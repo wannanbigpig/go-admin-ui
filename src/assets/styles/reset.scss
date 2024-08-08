@@ -1,0 +1,43 @@
+:root {
+  font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  background-color: $--xl-bg-color;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+* {
+  margin: 0px;
+  padding: 0px;
+}
+
+html,
+body,
+.common-layout,
+.el-container,
+#app {
+  height: 100%;
+}
+
+a {
+  text-decoration: none;
+}
+
+.is_fixed {
+  position: fixed;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.el-tooltip__trigger:focus-visible {
+  outline: none;
+}

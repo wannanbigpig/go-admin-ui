@@ -1,0 +1,15 @@
+.right-container > .xl-main {
+  // border: 10px solid #f0f2f5;
+  background-color: $--xl-main-bg-color;
+  padding: $--xl-main-padding;
+  overflow: visible;
+  .xl-main-inner {
+    width: calc(100% - $--xl-main-inner-padding * 2);
+    background-color: var(--el-bg-color);
+    min-height: calc(100vh - $--xl-header-height - $--xl-main-padding * 2 - $--xl-main-inner-padding * 2);
+    padding: $--xl-main-inner-padding;
+  }
+  .xl-main-height {
+    height: calc(100vh - $--xl-header-height - $--xl-main-padding * 2 - $--xl-main-inner-padding * 2);
+  }
+}

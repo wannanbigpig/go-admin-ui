@@ -1,0 +1,27 @@
+.right-container > .xl-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--xl-head-z-index);
+  color: var(--el-text-color-primary);
+  background-image: radial-gradient(transparent 1px, var(--el-bg-color) 1px);
+  background-size: 4px 4px;
+  backdrop-filter: saturate(50%) blur(4px);
+  -webkit-backdrop-filter: saturate(50%) blur(4px);
+  height: $--xl-header-height;
+  // border-bottom: 1px solid var(--el-border-color-extra-light);
+  // box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.2);
+  .xl-header-content {
+    display: flex;
+    height: 100%;
+    justify-content: space-between;
+    margin: 0 auto;
+    text-align: center;
+    align-items: center;
+    .xl-header-left {
+      height: 100%;
+    }
+    .xl-header-right {
+      height: 100%;
+    }
+  }
+}

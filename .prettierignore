@@ -1,0 +1,8 @@
+**/*.svg
+/dist
+/build
+/assets/images
+.*
+!.prettierignore
+!.prettierrc.js
+!.eslint.config.js

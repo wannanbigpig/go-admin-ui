@@ -1,0 +1,59 @@
+import { defineStore } from 'pinia'
+import { login } from '@/api/login' // 导入api
+import router from '@/router'
+
+export const useAuthStore = defineStore(
+  'auth',
+  () => {
+    // state
+    const access_token = ref('')
+    const expires_at = ref(0)
+
+    // getters
+    const isTokenExpired = computed(() => {
+      return Date.now() / 1000 >= expires_at.value
+    })
+
+    const token = computed(() => {
+      return isTokenExpired.value ? '' : access_token.value
+    })
+
+    // actions
+
+    /**
+     * 登录
+     * @param {object} credential
+     * @returns
+     */
+    async function loginWithCredentials(credential) {
+      const res = await login(credential)
+      updateToken(res.data.access_token, res.data.expires_at)
+      return res
+    }
+
+    /**
+     * 更新token
+     * @param {string} token
+     * @param {number} exp
+     */
+    function updateToken(token, exp) {
+      access_token.value = token
+      expires_at.value = exp
+    }
+
+    /**
+     * 退出登录
+     *
+     * @param {string} redirectUrl
+     */
+    function logout(redirectUrl) {
+      updateToken('', 0)
+      router.push({ name: 'Login', query: { redirect: redirectUrl } })
+    }
+
+    return { access_token, expires_at, token, loginWithCredentials, updateToken, logout }
+  },
+  {
+    persist: true,
+  }
+)

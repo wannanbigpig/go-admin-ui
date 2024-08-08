@@ -1,0 +1,17 @@
+@import "./main.scss";
+@import "./sidebar.scss";
+@import "./header.scss";
+
+.common-layout {
+  background-color: var(--el-bg-color);
+
+  .right-container {
+    transition:
+      0.3s width,
+      0.3s margin-left ease-in-out;
+    width: calc(100% - var(--xl-aside-width));
+    // margin-left: var(--xl-aside-width);
+    overflow: auto;
+    scrollbar-color: var(--el-scrollbar-bg-color) var(--el-fill-color-light);
+  }
+}
