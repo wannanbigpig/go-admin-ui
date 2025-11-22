@@ -1,17 +1,21 @@
 #xl-aside {
   width: var(--xl-aside-width);
-  color: var(--el-text-color-primary);
   height: 100%;
+  color: var(--el-text-color-primary);
+  background-color: $--xl-bg-color;
+  border-right: 1px solid var(--el-color-info-light-8);
   transition: 0.3s width;
-  border-right: 1px solid var(--el-border-color-extra-light);
+
   .xl-scrollbar {
-    height: calc(100% - $--xl-side-logo);
+    height: calc(100% - $--xl-side-logo-height - $--xl-side-logo-border);
+
     .el-menu {
       border-right: none;
+      background: $--xl-bg-color;
     }
   }
-}
 
-#xl-aside.collapse {
-  width: var(--xl-aside-min-width) !important;
+  &.collapse {
+    width: var(--xl-aside-min-width) !important;
+  }
 }

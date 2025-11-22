@@ -1,14 +1,13 @@
 {
-  "compilerOptions": {
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"]
+    "compilerOptions": {
+        "baseUrl": "./",
+        "paths": {
+            "@/*": ["src/*"]
+        },
+        "experimentalDecorators": true,
+        "jsx": "preserve",
+        "typeRoots": ["./node_modules/element-plus/global"]
     },
-    // 解决prettier对于装饰器语法的警告
-    "experimentalDecorators": true,
-    // 解决.jsx文件无法快速跳转的问题
-    "jsx": "preserve"
-  },
-  //提高 IDE 性能
-  "exclude": ["node_modules", "dist", "build"]
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist", "build"]
 }

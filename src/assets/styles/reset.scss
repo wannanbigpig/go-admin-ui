@@ -1,23 +1,25 @@
+// ==================== 根元素样式 ====================
 :root {
-  font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
+  height: 100%;
   color-scheme: light dark;
   background-color: $--xl-bg-color;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  height: 100%;
 }
 
+// ==================== 全局重置 ====================
 * {
-  margin: 0px;
-  padding: 0px;
+  margin: 0;
+  padding: 0;
 }
 
+// ==================== 全高度元素 ====================
 html,
 body,
 .common-layout,
@@ -26,18 +28,23 @@ body,
   height: 100%;
 }
 
+// ==================== 链接样式 ====================
 a {
   text-decoration: none;
 }
 
-.is_fixed {
-  position: fixed;
-}
-
-.pointer {
-  cursor: pointer;
-}
-
+// ==================== 工具提示样式 ====================
 .el-tooltip__trigger:focus-visible {
   outline: none;
+}
+
+.el-popper.is-customized {
+  color: #fff;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgb(159, 229, 151), rgb(204, 229, 129));
+}
+
+.el-popper.is-customized .el-popper__arrow::before {
+  background: linear-gradient(45deg, #b2e68d, #bce689);
+  right: 0;
 }

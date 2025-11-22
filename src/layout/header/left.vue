@@ -1,28 +1,36 @@
 <template>
   <div class="xl-left-content">
-    <div>
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/' }">homepage</el-breadcrumb-item>
-        <el-breadcrumb-item>
-          <a href="/">promotion management</a>
-        </el-breadcrumb-item>
-        <el-breadcrumb-item>promotion list</el-breadcrumb-item>
-        <el-breadcrumb-item>promotion detail</el-breadcrumb-item>
-      </el-breadcrumb>
-    </div>
-    <div class="refresh-btn">
+    <!-- 刷新按钮 -->
+    <div class="xl-refresh-btn xl-cursor-pointer" @click="handleRefresh">
       <el-tooltip effect="dark" content="刷新页面" placement="bottom" :enterable="false">
-        <i-ep-refresh-right style="outline: none" width="24" height="24" @click="handleRefresh()" />
+        <el-icon size="24" :class="{ 'xl-refresh-icon': refreshStore.isRefreshing }">
+          <i-ep-refresh />
+        </el-icon>
       </el-tooltip>
+    </div>
+    <!-- 面包屑导航 -->
+    <div>
+      <xl-breadcrumb />
     </div>
   </div>
 </template>
+
 <script setup>
-import router from '@/router'
-function handleRefresh() {
-  router.replace({
-    path: '/refresh',
-  })
+import XlBreadcrumb from '@/components/breadcrumb/index.vue'
+import { useRefreshStore } from '@/stores/refresh'
+
+// ==================== Store ====================
+const refreshStore = useRefreshStore()
+
+// ==================== 方法 ====================
+/**
+ * 处理页面刷新
+ * 如果当前不在刷新状态，则触发刷新
+ */
+const handleRefresh = () => {
+  if (!refreshStore.isRefreshing) {
+    refreshStore.setKey()
+  }
 }
 </script>
 
@@ -32,11 +40,13 @@ function handleRefresh() {
   display: flex;
   align-items: center;
 
-  .refresh-btn {
+  .xl-refresh-btn {
     width: 24px;
     height: 24px;
-    margin-left: 10px;
-    cursor: pointer;
+    margin-right: 10px;
+    .xl-refresh-icon {
+      @include rotate-forever(1s);
+    }
   }
 }
 </style>
