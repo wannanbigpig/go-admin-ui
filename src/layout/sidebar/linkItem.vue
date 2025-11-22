@@ -1,35 +1,52 @@
 <template>
-  <router-link class="linkStyle" v-if="!isExternal(to)" :to="to">
+  <!-- 内部路由链接 -->
+  <router-link v-if="!isExternal(to)" class="linkStyle" :to="to">
     <slot />
   </router-link>
-  <a v-else-if="isNewWindow" class="linkStyle" rel="noopener noreferrer" target="_blank" :href="to">
+  <!-- 外部链接（新窗口打开） -->
+  <a
+    v-else-if="isNewWindow"
+    class="linkStyle"
+    rel="noopener noreferrer"
+    target="_blank"
+    :href="to"
+  >
     <slot />
   </a>
-  <a v-else class="linkStyle" @click="toIframe(to)">
+  <!-- 外部链接（iframe 方式打开） -->
+  <a v-else class="linkStyle" @click="handleToIframe(to)">
     <slot />
   </a>
 </template>
 
 <script setup>
-import { RouterLink } from 'vue-router'
-import { isExternal } from '@/utils/helper'
 import router from '@/router'
+import { isExternal } from '@/utils/helper'
 
+// ==================== Props 定义 ====================
 defineProps({
+  /** 链接地址 */
   to: {
     type: String,
     required: true,
   },
+  /** 是否在新窗口打开（仅外部链接有效） */
   isNewWindow: {
     type: Boolean,
     default: true,
   },
 })
-function toIframe(to) {
+
+// ==================== 方法 ====================
+/**
+ * 处理外部链接，通过 iframe 方式打开
+ * @param {string} url - 外部链接地址
+ */
+const handleToIframe = (url) => {
   router.push({
     path: '/iframe',
     query: {
-      to,
+      to: url,
     },
   })
 }

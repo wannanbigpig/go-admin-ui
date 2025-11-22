@@ -1,16 +1,30 @@
+// ==================== 颜色变量 ====================
 $--xl-bg-color: #ffffff;
-$--xl-main-bg-color: #f0f2f5;
+$--xl-main-bg-color: #f7f7f7;
 
-$--xl-aside-width: 200px;
+// ==================== 布局尺寸变量 ====================
+// 侧边栏
+$--xl-aside-width: 260px;
 $--xl-aside-min-width: 64px;
+$--xl-side-logo-height: 50px;
+$--xl-side-logo-border: 1px;
+
+// 头部
 $--xl-header-height: 50px;
-$--xl-side-logo: 50px;
-$--xl-collapse-btn-width: 20px;
-$--xl-collapse-btn-height: 20px;
+
+// 折叠按钮
+$--xl-collapse-btn-width: 24px;
+$--xl-collapse-btn-height: 24px;
 $--xl-collapse-btn-hover-width: 30px;
 $--xl-collapse-btn-hover-height: 30px;
+
+// 主内容区
 $--xl-main-padding: 5px;
 $--xl-main-inner-padding: 10px;
 
+// 表格
+$--xl-table-height: 50px;
+
+// ==================== 层级变量 ====================
 $--xl-head-z-index: 12;
 $--xl-collapse-btn-z-index: 15;

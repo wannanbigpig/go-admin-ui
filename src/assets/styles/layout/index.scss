@@ -1,17 +1,16 @@
-@import "./main.scss";
-@import "./sidebar.scss";
-@import "./header.scss";
+@import './main.scss';
+@import './sidebar.scss';
+@import './header.scss';
 
 .common-layout {
-  background-color: var(--el-bg-color);
+  background-color: $--xl-main-bg-color;
 
   .right-container {
+    width: calc(100% - var(--xl-aside-width));
+    overflow: auto;
+    scrollbar-color: var(--el-scrollbar-bg-color) var(--el-fill-color-light);
     transition:
       0.3s width,
       0.3s margin-left ease-in-out;
-    width: calc(100% - var(--xl-aside-width));
-    // margin-left: var(--xl-aside-width);
-    overflow: auto;
-    scrollbar-color: var(--el-scrollbar-bg-color) var(--el-fill-color-light);
   }
 }

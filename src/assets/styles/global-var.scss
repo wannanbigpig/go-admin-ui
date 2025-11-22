@@ -1,7 +1,10 @@
+// ==================== CSS 变量（用于动态样式） ====================
 :root {
+  // 侧边栏宽度
   --xl-aside-width: #{$--xl-aside-width};
   --xl-aside-min-width: #{$--xl-aside-min-width};
 
+  // 层级
   --xl-head-z-index: #{$--xl-head-z-index};
   --xl-collapse-btn-z-index: #{$--xl-collapse-btn-z-index};
 }

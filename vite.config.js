@@ -10,79 +10,107 @@ import IconsResolver from 'unplugin-icons/resolver'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import eslintPlugin from 'vite-plugin-eslint'
 
-// 是否自动开启浏览器
-const AUTO_OPEN_BROWESR = process.env.AUTO_OPEN_BROWESR
-const autoOpenBrowser = AUTO_OPEN_BROWESR === 'true' || AUTO_OPEN_BROWESR === undefined
+// ==================== 常量定义 ====================
+/** 是否自动打开浏览器（从环境变量读取，默认为 true） */
+const AUTO_OPEN_BROWSER = process.env.AUTO_OPEN_BROWSER
+const autoOpenBrowser = AUTO_OPEN_BROWSER === 'true' || AUTO_OPEN_BROWSER === undefined
+
+/** Base 路径（用于 GitHub Pages 部署） */
+// 从环境变量读取，如果未设置则默认为 '/'
+// GitHub Pages 部署时，如果是仓库根目录，使用仓库名称；如果是自定义域名，使用 '/'
+const base = process.env.VITE_BASE_URL || '/'
+
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
-      '~': resolve(__dirname, './node_modules'),
+    // ==================== Base 路径配置 ====================
+    base,
+
+    // ==================== 路径解析配置 ====================
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, './src'),
+            '~': resolve(__dirname, './node_modules'),
+        },
+        extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
     },
-    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
-  },
-  plugins: [
-    vue(),
-    AutoImport({
-      imports: ['vue'],
-      resolvers: [
-        ElementPlusResolver(),
-        // 自动导入图标组件
-        IconsResolver(),
-      ],
-      eslintrc: {
-        enabled: true, // Default `false`
-        filepath: './.eslintrc-auto-import.json', // Default `./.eslintrc-auto-import.json`
-        globalsPropValue: true, // Default `true`, (true | false | 'readonly' | 'readable' | 'writable' | 'writeable')
-      },
-    }),
-    Components({
-      resolvers: [
-        ElementPlusResolver(),
-        IconsResolver({
-          enabledCollections: ['ep', 'ant-design'],
-          customCollections: ['custom'],
+
+    // ==================== 插件配置 ====================
+    plugins: [
+        // Vue 3 支持
+        vue(),
+
+        // 自动导入 API（Vue、Element Plus、图标等）
+        AutoImport({
+            imports: ['vue'],
+            resolvers: [
+                ElementPlusResolver(),
+                IconsResolver(), // 自动导入图标组件
+            ],
+            eslintrc: {
+                enabled: true,
+                filepath: './.eslintrc-auto-import.json',
+                globalsPropValue: true,
+            },
         }),
-      ],
-    }),
-    Icons({
-      compiler: 'vue3', // 指定编译器
-      autoInstall: true,
-      customCollections: {
-        custom: FileSystemIconLoader('./src/assets/svg'),
-      },
-    }),
-    ElementPlus({
-      // options,
-    }),
-    eslintPlugin({
-      // 配置选项
-      cache: false, // 禁用缓存
-    }),
-  ],
-  publicDir: 'public',
-  lintOnSave: true,
-  server: {
-    open: autoOpenBrowser ? '/' : '',
-    host: '127.0.0.1',
-    port: 3000,
-    strictPort: false,
-    https: false, // 开启https
-    proxy: {},
-  },
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, './index.html'),
-      },
+
+        // 自动导入组件（Element Plus、图标等）
+        Components({
+            resolvers: [
+                ElementPlusResolver(),
+                IconsResolver({
+                    enabledCollections: ['ep', 'ant-design'], // 启用的图标集合
+                    customCollections: ['custom'], // 自定义图标集合
+                }),
+            ],
+        }),
+
+        // 图标插件
+        Icons({
+            compiler: 'vue3',
+            autoInstall: true,
+            customCollections: {
+                custom: FileSystemIconLoader('./src/assets/svg'), // 自定义 SVG 图标
+            },
+        }),
+
+        // Element Plus 按需导入样式
+        ElementPlus(),
+
+        // ESLint 插件
+        eslintPlugin({
+            cache: false, // 禁用缓存，确保每次都能检查到最新代码
+        }),
+    ],
+
+    // ==================== 开发服务器配置 ====================
+    server: {
+        open: autoOpenBrowser ? '/' : false, // 自动打开浏览器
+        host: '127.0.0.1',
+        port: 3000,
+        strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
+        https: false,
+        proxy: {}, // 代理配置
     },
-    outDir: 'dist',
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@import "@/assets/styles/global.scss";`, // 添加全局样式
-      },
+
+    // ==================== 构建配置 ====================
+    build: {
+        rollupOptions: {
+            input: {
+                main: resolve(__dirname, './index.html'),
+            },
+        },
+        outDir: 'dist',
     },
-  },
+
+    // ==================== CSS 配置 ====================
+    css: {
+        preprocessorOptions: {
+            scss: {
+                // 全局注入 SCSS 变量和混入
+                additionalData: `@import "@/assets/styles/global.scss";`,
+            },
+        },
+    },
+
+    // ==================== 公共资源目录 ====================
+    publicDir: 'public',
 })

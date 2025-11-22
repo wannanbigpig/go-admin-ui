@@ -17,16 +17,19 @@ export function checkNumber(value, decimal = 2, negative = false) {
   if (!negative && numValue < 0) {
     return false // 如果不允许负数但传入的是负数
   }
-  // 当decimal为0时，直接检查是否含有小数点
-  if (decimal === 0) {
-    if (value.includes('.')) {
-      return false // 如果decimal为0且输入包含小数点，返回false
-    } else {
-      return true // 如果没有小数点且decimal为0，直接返回true，跳过后续检查
-    }
+
+  // 检查decimal是否合法
+  if (decimal < 0) {
+    return false
   }
+
   // 转换为字符串以便检查小数位数
   const valueStr = numValue.toString()
+
+  // 当decimal为0时，直接检查是否含有小数点
+  if (decimal === 0) {
+    return !valueStr.includes('.')
+  }
 
   // 检查小数点后是否有超过允许的小数位数
   const decimalPart = valueStr.split('.')[1]
@@ -37,6 +40,27 @@ export function checkNumber(value, decimal = 2, negative = false) {
   // 如果上述检查都通过，则数值满足条件
   return true
 }
+
+/**
+ * 从对象中提取指定的属性，创建一个新对象
+ * @param {Object} obj - 源对象
+ * @param {string[]} keys - 需要提取的属性名数组
+ * @returns {Object} 包含指定属性的新对象
+ *
+ * @example
+ * pick({ a: 1, b: 2, c: 3 }, ['a', 'c'])
+ * // 返回: { a: 1, c: 3 }
+ */
+export function pick(obj, keys) {
+  const result = {}
+  keys.forEach((key) => {
+    if (key in obj) {
+      result[key] = obj[key]
+    }
+  })
+  return result
+}
+
 /**
  * 异步函数：暂停指定时长
  *
@@ -70,13 +94,18 @@ export function randomStr(length = 16) {
 }
 
 /**
- * 判断是否外链
+ * 判断路径是否为外部链接
+ * 检查路径是否以 http:// 或 https:// 开头
  *
- * @param {string} path
- * @returns
+ * @param {string} path - 需要检查的路径
+ * @returns {boolean} 如果是外部链接返回 true，否则返回 false
+ *
+ * @example
+ * isExternal('https://example.com') // true
+ * isExternal('/home') // false
  */
 export function isExternal(path) {
-  return /^(https?:|mailto:|tel:)/.test(path)
+  return /^(https?:|http?:)/.test(path)
 }
 
 /**
@@ -86,29 +115,130 @@ export function isExternal(path) {
  * @returns {boolean}
  */
 export function isEmpty(value) {
-  // 处理 null 和 undefined
+  // 处理 Vue 的 Ref 对象（如 ref([])）
+  if (value?.__v_isRef) value = value.value
+
+  // 基础类型快速判断
   if (value == null) return true
-
-  // 处理布尔值
-  if (typeof value === 'boolean') return !value
-
-  // 处理数字 (0 为 false, 其他数字为 true)
-  if (typeof value === 'number') return value === 0
-
-  // 处理字符串 (空字符串为 true)
-  if (typeof value === 'string') return value.trim().length === 0
-
-  // 处理数组 (空数组为 true)
-  if (Array.isArray(value)) return value.length === 0
-
-  // 处理 Map 和 Set (空为 true)
-  if (value instanceof Map || value instanceof Set) return value.size === 0
-
-  // 处理普通对象 (没有可枚举属性和 Symbol 属性为 true)
-  if (typeof value === 'object') {
-    return Object.keys(value).length === 0 && Object.getOwnPropertySymbols(value).length === 0
+  switch (typeof value) {
+    case 'boolean':
+      return !value
+    case 'number':
+      return value === 0
+    case 'string':
+      return value.trim() === ''
   }
 
-  // 对于所有其他类型，默认返回 false
+  // 集合类型（Map/Set/Array）
+  if (value instanceof Map || value instanceof Set) return value.size === 0
+  if (Array.isArray(value)) return value.length === 0
+
+  // 普通对象（包含 Symbol 属性的判断）
+  if (typeof value === 'object') {
+    return Reflect.ownKeys(value).length === 0 // 合并普通属性和 Symbol 属性检查
+  }
+
+  // 其他类型（如函数、Symbol 等）默认非空
   return false
+}
+
+/**
+ * 过滤对象中的 null 和 undefined 值
+ * 创建一个新对象，只包含非 null 和非 undefined 的属性
+ *
+ * @param {Object} obj - 源对象
+ * @returns {Object} 过滤后的新对象
+ *
+ * @example
+ * filterNullUndefined({ a: 1, b: null, c: undefined, d: 'test' })
+ * // 返回: { a: 1, d: 'test' }
+ */
+export function filterNullUndefined(obj) {
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== null && value !== undefined))
+}
+
+/**
+ * 防重复执行函数
+ *
+ * 假设有一个用户输入搜索的场景，我们希望用户停止输入后的300毫秒才执行搜索请求，可以使用这个防抖函数来减少不必要的请求。
+ * 在用户停止输入的300毫秒后，search 函数才会被调用。如果在300毫秒内用户又输入了新的内容，则会重新计时，最终只会执行最后一次有效的搜索操作。
+ *
+ * @param {Function} fn
+ * @param {Number} delay
+ * @returns
+ */
+export function debounce(fn, delay) {
+  let timer
+  return function (...args) {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      fn.apply(this, args)
+    }, delay)
+  }
+}
+
+/**
+ * 格式化日期为 YYYY-MM-DD HH:mm:ss 格式
+ *
+ * @param {Date|string|number} date - 日期对象、日期字符串或时间戳
+ * @returns {string} 格式化后的日期字符串，格式为 YYYY-MM-DD HH:mm:ss
+ *
+ * @example
+ * formatDate(new Date())
+ * // 返回: '2024-01-01 12:00:00'
+ */
+export function formatDate(date) {
+  const dateObj = date instanceof Date ? date : new Date(date)
+  const year = dateObj.getFullYear()
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0') // 月份从 0 开始，需要 +1
+  const day = String(dateObj.getDate()).padStart(2, '0')
+  const hours = String(dateObj.getHours()).padStart(2, '0')
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0')
+  const seconds = String(dateObj.getSeconds()).padStart(2, '0')
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+/**
+ * 将多层级树形数据扁平化为选项数组
+ *
+ * 该函数用于将树形结构的数据（如部门、菜单等）转换为扁平化的选项数组，
+ * 每个选项包含 label 和 value，label 会保留层级关系（使用 / 分隔符）。
+ *
+ * @param {Array} tree - 树形数据数组，每个节点应包含 id、name 和 children 属性
+ * @param {string} prefix - 前缀字符串，用于构建层级路径，默认为空字符串
+ * @param {Object} options - 配置选项
+ * @param {string} options.idKey - ID字段名，默认为 'id'
+ * @param {string} options.nameKey - 名称字段名，默认为 'name'
+ * @param {string} options.childrenKey - 子节点字段名，默认为 'children'
+ * @param {string} options.separator - 层级分隔符，默认为 ' / '
+ * @returns {Array} 扁平化的选项数组，每个选项包含 { label, value }
+ *
+ * @example
+ * const tree = [
+ *   { id: 1, name: '技术部', children: [
+ *     { id: 2, name: '前端组', children: [] }
+ *   ]}
+ * ]
+ * flattenTree(tree)
+ * // 返回: [
+ * //   { label: '技术部', value: 1 },
+ * //   { label: '技术部 / 前端组', value: 2 }
+ * // ]
+ */
+export function flattenTree(tree, prefix = '', options = {}) {
+  const { idKey = 'id', nameKey = 'name', childrenKey = 'children', separator = ' / ' } = options
+
+  const result = []
+  tree.forEach((item) => {
+    const label = prefix ? `${prefix}${separator}${item[nameKey]}` : item[nameKey]
+    result.push({
+      label,
+      value: item[idKey],
+    })
+    if (item[childrenKey] && item[childrenKey].length > 0) {
+      result.push(...flattenTree(item[childrenKey], label, options))
+    }
+  })
+  return result
 }
