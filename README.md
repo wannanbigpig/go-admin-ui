@@ -17,17 +17,11 @@
 
 <div align="center">
 
-![X-L-Admin 后台管理系统](./screenshot.png)
+![X-L-Admin 后台管理系统](./docs/images/home.png)
 
 _管理员管理页面 - 完整的权限管理系统_
 
 </div>
-
-> 💡 **添加截图**：
->
-> 1. 将截图保存为 `screenshot.png` 放在项目根目录
-> 2. 或使用在线图片链接：`![截图描述](https://your-image-url.com/screenshot.png)`
-> 3. 或使用 GitHub 的 raw 链接：`![截图描述](https://raw.githubusercontent.com/wannanbigpig/go-admin-ui/main/screenshot.png)`
 
 ## ✨ 功能特性
 
