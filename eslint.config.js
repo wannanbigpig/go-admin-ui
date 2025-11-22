@@ -59,7 +59,10 @@ export default [
       'no-unused-vars': 'error', // 禁止出现未使用的变量
 
       // 代码质量
-      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off', // 生产环境禁止 console
+      // 生产环境禁止 console.log，但允许 console.error 和 console.warn（用于错误日志）
+      'no-console': process.env.NODE_ENV === 'production' 
+        ? ['error', { allow: ['warn', 'error'] }] 
+        : 'off',
       'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off', // 生产环境禁止 debugger
       'no-unused-expressions': 'warn', // 禁止出现未使用的表达式
       'no-unreachable': 'error', // 禁止在 return、throw、continue、break 后出现不可达代码
