@@ -76,8 +76,8 @@ function handlePermission(el, binding, isMounted) {
       resetElement(el)
     }
   } catch (error) {
-    console.error('[v-permission] 权限检查出错:', error)
     // 出错时默认隐藏元素，避免权限泄露
+    console.error('[v-permission] 权限检查出错:', error)
     hideElement(el)
   }
 }

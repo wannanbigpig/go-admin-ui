@@ -153,7 +153,6 @@ import { usePermission } from '@/composables/usePermission'
 // ==================== 权限相关 ====================
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
-console.log(detailButtonInfo)
 
 // ==================== 工具函数 ====================
 /**
