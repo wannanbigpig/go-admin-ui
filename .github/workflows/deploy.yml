@@ -34,11 +34,20 @@ jobs:
       - name: Build
         run: npm run build:production
         env:
-          # 设置 base 路径
+          # 页面 base 路径（用于路由和静态资源）
           # 如果是普通仓库，使用 /仓库名称/
           # 如果是 username.github.io 仓库，使用 /
-          # 可以根据需要修改为你的仓库名称
-          VITE_BASE_URL: /${{ github.event.repository.name }}/
+          VITE_APP_BASE: /${{ github.event.repository.name }}/
+          # API 服务器地址（参考 .env.production）
+          # 方式1：使用 GitHub Secrets（推荐）- 在仓库 Settings > Secrets and variables > Actions 中配置
+          # 方式2：直接修改下面的值
+          VITE_BASE_URL: ${{ secrets.VITE_BASE_URL != '' && secrets.VITE_BASE_URL || 'http://112.124.53.17' }}
+          # API 路径前缀（参考 .env.production）
+          VITE_BASE_API: /admin
+          # 静态资源路径（参考 .env.production）
+          VITE_BASE_STATIC: /static
+          # 应用标题（参考 .env.production）
+          VITE_APP_TITLE: X-L-Admin
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -18,7 +18,8 @@ const autoOpenBrowser = AUTO_OPEN_BROWSER === 'true' || AUTO_OPEN_BROWSER === un
 /** Base 路径（用于 GitHub Pages 部署） */
 // 从环境变量读取，如果未设置则默认为 '/'
 // GitHub Pages 部署时，如果是仓库根目录，使用仓库名称；如果是自定义域名，使用 '/'
-const base = process.env.VITE_BASE_URL || '/'
+// 注意：VITE_APP_BASE 用于页面 base 路径，VITE_BASE_URL 用于 API 地址（两者分开）
+const base = process.env.VITE_APP_BASE || '/'
 
 export default defineConfig({
     // ==================== Base 路径配置 ====================
