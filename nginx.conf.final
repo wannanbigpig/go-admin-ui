@@ -1,0 +1,94 @@
+server
+{
+    listen 80;
+    server_name 112.124.53.17;
+
+    index index.html index.htm default.htm default.html;
+
+    root /home/x-l-admin;
+
+    include /www/server/panel/vhost/nginx/extension/112.124.53.17/*.conf;
+
+    #CERT-APPLY-CHECK--START
+
+    # 用于SSL证书申请时的文件验证相关配置 -- 请勿删除并保持这段设置在优先级高的位置
+
+    include /www/server/panel/vhost/nginx/well-known/112.124.53.17.conf;
+
+    #CERT-APPLY-CHECK--END
+
+    #SSL-START SSL相关配置，请勿删除或修改下一行带注释的404规则
+
+    #error_page 404/404.html;
+
+    #SSL-END
+
+    #ERROR-PAGE-START  错误页配置，可以注释、删除或修改
+
+    #error_page 404 /404.html;
+
+    #error_page 502 /502.html;
+
+    #ERROR-PAGE-END
+
+    #REWRITE-START URL重写规则引用,修改后将导致面板设置的伪静态规则失效
+
+    include /www/server/panel/vhost/rewrite/html_112.124.53.17.conf;
+
+    #REWRITE-END
+
+    # ==================== 静态资源优先处理（必须在 location / 之前）====================
+    # 重要：静态资源的 location 必须在 location / 之前，确保 JS/CSS 等文件返回正确内容
+    # 使用正则匹配，优先级高于普通 location
+    # 包含所有可能的静态资源扩展名
+    location ~* \.(js|mjs|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json)$
+    {
+        expires      12h;
+        error_log /dev/null;
+        access_log /dev/null;
+        # 关键：文件不存在时返回 404，不要返回 index.html
+        try_files $uri =404;
+    }
+
+    # 图片资源（更长的缓存时间）
+    location ~* \.(gif|jpg|jpeg|png|bmp|swf|webp)$
+    {
+        expires      30d;
+        error_log /dev/null;
+        access_log /dev/null;
+        # 关键：文件不存在时返回 404
+        try_files $uri =404;
+    }
+
+    # ==================== Vue Router History 模式支持 ====================
+    # 支持 Vue Router History 模式
+    # 所有请求都尝试查找文件，找不到则返回 index.html，让 Vue Router 处理路由
+    # 注意：静态资源已经在上面处理了，这里不会匹配到静态资源
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    #禁止访问的文件或目录
+
+    location ~ ^/(\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)
+    {
+        return 404;
+    }
+
+    #一键申请SSL证书验证目录相关设置
+
+    location ~ \.well-known{
+        allow all;
+    }
+
+    #禁止在证书验证目录放入敏感文件
+
+    if ( $uri ~ "^/\.well-known/.*\.(php|jsp|py|js|css|lua|ts|go|zip|tar\.gz|rar|7z|sql|bak)$" ) {
+        return 403;
+    }
+
+    access_log  /www/wwwlogs/112.124.53.17.log;
+
+    error_log  /www/wwwlogs/112.124.53.17.error.log;
+}
+
