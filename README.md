@@ -225,15 +225,6 @@ VITE_BASE_API=/admin
 VITE_BASE_STATIC=/static
 ```
 
-**`.env.production`** - 生产环境
-
-```env
-VITE_APP_TITLE=X-L-Admin
-VITE_BASE_URL=http://112.124.53.17
-VITE_BASE_API=/admin
-VITE_BASE_STATIC=/static
-```
-
 ### 权限系统
 
 项目实现了完整的 RBAC 权限控制系统：
