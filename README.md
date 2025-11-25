@@ -11,6 +11,8 @@
 
 [功能特性](#-功能特性) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [开发指南](#-开发指南)
 
+> 📦 **相关项目**：本项目为前端项目，后端 API 服务请参考 [后端代码库](https://github.com/wannanbigpig/gin-layout)
+
 </div>
 
 ## 📸 项目截图
@@ -61,10 +63,13 @@ _管理员管理页面 - 完整的权限管理系统_
 
 ## 🚀 快速开始
 
+> **注意**：本项目为前端项目，需要配合后端 API 使用。后端代码库地址：[https://github.com/wannanbigpig/gin-layout](https://github.com/wannanbigpig/gin-layout)
+
 ### 环境要求
 
 -   Node.js >= 18.0.0
 -   npm >= 9.0.0 或 yarn >= 1.22.0 或 pnpm >= 8.0.0
+-   后端服务（参考 [后端项目](https://github.com/wannanbigpig/go-admin) 进行部署）
 
 ### 安装依赖
 
@@ -350,7 +355,8 @@ settingStore.watermarkContent = ['github.com/wannanbigpig']
 **皖南大花猪 (wannanbigpig)**
 
 -   GitHub: [@wannanbigpig](https://github.com/wannanbigpig)
--   项目地址: [https://github.com/wannanbigpig/go-admin-ui](https://github.com/wannanbigpig/go-admin-ui)
+-   前端项目: [https://github.com/wannanbigpig/go-admin-ui](https://github.com/wannanbigpig/go-admin-ui)
+-   后端项目: [https://github.com/wannanbigpig/gin-layout](https://github.com/wannanbigpig/gin-layout)
 
 ## 🙏 致谢
 
