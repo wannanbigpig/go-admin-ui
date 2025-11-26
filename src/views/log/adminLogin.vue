@@ -122,6 +122,19 @@
                             {{ currentDetail.revoked_at || '-' }}
                         </el-descriptions-item>
                     </el-descriptions>
+
+                    <el-divider />
+
+                    <el-collapse v-model="activeCollapse">
+                        <el-collapse-item v-if="currentDetail.access_token" name="accessToken" title="Access Token">
+                            <div v-if="currentDetail.token_hash" class="hash-label">Token Hash: {{ currentDetail.token_hash }}</div>
+                            <pre class="json-content">{{ currentDetail.access_token }}</pre>
+                        </el-collapse-item>
+                        <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken" title="Refresh Token">
+                            <div v-if="currentDetail.refresh_token_hash" class="hash-label">Refresh Token Hash: {{ currentDetail.refresh_token_hash }}</div>
+                            <pre class="json-content">{{ currentDetail.refresh_token }}</pre>
+                        </el-collapse-item>
+                    </el-collapse>
                 </template>
             </div>
         </el-drawer>
@@ -135,6 +148,34 @@
 
 .detail-content {
     padding: 20px 0;
+
+    :deep(.el-descriptions__label) {
+        font-weight: 500;
+    }
+
+    :deep(.el-descriptions__content) {
+        word-break: break-all;
+        word-wrap: break-word;
+    }
+
+    .json-content {
+        background-color: var(--el-fill-color-light);
+        padding: 15px;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1.6;
+        overflow-x: auto;
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .hash-label {
+        color: var(--el-color-danger);
+        font-size: 12px;
+        margin-bottom: 10px;
+        padding: 8px 0;
+    }
 }
 </style>
 
@@ -168,6 +209,7 @@ const handleCopyClick = (text) => {
 const openDetailDrawer = async (row) => {
     showDetailDrawer.value = true
     detailLoading.value = true
+    activeCollapse.value = []
     currentDetail.value = null
 
     try {
@@ -203,6 +245,7 @@ const dateRange = ref(null)
 // 详情抽屉相关
 const showDetailDrawer = ref(false)
 const currentDetail = ref(null)
+const activeCollapse = ref([])
 const detailLoading = ref(false)
 
 // ==================== 查询相关 ====================
