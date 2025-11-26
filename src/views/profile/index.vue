@@ -3,7 +3,7 @@
         <div class="xl-container">
             <div class="xl-profile-header">
                 <div class="xl-profile-avatar">
-                    <el-avatar :size="120" :src="userInfo.avatar" shape="circle">
+                    <el-avatar :size="120" :src="getImageUrl(userInfo.avatar)" shape="circle">
                         <el-icon size="80">
                             <i-ep-avatar />
                         </el-icon>
@@ -69,7 +69,7 @@
                     <el-col :span="12">
                         <el-form-item label="头像" prop="avatar">
                             <el-upload class="avatar-uploader" :show-file-list="false" :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload" :http-request="customUpload">
-                                <img w-full v-if="formData.avatar" :src="formData.avatar" class="avatar" />
+                                <img w-full v-if="formData.avatar" :src="getImageUrl(formData.avatar)" class="avatar" />
                                 <el-icon v-else class="avatar-uploader-icon"><i-ep-plus /></el-icon>
                             </el-upload>
                         </el-form-item>
@@ -219,6 +219,7 @@ import { getUserInfo, updateProfile } from '@/api/auth'
 import { uploadAvatar } from '@/api/adminUser'
 import { ElMessage } from 'element-plus'
 import xlDrawer from '@/components/drawer/index.vue'
+import { getImageUrl } from '@/utils/helper'
 
 // ==================== 常量定义 ====================
 const STATUS = {
@@ -254,7 +255,7 @@ const initialFormData = {
     username: '',
     phone_number: '',
     email: '',
-    avatar: '',
+    avatar: '', // 统一使用 uuid
     password: '',
     confirm_password: '',
 }
@@ -314,8 +315,10 @@ const formatDateTime = (dateTime) => {
  * 头像上传成功回调
  */
 const handleAvatarSuccess = (response) => {
-    const { VITE_BASE_URL, VITE_BASE_STATIC } = import.meta.env
-    formData.avatar = `${VITE_BASE_URL}${VITE_BASE_STATIC}/${response.path}`
+    // 统一保存 uuid
+    if (response && response.uuid) {
+        formData.avatar = response.uuid
+    }
 }
 
 /**
