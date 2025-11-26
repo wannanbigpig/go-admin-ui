@@ -46,7 +46,7 @@
                 <xl-table-list :data="adminUserList" :tableTitle="tableTitle" :pagination="pagination">
                     <!-- 渲染表格列的内容 -->
                     <template #td="{ item, val, row }">
-                        <el-avatar v-if="item.avatar" :size="50" :src="val">
+                        <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(val)">
                             <el-icon size="32">
                                 <i-ep-avatar />
                             </el-icon>
@@ -87,7 +87,7 @@
                     <el-col :span="12">
                         <el-form-item label="头像" prop="avatar">
                             <el-upload class="avatar-uploader" :show-file-list="false" :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload" :http-request="customUpload">
-                                <img w-full v-if="formData.avatar" :src="formData.avatar" class="avatar" />
+                                <img w-full v-if="formData.avatar" :src="getImageUrl(formData.avatar)" class="avatar" />
                                 <el-icon v-else class="avatar-uploader-icon"><i-ep-plus /></el-icon>
                             </el-upload>
                         </el-form-item>
@@ -262,7 +262,7 @@ import xlActionButtons from '@/components/actionButtons/index.vue'
 import { getAdminUserList, getFullEmail, getFullPhone, uploadAvatar, createAdminUser, updateAdminUser, deleteAdminUser, bindAdminUserRole, getAdminUserDetail } from '@/api/adminUser'
 import { getDepartmentList } from '@/api/department'
 import { getRoleList } from '@/api/permission'
-import { filterNullUndefined, flattenTree } from '@/utils/helper'
+import { filterNullUndefined, flattenTree, getImageUrl } from '@/utils/helper'
 import { onMounted, reactive, ref, computed } from 'vue'
 import Clipboard from 'clipboard'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -336,9 +336,10 @@ const AVATAR_CONFIG = {
  * 头像上传成功回调
  */
 const handleAvatarSuccess = (response) => {
-    // 仅在需要时获取环境变量
-    const { VITE_BASE_URL, VITE_BASE_STATIC } = import.meta.env
-    formData.avatar = `${VITE_BASE_URL}${VITE_BASE_STATIC}/${response.path}`
+    // 统一保存 uuid
+    if (response && response.uuid) {
+        formData.avatar = response.uuid
+    }
 }
 
 /**
@@ -365,6 +366,7 @@ const customUpload = async ({ file, onError }) => {
         const result = res.data[0]
         if (result.status === 'SUCCESS') {
             ElMessage.success('上传成功')
+            handleAvatarSuccess(result)
             return result
         }
         ElMessage.error(result.failure_reason)
@@ -390,7 +392,7 @@ const initialFormData = {
     status: STATUS.NORMAL,
     phone_number: '',
     email: '',
-    avatar: '',
+    avatar: '', // 统一使用 uuid
     dept_ids: [],
     password: '',
     confirm_password: '',
