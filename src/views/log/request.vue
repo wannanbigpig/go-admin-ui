@@ -116,6 +116,9 @@
                         <el-descriptions-item label="操作人员">
                             {{ currentDetail.operator_name || '-' }}
                         </el-descriptions-item>
+                        <el-descriptions-item label="JWT ID">
+                            {{ currentDetail.jwt_id || '-' }}
+                        </el-descriptions-item>
                         <el-descriptions-item label="创建时间">
                             {{ currentDetail.created_at || '-' }}
                         </el-descriptions-item>
