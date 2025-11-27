@@ -12,6 +12,8 @@
 [功能特性](#-功能特性) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [开发指南](#-开发指南)
 
 > 📦 **相关项目**：本项目为前端项目，后端 API 服务请参考 [后端代码库](https://github.com/wannanbigpig/gin-layout)
+>
+> 📚 **API 文档**：查看完整的 API 接口文档请访问 [https://wannanbigpig.apifox.cn/](https://wannanbigpig.apifox.cn/)
 
 </div>
 
