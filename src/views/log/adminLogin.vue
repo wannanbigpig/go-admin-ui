@@ -126,13 +126,25 @@
                     <el-divider />
 
                     <el-collapse v-model="activeCollapse">
-                        <el-collapse-item v-if="currentDetail.access_token" name="accessToken" title="Access Token">
+                        <el-collapse-item v-if="currentDetail.access_token" name="accessToken">
+                            <template #title>
+                                <span>Access Token</span>
+                                <el-button v-if="currentDetail.access_token" link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('accessToken')">
+                                    {{ tokenFormatState.accessToken ? '还原' : '格式化' }}
+                                </el-button>
+                            </template>
                             <div v-if="currentDetail.token_hash" class="hash-label">Token Hash: {{ currentDetail.token_hash }}</div>
-                            <pre class="json-content">{{ currentDetail.access_token }}</pre>
+                            <pre class="json-content">{{ tokenFormatState.accessToken ? formatJwtToken(currentDetail.access_token) : currentDetail.access_token }}</pre>
                         </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken" title="Refresh Token">
+                        <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken">
+                            <template #title>
+                                <span>Refresh Token</span>
+                                <el-button v-if="currentDetail.refresh_token" link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('refreshToken')">
+                                    {{ tokenFormatState.refreshToken ? '还原' : '格式化' }}
+                                </el-button>
+                            </template>
                             <div v-if="currentDetail.refresh_token_hash" class="hash-label">Refresh Token Hash: {{ currentDetail.refresh_token_hash }}</div>
-                            <pre class="json-content">{{ currentDetail.refresh_token }}</pre>
+                            <pre class="json-content">{{ tokenFormatState.refreshToken ? formatJwtToken(currentDetail.refresh_token) : currentDetail.refresh_token }}</pre>
                         </el-collapse-item>
                     </el-collapse>
                 </template>
@@ -176,6 +188,10 @@
         margin-bottom: 10px;
         padding: 8px 0;
     }
+
+    .format-btn {
+        margin-left: 10px;
+    }
 }
 </style>
 
@@ -211,6 +227,11 @@ const openDetailDrawer = async (row) => {
     detailLoading.value = true
     activeCollapse.value = []
     currentDetail.value = null
+    // 重置格式化状态
+    tokenFormatState.value = {
+        accessToken: true,
+        refreshToken: true,
+    }
 
     try {
         const res = await getLoginLogDetail(row.id)
@@ -225,6 +246,17 @@ const openDetailDrawer = async (row) => {
 }
 
 /**
+ * 切换 Token 格式化状态
+ */
+const toggleTokenFormat = (type) => {
+    if (type === 'accessToken') {
+        tokenFormatState.value.accessToken = !tokenFormatState.value.accessToken
+    } else if (type === 'refreshToken') {
+        tokenFormatState.value.refreshToken = !tokenFormatState.value.refreshToken
+    }
+}
+
+/**
  * 格式化IP地址显示（包含IP所在地）
  */
 const formatIpAddress = (ip, ipLocation) => {
@@ -233,6 +265,67 @@ const formatIpAddress = (ip, ipLocation) => {
         return `${ip} ${ipLocation}`
     }
     return ip
+}
+
+/**
+ * Base64URL 解码（支持 UTF-8）
+ */
+const base64UrlDecode = (str) => {
+    // Base64URL 转 Base64
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+    // 添加填充
+    while (base64.length % 4) {
+        base64 += '='
+    }
+    // 使用 atob 解码
+    const binaryString = atob(base64)
+    // 将 Latin-1 字符串转换为 UTF-8
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+    }
+    // 使用 TextDecoder 解码为 UTF-8
+    return new TextDecoder('utf-8').decode(bytes)
+}
+
+/**
+ * 格式化JWT Token显示
+ */
+const formatJwtToken = (token) => {
+    if (!token) return ''
+
+    try {
+        const parts = token.split('.')
+        if (parts.length !== 3) {
+            return token // 不是标准JWT格式，直接返回
+        }
+
+        const [headerPart, payloadPart, signaturePart] = parts
+
+        // 解码 Header
+        let header = ''
+        try {
+            const headerStr = base64UrlDecode(headerPart)
+            const headerJson = JSON.parse(headerStr)
+            header = JSON.stringify(headerJson, null, 2)
+        } catch {
+            header = headerPart
+        }
+
+        // 解码 Payload
+        let payload = ''
+        try {
+            const payloadStr = base64UrlDecode(payloadPart)
+            const payloadJson = JSON.parse(payloadStr)
+            payload = JSON.stringify(payloadJson, null, 2)
+        } catch {
+            payload = payloadPart
+        }
+
+        return `Header:\n${header}\n\nPayload:\n${payload}\n\nSignature:\n${signaturePart}`
+    } catch {
+        return token // 解析失败，直接返回原始token
+    }
 }
 
 // ==================== 响应式数据 ====================
@@ -247,6 +340,10 @@ const showDetailDrawer = ref(false)
 const currentDetail = ref(null)
 const activeCollapse = ref([])
 const detailLoading = ref(false)
+const tokenFormatState = ref({
+    accessToken: true, // 默认格式化
+    refreshToken: true, // 默认格式化
+})
 
 // ==================== 查询相关 ====================
 const queryWhere = reactive({
