@@ -251,10 +251,10 @@
                     </el-col>
                     <el-col :span="3">
                         <el-form-item prop="is_external_links" label="是否外链">
-                            <el-switch v-model="formData.is_external_links" inline-prompt active-text="是" inactive-text="否" :active-value="1" :inactive-value="0" disabled />
+                            <el-switch v-model="formData.is_external_links" inline-prompt active-text="是" inactive-text="否" :active-value="1" :inactive-value="0" :disabled="formData.type === MENU_TYPE.BUTTON" />
                         </el-form-item>
                     </el-col>
-                    <el-col :span="4"></el-col>
+                    <el-col :span="4">
                         <el-form-item prop="is_new_window" label="新窗口打开" v-show="formData.is_external_links === 1">
                             <template #label>
                                 <span class="xl-label-with-icon">
