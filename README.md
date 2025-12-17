@@ -13,7 +13,7 @@
 
 <div align="center">
 
-### 🌐 [在线演示](https://x-l-admin.wannanbigpig.com/) | [说明文档](https://x-l-admin.wannanbigpig.com/)
+### 🌐 [在线演示](https://x-l-admin.wannanbigpig.com/)
 
 </div>
 
