@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth'
+import { hasButtonPermission } from '@/modules/auth/permission'
 
 // ==================== 常量定义 ====================
 /** Token 在 localStorage 中的存储键名 */
@@ -37,32 +38,5 @@ export function removeToken() {
  */
 export function hasPermission(permission, checkShow = false) {
   const authStore = useAuthStore()
-  const permissions = authStore.buttonPermissions || []
-
-  // 如果没有传入权限标识，默认有权限
-  if (!permission) {
-    return true
-  }
-
-  // 如果传入的是数组，需要所有权限都存在
-  if (Array.isArray(permission)) {
-    return permission.every((perm) => {
-      const hasPerm = permissions.includes(perm)
-      // 如果权限不存在或不需要检查显示状态，直接返回权限检查结果
-      if (!hasPerm || !checkShow) {
-        return hasPerm
-      }
-      // 如果需要检查显示状态，使用 shouldShowButton
-      return authStore.shouldShowButton(perm)
-    })
-  }
-
-  // 单个权限标识
-  const hasPerm = permissions.includes(permission)
-  // 如果权限不存在或不需要检查显示状态，直接返回权限检查结果
-  if (!hasPerm || !checkShow) {
-    return hasPerm
-  }
-  // 如果需要检查显示状态，使用 shouldShowButton
-  return authStore.shouldShowButton(permission)
+  return hasButtonPermission(authStore.buttonPermissionMap, authStore.buttonPermissions, permission, checkShow)
 }

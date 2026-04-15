@@ -16,16 +16,15 @@ import { ElMessage } from 'element-plus'
  * v-permission.disabled.hide.once="'adminUser:edit'" - 可以组合使用
  */
 export default {
-  mounted(el, binding) {
-    handlePermission(el, binding, true)
-  },
-  updated(el, binding) {
-    // 如果使用了 once 修饰符，跳过更新
-    if (binding.modifiers.once) {
-      return
-    }
-    handlePermission(el, binding, false)
-  },
+    mounted(el, binding) {
+        handlePermission(el, binding, true)
+    },
+    updated(el, binding) {
+        if (binding.modifiers.once) {
+            return
+        }
+        handlePermission(el, binding, false)
+    },
 }
 
 /**
@@ -35,51 +34,34 @@ export default {
  * @param {boolean} isMounted - 是否是首次挂载
  */
 function handlePermission(el, binding, isMounted) {
-  const { value, arg, modifiers } = binding
+    const { value, arg, modifiers } = binding
 
-  try {
-    // 如果没有传入权限值，默认显示
-    if (value === null || value === undefined || value === '') {
-      resetElement(el)
-      return
-    }
-
-    // 检查权限（同时检查显示状态）
-    let hasAuth = false
-
-    if (arg === 'or') {
-      // 或逻辑：满足任意一个权限即可
-      hasAuth = Array.isArray(value) ? value.some((perm) => hasPermission(perm, true)) : hasPermission(value, true)
-    } else {
-      // 默认逻辑：需要满足所有权限
-      hasAuth = hasPermission(value, true)
-    }
-
-    // 根据修饰符处理无权限的情况
-    if (!hasAuth) {
-      if (modifiers.disabled) {
-        // disabled 修饰符：禁用元素
-        disableElement(el)
-      } else if (modifiers.hide) {
-        // hide 修饰符：隐藏但保留占位
-        hideElement(el)
-      } else {
-        // 默认：移除元素（仅在首次挂载时）
-        if (isMounted) {
-          removeElement(el)
-        } else {
-          hideElement(el)
+    try {
+        if (value === null || value === undefined || value === '') {
+            resetElement(el)
+            return
         }
-      }
-    } else {
-      // 有权限：恢复元素状态
-      resetElement(el)
+
+        const hasAuth = arg === 'or' ? (Array.isArray(value) ? value.some((perm) => hasPermission(perm, true)) : hasPermission(value, true)) : hasPermission(value, true)
+
+        if (!hasAuth) {
+            if (modifiers.disabled) {
+                disableElement(el)
+            } else if (modifiers.hide) {
+                hideElement(el)
+            } else if (isMounted) {
+                removeElement(el)
+            } else {
+                hideElement(el)
+            }
+            return
+        }
+
+        resetElement(el)
+    } catch (error) {
+        console.error('[v-permission] 权限检查出错:', error)
+        hideElement(el)
     }
-  } catch (error) {
-    // 出错时默认隐藏元素，避免权限泄露
-    console.error('[v-permission] 权限检查出错:', error)
-    hideElement(el)
-  }
 }
 
 /**
@@ -87,29 +69,16 @@ function handlePermission(el, binding, isMounted) {
  * @param {HTMLElement} el - DOM 元素
  */
 function disableElement(el) {
-  // 保存原始 disabled 状态（如果存在）
-  if (!el.hasAttribute('data-original-disabled')) {
-    el.setAttribute('data-original-disabled', el.disabled ? 'true' : 'false')
-  }
+    if (!el.hasAttribute('data-original-disabled')) {
+        el.setAttribute('data-original-disabled', el.disabled ? 'true' : 'false')
+    }
 
-  if (el.tagName === 'BUTTON' || el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
-    // 不使用 disabled 属性，而是通过样式和事件处理来模拟禁用
-    // 这样点击事件仍然可以触发
+    const isNativeControl = ['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)
     el.setAttribute('data-permission-disabled', 'true')
     el.style.pointerEvents = 'auto'
     el.style.cursor = 'not-allowed'
-    el.style.opacity = '0.8'
-    // 添加点击事件监听器，显示提示（使用捕获阶段，确保优先执行）
+    el.style.opacity = isNativeControl ? '0.8' : '0.6'
     el.addEventListener('click', showNoPermissionMessage, true)
-  } else {
-    // 对于其他元素，添加禁用样式和阻止点击
-    el.style.pointerEvents = 'auto'
-    el.style.opacity = '0.6'
-    el.style.cursor = 'not-allowed'
-    el.setAttribute('data-permission-disabled', 'true')
-    // 添加点击事件监听器，显示提示
-    el.addEventListener('click', showNoPermissionMessage, true)
-  }
 }
 
 /**
@@ -117,13 +86,12 @@ function disableElement(el) {
  * @param {HTMLElement} el - DOM 元素
  */
 function hideElement(el) {
-  // 保存原始 display 值
-  if (!el.hasAttribute('data-original-display')) {
-    const originalDisplay = window.getComputedStyle(el).display
-    el.setAttribute('data-original-display', originalDisplay || '')
-  }
-  el.style.display = 'none'
-  el.setAttribute('data-permission-hidden', 'true')
+    if (!el.hasAttribute('data-original-display')) {
+        const originalDisplay = window.getComputedStyle(el).display
+        el.setAttribute('data-original-display', originalDisplay || '')
+    }
+    el.style.display = 'none'
+    el.setAttribute('data-permission-hidden', 'true')
 }
 
 /**
@@ -131,9 +99,9 @@ function hideElement(el) {
  * @param {HTMLElement} el - DOM 元素
  */
 function removeElement(el) {
-  if (el.parentNode) {
-    el.parentNode.removeChild(el)
-  }
+    if (el.parentNode) {
+        el.parentNode.removeChild(el)
+    }
 }
 
 /**
@@ -141,40 +109,26 @@ function removeElement(el) {
  * @param {HTMLElement} el - DOM 元素
  */
 function resetElement(el) {
-  // 恢复 disabled 状态
-  if (el.hasAttribute('data-permission-disabled')) {
-    if (el.tagName === 'BUTTON' || el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
-      // 恢复原始 disabled 状态
-      const originalDisabled = el.getAttribute('data-original-disabled')
-      if (originalDisabled === 'true') {
-        el.disabled = true
-      } else {
-        el.disabled = false
-      }
-      el.removeAttribute('data-original-disabled')
-      // 移除样式
-      el.style.pointerEvents = ''
-      el.style.cursor = ''
-      el.style.opacity = ''
-      // 移除点击事件监听器
-      el.removeEventListener('click', showNoPermissionMessage, true)
-    } else {
-      el.style.pointerEvents = ''
-      el.style.opacity = ''
-      el.style.cursor = ''
-      // 移除点击事件监听器
-      el.removeEventListener('click', showNoPermissionMessage, true)
-    }
-    el.removeAttribute('data-permission-disabled')
-  }
+    if (el.hasAttribute('data-permission-disabled')) {
+        if (['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) {
+            const originalDisabled = el.getAttribute('data-original-disabled')
+            el.disabled = originalDisabled === 'true'
+            el.removeAttribute('data-original-disabled')
+        }
 
-  // 恢复显示状态
-  if (el.hasAttribute('data-permission-hidden')) {
-    const originalDisplay = el.getAttribute('data-original-display')
-    el.style.display = originalDisplay || ''
-    el.removeAttribute('data-original-display')
-    el.removeAttribute('data-permission-hidden')
-  }
+        el.style.pointerEvents = ''
+        el.style.cursor = ''
+        el.style.opacity = ''
+        el.removeEventListener('click', showNoPermissionMessage, true)
+        el.removeAttribute('data-permission-disabled')
+    }
+
+    if (el.hasAttribute('data-permission-hidden')) {
+        const originalDisplay = el.getAttribute('data-original-display')
+        el.style.display = originalDisplay || ''
+        el.removeAttribute('data-original-display')
+        el.removeAttribute('data-permission-hidden')
+    }
 }
 
 /**
@@ -182,8 +136,8 @@ function resetElement(el) {
  * @param {Event} event - 事件对象
  */
 function showNoPermissionMessage(event) {
-  event.preventDefault()
-  event.stopPropagation()
-  event.stopImmediatePropagation()
-  ElMessage.warning('暂无权限')
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+    ElMessage.warning('暂无权限')
 }

@@ -31,7 +31,7 @@
                     <template #operation>
                         <el-table-column width="200" label="操作" align="center" fixed="right">
                             <template #default="scope">
-                                <xl-action-buttons :buttons="actionButtons" :scope="scope" />
+                                <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="3" />
                             </template>
                         </el-table-column>
                     </template>
@@ -45,7 +45,7 @@
                 <el-row :gutter="20">
                     <el-col :span="24">
                         <el-form-item label="上级部门" prop="pid">
-                            <el-select v-model="formData.pid" placeholder="请选择上级部门" :disabled="isParentFixed" clearable filterable style="width: 100%">
+                            <el-select v-model="formData.pid" placeholder="请选择上级部门" :disabled="isParentFixed || isProtectedEditingDepartment" clearable filterable style="width: 100%">
                                 <el-option label="顶级部门" :value="0" />
                                 <el-option v-for="dept in filteredDepartmentOptions" :key="dept.id" :label="dept.label || dept.name" :value="dept.id" :disabled="dept.level > 4" />
                             </el-select>
@@ -62,7 +62,7 @@
                 <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item label="排序" prop="sort">
-                            <el-input-number v-model.number="formData.sort" :min="0" :step="10" placeholder="请输入排序值" controls-position="right" style="width: 100%" />
+                            <el-input-number v-model.number="formData.sort" :min="0" :step="10" placeholder="请输入排序值" controls-position="right" style="width: 100%" :disabled="isProtectedEditingDepartment" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -163,12 +163,14 @@ import xlTableList from '@/components/tableList/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { getDepartmentList, createDepartment, updateDepartment, deleteDepartment, getDepartmentDetail, bindDepartmentRole } from '@/api/department'
-import { getRoleList } from '@/api/permission'
-import { filterNullUndefined } from '@/utils/helper'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { DEPARTMENT_EDIT_TYPE, isProtectedDepartment } from '@/modules/department/model'
+import { deleteDepartmentItem } from '@/modules/department/service'
+import { useDepartmentTreeList } from '@/modules/department/useDepartmentTreeList'
+import { useDepartmentForm } from '@/modules/department/useDepartmentForm'
+import { useDepartmentRoleBinding } from '@/modules/department/useDepartmentRoleBinding'
 const { getButtonInfoFull } = usePermission()
 const addChildButtonInfo = getButtonInfoFull('department:addChild')
 const addButtonInfo = getButtonInfoFull('department:add')
@@ -205,110 +207,45 @@ const actionButtons = computed(() => {
             showIcon: false,
             click: (row) => handleDelete(row),
             divided: true,
+            disabled: (row) => isProtectedDepartment(row),
+            tooltip: (row) => (isProtectedDepartment(row) ? '该系统保留对象不允许删除' : ''),
         },
     ]
 })
 
 // ==================== 常量定义 ====================
-const EDIT_TYPE = {
-    ADD: 1,
-    EDIT: 2,
-}
-
-const SUBMIT_DELAY = 3000
-
-// ==================== 表单相关 ====================
-const showDrawer = ref(false)
-const formDataRef = ref()
-const formTitle = ref('')
-const currentIndex = ref(null)
-const isSubmitting = ref(false)
-
-// 表单初始数据
-const initialFormData = {
-    id: 0,
-    name: '',
-    sort: 100,
-    pid: 0,
-    description: '',
-}
-
-const formData = reactive({ ...initialFormData })
-const originalFormData = ref(null)
-
-// 判断是否为编辑模式
-const isEditMode = computed(() => !!originalFormData.value)
-
-// 判断上级部门是否固定（新增子部门时固定）
-const isParentFixed = ref(false)
-
-// 表单验证规则
-const getDynamicRules = () => {
-    const trigger = ['blur', 'change']
-
-    return {
-        name: [{ required: true, message: '部门名称不能为空', trigger }],
-        sort: [{ required: true, message: '排序不能为空', trigger, type: 'number' }],
-    }
-}
-
-// ==================== 数据提交相关 ====================
-/**
- * 获取提交的字段数据（新增和编辑都提交所有字段）
- */
-const getSubmitData = () => {
-    return {
-        id: formData.id || 0,
-        name: formData.name,
-        sort: formData.sort,
-        pid: formData.pid ?? 0,
-        description: formData.description || '',
-    }
-}
-
-// ==================== 表单提交 ====================
-/**
- * 提交表单
- */
-const editConfirmSubmit = async () => {
-    if (isSubmitting.value) return
-
-    isSubmitting.value = true
-
-    try {
-        const valid = await formDataRef.value.validate().catch(() => false)
-        if (!valid) {
-            isSubmitting.value = false
-            return
-        }
-
-        const submitData = getSubmitData()
-
-        // 根据编辑模式调用不同的接口
-        if (isEditMode.value) {
-            await updateDepartment(submitData)
-        } else {
-            await createDepartment(submitData)
-        }
-
-        getList()
-        showDrawer.value = false
-        ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
-    } catch (error) {
-        console.error('提交失败:', error)
-    } finally {
-        // 延迟重置提交状态，防止重复提交
-        setTimeout(() => {
-            isSubmitting.value = false
-        }, SUBMIT_DELAY)
-    }
-}
+const EDIT_TYPE = DEPARTMENT_EDIT_TYPE
+const tableListRef = ref(null)
+const { loading, departmentList, departmentOptions, queryFormRef, queryWhere, isExpanded, getList, handleSearch, handleToggleExpand, getChildrenIds } = useDepartmentTreeList(tableListRef)
+const {
+    showDrawer,
+    formDataRef,
+    formTitle,
+    currentIndex,
+    isSubmitting,
+    isParentFixed,
+    isProtectedEditingDepartment,
+    formData,
+    getDynamicRules,
+    filteredDepartmentOptions,
+    openEditDrawer,
+    handleAddChild,
+    editConfirmSubmit,
+} = useDepartmentForm({ departmentOptions, getChildrenIds, refreshList: getList })
+const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentDepartmentName, roleOptions, roleOptionsLoading, bindRoleData, filterRole, handleBindRole, bindRoleConfirmSubmit } = useDepartmentRoleBinding({
+    refreshList: getList,
+})
 
 // ==================== 操作处理 ====================
 /**
  * 删除部门
  */
 const handleDelete = async (row) => {
+    if (isProtectedDepartment(row)) {
+        ElMessage.warning('默认部门不允许删除')
+        return
+    }
+
     try {
         await ElMessageBox.confirm('确认删除该部门吗?', '温馨提示', {
             confirmButtonText: '确认',
@@ -318,7 +255,7 @@ const handleDelete = async (row) => {
                     instance.confirmButtonLoading = true
                     instance.confirmButtonText = '删除中...'
                     try {
-                        await deleteDepartment({ id: row.id })
+                        await deleteDepartmentItem(row.id)
                         ElMessage.success('删除成功')
                         getList()
                         done()
@@ -337,318 +274,6 @@ const handleDelete = async (row) => {
     }
 }
 
-// ==================== 绑定角色相关 ====================
-const showBindRoleDrawer = ref(false)
-const bindRoleFormRef = ref()
-const isBindingRole = ref(false)
-const currentDepartmentName = ref('')
-const bindRoleData = reactive({
-    id: 0,
-    role_ids: [],
-})
-
-/**
- * 角色过滤方法
- */
-const filterRole = (query, item) => {
-    return item.name.toLowerCase().includes(query.toLowerCase())
-}
-
-/**
- * 打开绑定角色抽屉
- */
-const handleBindRole = async (row) => {
-    if (!row || typeof row.id !== 'number') {
-        ElMessage.error('无效的行数据')
-        return
-    }
-
-    currentDepartmentName.value = row.name || ''
-    bindRoleData.id = row.id
-    bindRoleData.role_ids = []
-
-    // 先打开抽屉，不阻塞
-    showBindRoleDrawer.value = true
-
-    // 如果角色列表未加载，则异步加载（不阻塞抽屉打开）
-    if (!roleOptionsLoaded.value) {
-        roleOptionsLoading.value = true
-        getRoleOptions()
-            .then(() => {
-                roleOptionsLoaded.value = true
-            })
-            .catch((error) => {
-                console.error('获取角色列表失败:', error)
-                ElMessage.error('获取角色列表失败')
-            })
-            .finally(() => {
-                roleOptionsLoading.value = false
-            })
-    }
-
-    // 获取部门详情，查看已绑定的角色
-    try {
-        const res = await getDepartmentDetail({ id: row.id })
-        const deptData = res.data?.data || res.data
-        if (deptData && Array.isArray(deptData.role_list)) {
-            // 使用 role_list 字段回显
-            bindRoleData.role_ids = deptData.role_list
-        } else if (deptData && Array.isArray(deptData.role_ids)) {
-            // 兼容 role_ids 字段
-            bindRoleData.role_ids = deptData.role_ids
-        } else if (deptData && Array.isArray(deptData.roles)) {
-            // 如果返回的是角色对象数组，提取ID
-            bindRoleData.role_ids = deptData.roles.map((role) => role.id)
-        }
-    } catch (error) {
-        console.error('获取部门详情失败:', error)
-        // 即使获取失败也继续显示绑定角色抽屉
-    }
-}
-
-/**
- * 提交绑定角色
- */
-const bindRoleConfirmSubmit = async () => {
-    if (isBindingRole.value) return
-
-    isBindingRole.value = true
-
-    try {
-        const submitData = {
-            id: bindRoleData.id,
-            role_ids: Array.isArray(bindRoleData.role_ids) ? bindRoleData.role_ids : [],
-        }
-
-        await bindDepartmentRole(submitData)
-        ElMessage.success('绑定角色成功')
-        showBindRoleDrawer.value = false
-        getList() // 刷新列表
-    } catch (error) {
-        console.error('绑定角色失败:', error)
-    } finally {
-        setTimeout(() => {
-            isBindingRole.value = false
-        }, SUBMIT_DELAY)
-    }
-}
-
-/**
- * 重置表单数据
- */
-const resetFormData = () => {
-    Object.assign(formData, { ...initialFormData })
-    isParentFixed.value = false
-    if (formDataRef.value) {
-        formDataRef.value.clearValidate()
-    }
-}
-
-/**
- * 保存原始数据（深拷贝）
- */
-const saveOriginalData = () => {
-    originalFormData.value = JSON.parse(
-        JSON.stringify({
-            id: formData.id,
-            name: formData.name,
-            sort: formData.sort,
-            pid: formData.pid,
-            description: formData.description,
-        })
-    )
-}
-
-/**
- * 获取部门的所有子部门ID（包括自己）
- */
-const getChildrenIds = (deptId) => {
-    // 使用已扁平化的部门选项列表
-    const flatList = departmentOptions.value
-
-    const result = [deptId]
-    const findChildren = (pid) => {
-        flatList.forEach((dept) => {
-            if (dept.pid === pid) {
-                result.push(dept.id)
-                findChildren(dept.id)
-            }
-        })
-    }
-    findChildren(deptId)
-    return result
-}
-
-/**
- * 过滤部门选项（编辑时排除自己和自己的子部门）
- */
-const filteredDepartmentOptions = computed(() => {
-    if (!isEditMode.value || !formData.id) {
-        return departmentOptions.value
-    }
-
-    // 获取当前部门及其所有子部门的ID
-    const excludeIds = getChildrenIds(formData.id)
-    return departmentOptions.value.filter((dept) => !excludeIds.includes(dept.id))
-})
-
-/**
- * 新增子部门
- */
-const handleAddChild = (parentRow) => {
-    if (!parentRow || typeof parentRow.id !== 'number') {
-        ElMessage.error('无效的行数据')
-        return
-    }
-    openEditDrawer(EDIT_TYPE.ADD, null, 0, parentRow.id)
-}
-
-/**
- * 打开编辑/新增抽屉
- */
-const openEditDrawer = async (type, row, index, fixedParentId = null) => {
-    // 参数校验
-    if (typeof type !== 'number' || ![EDIT_TYPE.ADD, EDIT_TYPE.EDIT].includes(type)) {
-        return
-    }
-
-    if (type === EDIT_TYPE.EDIT) {
-        if (!row || typeof row.id !== 'number') {
-            ElMessage.error('无效的行数据')
-            return
-        }
-
-        formTitle.value = '编辑部门'
-        currentIndex.value = index
-        resetFormData()
-
-        // 直接使用列表数据，不需要调用详情接口
-        Object.assign(formData, {
-            id: row.id,
-            name: row.name || '',
-            sort: row.sort ?? 100,
-            pid: row.pid ?? 0,
-            description: row.description || '',
-        })
-
-        saveOriginalData()
-    } else {
-        // 新增模式
-        formTitle.value = '新增部门'
-        resetFormData()
-        originalFormData.value = null
-
-        // 如果指定了父部门ID，固定上级部门字段
-        if (fixedParentId !== null) {
-            formData.pid = fixedParentId
-            isParentFixed.value = true
-        } else {
-            isParentFixed.value = false
-        }
-    }
-
-    currentIndex.value = index
-    showDrawer.value = true
-}
-
-// ==================== 搜索相关 ====================
-const queryFormRef = ref(null)
-const queryWhere = reactive({
-    name: null,
-})
-
-/**
- * 搜索
- */
-const handleSearch = () => {
-    getList()
-}
-
-/**
- * 切换展开/折叠所有行
- */
-const handleToggleExpand = () => {
-    if (!tableListRef.value) return
-    isExpanded.value = !isExpanded.value
-    tableListRef.value.toggleAllRows(isExpanded.value)
-}
-
-// ==================== 列表相关 ====================
-const loading = ref(false)
-const departmentList = ref([])
-const departmentOptions = ref([])
-const roleOptions = ref([])
-const roleOptionsLoading = ref(false) // 角色列表加载状态
-const roleOptionsLoaded = ref(false) // 标记角色数据是否已加载
-const tableListRef = ref(null)
-const isExpanded = ref(true) // 默认展开
-
-/**
- * 扁平化部门树（用于上级部门选择）
- */
-const flattenDepartmentTree = (tree, prefix = '') => {
-    const flatList = []
-    tree.forEach((dept) => {
-        const label = prefix ? `${prefix} / ${dept.name}` : dept.name
-        flatList.push({
-            ...dept,
-            label,
-        })
-        if (dept.children && dept.children.length > 0) {
-            flatList.push(...flattenDepartmentTree(dept.children, label))
-        }
-    })
-    return flatList
-}
-
-/**
- * 获取部门列表
- */
-const getList = async () => {
-    loading.value = true
-
-    try {
-        // 过滤空字符串，接口自动返回全部数据，不需要传 page 和 per_page
-        const filteredParams = {
-            ...queryWhere,
-            name: queryWhere.name?.trim() || undefined,
-        }
-
-        const res = await getDepartmentList(filterNullUndefined(filteredParams))
-        // 部门列表接口返回的是树形结构，直接是数组，没有分页信息
-        const deptData = res.data?.data || res.data
-
-        if (Array.isArray(deptData)) {
-            departmentList.value = deptData
-            // 同时更新部门选项（用于上级部门选择）
-            departmentOptions.value = flattenDepartmentTree(deptData)
-        } else {
-            departmentList.value = []
-            departmentOptions.value = []
-        }
-    } catch (error) {
-        console.error('获取部门列表失败:', error)
-        departmentList.value = []
-        departmentOptions.value = []
-    } finally {
-        loading.value = false
-    }
-}
-
-/**
- * 获取角色列表（用于绑定角色选择）
- */
-const getRoleOptions = async () => {
-    const res = await getRoleList({ page: 1, per_page: 9999 })
-    // 处理返回结构：res.data.data 或 res.data
-    const roleData = res.data?.data || res.data
-    if (Array.isArray(roleData)) {
-        roleOptions.value = roleData
-    }
-    return roleData
-}
-
-// ==================== 生命周期 ====================
 onMounted(() => {
     getList()
 })

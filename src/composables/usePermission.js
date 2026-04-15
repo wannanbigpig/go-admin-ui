@@ -14,36 +14,31 @@ import { hasPermission } from '@/utils/auth'
  * const buttonInfo = getButtonInfo('adminUser:edit')
  */
 export function usePermission() {
-  const authStore = useAuthStore()
+    const authStore = useAuthStore()
 
-  // 获取所有按钮权限列表
-  const buttonPermissions = computed(() => authStore.buttonPermissions || [])
+    const buttonPermissions = computed(() => authStore.buttonPermissions || [])
 
-  // 检查权限的方法
-  const checkPermission = (permission) => {
-    return hasPermission(permission)
-  }
+    const checkPermission = (permission) => {
+        return hasPermission(permission)
+    }
 
-  // 获取按钮信息（图标或名称）
-  const getButtonInfo = (code) => {
-    return authStore.getButtonInfo(code)
-  }
+    const getButtonInfo = (code) => {
+        return authStore.getButtonInfo(code)
+    }
 
-  // 获取完整的按钮信息对象（包括 icon, title, is_show）
-  const getButtonInfoFull = (code) => {
-    return authStore.getButtonInfoFull(code)
-  }
+    const getButtonInfoFull = (code) => {
+        return authStore.getButtonInfoFull(code)
+    }
 
-  // 检查按钮是否应该显示（有权限且 is_show 为 true）
-  const shouldShowButton = (code) => {
-    return authStore.shouldShowButton(code)
-  }
+    const shouldShowButton = (code) => {
+        return authStore.shouldShowButton(code)
+    }
 
-  return {
-    buttonPermissions,
-    checkPermission,
-    getButtonInfo,
-    getButtonInfoFull,
-    shouldShowButton,
-  }
+    return {
+        buttonPermissions,
+        checkPermission,
+        getButtonInfo,
+        getButtonInfoFull,
+        shouldShowButton,
+    }
 }

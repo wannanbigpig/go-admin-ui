@@ -45,6 +45,8 @@
                 :show-text="button.showText"
                 :type="button.type || 'primary'"
                 :link="button.link !== false"
+                :disabled="normalizeDisabled(button)"
+                :tooltip-content="normalizeTooltip(button)"
                 :button-info="button.buttonInfo"
                 :text="button.text || button.buttonInfo?.title || button.permission"
                 @click="handleClick(button, scope)"
@@ -60,25 +62,29 @@
                 :show-text="button.showText"
                 :type="button.type || 'primary'"
                 :link="button.link !== false"
+                :disabled="normalizeDisabled(button)"
+                :tooltip-content="normalizeTooltip(button)"
                 :button-info="button.buttonInfo"
                 :text="button.text || button.buttonInfo?.title || button.permission"
                 @click="handleClick(button, scope)"
             />
 
             <!-- 更多按钮下拉菜单 -->
-            <el-dropdown v-if="hasMoreButtons" trigger="click">
+            <el-dropdown v-if="hasMoreButtons" trigger="hover" size="small">
                 <el-button type="primary" link>
                     更多
                     <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
                     <el-dropdown-menu>
-                        <el-dropdown-item v-for="(button, index) in moreButtons" :key="index" :divided="button.divided" @click="handleClick(button, scope)">
-                            <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
-                                <xl-icon :icon="button.buttonInfo.icon" />
-                            </el-icon>
-                            {{ button.buttonInfo?.title || button.text || '操作' }}
-                        </el-dropdown-item>
+                        <el-tooltip v-for="(button, index) in moreButtons" :key="index" :content="normalizeTooltip(button)" placement="top" :disabled="!normalizeTooltip(button)">
+                            <el-dropdown-item :divided="button.divided" :disabled="normalizeDisabled(button)" :title="normalizeTooltip(button) || undefined" @click="handleClick(button, scope)">
+                                <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
+                                    <xl-icon :icon="button.buttonInfo.icon" />
+                                </el-icon>
+                                {{ button.buttonInfo?.title || button.text || '操作' }}
+                            </el-dropdown-item>
+                        </el-tooltip>
                     </el-dropdown-menu>
                 </template>
             </el-dropdown>
@@ -129,11 +135,32 @@ const props = defineProps({
  */
 const visibleButtons = computed(() => {
     return props.buttons.filter((btn) => {
+        const row = props.scope?.row || props.scope
+        if (typeof btn.visible === 'function' && !btn.visible(row, props.scope?.$index)) {
+            return false
+        }
+
         // 检查权限：如果有 buttonInfo 且 is_show 为 false，则不显示；否则检查权限
         const hasPermission = btn.buttonInfo?.is_show === false ? false : checkPermission(btn.permission)
         return hasPermission
     })
 })
+
+const normalizeDisabled = (button) => {
+    if (typeof button.disabled === 'function') {
+        const row = props.scope?.row || props.scope
+        return button.disabled(row, props.scope?.$index)
+    }
+    return !!button.disabled
+}
+
+const normalizeTooltip = (button) => {
+    if (typeof button.tooltip === 'function') {
+        const row = props.scope?.row || props.scope
+        return button.tooltip(row, props.scope?.$index) || ''
+    }
+    return button.tooltip || ''
+}
 
 /**
  * 是否应该显示所有按钮（按钮数量 <= maxVisibleButtons）
@@ -163,6 +190,10 @@ const hasMoreButtons = computed(() => {
  * 处理按钮点击事件
  */
 const handleClick = (button, scope) => {
+    if (normalizeDisabled(button)) {
+        return
+    }
+
     if (button.click && typeof button.click === 'function') {
         // 如果 click 是函数，直接调用
         // scope 可能是 { row, $index } 或者直接是 row 对象

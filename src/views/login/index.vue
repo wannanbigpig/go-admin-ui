@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { getCaptcha } from '@/api/login'
+import { fetchCaptcha } from '@/modules/auth/service'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
@@ -111,10 +111,10 @@ const validateRules = {
  */
 const refreshCaptcha = async () => {
     try {
-        const res = await getCaptcha()
-        captchaSrc.value = res.data.b64s
-        loginForm.captchaId = res.data.id
-        captchaAnswer.value = res.data.answer
+        const captcha = await fetchCaptcha()
+        captchaSrc.value = captcha.b64s
+        loginForm.captchaId = captcha.id
+        captchaAnswer.value = captcha.answer
     } catch (error) {
         console.error('获取验证码失败:', error)
         ElMessage.error('获取验证码失败')

@@ -150,17 +150,16 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
-import { editPermission, getPermissionList } from '@/api/permission'
-import { checkNumber, filterNullUndefined } from '@/utils/helper'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import Clipboard from 'clipboard'
-import { ElMessage } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { API_PERMISSION_METHOD_OPTIONS, API_PERMISSION_SWITCH_VALUE } from '@/modules/apiPermission/model'
+import { useApiPermissionList } from '@/modules/apiPermission/useApiPermissionList'
+import { useApiPermissionForm } from '@/modules/apiPermission/useApiPermissionForm'
+
 const { getButtonInfoFull } = usePermission()
 const buttonInfo = getButtonInfoFull('api:update')
-/**
- * 操作按钮配置
- */
+
 const actionButtons = computed(() => {
     return [
         {
@@ -172,182 +171,21 @@ const actionButtons = computed(() => {
     ]
 })
 
-// ==================== 常量定义 ====================
-/** 提交防抖时间（毫秒） */
-const SUBMIT_DEBOUNCE_TIME = 3000
+const METHOD_OPTIONS = API_PERMISSION_METHOD_OPTIONS
+const SWITCH_VALUE = API_PERMISSION_SWITCH_VALUE
 
-/** HTTP 请求方法选项 */
-const METHOD_OPTIONS = [
-    { value: 'POST', label: 'POST' },
-    { value: 'GET', label: 'GET' },
-    { value: 'PUT', label: 'PUT' },
-    { value: 'DELETE', label: 'DELETE' },
-    { value: 'OPTIONS', label: 'OPTIONS' },
-    { value: 'HEAD', label: 'HEAD' },
-    { value: 'PATCH', label: 'PATCH' },
-]
+const { loading, permissionList, pagination, queryFormRef, queryWhere, handleSearch, loadList } = useApiPermissionList()
+const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, editFormRules, handleSortNumberChange, handleEditClick, editConfirmSubmit } =
+    useApiPermissionForm(permissionList)
 
-/** 开关值 */
-const SWITCH_VALUE = {
-    NO: 0,
-    YES: 1,
-}
-
-// ==================== 工具函数 ====================
-/**
- * 复制文本到剪贴板
- */
 const handleCopyClick = (text) => {
     Clipboard.copy(text)
 }
 
-/**
- * 处理排序数字输入
- */
-let sortNumericValue
-const handleSortNumberChange = (value) => {
-    if (value === '') {
-        currentRow.value.sort = 0
-        return
-    }
-    if (checkNumber(value, 0)) {
-        sortNumericValue = value
-        return true
-    }
-    currentRow.value.sort = sortNumericValue
-}
-
-// ==================== 响应式数据 ====================
-// 抽屉相关
-const showDrawer = ref(false)
-const currentRowRef = ref(null)
-const currentRow = ref(null)
-const currentIndex = ref(null)
-const isSubmitting = ref(false)
-
-// 列表相关
-const loading = ref(false)
-const permissionList = ref([])
-const queryFormRef = ref(null)
-
-// ==================== 表单验证规则 ====================
-const editFormRules = {
-    name: [
-        { required: true, message: '接口名称不能为空', trigger: 'blur' },
-        { min: 1, max: 60, message: '名称不超过60个字符', trigger: 'blur' },
-    ],
-    is_auth: [
-        { required: true, message: '是否鉴权必填', trigger: 'change' },
-        { type: 'enum', enum: [SWITCH_VALUE.NO, SWITCH_VALUE.YES], message: '选择的值只能是或否', trigger: 'change' },
-    ],
-    sort: [{ trigger: 'blur', type: 'integer', message: '请输入整数类型' }],
-}
-
-// ==================== 查询相关 ====================
-const queryWhere = reactive({
-    page: 1,
-    per_page: 10,
-    method: null,
-    keyword: null,
-    is_auth: null,
-    is_effective: null,
-})
-
-const pagination = reactive({
-    total: 0,
-    page: 1,
-    page_size: 10,
-    pageSizeChange: (val) => {
-        queryWhere.per_page = val
-        getList()
-    },
-    pageChange: (val) => {
-        queryWhere.page = val
-        getList()
-    },
-})
-
-/**
- * 搜索
- */
-const handleSearch = () => {
-    queryWhere.page = 1 // 搜索时重置到第一页
-    getList()
-}
-
-// ==================== 表单操作 ====================
-/**
- * 提交表单
- */
-const editConfirmSubmit = async () => {
-    if (isSubmitting.value) return
-
-    isSubmitting.value = true
-
-    try {
-        const valid = await currentRowRef.value.validate().catch(() => false)
-        if (!valid) {
-            isSubmitting.value = false
-            return
-        }
-
-        const submitData = {
-            id: currentRow.value.id,
-            name: currentRow.value.name,
-            sort: currentRow.value.sort,
-            is_auth: currentRow.value.is_auth,
-            desc: currentRow.value.desc,
-        }
-
-        await editPermission(submitData)
-        permissionList.value[currentIndex.value] = { ...currentRow.value }
-        showDrawer.value = false
-        ElMessage.success('编辑成功')
-    } catch (error) {
-        console.error('提交失败:', error)
-    } finally {
-        setTimeout(() => {
-            isSubmitting.value = false
-        }, SUBMIT_DEBOUNCE_TIME)
-    }
-}
-
-/**
- * 打开编辑抽屉
- */
-const handleEditClick = (row, index) => {
-    currentRow.value = { ...row }
-    currentIndex.value = index
-    showDrawer.value = true
-}
-
-// ==================== 列表相关 ====================
-/**
- * 获取权限列表
- */
-const getList = async () => {
-    loading.value = true
-
-    try {
-        const res = await getPermissionList(filterNullUndefined(queryWhere))
-        pagination.total = res.data.total
-        pagination.page = res.data.current_page
-        pagination.page_size = res.data.per_page
-        permissionList.value = res.data.data
-    } catch (error) {
-        console.error('获取权限列表失败:', error)
-        ElMessage.error('获取权限列表失败')
-    } finally {
-        loading.value = false
-    }
-}
-
-// ==================== 生命周期 ====================
 onMounted(() => {
-    getList()
+    loadList()
 })
 
-// ==================== 表格配置 ====================
 const tableTitle = [
     {
         prop: 'code',

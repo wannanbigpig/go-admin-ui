@@ -394,13 +394,21 @@ import { Icon as XlIcon } from '@iconify/vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { deleteMenu, createMenu, updateMenu, getMenuList, getMenuDetail, getPermissionList } from '@/api/permission'
-import { filterNullUndefined, checkNumber, pick } from '@/utils/helper'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import Clipboard from 'clipboard'
-import { ElLoading, ElMessage, ElMessageBox } from 'element-plus'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import { usePermission } from '@/composables/usePermission'
+import {
+    MENU_CASCADER_PROPS,
+    MENU_OPERATION_TYPE,
+    MENU_STATUS,
+    MENU_STEP,
+    MENU_TYPE,
+} from '@/modules/menu/model'
+import { useMenuList } from '@/modules/menu/useMenuList'
+import { useMenuPermissionSelection } from '@/modules/menu/useMenuPermissionSelection'
+import { useMenuForm } from '@/modules/menu/useMenuForm'
+
 const { getButtonInfoFull } = usePermission()
 const addChildButtonInfo = getButtonInfoFull('menu:addChild')
 const addButtonInfo = getButtonInfoFull('menu:add')
@@ -434,580 +442,41 @@ const actionButtons = computed(() => {
     ]
 })
 
-// ==================== 常量定义 ====================
-/** 菜单类型 */
-const MENU_TYPE = {
-    DIRECTORY: 1, // 目录
-    MENU: 2, // 菜单
-    BUTTON: 3, // 按钮
-}
+const OPERATION_TYPE = MENU_OPERATION_TYPE
+const STEP = MENU_STEP
+const STATUS = MENU_STATUS
+const cascaderProps = MENU_CASCADER_PROPS
 
-/** 操作类型 */
-const OPERATION_TYPE = {
-    ADD: 1, // 新增
-    EDIT: 2, // 编辑
-}
-
-/** 步骤 */
-const STEP = {
-    BASIC_INFO: 1, // 基础信息
-    PERMISSION: 2, // 选择权限
-}
-
-/** 状态值 */
-const STATUS = {
-    DISABLED: 0, // 禁用
-    ENABLED: 1, // 正常
-    ALL: 2, // 全部
-}
-
-/** 开关值 */
-const SWITCH_VALUE = {
-    NO: 0,
-    YES: 1,
-}
-
-/** 提交防抖时间（毫秒） */
-const SUBMIT_DEBOUNCE_TIME = 3000
-
-/** 权限列表查询参数 */
-const PERMISSION_QUERY_PARAMS = {
-    page: 1,
-    per_page: 9999,
-    is_auth: 1,
-}
-
-// ==================== 级联选择器配置 ====================
-const cascaderProps = {
-    checkStrictly: true,
-    expandTrigger: 'hover',
-    label: 'title',
-    value: 'id',
-    emitPath: false,
-    disabled: 'disabled',
-}
-
-// ==================== 响应式数据 ====================
-// 列表相关
-const loading = ref(true)
-const menuList = ref([])
-const selectMenuList = ref([])
 const tableListRef = ref(null)
-const isExpanded = ref(false) // 默认展开，因为设置了 default-expand-all
-const queryWhere = reactive({
-    keyword: null,
-    is_auth: null,
-    status: STATUS.ALL,
+const { loading, menuList, queryFormRef, queryWhere, isExpanded, getList, handleSearch, handleToggleExpand, getSelectMenuList } = useMenuList(tableListRef)
+const { permissionList, permissionListLoading, filterPermission, fetchPermissionList } = useMenuPermissionSelection()
+const {
+    showDrawer,
+    step,
+    formTitle,
+    formDataRef,
+    isParentFixed,
+    currentIndex,
+    isSubmitting,
+    formData,
+    editFormRules,
+    handleAnimateDurationChange,
+    handlePathChange,
+    handleStepChange,
+    handleSubmit,
+    handleCancel,
+    handleDrawerClose,
+    openEditDrawer,
+    handleAddChild,
+    handleDelete,
+} = useMenuForm({
+    fetchPermissionList,
+    getList,
 })
 
-// 抽屉相关
-const showDrawer = ref(false)
-const step = ref(STEP.BASIC_INFO)
-const formTitle = ref('新增菜单')
-const formDataRef = ref(null)
-const isParentFixed = ref(false) // 上级菜单是否固定（新增子菜单时固定）
-const currentIndex = ref(null)
-const isSubmitting = ref(false)
-
-// 权限相关
-const permissionList = ref(null)
-const permissionListLoading = ref(false) // 权限列表加载状态
-
-// 表单引用
-const queryFormRef = ref(null)
-
-// ==================== 初始表单数据 ====================
-const initialFormData = {
-    id: 0,
-    title: '',
-    pid: 0,
-    path: '',
-    redirect: '',
-    name: '',
-    component: '',
-    code: '',
-    is_external_links: 0,
-    icon: '',
-    sort: 100,
-    type: MENU_TYPE.MENU,
-    is_auth: 1,
-    status: 1,
-    is_show: 1,
-    is_new_window: 0,
-    animate_duration: 0,
-    animate_enter: '',
-    animate_leave: '',
-    description: '',
-    api_list: [],
-}
-
-const formData = reactive({ ...initialFormData })
-
-// ==================== 工具函数 ====================
-/**
- * 复制文本到剪贴板
- */
 const handleCopyClick = (text) => {
     Clipboard.copy(text)
 }
-
-/**
- * 重置表单数据
- */
-const resetFormData = () => {
-    Object.assign(formData, initialFormData)
-    if (formDataRef.value) {
-        formDataRef.value.clearValidate()
-    }
-}
-
-/**
- * 处理动画时长输入
- */
-let numericValue
-const handleAnimateDurationChange = (value, decimal = 2) => {
-    // 去掉开头的 0（除非后面跟着小数点）
-    const val = value.replace(/^(0+)(?=\d)/, '')
-    formData.animate_duration = val
-
-    if (value === '') {
-        formData.animate_duration = 0
-        return
-    }
-
-    if (checkNumber(value, decimal)) {
-        numericValue = val
-        return true
-    }
-
-    formData.animate_duration = numericValue
-}
-
-/**
- * 处理路由地址变化，自动判断是否为外链
- */
-const handlePathChange = (val) => {
-    const isExternalLink = val.startsWith('http://') || val.startsWith('https://')
-    formData.is_external_links = isExternalLink ? SWITCH_VALUE.YES : SWITCH_VALUE.NO
-}
-
-// ==================== 表单验证规则 ====================
-const editFormRules = {
-    title: [
-        { required: true, message: '名称不能为空', trigger: 'blur' },
-        { min: 1, max: 12, message: '名称不超过12个字符', trigger: 'blur' },
-    ],
-    pid: [
-        {
-            required: true,
-            message: '上级菜单不能为空',
-            trigger: 'blur',
-            validator: (rule, value, callback) => {
-                // pid 可以是 0（顶级菜单）或大于 0 的数字
-                if (value === null || value === undefined || value === '') {
-                    callback(new Error('上级菜单不能为空'))
-                } else {
-                    callback()
-                }
-            },
-        },
-    ],
-    type: [{ required: true, message: '菜单类型不能为空', trigger: 'blur' }],
-    is_auth: [{ required: true, message: '是否鉴权不能为空', trigger: 'blur' }],
-    is_show: [{ required: true, message: '是否显示不能为空', trigger: 'blur' }],
-    sort: [{ trigger: 'blur', type: 'integer', message: '请输入整数类型' }],
-    path: [
-        {
-            trigger: 'blur',
-            validator: (rule, value, callback) => {
-                callback()
-            },
-        },
-    ],
-    name: [
-        {
-            trigger: 'blur',
-            validator: (rule, value, callback) => {
-                // 菜单类型必须填写路由名称
-                if (formData.type === MENU_TYPE.MENU && !value) {
-                    callback(new Error('请输入路由名称'))
-                }
-                callback()
-            },
-        },
-    ],
-    component: [
-        {
-            trigger: 'blur',
-            validator: (rule, value, callback) => {
-                // 菜单类型且非外链时必须填写组件路径
-                if (formData.type === MENU_TYPE.MENU && formData.is_external_links !== SWITCH_VALUE.YES) {
-                    if (!value) {
-                        callback(new Error('请输入组件路径'))
-                    }
-                }
-                // 组件路径验证
-                if (value) {
-                    if (value.startsWith('/')) {
-                        callback(new Error('组件路径不能以 / 开头'))
-                    }
-                    if (!/^[a-zA-Z0-9/._-]+$/.test(value)) {
-                        callback(new Error('组件路径只能包含字母、数字、/、.、_、-'))
-                    }
-                }
-                callback()
-            },
-        },
-    ],
-    code: [
-        {
-            trigger: 'blur',
-            validator: (rule, value, callback) => {
-                // 按钮类型必须填写权限标识
-                if (formData.type === MENU_TYPE.BUTTON && !value) {
-                    callback(new Error('请输入权限标识'))
-                }
-                callback()
-            },
-        },
-    ],
-}
-
-// ==================== 表单操作 ====================
-/**
- * 处理步骤切换
- */
-const handleStepChange = async (targetStep) => {
-    if (targetStep === STEP.PERMISSION) {
-        // 切换到权限选择步骤，先验证表单
-        try {
-            await formDataRef.value.validate()
-            // 验证通过，先切换到权限选择步骤，不阻塞
-            step.value = targetStep
-            // 按需获取权限列表（异步加载，不阻塞步骤切换）
-            if (!permissionList.value) {
-                permissionListLoading.value = true
-                fetchPermissionList()
-                    .then(() => {
-                        // 权限列表加载完成
-                    })
-                    .catch((error) => {
-                        console.error('获取权限列表失败:', error)
-                    })
-                    .finally(() => {
-                        permissionListLoading.value = false
-                    })
-            }
-        } catch (fields) {
-            // 验证失败，自动滚动到第一个错误字段
-            if (fields && typeof fields === 'object') {
-                const firstErrorField = Object.keys(fields)[0]
-                if (firstErrorField && formDataRef.value) {
-                    formDataRef.value.scrollToField(firstErrorField)
-                }
-            }
-            ElMessage.warning('请先完善基础信息')
-        }
-    } else {
-        step.value = targetStep
-    }
-}
-
-/**
- * 提交表单
- */
-const handleSubmit = async () => {
-    if (isSubmitting.value) return
-
-    isSubmitting.value = true
-
-    // 根据菜单类型清理不需要的字段
-    if (formData.type === MENU_TYPE.BUTTON) {
-        // 按钮类型：清空菜单相关字段
-        formData.name = ''
-        formData.path = ''
-        formData.redirect = ''
-        formData.component = ''
-    } else {
-        // 非按钮类型：清空权限标识
-        formData.code = ''
-    }
-
-    try {
-        // 根据是否有 id 判断是新增还是编辑
-        if (formData.id > 0) {
-            await updateMenu(formData)
-        } else {
-            await createMenu(formData)
-        }
-        ElMessage.success('操作成功')
-        getList()
-        showDrawer.value = false
-    } catch (error) {
-        console.error('提交失败:', error)
-    } finally {
-        setTimeout(() => {
-            isSubmitting.value = false
-        }, SUBMIT_DEBOUNCE_TIME)
-    }
-}
-
-/**
- * 取消操作
- */
-const handleCancel = () => {
-    // 编辑模式下退出需要确认
-    if (formData.id > 0) {
-        ElMessageBox.confirm(`已填写数据将会重置，确认退出${formTitle.value}吗?`, '温馨提示')
-            .then(() => {
-                closeDrawer()
-            })
-            .catch(() => {
-                // 用户取消，不做任何操作
-            })
-    } else {
-        closeDrawer()
-    }
-}
-
-/**
- * 关闭抽屉
- */
-const closeDrawer = () => {
-    showDrawer.value = false
-    isParentFixed.value = false
-}
-
-/**
- * 抽屉关闭前的回调
- */
-const handleDrawerClose = (done) => {
-    if (formData.id > 0) {
-        ElMessageBox.confirm(`已填写数据将会重置，确认退出${formTitle.value}吗?`, '温馨提示')
-            .then(() => {
-                isParentFixed.value = false
-                done()
-            })
-            .catch(() => {
-                // 用户取消，不做任何操作
-            })
-    } else {
-        isParentFixed.value = false
-        done()
-    }
-}
-
-// ==================== 菜单操作 ====================
-/**
- * 新增子菜单
- */
-const handleAddChild = (parentRow) => {
-    if (!parentRow || typeof parentRow.id !== 'number') {
-        ElMessage.error('无效的行数据')
-        return
-    }
-    openEditDrawer(OPERATION_TYPE.ADD, null, 0, parentRow.id)
-}
-
-/**
- * 打开编辑抽屉
- */
-const openEditDrawer = (type, row, index, fixedParentId = null) => {
-    // 参数校验
-    if (typeof type !== 'number' || ![OPERATION_TYPE.ADD, OPERATION_TYPE.EDIT].includes(type)) {
-        return
-    }
-
-    if (type === OPERATION_TYPE.EDIT && (!row || typeof row.id !== 'number')) {
-        ElMessage.error('无效的行数据')
-        return
-    }
-
-    // 重置表单和步骤
-    resetFormData()
-    step.value = STEP.BASIC_INFO
-
-    if (type === OPERATION_TYPE.EDIT) {
-        // 编辑模式
-        formTitle.value = '编辑菜单'
-        isParentFixed.value = false
-        loadMenuDetail(row.id, index)
-    } else {
-        // 新增模式
-        formTitle.value = '新增菜单'
-        if (fixedParentId !== null) {
-            formData.pid = fixedParentId
-            isParentFixed.value = true
-        } else {
-            isParentFixed.value = false
-        }
-        showDrawer.value = true
-    }
-}
-
-/**
- * 加载菜单详情
- */
-const loadMenuDetail = async (menuId, index) => {
-    const loadingInstance = ElLoading.service({
-        lock: true,
-        text: '加载中...',
-        background: 'rgba(0, 0, 0, 0.7)',
-        zIndex: 3000,
-    })
-
-    try {
-        const res = await getMenuDetail({ id: menuId })
-        if (res?.data) {
-            Object.assign(formData, pick(res.data, Object.keys(initialFormData)))
-            currentIndex.value = index
-            showDrawer.value = true
-        } else {
-            throw new Error('获取的数据无效')
-        }
-    } catch (error) {
-        ElMessage.error('获取菜单详情失败')
-        console.error(error)
-    } finally {
-        loadingInstance.close()
-    }
-
-    // 按需获取权限列表（异步加载，不阻塞）
-    if (!permissionList.value) {
-        permissionListLoading.value = true
-        fetchPermissionList()
-            .then(() => {
-                // 权限列表加载完成
-            })
-            .catch((error) => {
-                console.error('获取权限列表失败:', error)
-            })
-            .finally(() => {
-                permissionListLoading.value = false
-            })
-    }
-}
-
-/**
- * 删除菜单
- */
-const handleDelete = async (row) => {
-    try {
-        await ElMessageBox.confirm('确认删除该菜单吗?', '温馨提示', {
-            confirmButtonText: '确认',
-            cancelButtonText: '取消',
-            beforeClose: async (action, instance, done) => {
-                if (action === 'confirm') {
-                    instance.confirmButtonLoading = true
-                    instance.confirmButtonText = '删除中...'
-                    try {
-                        await deleteMenu({ id: row.id })
-                        ElMessage.success('删除成功')
-                        getList()
-                        done()
-                    } catch (error) {
-                        console.error('删除失败:', error)
-                        instance.confirmButtonLoading = false
-                        instance.confirmButtonText = '确认'
-                    }
-                } else {
-                    done()
-                }
-            },
-        })
-    } catch {
-        // 用户取消删除时不处理
-    }
-}
-
-// ==================== 权限相关 ====================
-/**
- * 过滤权限选项
- */
-const filterPermission = (query, item) => {
-    const lowerQuery = query.toLowerCase()
-    return item.name.toLowerCase().includes(lowerQuery) || item.route.includes(lowerQuery)
-}
-
-/**
- * 获取权限列表
- */
-const fetchPermissionList = async () => {
-    try {
-        const res = await getPermissionList(PERMISSION_QUERY_PARAMS)
-        permissionList.value = res.data?.data || res.data || []
-    } catch (error) {
-        console.error('获取权限列表失败:', error)
-        ElMessage.error('获取权限列表失败')
-        throw error
-    }
-}
-
-// ==================== 菜单列表相关 ====================
-/**
- * 递归处理菜单项，禁用按钮类型和当前编辑的菜单
- */
-const processMenuItem = (item, currentId) => {
-    const menuItem = { ...item }
-
-    // 当前编辑的菜单或按钮类型需要禁用
-    if (item.id === currentId || item.type === MENU_TYPE.BUTTON) {
-        menuItem.disabled = true
-    }
-
-    // 递归处理子菜单
-    if (item.children?.length > 0) {
-        menuItem.children = item.children.map((child) => processMenuItem(child, currentId))
-    }
-
-    return menuItem
-}
-
-/**
- * 获取级联选择器的菜单列表
- */
-const getSelectMenuList = (currentMenuId) => {
-    const processedList = menuList.value.slice().map((item) => processMenuItem(item, currentMenuId))
-
-    // 添加顶级菜单选项
-    selectMenuList.value = [{ title: '顶级菜单', id: 0 }, ...processedList]
-    return selectMenuList.value
-}
-
-// ==================== 列表查询 ====================
-/**
- * 搜索
- */
-const handleSearch = () => {
-    getList()
-}
-
-/**
- * 切换展开/折叠所有行
- */
-const handleToggleExpand = () => {
-    if (!tableListRef.value) return
-    isExpanded.value = !isExpanded.value
-    tableListRef.value.toggleAllRows(isExpanded.value)
-}
-
-/**
- * 获取菜单列表
- */
-const getList = async () => {
-    loading.value = true
-    try {
-        const res = await getMenuList(filterNullUndefined(queryWhere))
-        menuList.value = res.data
-    } catch (error) {
-        console.error('获取菜单列表失败:', error)
-        ElMessage.error('获取菜单列表失败')
-    } finally {
-        loading.value = false
-    }
-}
-
-// ==================== 生命周期 ====================
 onMounted(() => {
     getList()
 })

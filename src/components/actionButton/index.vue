@@ -111,14 +111,16 @@
   6. 权限控制使用 v-permission 指令，会自动应用到根元素
 -->
 <template>
-    <span class="xl-action-button-wrapper">
-        <el-tooltip v-if="shouldShowTooltip" :content="buttonInfo?.title || text" placement="top">
-            <el-button v-bind="buttonAttrs" @click="handleClick">
-                <el-icon v-if="shouldShowIcon">
-                    <xl-icon :icon="buttonInfo?.icon" />
-                </el-icon>
-                <span v-if="shouldShowText">{{ buttonInfo?.title || text }}</span>
-            </el-button>
+    <span class="xl-action-button-wrapper" :title="tooltipContent || undefined">
+        <el-tooltip v-if="tooltipContent" :content="tooltipContent" placement="top">
+            <span class="xl-action-button-tooltip-trigger">
+                <el-button v-bind="buttonAttrs" @click="handleClick">
+                    <el-icon v-if="shouldShowIcon">
+                        <xl-icon :icon="buttonInfo?.icon" />
+                    </el-icon>
+                    <span v-if="shouldShowText">{{ buttonInfo?.title || text }}</span>
+                </el-button>
+            </span>
         </el-tooltip>
         <el-button v-else v-bind="buttonAttrs" @click="handleClick">
             <el-icon v-if="shouldShowIcon">
@@ -180,6 +182,10 @@ const props = defineProps({
         type: String,
         default: undefined,
     },
+    tooltipContent: {
+        type: String,
+        default: '',
+    },
 })
 
 // ==================== Emits 定义 ====================
@@ -206,6 +212,9 @@ const buttonAttrs = computed(() => {
     }
     if (props.size !== undefined) {
         result.size = props.size
+    }
+    if (props.tooltipContent) {
+        result.title = props.tooltipContent
     }
 
     // 排除 class 和 style（这些不应该传递给按钮，应该应用到根元素）
@@ -253,6 +262,11 @@ const shouldShowTooltip = computed(() => {
     return props.showTooltip && !props.showText && shouldShowIcon.value && !shouldShowText.value
 })
 
+const tooltipContent = computed(() => {
+    if (props.tooltipContent) return props.tooltipContent
+    return shouldShowTooltip.value ? props.buttonInfo?.title || props.text : ''
+})
+
 // ==================== 方法 ====================
 /**
  * 处理按钮点击事件
@@ -264,8 +278,17 @@ const handleClick = (event) => {
 
 <style lang="scss" scoped>
 .xl-action-button-wrapper {
-    display: inline-block;
+    display: inline-flex;
     vertical-align: middle;
+    align-items: center;
+}
+
+.xl-action-button-tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    cursor: not-allowed;
 }
 </style>
 
@@ -285,5 +308,13 @@ const handleClick = (event) => {
 .xl-action-button-wrapper .el-button {
     margin-left: 0;
     margin-right: 0;
+}
+
+.xl-action-button-tooltip-trigger .el-button.is-disabled {
+    pointer-events: none;
+}
+
+.xl-action-button-tooltip-trigger .el-button.is-disabled > * {
+    pointer-events: none;
 }
 </style>

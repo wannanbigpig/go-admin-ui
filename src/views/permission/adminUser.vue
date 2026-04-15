@@ -73,7 +73,7 @@
                     <template #operation>
                         <el-table-column width="200" label="操作" align="center" fixed="right">
                             <template #default="scope">
-                                <xl-action-buttons :buttons="actionButtons" :scope="scope" />
+                                <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="2" />
                             </template>
                         </el-table-column>
                     </template>
@@ -127,7 +127,7 @@
                     </el-col>
                     <el-col :span="12">
                         <el-form-item prop="status" label="状态">
-                            <el-select v-model="formData.status" placeholder="请选择状态" clearable>
+                            <el-select v-model="formData.status" placeholder="请选择状态" clearable :disabled="isRootAdminEditing">
                                 <el-option label="正常" :value="STATUS.NORMAL" />
                                 <el-option label="禁用" :value="STATUS.DISABLED" />
                             </el-select>
@@ -180,8 +180,8 @@
                         v-model="bindRoleData.role_ids"
                         filterable
                         :filter-method="filterRole"
-                        :props="{ key: 'id', label: 'name' }"
-                        :data="roleOptions"
+                        :props="transferProps"
+                        :data="roleTransferOptions"
                         :titles="['全部角色', '已绑定角色']"
                         target-order="push"
                         filter-placeholder="角色名称"
@@ -259,14 +259,16 @@ import xlTableList from '@/components/tableList/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
-import { getAdminUserList, getFullEmail, getFullPhone, uploadAvatar, createAdminUser, updateAdminUser, deleteAdminUser, bindAdminUserRole, getAdminUserDetail } from '@/api/adminUser'
-import { getDepartmentList } from '@/api/department'
-import { getRoleList } from '@/api/permission'
-import { filterNullUndefined, flattenTree, getImageUrl } from '@/utils/helper'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { getImageUrl } from '@/utils/helper'
+import { onMounted, computed } from 'vue'
 import Clipboard from 'clipboard'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { ADMIN_USER_EDIT_TYPE, ADMIN_USER_STATUS, isRootAdminUser } from '@/modules/adminUser/model'
+import { deleteAdminUserItem } from '@/modules/adminUser/service'
+import { useAdminUserList } from '@/modules/adminUser/useAdminUserList'
+import { useAdminUserForm } from '@/modules/adminUser/useAdminUserForm'
+import { useAdminUserRoleBinding } from '@/modules/adminUser/useAdminUserRoleBinding'
 const { getButtonInfoFull } = usePermission()
 const updateButtonInfo = getButtonInfoFull('adminUser:update')
 const bindRoleButtonInfo = getButtonInfoFull('adminUser:bindRole')
@@ -299,22 +301,15 @@ const actionButtons = computed(() => {
             showText: true,
             click: (row) => handleDelete(row),
             divided: true,
+            disabled: (row) => isRootAdminUser(row),
+            tooltip: (row) => (isRootAdminUser(row) ? '该系统保留对象不允许删除' : ''),
         },
     ]
 })
 
 // ==================== 常量定义 ====================
-const STATUS = {
-    NORMAL: 1,
-    DISABLED: 0,
-}
-
-const EDIT_TYPE = {
-    ADD: 1,
-    EDIT: 2,
-}
-
-const SUBMIT_DELAY = 3000
+const STATUS = ADMIN_USER_STATUS
+const EDIT_TYPE = ADMIN_USER_EDIT_TYPE
 
 // ==================== 工具函数 ====================
 /**
@@ -324,242 +319,49 @@ const handleCopyClick = (text) => {
     Clipboard.copy(text)
 }
 
-// ==================== 头像上传相关 ====================
-/** 头像上传配置 */
-const AVATAR_CONFIG = {
-    ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
-    MAX_SIZE: 2 * 1024 * 1024, // 2MB
-    UPLOAD_PATH: 'avatar',
-}
-
-/**
- * 头像上传成功回调
- */
-const handleAvatarSuccess = (response) => {
-    // 统一保存 uuid
-    if (response && response.uuid) {
-        formData.avatar = response.uuid
-    }
-}
-
-/**
- * 头像上传前验证
- */
-const beforeAvatarUpload = (rawFile) => {
-    if (!AVATAR_CONFIG.ALLOWED_TYPES.includes(rawFile.type)) {
-        ElMessage.error('头像图片必须是 JPG、PNG 或 GIF 格式！')
-        return false
-    }
-    if (rawFile.size > AVATAR_CONFIG.MAX_SIZE) {
-        ElMessage.error('头像图片大小不能超过 2MB！')
-        return false
-    }
-    return true
-}
-
-/**
- * 自定义上传方法
- */
-const customUpload = async ({ file, onError }) => {
-    try {
-        const res = await uploadAvatar(file, { path: AVATAR_CONFIG.UPLOAD_PATH })
-        const result = res.data[0]
-        if (result.status === 'SUCCESS') {
-            ElMessage.success('上传成功')
-            handleAvatarSuccess(result)
-            return result
-        }
-        ElMessage.error(result.failure_reason)
-        return null
-    } catch (err) {
-        onError?.(err)
-        return null
-    }
-}
-
-// ==================== 表单相关 ====================
-const showDrawer = ref(false)
-const formDataRef = ref()
-const formTitle = ref('')
-const currentIndex = ref(null)
-const isSubmitting = ref(false)
-
-// 表单初始数据
-const initialFormData = {
-    id: 0,
-    nickname: '',
-    username: '',
-    status: STATUS.NORMAL,
-    phone_number: '',
-    email: '',
-    avatar: '', // 统一使用 uuid
-    dept_ids: [],
-    password: '',
-    confirm_password: '',
-}
-
-const formData = reactive({ ...initialFormData })
-const originalFormData = ref(null)
-
-// 判断是否为编辑模式
-const isEditMode = computed(() => !!originalFormData.value)
-
-// 表单验证规则
-const getDynamicRules = (id) => {
-    const isEdit = !!id && id !== 0
-    const trigger = ['blur', 'change']
-
-    return {
-        nickname: [{ required: true, message: '昵称不能为空', trigger }],
-        username: [
-            { required: true, message: '用户名不能为空', trigger },
-            {
-                pattern: /^[a-zA-Z0-9_]+$/,
-                message: '由字母、数字和下划线组成',
-                trigger,
-            },
-        ],
-        password: [!isEdit && { required: true, message: '密码不能为空', trigger }, { min: 6, max: 20, message: '密码长度6-20个字符', trigger }].filter(Boolean),
-        confirm_password: [
-            (!isEdit || formData.password) && { required: true, message: '请确认密码', trigger },
-            {
-                validator: (_, value, callback) => {
-                    if (formData.password && value !== formData.password) {
-                        callback(new Error('两次输入密码不一致'))
-                    } else {
-                        callback()
-                    }
-                },
-                trigger,
-            },
-        ].filter(Boolean),
-    }
-}
-
-// ==================== 数据比较工具函数 ====================
-/**
- * 比较两个数组是否相等（忽略顺序）
- */
-const isArrayEqual = (arr1, arr2) => {
-    if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false
-    if (arr1.length !== arr2.length) return false
-    const sorted1 = [...arr1].sort()
-    const sorted2 = [...arr2].sort()
-    return sorted1.every((val, index) => val === sorted2[index])
-}
-
-/**
- * 判断值是否为空（用于判断是否提交字段）
- */
-const isEmptyValue = (value) => {
-    if (value == null) return true
-    if (typeof value === 'string' && !value.trim()) return true
-    if (Array.isArray(value) && !value.length) return true
-    return false
-}
-
-// ==================== 数据提交相关 ====================
-/**
- * 获取新增模式的提交数据
- */
-const getAddSubmitData = () => {
-    const submitData = {
-        nickname: formData.nickname,
-        username: formData.username,
-        status: formData.status ?? STATUS.NORMAL,
-    }
-
-    // 非必填字段：有值才提交
-    const optionalFields = ['phone_number', 'email', 'avatar', 'dept_ids', 'password']
-    optionalFields.forEach((field) => {
-        if (!isEmptyValue(formData[field])) {
-            submitData[field] = formData[field]
-        }
-    })
-
-    return submitData
-}
-
-/**
- * 获取编辑模式的提交数据
- */
-const getEditSubmitData = () => {
-    const submitData = { id: formData.id }
-    const original = originalFormData.value
-
-    // 字段映射表
-    const fieldMap = ['nickname', 'username', 'status', 'phone_number', 'email', 'avatar']
-
-    // 检查普通字段是否被修改
-    fieldMap.forEach((field) => {
-        if (formData[field] !== original[field]) {
-            submitData[field] = formData[field]
-        }
-    })
-
-    // 部门ID数组比较
-    if (!isArrayEqual(formData.dept_ids || [], original.dept_ids || [])) {
-        submitData.dept_ids = formData.dept_ids || []
-    }
-
-    // 密码：如果填写了才提交
-    if (!isEmptyValue(formData.password)) {
-        submitData.password = formData.password
-    }
-
-    return submitData
-}
-
-/**
- * 获取提交的字段数据
- */
-const getSubmitData = () => {
-    return isEditMode.value ? getEditSubmitData() : getAddSubmitData()
-}
-
-// ==================== 表单提交 ====================
-/**
- * 提交表单
- */
-const editConfirmSubmit = async () => {
-    if (isSubmitting.value) return
-
-    isSubmitting.value = true
-
-    try {
-        const valid = await formDataRef.value.validate().catch(() => false)
-        if (!valid) {
-            isSubmitting.value = false
-            return
-        }
-
-        const submitData = getSubmitData()
-
-        // 根据编辑模式调用不同的接口
-        if (isEditMode.value) {
-            await updateAdminUser(submitData)
-        } else {
-            await createAdminUser(submitData)
-        }
-
-        getList()
-        showDrawer.value = false
-        ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
-    } catch (error) {
-        console.error('提交失败:', error)
-    } finally {
-        // 延迟重置提交状态，防止重复提交
-        setTimeout(() => {
-            isSubmitting.value = false
-        }, SUBMIT_DELAY)
-    }
-}
+const { loading, adminUserList, departmentOptions, queryFormRef, queryWhere, pagination, getList, getDepartmentOptions, handleSearch, createToggleFullInfo, fetchAdminUserFullPhone, fetchAdminUserFullEmail } =
+    useAdminUserList()
+const {
+    showDrawer,
+    formDataRef,
+    formTitle,
+    currentIndex,
+    isSubmitting,
+    formData,
+    isEditMode,
+    isRootAdminEditing,
+    getDynamicRules,
+    beforeAvatarUpload,
+    handleAvatarSuccess,
+    customUpload,
+    openEditDrawer,
+    editConfirmSubmit,
+} = useAdminUserForm({ refreshList: getList })
+const {
+    showBindRoleDrawer,
+    bindRoleFormRef,
+    isBindingRole,
+    currentAdminUserName,
+    currentUserIsRootAdmin,
+    superAdminRoleId,
+    roleOptions,
+    roleOptionsLoading,
+    bindRoleData,
+    filterRole,
+    handleBindRole,
+    bindRoleConfirmSubmit,
+} = useAdminUserRoleBinding({ refreshList: getList })
 
 // ==================== 操作处理 ====================
 /**
  * 删除管理员
  */
 const handleDelete = async (row) => {
+    if (isRootAdminUser(row)) {
+        ElMessage.warning('ID 为 1 的用户不允许删除')
+        return
+    }
+
     try {
         await ElMessageBox.confirm('确认删除该管理员吗?', '温馨提示', {
             confirmButtonText: '确认',
@@ -569,7 +371,7 @@ const handleDelete = async (row) => {
                     instance.confirmButtonLoading = true
                     instance.confirmButtonText = '删除中...'
                     try {
-                        await deleteAdminUser(row.id)
+                        await deleteAdminUserItem(row.id)
                         ElMessage.success('删除成功')
                         getList()
                         done()
@@ -588,324 +390,19 @@ const handleDelete = async (row) => {
     }
 }
 
-// ==================== 绑定角色相关 ====================
-const showBindRoleDrawer = ref(false)
-const bindRoleFormRef = ref()
-const isBindingRole = ref(false)
-const currentAdminUserName = ref('')
-const roleOptions = ref([])
-const roleOptionsLoading = ref(false) // 角色列表加载状态
-const roleOptionsLoaded = ref(false) // 标记角色数据是否已加载
-const bindRoleData = reactive({
-    id: 0,
-    role_ids: [],
+const transferProps = {
+    key: 'id',
+    label: 'name',
+    disabled: 'disabled',
+}
+
+const roleTransferOptions = computed(() => {
+    return (roleOptions.value || []).map((role) => ({
+        ...role,
+        disabled: currentUserIsRootAdmin.value && role.id === superAdminRoleId.value,
+    }))
 })
 
-/**
- * 角色过滤方法
- */
-const filterRole = (query, item) => {
-    return item.name.toLowerCase().includes(query.toLowerCase())
-}
-
-/**
- * 获取角色列表
- */
-const getRoleOptions = async () => {
-    const res = await getRoleList({ per_page: 999 })
-    const roleData = res.data?.data || res.data
-    if (roleData && Array.isArray(roleData.data)) {
-        roleOptions.value = roleData.data
-    } else if (Array.isArray(roleData)) {
-        roleOptions.value = roleData
-    }
-    return roleData
-}
-
-/**
- * 打开绑定角色抽屉
- */
-const handleBindRole = async (row) => {
-    if (!row || typeof row.id !== 'number') {
-        ElMessage.error('无效的行数据')
-        return
-    }
-
-    currentAdminUserName.value = row.nickname || row.username || ''
-    bindRoleData.id = row.id
-    bindRoleData.role_ids = []
-
-    // 先打开抽屉，不阻塞
-    showBindRoleDrawer.value = true
-
-    // 如果角色列表未加载，则异步加载（不阻塞抽屉打开）
-    if (!roleOptionsLoaded.value) {
-        roleOptionsLoading.value = true
-        getRoleOptions()
-            .then(() => {
-                roleOptionsLoaded.value = true
-            })
-            .catch((error) => {
-                console.error('获取角色列表失败:', error)
-            })
-            .finally(() => {
-                roleOptionsLoading.value = false
-            })
-    }
-
-    // 获取管理员详情，查看已绑定的角色
-    try {
-        const res = await getAdminUserDetail({ id: row.id })
-        const userData = res.data?.data || res.data
-        if (userData && Array.isArray(userData.role_list)) {
-            // 使用 role_list 字段回显
-            bindRoleData.role_ids = userData.role_list
-        } else if (userData && Array.isArray(userData.role_ids)) {
-            // 兼容 role_ids 字段
-            bindRoleData.role_ids = userData.role_ids
-        } else if (userData && Array.isArray(userData.roles)) {
-            // 如果返回的是角色对象数组，提取ID
-            bindRoleData.role_ids = userData.roles.map((role) => (typeof role === 'object' ? role.id : role))
-        }
-    } catch (error) {
-        console.error('获取管理员详情失败:', error)
-        // 即使获取失败也继续显示绑定角色抽屉
-    }
-}
-
-/**
- * 提交绑定角色
- */
-const bindRoleConfirmSubmit = async () => {
-    if (isBindingRole.value) return
-
-    isBindingRole.value = true
-
-    try {
-        const submitData = {
-            id: bindRoleData.id,
-            role_ids: Array.isArray(bindRoleData.role_ids) ? bindRoleData.role_ids : [],
-        }
-
-        await bindAdminUserRole(submitData)
-        ElMessage.success('绑定角色成功')
-        showBindRoleDrawer.value = false
-        getList() // 刷新列表
-    } catch (error) {
-        console.error('绑定角色失败:', error)
-    } finally {
-        setTimeout(() => {
-            isBindingRole.value = false
-        }, SUBMIT_DELAY)
-    }
-}
-
-/**
- * 重置表单数据
- */
-const resetFormData = () => {
-    Object.assign(formData, { ...initialFormData })
-    if (formDataRef.value) {
-        formDataRef.value.clearValidate()
-    }
-}
-
-/**
- * 从行数据中提取部门ID
- */
-const extractDeptIds = (row) => {
-    if (row.departments?.length) {
-        return row.departments.map((dept) => dept.id).filter((id) => id != null)
-    }
-    if (row.dept_ids) {
-        return Array.isArray(row.dept_ids) ? row.dept_ids : []
-    }
-    if (row.department_ids) {
-        return Array.isArray(row.department_ids) ? row.department_ids : []
-    }
-    if (row.department_id != null) {
-        return Array.isArray(row.department_id) ? row.department_id : [row.department_id]
-    }
-    return []
-}
-
-/**
- * 保存原始数据（深拷贝）
- */
-const saveOriginalData = () => {
-    originalFormData.value = JSON.parse(
-        JSON.stringify({
-            id: formData.id,
-            nickname: formData.nickname,
-            username: formData.username,
-            status: formData.status,
-            phone_number: formData.phone_number,
-            email: formData.email,
-            avatar: formData.avatar,
-            dept_ids: [...formData.dept_ids],
-        })
-    )
-}
-
-/**
- * 打开编辑/新增抽屉
- */
-const openEditDrawer = (type, row, index) => {
-    // 参数校验
-    if (typeof type !== 'number' || ![EDIT_TYPE.ADD, EDIT_TYPE.EDIT].includes(type)) {
-        return
-    }
-
-    // 重置表单
-    resetFormData()
-    currentIndex.value = index
-
-    if (type === EDIT_TYPE.EDIT) {
-        if (!row || typeof row.id !== 'number') {
-            ElMessage.error('无效的行数据')
-            return
-        }
-
-        formTitle.value = '编辑管理员'
-
-        // 设置表单数据
-        Object.assign(formData, {
-            id: row.id,
-            nickname: row.nickname || '',
-            username: row.username || '',
-            status: row.status ?? STATUS.NORMAL,
-            phone_number: row.phone_number || '',
-            email: row.email || '',
-            avatar: row.avatar || '',
-            dept_ids: extractDeptIds(row),
-        })
-
-        saveOriginalData()
-    } else {
-        // 新增模式
-        formTitle.value = '新增管理员'
-        originalFormData.value = null
-    }
-
-    showDrawer.value = true
-}
-// ==================== 搜索相关 ====================
-const queryFormRef = ref(null)
-const queryWhere = reactive({
-    page: 1,
-    per_page: 10,
-    username: null,
-    phone_number: null,
-    status: null,
-    email: null,
-    dept_id: null,
-})
-
-/**
- * 搜索
- */
-const handleSearch = () => {
-    queryWhere.page = 1 // 搜索时重置到第一页
-    getList()
-}
-
-// ==================== 列表相关 ====================
-const loading = ref(false)
-const adminUserList = ref([])
-const departmentOptions = ref([])
-
-const pagination = reactive({
-    total: 0,
-    page: 1,
-    page_size: 10,
-    pageSizeChange: (val) => {
-        queryWhere.per_page = val
-        getList()
-    },
-    pageChange: (val) => {
-        queryWhere.page = val
-        getList()
-    },
-})
-
-/**
- * 获取部门列表
- */
-const getDepartmentOptions = async () => {
-    try {
-        const res = await getDepartmentList()
-        const departmentData = res.data?.data || res.data
-        if (Array.isArray(departmentData)) {
-            departmentOptions.value = flattenTree(departmentData)
-        }
-    } catch (error) {
-        console.error('获取部门列表失败:', error)
-    }
-}
-
-/**
- * 获取管理员列表
- */
-const getList = async () => {
-    loading.value = true
-
-    try {
-        // 过滤空字符串
-        const filteredParams = {
-            ...queryWhere,
-            phone_number: queryWhere.phone_number?.trim() || undefined,
-            username: queryWhere.username?.trim() || undefined,
-            email: queryWhere.email?.trim() || undefined,
-        }
-
-        const res = await getAdminUserList(filterNullUndefined(filteredParams))
-        const { total, current_page, per_page, data } = res.data
-
-        pagination.total = total
-        pagination.page = current_page
-        pagination.page_size = per_page
-        adminUserList.value = data
-    } catch (error) {
-        console.error('获取管理员列表失败:', error)
-    } finally {
-        loading.value = false
-    }
-}
-
-// ==================== 表格配置相关 ====================
-/**
- * 切换脱敏字段显示/隐藏的通用函数
- */
-const createToggleFullInfo = (field, oldField, fetchFn) => {
-    return (row) => {
-        const showField = `showFull${field.charAt(0).toUpperCase() + field.slice(1)}`
-        row[showField] = !row[showField]
-
-        // 切换显示时交换当前值和旧值
-        const swapValues = () => {
-            const oldValue = row[oldField]
-            row[oldField] = row[field]
-            row[field] = oldValue
-        }
-
-        if (row[showField]) {
-            // 显示完整信息
-            if (row[oldField] === undefined) {
-                row[oldField] = row[field]
-                fetchFn({ id: row.id }).then((res) => {
-                    row[field] = res.data[field]
-                })
-            } else {
-                swapValues()
-            }
-        } else {
-            // 隐藏完整信息，恢复脱敏值
-            swapValues()
-        }
-    }
-}
-
-// ==================== 生命周期 ====================
 onMounted(() => {
     getList()
     getDepartmentOptions()
@@ -946,7 +443,7 @@ const tableTitle = [
         minWidth: 160,
         customRow: true,
         eye: true,
-        getFullInfo: createToggleFullInfo('phone_number', 'old_phone_number', getFullPhone),
+        getFullInfo: createToggleFullInfo('phone_number', 'old_phone_number', fetchAdminUserFullPhone),
         formatter: (row) => {
             if (!row.phone_number) return ''
             return row.country_code ? `+${row.country_code} ${row.phone_number}` : row.phone_number
@@ -958,7 +455,7 @@ const tableTitle = [
         minWidth: 180,
         customRow: true,
         eye: true,
-        getFullInfo: createToggleFullInfo('email', 'old_email', getFullEmail),
+        getFullInfo: createToggleFullInfo('email', 'old_email', fetchAdminUserFullEmail),
     },
     {
         prop: 'departments',

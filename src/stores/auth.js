@@ -1,20 +1,11 @@
 import { defineStore } from 'pinia'
-import { login } from '@/api/login'
-import { getUserInfo, getUserMenuList } from '@/api/auth'
+import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
 import router from '@/router'
 import { removeDynamicRoute, convertRoute } from '@/router/dynamicRoutes'
 import { ref, computed } from 'vue'
+import { buildButtonPermissionMap, extractButtonPermissions } from '@/modules/auth/permission'
 
 // ==================== 常量定义 ====================
-/** 按钮类型标识 */
-const BUTTON_TYPE = 3
-
-/** 显示状态值 */
-const SHOW_STATUS = {
-    YES: 1,
-    NO: 0,
-}
-
 export const useAuthStore = defineStore(
     'auth',
     () => {
@@ -52,44 +43,14 @@ export const useAuthStore = defineStore(
          * 提取所有按钮权限的 code 列表（递归处理树形结构）
          */
         const buttonPermissions = computed(() => {
-            const permissions = []
-            const extractButtonCodes = (items) => {
-                if (!Array.isArray(items)) return
-                items.forEach((item) => {
-                    if (item.type === BUTTON_TYPE && item.code) {
-                        permissions.push(item.code)
-                    }
-                    if (item.children?.length > 0) {
-                        extractButtonCodes(item.children)
-                    }
-                })
-            }
-            extractButtonCodes(menu.value)
-            return permissions
+            return extractButtonPermissions(menu.value)
         })
 
         /**
          * 按钮权限信息映射（code -> {icon, title, is_show}）
          */
         const buttonPermissionMap = computed(() => {
-            const map = new Map()
-            const extractButtonInfo = (items) => {
-                if (!Array.isArray(items)) return
-                items.forEach((item) => {
-                    if (item.type === BUTTON_TYPE && item.code) {
-                        map.set(item.code, {
-                            icon: item.icon || '',
-                            title: item.title || '',
-                            is_show: item.is_show === SHOW_STATUS.YES,
-                        })
-                    }
-                    if (item.children?.length > 0) {
-                        extractButtonInfo(item.children)
-                    }
-                })
-            }
-            extractButtonInfo(menu.value)
-            return map
+            return buildButtonPermissionMap(menu.value)
         })
 
         /**
@@ -123,8 +84,8 @@ export const useAuthStore = defineStore(
          */
         const loginWithCredentials = async (credentials) => {
             resetAuthStore()
-            const res = await login(credentials)
-            updateToken(res.data.access_token, res.data.expires_at)
+            const result = await submitLogin(credentials)
+            updateToken(result.access_token, result.expires_at)
             // 登录成功后立即刷新用户信息和菜单，确保路由跳转时数据已准备好
             try {
                 await refreshUserInfo()
@@ -132,7 +93,7 @@ export const useAuthStore = defineStore(
                 console.error('登录后刷新用户信息失败:', error)
                 // 即使刷新失败，也允许登录继续，路由守卫会处理
             }
-            return res
+            return result
         }
 
         /**
@@ -149,9 +110,9 @@ export const useAuthStore = defineStore(
 
             isRefreshUserInfo.value = true
             try {
-                const [userInfoRes, menuListRes] = await Promise.all([getUserInfo(), getUserMenuList()])
-                userInfo.value = userInfoRes.data
-                menu.value = menuListRes.data
+                const [userInfoRes, menuListRes] = await Promise.all([fetchCurrentUser(), fetchUserMenuTree()])
+                userInfo.value = userInfoRes
+                menu.value = menuListRes
                 removeDynamicRoute()
             } finally {
                 isRefreshUserInfo.value = false

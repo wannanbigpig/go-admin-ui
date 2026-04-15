@@ -1,0 +1,1 @@
+export const DEFAULT_SUBMIT_DELAY = 3000

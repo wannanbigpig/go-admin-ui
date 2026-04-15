@@ -177,187 +177,24 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { getRequestLogList, getRequestLogDetail } from '@/api/log'
-import { filterNullUndefined } from '@/utils/helper'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted } from 'vue'
 import Clipboard from 'clipboard'
-import { ElMessage } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { LOG_METHOD_OPTIONS } from '@/modules/log/model'
+import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
 
-// ==================== 权限相关 ====================
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('requestLog:detail')
+const METHOD_OPTIONS = LOG_METHOD_OPTIONS
+const { loading, logList, pagination, queryFormRef, queryWhere, dateRange, showDetailDrawer, currentDetail, activeCollapse, detailLoading, formatJson, formatIpAddress, getMethodTagType, getResponseStatusTagType, handleSearch, loadList, openDetailDrawer } =
+    useRequestLogPage()
 
-// ==================== 常量定义 ====================
-/** HTTP 请求方法选项 */
-const METHOD_OPTIONS = [
-    { value: 'POST', label: 'POST' },
-    { value: 'GET', label: 'GET' },
-    { value: 'PUT', label: 'PUT' },
-    { value: 'DELETE', label: 'DELETE' },
-    { value: 'OPTIONS', label: 'OPTIONS' },
-    { value: 'HEAD', label: 'HEAD' },
-    { value: 'PATCH', label: 'PATCH' },
-]
-
-// ==================== 工具函数 ====================
-/**
- * 复制文本到剪贴板
- */
 const handleCopyClick = (text) => {
     Clipboard.copy(text)
 }
 
-/**
- * 打开详情抽屉
- */
-const openDetailDrawer = async (row) => {
-    showDetailDrawer.value = true
-    detailLoading.value = true
-    activeCollapse.value = []
-    currentDetail.value = null
-
-    try {
-        const res = await getRequestLogDetail(row.id)
-        currentDetail.value = res.data
-    } catch (error) {
-        console.error('获取请求日志详情失败:', error)
-        ElMessage.error('获取请求日志详情失败')
-        showDetailDrawer.value = false
-    } finally {
-        detailLoading.value = false
-    }
-}
-
-/**
- * 获取请求方法的标签类型
- */
-const getMethodTagType = (method) => {
-    const typeMap = {
-        GET: 'success',
-        POST: 'primary',
-        PUT: 'warning',
-        DELETE: 'danger',
-        PATCH: 'info',
-    }
-    return typeMap[method] || ''
-}
-
-/**
- * 获取响应状态的标签类型
- */
-const getResponseStatusTagType = (status) => {
-    if (!status) return ''
-    if (status === 200) return 'success'
-    if ([400, 404].includes(status)) return 'warning'
-    if ([401, 403, 500].includes(status)) return 'danger'
-    return ''
-}
-
-/**
- * 格式化JSON字符串
- */
-const formatJson = (jsonStr) => {
-    if (!jsonStr) return '{}'
-    try {
-        const obj = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr
-        return JSON.stringify(obj, null, 2)
-    } catch {
-        return jsonStr
-    }
-}
-
-/**
- * 格式化IP地址显示（包含IP所在地）
- */
-const formatIpAddress = (ip, ipLocation) => {
-    if (!ip) return '-'
-    if (ipLocation) {
-        return `${ip} ${ipLocation}`
-    }
-    return ip
-}
-
-// ==================== 响应式数据 ====================
-// 列表相关
-const loading = ref(false)
-const logList = ref([])
-const queryFormRef = ref(null)
-const dateRange = ref(null)
-
-// 详情抽屉相关
-const showDetailDrawer = ref(false)
-const currentDetail = ref(null)
-const activeCollapse = ref([])
-const detailLoading = ref(false)
-
-// ==================== 查询相关 ====================
-const queryWhere = reactive({
-    page: 1,
-    per_page: 10,
-    operation_name: null,
-    method: null,
-    base_url: null,
-    operation_status: null,
-    operator_account: null,
-    start_time: null,
-    end_time: null,
-})
-
-const pagination = reactive({
-    total: 0,
-    page: 1,
-    page_size: 10,
-    pageSizeChange: (val) => {
-        queryWhere.per_page = val
-        getList()
-    },
-    pageChange: (val) => {
-        queryWhere.page = val
-        getList()
-    },
-})
-
-/**
- * 搜索
- */
-const handleSearch = () => {
-    queryWhere.page = 1 // 搜索时重置到第一页
-    // 处理日期范围
-    if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
-        queryWhere.start_time = dateRange.value[0]
-        queryWhere.end_time = dateRange.value[1]
-    } else {
-        queryWhere.start_time = null
-        queryWhere.end_time = null
-    }
-    getList()
-}
-
-// ==================== 列表相关 ====================
-/**
- * 获取请求日志列表
- */
-const getList = async () => {
-    loading.value = true
-
-    try {
-        const res = await getRequestLogList(filterNullUndefined(queryWhere))
-        pagination.total = res.data.total
-        pagination.page = res.data.current_page
-        pagination.page_size = res.data.per_page
-        logList.value = res.data.data
-    } catch (error) {
-        console.error('获取请求日志列表失败:', error)
-        ElMessage.error('获取请求日志列表失败')
-    } finally {
-        loading.value = false
-    }
-}
-
-// ==================== 生命周期 ====================
 onMounted(() => {
-    getList()
+    loadList()
 })
 
 // ==================== 表格配置 ====================

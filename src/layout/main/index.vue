@@ -1,5 +1,5 @@
 <template>
-    <router-view v-slot="{ Component, route }">
+    <router-view v-slot="{ Component }">
         <transition
             class="xl-main-transition animate__animated"
             :enter-active-class="routeMetaAnimateEnter"
@@ -8,7 +8,7 @@
             mode="out-in"
             appear
         >
-            <div class="xl-main-inner" :key="route.path + refreshStore.key">
+            <div class="xl-main-inner" :key="refreshStore.key">
                 <div class="xl-main-content">
                     <component :is="Component" @vue:updated="renderComplete" />
                 </div>

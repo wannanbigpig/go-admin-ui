@@ -39,7 +39,11 @@ const handleToggleCollapse = () => {
   z-index: var(--xl-collapse-btn-z-index);
   background: #fff;
   inset-inline-end: -13px;
-  transition: left 0.3s, transform 0.3s, width 0.3s;
+  transition:
+    left 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease;
   display: flex;
   align-items: center;
   justify-content: center;

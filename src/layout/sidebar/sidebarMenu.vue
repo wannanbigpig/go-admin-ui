@@ -1,6 +1,6 @@
 <template>
     <el-scrollbar class="xl-scrollbar">
-        <el-menu :default-active="activeMenu" class="el-menu-vertical-demo" :collapse-transition="true" :collapse="settingStore.isCollapse" :router="false" @select="handleMenuSelect">
+        <el-menu :default-active="activeMenu" class="el-menu-vertical-demo" :collapse-transition="false" :collapse="settingStore.isCollapse" :router="false" @select="handleMenuSelect">
             <!-- 加载状态 -->
             <div v-if="loading" class="loading-text">菜单加载中...</div>
             <template v-else>
@@ -65,7 +65,28 @@ watch(
 )
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.xl-scrollbar {
+    :deep(.el-scrollbar__view) {
+        min-height: 100%;
+    }
+
+    :deep(.el-menu) {
+        transition:
+            width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+            padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: width;
+    }
+
+    :deep(.el-sub-menu__title),
+    :deep(.el-menu-item) {
+        transition:
+            background-color 220ms ease,
+            color 220ms ease,
+            padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+}
+
 .loading-text,
 .empty-text {
     padding: 20px;
