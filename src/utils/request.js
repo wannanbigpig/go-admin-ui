@@ -25,8 +25,13 @@ const service = axios.create({
 service.interceptors.request.use(
     (config) => {
         const authStore = useAuthStore()
+        config.headers = config.headers || {}
         // 添加认证 token
-        config.headers['Authorization'] = `Bearer ${authStore.token}`
+        if (authStore.token) {
+            config.headers['Authorization'] = `Bearer ${authStore.token}`
+        } else {
+            delete config.headers['Authorization']
+        }
         // 仅在没有手动设置时才默认使用 application/json
         if (!config.headers['Content-Type'] && !(config.data instanceof FormData)) {
             config.headers['Content-Type'] = 'application/json'

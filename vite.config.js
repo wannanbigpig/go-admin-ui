@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -11,19 +11,32 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import eslintPlugin from 'vite-plugin-eslint'
 
 // ==================== 常量定义 ====================
-/** 是否自动打开浏览器（从环境变量读取，默认为 true） */
-const AUTO_OPEN_BROWSER = process.env.AUTO_OPEN_BROWSER
-const autoOpenBrowser = AUTO_OPEN_BROWSER === 'true' || AUTO_OPEN_BROWSER === undefined
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  /** 是否自动打开浏览器（从环境变量读取，默认为 true） */
+  const autoOpenBrowser = env.AUTO_OPEN_BROWSER === 'true' || env.AUTO_OPEN_BROWSER === undefined
 
-/** Base 路径（用于 GitHub Pages 部署） */
-// 从环境变量读取，如果未设置则默认为 '/'
-// GitHub Pages 部署时，如果是仓库根目录，使用仓库名称；如果是自定义域名，使用 '/'
-// 注意：VITE_APP_BASE 用于页面 base 路径，VITE_BASE_URL 用于 API 地址（两者分开）
-const base = process.env.VITE_APP_BASE || '/'
+  /** Base 路径（用于 GitHub Pages 部署） */
+  // 从环境变量读取，如果未设置则默认为 '/'
+  // GitHub Pages 部署时，如果是仓库根目录，使用仓库名称；如果是自定义域名，使用 '/'
+  // 注意：VITE_APP_BASE 用于页面 base 路径，VITE_BASE_URL 用于 API 地址（两者分开）
+  const base = env.VITE_APP_BASE || '/'
+  const proxyTarget = env.VITE_PROXY_TARGET || env.VITE_BASE_URL || 'http://127.0.0.1:9001'
 
-export default defineConfig({
-    // ==================== Base 路径配置 ====================
-    base,
+  const createProxyConfig = () => ({
+    target: proxyTarget,
+    changeOrigin: true,
+    configure: (proxy) => {
+      proxy.on('proxyReq', (proxyReq) => {
+        proxyReq.removeHeader('origin')
+        proxyReq.removeHeader('referer')
+      })
+    },
+  })
+
+  return {
+  // ==================== Base 路径配置 ====================
+  base,
 
   // ==================== 路径解析配置 ====================
   resolve: {
@@ -89,7 +102,10 @@ export default defineConfig({
     port: 3000,
     strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
     https: false,
-    proxy: {}, // 代理配置
+    proxy: {
+      '/admin': createProxyConfig(),
+      '/static': createProxyConfig(),
+    }, // 代理配置
   },
 
   // ==================== 构建配置 ====================
@@ -114,4 +130,5 @@ export default defineConfig({
 
   // ==================== 公共资源目录 ====================
   publicDir: 'public',
+  }
 })
