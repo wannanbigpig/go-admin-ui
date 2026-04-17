@@ -31,8 +31,8 @@
             </el-form>
         </div>
 
-        <div class="xl-container" v-loading="loading" element-loading-text="数据全力加载中..." element-loading-custom-class="xl-loading">
-            <xl-table-list :data="logList" :tableTitle="tableTitle" :pagination="pagination">
+        <div class="xl-container">
+            <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
                 <!-- 渲染表格列的内容 -->
                 <template #td="{ item, val, row }">
                     <el-tag v-if="item.tag" :type="item.tag[row[item.prop]]?.type || item.tag[val]?.type || item.tag['other']?.type">
@@ -207,8 +207,25 @@ import { useAdminLoginLogPage } from '@/modules/log/useAdminLoginLogPage'
 
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
-const { loading, logList, pagination, queryFormRef, queryWhere, dateRange, showDetailDrawer, currentDetail, activeCollapse, detailLoading, tokenFormatState, formatIpAddress, toggleTokenFormat, formatJwtToken, handleSearch, loadList, openDetailDrawer } =
-    useAdminLoginLogPage()
+const {
+    loading,
+    logList,
+    pagination,
+    queryFormRef,
+    queryWhere,
+    dateRange,
+    showDetailDrawer,
+    currentDetail,
+    activeCollapse,
+    detailLoading,
+    tokenFormatState,
+    formatIpAddress,
+    toggleTokenFormat,
+    formatJwtToken,
+    handleSearch,
+    loadList,
+    openDetailDrawer,
+} = useAdminLoginLogPage()
 
 const handleCopyClick = (text) => {
     Clipboard.copy(text)

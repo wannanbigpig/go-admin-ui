@@ -58,10 +58,10 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { fetchCaptcha } from '@/modules/auth/service'
 import { useAuthStore } from '@/stores/auth'
-import { ElMessage } from 'element-plus'
+import { ElMessage, type FormInstance } from 'element-plus'
 import router from '@/router'
 import { ref, reactive, onBeforeMount } from 'vue'
 
@@ -78,7 +78,7 @@ const showRightDh = ref(true)
 const loginLoading = ref(false)
 const captchaSrc = ref('')
 const captchaAnswer = ref('')
-const loginFormRef = ref(null)
+const loginFormRef = ref<FormInstance>()
 const authStore = useAuthStore()
 
 // 表单数据
@@ -124,7 +124,7 @@ const refreshCaptcha = async () => {
 /**
  * 处理登录
  */
-const handleLogin = async (formEl) => {
+const handleLogin = async (formEl: FormInstance | undefined) => {
     if (!formEl) return
 
     try {
@@ -143,7 +143,7 @@ const handleLogin = async (formEl) => {
         // 等待一下确保路由已准备好，然后跳转
         await new Promise((resolve) => setTimeout(resolve, 100))
 
-        const redirectPath = router.currentRoute.value.query.redirect || '/'
+        const redirectPath = (router.currentRoute.value.query.redirect as string) || '/'
         await router.push(redirectPath)
     } catch (error) {
         console.error('登录失败:', error)
@@ -159,7 +159,7 @@ onBeforeMount(refreshCaptcha)
 </script>
 
 <style scoped lang="scss">
-// @import "@/assets/styles/index.scss";
+// ... (样式保持不变)
 .login-container {
     background-image: url('@/assets/images/login_background.png');
     background-size: 100% 100%;
@@ -217,9 +217,6 @@ onBeforeMount(refreshCaptcha)
             height: 100%;
             background-size: 100% 100%;
             background-repeat: no-repeat;
-            // background-image: url('@/assets/images/logo-frontend.png');
-            // background-size: 35% 35%;
-            // background-position: 50% 30%;
             .left-dh {
                 width: 100%;
                 height: 100%;
@@ -256,16 +253,16 @@ onBeforeMount(refreshCaptcha)
             }
             .login-form {
                 display: flex;
-                flex-direction: column; /* 使得表单项和按钮在垂直方向上排列 */
-                justify-content: center; /* 水平居中 */
-                align-items: center; /* 水平居中，适用于单行内容 */
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
                 width: 300px;
                 margin: auto;
                 font-size: 25px;
                 font-weight: 500;
                 color: #191919;
                 .input {
-                    flex: 1; /* 让输入框自适应宽度 */
+                    flex: 1;
                     height: 48px;
                 }
                 .button {

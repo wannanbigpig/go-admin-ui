@@ -36,8 +36,8 @@
             </el-form>
         </div>
 
-        <div class="xl-container" v-loading="loading" element-loading-text="数据全力加载中..." element-loading-custom-class="xl-loading">
-            <xl-table-list :data="permissionList" :tableTitle="tableTitle" :pagination="pagination">
+        <div class="xl-container">
+            <xl-table-list :loading="loading" :data="permissionList" :tableTitle="tableTitle" :pagination="pagination">
                 <!-- 渲染表格列的内容 -->
                 <template #td="{ item, val }">
                     <el-icon v-if="item.icon" :color="item.icon[val]?.color">
@@ -175,8 +175,7 @@ const METHOD_OPTIONS = API_PERMISSION_METHOD_OPTIONS
 const SWITCH_VALUE = API_PERMISSION_SWITCH_VALUE
 
 const { loading, permissionList, pagination, queryFormRef, queryWhere, handleSearch, loadList } = useApiPermissionList()
-const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, editFormRules, handleSortNumberChange, handleEditClick, editConfirmSubmit } =
-    useApiPermissionForm(permissionList)
+const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, editFormRules, handleSortNumberChange, handleEditClick, editConfirmSubmit } = useApiPermissionForm(permissionList)
 
 const handleCopyClick = (text) => {
     Clipboard.copy(text)

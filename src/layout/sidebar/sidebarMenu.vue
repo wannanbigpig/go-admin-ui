@@ -7,85 +7,54 @@
                 <!-- 空状态 -->
                 <div v-if="visibleRoutes.length === 0" class="empty-text">暂无可用菜单</div>
                 <!-- 菜单项列表 -->
-                <sidebar-item v-for="route in visibleRoutes" :key="route.name" :route="route" />
+                <sidebar-item v-for="routeItem in visibleRoutes" :key="String(routeItem.name || routeItem.path)" :route="routeItem" />
             </template>
         </el-menu>
     </el-scrollbar>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarItem from './sidebarItem.vue'
 import { useSettingStore } from '@/stores/setting'
 import { useAuthStore } from '@/stores/auth'
 
-// ==================== Store ====================
 const settingStore = useSettingStore()
 const authStore = useAuthStore()
 const route = useRoute()
 
-// ==================== 响应式数据 ====================
 /** 当前激活的菜单项 */
 const activeMenu = ref('')
 /** 菜单加载状态 */
 const loading = ref(false)
 
-// ==================== 计算属性 ====================
 /** 菜单路由数据 */
 const menuRoutes = computed(() => authStore.routerData || [])
 
 /** 可见的路由列表（过滤掉 show: false 的路由） */
 const visibleRoutes = computed(() => {
-    return menuRoutes.value.filter((route) => {
-        const meta = route.meta || {}
+    return menuRoutes.value.filter((routeItem) => {
+        const meta = routeItem.meta || {}
         return meta.show !== false
     })
 })
 
-// ==================== 方法 ====================
-/**
- * 处理菜单选择事件
- * 阻止默认行为，让 router-link 或自定义处理函数来处理导航
- */
 const handleMenuSelect = () => {
-    // 这里不做任何操作，因为导航已经由 linkItem 组件处理
+    // 导航由 linkItem 处理
 }
 
-// ==================== 监听器 ====================
-/**
- * 监听路由变化，更新激活的菜单项
- */
 watch(
     () => route.path,
     (newPath) => {
-        activeMenu.value = route.meta?.activeMenu || newPath
+        activeMenu.value = (route.meta?.activeMenu as string) || newPath
     },
     { immediate: true }
 )
 </script>
 
 <style scoped lang="scss">
-.xl-scrollbar {
-    :deep(.el-scrollbar__view) {
-        min-height: 100%;
-    }
-
-    :deep(.el-menu) {
-        transition:
-            width 320ms cubic-bezier(0.22, 1, 0.36, 1),
-            padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
-        will-change: width;
-    }
-
-    :deep(.el-sub-menu__title),
-    :deep(.el-menu-item) {
-        transition:
-            background-color 220ms ease,
-            color 220ms ease,
-            padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
-    }
-}
+@import '@/assets/styles/layout/sidebar.scss';
 
 .loading-text,
 .empty-text {

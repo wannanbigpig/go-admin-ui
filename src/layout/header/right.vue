@@ -8,7 +8,7 @@
                     <el-text type="info" size="small" :truncated="true">{{ authStore.userInfo.username }}</el-text>
                 </div>
                 <div class="user-avatar">
-                    <el-avatar :size="AVATAR_CONFIG.SIZE" :src="getImageUrl(authStore.userInfo.avatar)" shape="circle">
+                    <el-avatar :size="AVATAR_CONFIG.SIZE" :src="getImageUrl(authStore.userInfo.avatar || '')" shape="circle">
                         <i-ep-avatar :width="AVATAR_CONFIG.ICON_SIZE" :height="AVATAR_CONFIG.ICON_SIZE" />
                     </el-avatar>
                 </div>
@@ -39,18 +39,17 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { logout } from '@/api/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getImageUrl } from '@/utils/helper'
 
-// ==================== 常量 ====================
-const COMMAND = {
-    USER_DETAIL: 'user-detail',
-    USER_REFRESH: 'user-refresh',
-    LOGOUT: 'logout',
+enum COMMAND {
+    USER_DETAIL = 'user-detail',
+    USER_REFRESH = 'user-refresh',
+    LOGOUT = 'logout',
 }
 
 const MESSAGE = {
@@ -66,13 +65,8 @@ const AVATAR_CONFIG = {
     ICON_SIZE: 30,
 }
 
-// ==================== 响应式数据 ====================
 const authStore = useAuthStore()
 
-// ==================== 方法 ====================
-/**
- * 处理退出登录
- */
 const handleLogout = async () => {
     try {
         await ElMessageBox.confirm(MESSAGE.LOGOUT_CONFIRM_CONTENT, MESSAGE.LOGOUT_CONFIRM_TITLE, {
@@ -86,7 +80,6 @@ const handleLogout = async () => {
         authStore.logout(router.currentRoute.value.fullPath)
         ElMessage({ type: 'success', message: MESSAGE.LOGOUT_SUCCESS })
     } catch (error) {
-        // 用户取消操作
         if (error !== 'cancel') {
             console.error('退出登录失败:', error)
         } else {
@@ -95,9 +88,6 @@ const handleLogout = async () => {
     }
 }
 
-/**
- * 处理刷新缓存
- */
 const handleRefresh = async () => {
     try {
         await authStore.refreshUserInfo()
@@ -108,11 +98,7 @@ const handleRefresh = async () => {
     }
 }
 
-/**
- * 处理下拉菜单命令
- * @param {string} command - 命令类型
- */
-const handleCommand = (command) => {
+const handleCommand = (command: COMMAND) => {
     switch (command) {
         case COMMAND.LOGOUT:
             handleLogout()
@@ -125,12 +111,13 @@ const handleCommand = (command) => {
             break
         default:
             console.warn('未知的命令类型:', command)
-            ElMessage({ type: 'warning', message: `未知操作: ${command}` })
     }
 }
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/layout/header.scss';
+
 .xl-right-content {
     display: flex;
     align-items: center;

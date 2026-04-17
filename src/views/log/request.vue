@@ -43,8 +43,8 @@
             </el-form>
         </div>
 
-        <div class="xl-container" v-loading="loading" element-loading-text="数据全力加载中..." element-loading-custom-class="xl-loading">
-            <xl-table-list :data="logList" :tableTitle="tableTitle" :pagination="pagination">
+        <div class="xl-container">
+            <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
                 <!-- 渲染表格列的内容 -->
                 <template #td="{ item, val }">
                     <el-icon v-if="item.icon" :color="item.icon[val]?.color">
@@ -186,8 +186,25 @@ import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('requestLog:detail')
 const METHOD_OPTIONS = LOG_METHOD_OPTIONS
-const { loading, logList, pagination, queryFormRef, queryWhere, dateRange, showDetailDrawer, currentDetail, activeCollapse, detailLoading, formatJson, formatIpAddress, getMethodTagType, getResponseStatusTagType, handleSearch, loadList, openDetailDrawer } =
-    useRequestLogPage()
+const {
+    loading,
+    logList,
+    pagination,
+    queryFormRef,
+    queryWhere,
+    dateRange,
+    showDetailDrawer,
+    currentDetail,
+    activeCollapse,
+    detailLoading,
+    formatJson,
+    formatIpAddress,
+    getMethodTagType,
+    getResponseStatusTagType,
+    handleSearch,
+    loadList,
+    openDetailDrawer,
+} = useRequestLogPage()
 
 const handleCopyClick = (text) => {
     Clipboard.copy(text)
