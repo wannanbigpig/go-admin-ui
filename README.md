@@ -21,8 +21,6 @@
 >
 > 📚 **API 文档**：查看完整的 API 接口文档请访问 [https://wannanbigpig.apifox.cn/](https://wannanbigpig.apifox.cn/)
 >
-> 🔀 **分支说明**：当前分支为 **JavaScript 版本** (`master`)，如需使用 **TypeScript 版本**，请切换到 [ts-x-l-admin 分支](https://github.com/wannanbigpig/go-admin-ui/tree/ts-x-l-admin)
->
 > 🧭 **架构文档**：如果你是首次接手本项目，或准备开启新的 AI 会话，建议先阅读 [PROJECT_ARCHITECTURE.md](./PROJECT_ARCHITECTURE.md)
 
 </div>

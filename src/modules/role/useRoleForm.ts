@@ -58,16 +58,21 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             .filter((item) => !Number.isNaN(item))
     }
 
-    const getSubmitData = () => ({
-        id: formData.id || 0,
-        name: formData.name,
-        code: formData.code,
-        sort: formData.sort,
-        pid: formData.pid ?? 0,
-        description: formData.description || '',
-        menu_list: Array.isArray(formData.menu_list) ? formData.menu_list : [],
-        status: formData.status ?? ROLE_STATUS.NORMAL,
-    })
+    const getSubmitData = () => {
+        const data: Record<string, unknown> = {
+            name: formData.name,
+            code: formData.code,
+            sort: formData.sort,
+            pid: formData.pid ?? 0,
+            description: formData.description || '',
+            menu_list: Array.isArray(formData.menu_list) ? formData.menu_list : [],
+            status: formData.status ?? ROLE_STATUS.NORMAL,
+        }
+        if (isEditMode.value && formData.id) {
+            data.id = formData.id
+        }
+        return data
+    }
 
     const resetFormData = () => {
         Object.assign(formData, { ...initialFormData })
@@ -377,10 +382,11 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 return
             }
 
-            // 提交前同步当前树的全选节点，保持与旧版 JS 行为一致
+            // 提交前同步当前树的全选和半选节点，确保权限树完整性
             if (menuTreeRef.value && !isSuperAdminEditing.value) {
                 const checkedKeys = menuTreeRef.value.getCheckedKeys()
-                formData.menu_list = normalizeMenuList(checkedKeys)
+                const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
+                formData.menu_list = normalizeMenuList([...checkedKeys, ...halfCheckedKeys])
             }
 
             const submitData = getSubmitData()

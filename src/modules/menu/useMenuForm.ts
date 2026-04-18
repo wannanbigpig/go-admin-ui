@@ -245,20 +245,29 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         if (isSubmitting.value) return
         isSubmitting.value = true
 
+        const submitData = { ...formData } as Record<string, any>
+
+        // 按钮类型：清空路由、组件、动画相关字段
         if (formData.type === MENU_TYPE.BUTTON) {
-            formData.name = ''
-            formData.path = ''
-            formData.redirect = ''
-            formData.component = ''
+            submitData.name = ''
+            submitData.path = ''
+            submitData.redirect = ''
+            submitData.component = ''
+            submitData.is_show = MENU_SWITCH_VALUE.NO
+            submitData.is_auth = MENU_SWITCH_VALUE.YES
+            submitData.animate_duration = 0
+            submitData.animate_enter = ''
+            submitData.animate_leave = ''
         } else {
-            formData.code = ''
+            // 非按钮类型：不需要权限标识字段
+            submitData.code = ''
         }
 
         try {
-            if (Number(formData.id) > 0) {
-                await updateMenu(formData as unknown as Record<string, unknown>)
+            if (Number(submitData.id) > 0) {
+                await updateMenu(submitData as unknown as Record<string, unknown>)
             } else {
-                await createMenu(formData as unknown as Record<string, unknown>)
+                await createMenu(submitData as unknown as Record<string, unknown>)
             }
             ElMessage.success('操作成功')
             await getList()

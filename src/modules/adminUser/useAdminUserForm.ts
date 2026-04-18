@@ -43,12 +43,13 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     const customUpload = async ({ file, onError }: { file: File; onError?: (err: unknown) => void }) => {
         try {
             const result = await uploadAvatarFile(file, { path: ADMIN_USER_AVATAR_CONFIG.UPLOAD_PATH })
-            if (result && result.url) {
+            const res = result as { url?: string; status?: string; failure_reason?: string }
+            if (res && res.status === 'SUCCESS' && res.url) {
                 ElMessage.success('上传成功')
-                handleAvatarSuccess(result)
-                return result
+                handleAvatarSuccess(res)
+                return res
             }
-            ElMessage.error('上传失败')
+            ElMessage.error(res?.failure_reason || '上传失败')
             return null
         } catch (err) {
             console.error('上传失败:', err)
