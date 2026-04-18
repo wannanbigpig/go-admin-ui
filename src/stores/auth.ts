@@ -83,7 +83,7 @@ export const useAuthStore = defineStore(
         /**
          * 使用凭证登录
          */
-        const loginWithCredentials = async (credentials: any) => {
+        const loginWithCredentials = async (credentials: Record<string, unknown>) => {
             resetAuthStore()
             const result = await submitLogin(credentials)
             updateToken(result.access_token, result.expires_at)

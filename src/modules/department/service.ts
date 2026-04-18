@@ -2,7 +2,7 @@ import * as departmentApi from '@/api/department'
 import { normalizeArrayData, normalizeDetailData } from '@/modules/shared/response'
 import type { Department } from '@/types/department'
 
-export async function fetchDepartmentList(params?: any) {
+export async function fetchDepartmentList(params?: Record<string, unknown>) {
     const response = await departmentApi.getDepartmentList(params)
     return normalizeArrayData<Department>(response)
 }
@@ -15,14 +15,14 @@ export async function fetchDepartmentDetail(id: number | string) {
     return normalizeDetailData(response, {} as Department)
 }
 
-export async function addDepartment(data: any) {
+export async function addDepartment(data: Record<string, unknown>) {
     return await departmentApi.createDepartment(data)
 }
 
 // 别名导出
 export const createDepartmentItem = addDepartment
 
-export async function modifyDepartment(data: any) {
+export async function modifyDepartment(data: Record<string, unknown>) {
     return await departmentApi.updateDepartment(data)
 }
 

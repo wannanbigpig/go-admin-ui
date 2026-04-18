@@ -5,9 +5,9 @@ import { createDepartmentForm, createDepartmentRules, DEPARTMENT_EDIT_TYPE, DEPA
 import type { Department } from '@/types/department'
 
 interface UseDepartmentFormOptions {
-    departmentOptions: Ref<any[]>
+    departmentOptions: Ref<Department[]>
     getChildrenIds: (id: number | string) => (number | string)[]
-    refreshList: () => Promise<any>
+    refreshList: () => Promise<void>
 }
 
 export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshList }: UseDepartmentFormOptions) {
@@ -18,7 +18,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     const isSubmitting = ref(false)
 
     const initialFormData = createDepartmentForm()
-    const formData = reactive({ ...initialFormData }) as any
+    const formData = reactive({ ...initialFormData }) as Department
     const originalFormData = ref<Department | null>(null)
 
     const isEditMode = computed(() => !!originalFormData.value)
@@ -49,14 +49,14 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
             return departmentOptions.value
         }
         const excludeIds = getChildrenIds(formData.id)
-        return departmentOptions.value.filter((dept: any) => !excludeIds.includes(dept.id))
+        return departmentOptions.value.filter((dept: Department) => !excludeIds.includes(dept.id))
     })
 
     const handleAddChild = (parentRow: Department) => {
         openEditDrawer(DEPARTMENT_EDIT_TYPE.ADD, null, null, parentRow.id)
     }
 
-    const openEditDrawer = async (type: number, row: any, index: number | null, fixedParentId: number | string | null = null) => {
+    const openEditDrawer = async (type: number, row: Department | null, index: number | null, fixedParentId: number | string | null = null) => {
         resetFormData()
         currentIndex.value = index
 
@@ -97,9 +97,9 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
         try {
             const submitData = { ...formData }
             if (isEditMode.value) {
-                await updateDepartmentItem(submitData)
+                await updateDepartmentItem(submitData as unknown as Record<string, unknown>)
             } else {
-                await createDepartmentItem(submitData)
+                await createDepartmentItem(submitData as unknown as Record<string, unknown>)
             }
 
             await refreshList()

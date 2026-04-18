@@ -50,7 +50,7 @@
     </el-skeleton>
 </template>
 
-<script setup lang="ts" generic="T extends Record<string, any>">
+<script setup lang="ts" generic="T extends object">
 import { computed, ref } from 'vue'
 import xlPagination from '@/components/pagination/index.vue'
 import type { TableColumn } from '@/types/common'
@@ -63,7 +63,7 @@ interface Props {
     border?: boolean
     rowKey?: string
     lazy?: boolean
-    load?: (row: T, treeNode: any, resolve: (data: T[]) => void) => void
+    load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
     pagination?: {
         total: number
@@ -83,7 +83,7 @@ const props = withDefaults(defineProps<Props>(), {
     rowKey: 'id',
     lazy: false,
     treeProps: () => ({ children: 'children', hasChildren: 'hasChildren' }),
-    pagination: () => ({}) as any,
+    pagination: () => ({}) as NonNullable<Props['pagination']>,
 })
 
 const emit = defineEmits(['size-change', 'current-change'])
@@ -96,12 +96,12 @@ const hasTableTitle = computed(() => props.tableTitle.length > 0)
 
 const getCellValue = (item: TableColumn<T>, row: T) => {
     if (typeof item.formatter === 'function') return item.formatter(row)
-    return row[item.prop as keyof T] ?? '-'
+    return (row as Record<string, unknown>)[item.prop as string] ?? '-'
 }
 
 const getTagType = (item: TableColumn<T>, row: T) => {
     if (!item.tag) return 'info'
-    const tagValue = item.tagKey ? row[item.tagKey as keyof T] : getCellValue(item, row)
+    const tagValue = item.tagKey ? (row as Record<string, unknown>)[item.tagKey as string] : getCellValue(item, row)
     const tagConfig = item.tag[tagValue as string | number]
     return tagConfig?.type || 'info'
 }

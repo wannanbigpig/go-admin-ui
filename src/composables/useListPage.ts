@@ -5,23 +5,23 @@ import type { FormInstance } from 'element-plus'
 interface UseListPageOptions<T, Q> {
     query: Q & { page?: number; per_page?: number }
     fetcher: (params: Q) => Promise<{ list: T[]; total: number; page: number; pageSize: number }>
-    transformParams?: (query: Q) => any
+    transformParams?: (query: Q) => unknown
     queryFormRef?: Ref<FormInstance | undefined>
     defaultQuery?: Partial<Q>
 }
 
-export function useListPage<T = any, Q = any>({ query, fetcher, transformParams, queryFormRef, defaultQuery }: UseListPageOptions<T, Q>) {
+export function useListPage<T = unknown, Q = any>({ query, fetcher, transformParams, queryFormRef, defaultQuery }: UseListPageOptions<T, Q>) {
     const loading = ref(false)
     const items = ref([]) as Ref<T[]>
 
     const runFetch = async () => {
         loading.value = true
         try {
-            syncQueryPagination(query, pagination)
+            syncQueryPagination(query as Record<string, unknown>, pagination)
             const params = typeof transformParams === 'function' ? transformParams(query) : query
-            const result = await fetcher(params)
+            const result = await fetcher(params as Q)
             items.value = result.list
-            applyPaginationResult(pagination, result)
+            applyPaginationResult(pagination, result as unknown as Record<string, unknown>)
             return result
         } finally {
             loading.value = false

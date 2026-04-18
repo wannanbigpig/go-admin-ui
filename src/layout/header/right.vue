@@ -1,6 +1,6 @@
 <template>
     <div class="xl-right-content">
-        <el-dropdown size="large" type="default" trigger="hover" @command="handleCommand" class="xl-user-dropdown">
+        <el-dropdown size="large" type="default" trigger="click" @command="handleCommand" class="xl-user-dropdown" teleported persistent>
             <div class="xl-user-info xl-cursor-pointer">
                 <div class="user-name">
                     <el-text :truncated="true" size="default">{{ authStore.userInfo.nickname }}</el-text>

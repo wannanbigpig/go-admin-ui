@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="用户名" prop="username">
@@ -30,30 +30,28 @@
 
         <div class="xl-container">
             <div style="display: flex; align-items: center; margin-bottom: 10px">
-                <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" :button-info="addButtonInfo || {}" @click="openEditDrawer(1)" />
+                <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1)" />
             </div>
             <div>
                 <xl-table-list :loading="loading" :data="adminUserList" :tableTitle="tableTitle" :pagination="pagination">
                     <!-- 渲染表格列的内容 -->
                     <template #td="{ item, val, row }">
-                        <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(val)">
+                        <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(String(val))">
                             <el-icon size="32">
                                 <i-ep-avatar />
                             </el-icon>
                         </el-avatar>
-                        <el-tag v-else-if="item.tag" :type="item.tag[val]?.type || 'info'">
-                            {{ item.tag[val]?.text || val }}
+                        <el-tag v-else-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
+                            {{ item.tag[val as string | number]?.text || val }}
                         </el-tag>
                         <div v-else-if="item.eye" style="display: flex; align-items: center; gap: 3px">
                             <span>{{ val || '-' }}</span>
                             <el-icon v-show="val !== ''" size="small" class="xl-cursor-hover" @click="item.getFullInfo?.(row, item)">
-                                <i-ant-design-eye-invisible-outlined v-if="row['showFull' + item.prop.charAt(0).toUpperCase() + item.prop.slice(1)]" />
+                                <i-ant-design-eye-invisible-outlined v-if="(row as Record<string, any>)['showFull' + (item.prop as string).charAt(0).toUpperCase() + (item.prop as string).slice(1)]" />
                                 <i-ant-design-eye-outlined v-else />
                             </el-icon>
                         </div>
-                        <span v-else>
-                            {{ val }}
-                        </span>
+                        <span v-else>{{ val }}</span>
                     </template>
                     <!-- 操作列 -->
                     <template #operation>
@@ -67,7 +65,7 @@
             </div>
         </div>
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting">
+        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="40%">
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules(formData.id)" :key="currentIndex ?? 0">
                 <el-row>
                     <el-col :span="12">
@@ -93,8 +91,8 @@
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="手机号" prop="mobile">
-                            <el-input v-model.trim="formData.mobile" placeholder="请输入手机号" />
+                        <el-form-item label="手机号" prop="phone_number">
+                            <el-input v-model.trim="formData.phone_number" placeholder="请输入手机号" />
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
@@ -105,8 +103,8 @@
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item prop="dept_id" label="部门">
-                            <el-select v-model="formData.dept_id" placeholder="请选择部门" clearable filterable>
+                        <el-form-item prop="dept_ids" label="部门">
+                            <el-select v-model="formData.dept_ids" placeholder="请选择部门" clearable filterable multiple>
                                 <el-option v-for="dept in departmentOptions" :key="dept.value" :label="dept.label" :value="dept.value" />
                             </el-select>
                         </el-form-item>
@@ -136,7 +134,7 @@
         </xl-drawer>
 
         <!-- 绑定角色抽屉 -->
-        <xl-drawer v-model="showBindRoleDrawer" title="绑定角色" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole">
+        <xl-drawer v-model="showBindRoleDrawer" title="绑定角色" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
             <el-skeleton v-if="roleOptionsLoading" animated />
             <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto">
                 <el-form-item label="管理员">
@@ -160,7 +158,7 @@ import { getImageUrl } from '@/utils/helper'
 import { onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
-import { ADMIN_USER_STATUS } from '@/modules/adminUser/model'
+import { ADMIN_USER_STATUS, isRootAdminUser } from '@/modules/adminUser/model'
 import { removeAdminUser } from '@/modules/adminUser/service'
 import { useAdminUserList } from '@/modules/adminUser/useAdminUserList'
 import { useAdminUserForm } from '@/modules/adminUser/useAdminUserForm'
@@ -191,25 +189,27 @@ const actionButtons = computed(() => {
     return [
         {
             permission: 'adminUser:update',
-            buttonInfo: updateButtonInfo,
-            showIcon: true,
+            buttonInfo: updateButtonInfo || undefined,
+            showIcon: false,
             showText: true,
             click: (row: AdminUser, index: number) => openEditDrawer(2, row, index),
         },
         {
             permission: 'adminUser:bindRole',
-            buttonInfo: bindRoleButtonInfo,
-            showIcon: true,
+            buttonInfo: bindRoleButtonInfo || undefined,
+            showIcon: false,
             showText: true,
             click: (row: AdminUser) => handleBindRole(row),
         },
         {
             permission: 'adminUser:delete',
-            buttonInfo: deleteButtonInfo,
-            showIcon: true,
+            buttonInfo: deleteButtonInfo || undefined,
+            showIcon: false,
             showText: true,
             click: (row: AdminUser) => handleDelete(row),
-            disabled: (row: AdminUser) => row.id === 1,
+            disabled: (row: AdminUser) => isRootAdminUser(row),
+            tooltip: (row: AdminUser) => (isRootAdminUser(row) ? '超级管理员不允许删除' : ''),
+            divided: true,
         },
     ]
 })
@@ -241,14 +241,26 @@ const tableTitle: TableColumn<AdminUser>[] = [
     { prop: 'id', align: 'center', h_label: 'ID' },
     { prop: 'avatar', align: 'center', h_label: '头像', width: 100, customRow: true, avatar: true },
     { prop: 'nickname', h_label: '昵称', width: 160, overflow: true },
-    { prop: 'username', h_label: '用户名', width: 120, overflow: true },
     {
-        prop: 'mobile',
+        prop: 'username',
+        h_label: '用户名',
+        width: 120,
+        overflow: true,
+        h_tip: '用户名是唯一的，不能重复',
+        copy: true,
+        customRow: true,
+    },
+    {
+        prop: 'phone_number',
         h_label: '手机号',
         minWidth: 160,
         customRow: true,
         eye: true,
-        getFullInfo: createToggleFullInfo('mobile', 'old_mobile', fetchAdminUserFullPhone),
+        getFullInfo: createToggleFullInfo('phone_number', 'old_phone_number', fetchAdminUserFullPhone),
+        formatter: (row: AdminUser) => {
+            if (!row.phone_number) return ''
+            return row.country_code ? `+${row.country_code} ${row.phone_number}` : row.phone_number
+        },
     },
     {
         prop: 'email',
@@ -257,6 +269,19 @@ const tableTitle: TableColumn<AdminUser>[] = [
         customRow: true,
         eye: true,
         getFullInfo: createToggleFullInfo('email', 'old_email', fetchAdminUserFullEmail),
+    },
+    {
+        prop: 'departments',
+        h_label: '部门',
+        minWidth: 200,
+        customRow: true,
+        formatter: (row: AdminUser) => {
+            // 格式化部门数组，将部门名称用英文逗号连接
+            if (!row.departments || !Array.isArray(row.departments) || row.departments.length === 0) {
+                return '-'
+            }
+            return row.departments.map((dept) => dept.name).join(', ')
+        },
     },
     {
         prop: 'status',
@@ -268,8 +293,12 @@ const tableTitle: TableColumn<AdminUser>[] = [
             [STATUS.ENABLED]: { type: 'success', text: '正常' },
             [STATUS.DISABLED]: { type: 'danger', text: '禁用' },
         },
+        h_tip: '判断用户是否被禁止登录',
     },
     { prop: 'created_at', align: 'center', h_label: '创建时间', width: 160 },
+    { prop: 'updated_at', align: 'center', h_label: '更新时间', width: 160 },
+    { prop: 'last_login_at', align: 'center', h_label: '最后登录时间', width: 160 },
+    { prop: 'last_login_ip', align: 'center', h_label: '最后登录 IP', width: 150 },
 ]
 </script>
 

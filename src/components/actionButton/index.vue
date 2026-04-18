@@ -30,7 +30,8 @@ defineOptions({
 interface ButtonInfo {
     icon?: string
     title?: string
-    [key: string]: any
+    is_show?: boolean
+    [key: string]: unknown
 }
 
 interface Props {
@@ -57,7 +58,7 @@ const emit = defineEmits(['click'])
 const attrs = useAttrs()
 
 const buttonAttrs = computed(() => {
-    const result: any = { ...attrs }
+    const result: Record<string, unknown> = { ...attrs }
     if (props.type !== undefined) result.type = props.type
     if (props.link !== undefined) result.link = props.link
     if (props.size !== undefined) result.size = props.size

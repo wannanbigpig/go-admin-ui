@@ -1,2 +1,15 @@
-@import "./vars.scss";
-@import "./animation.scss";
+@import './vars.scss';
+
+// 创建一个 mixin 用于复用旋转动画逻辑
+@mixin rotate-forever($duration: 2s) {
+    animation: spin $duration linear infinite;
+    transform-origin: center center;
+    @keyframes spin {
+        from {
+            transform: rotate(360deg);
+        }
+        to {
+            transform: rotate(0deg);
+        }
+    }
+}

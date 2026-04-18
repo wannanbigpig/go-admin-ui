@@ -1,21 +1,30 @@
 export interface ApiPermission {
     id: number | string
+    code: string
     name: string
-    path: string
+    route: string
     method: string
-    group_name: string
-    description?: string
+    is_auth: number
+    is_effective: number
+    sort: number
+    func_path: string
+    description: string
     created_at?: string
     updated_at?: string
+    [key: string]: unknown
 }
 
 export function createApiPermissionForm(): Partial<ApiPermission> {
     return {
-        id: '',
+        id: 0,
+        code: '',
         name: '',
-        path: '',
+        route: '',
         method: 'GET',
-        group_name: '',
+        is_auth: 1,
+        is_effective: 1,
+        sort: 0,
+        func_path: '',
         description: '',
     }
 }
@@ -27,3 +36,11 @@ export const API_PERMISSION_METHODS = [
     { label: 'DELETE', value: 'DELETE' },
     { label: 'PATCH', value: 'PATCH' },
 ]
+
+// 别名，兼容旧代码
+export const API_PERMISSION_METHOD_OPTIONS = API_PERMISSION_METHODS
+
+export const API_PERMISSION_SWITCH_VALUE = {
+    YES: 1,
+    NO: 0,
+}

@@ -2,18 +2,19 @@ import { getPermissionList, editPermission, getMenuList, createMenu, updateMenu,
 import { normalizeArrayData, normalizeDetailData, normalizeListData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
+import type { ApiResponse } from '@/types/common'
 
-export async function fetchPermissionPage(params?: any) {
+export async function fetchPermissionPage(params?: Record<string, unknown>) {
     const response = await getPermissionList(params)
-    return normalizeListData<any>(response)
+    return normalizeListData<unknown>(response)
 }
 
-export async function updatePermissionItem(data: any) {
+export async function updatePermissionItem(data: Record<string, unknown>) {
     const response = await editPermission(data)
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
-export async function fetchMenuTree(params?: any) {
+export async function fetchMenuTree(params?: Record<string, unknown>) {
     const response = await getMenuList(params)
     return normalizeArrayData<Menu>(response)
 }
@@ -23,29 +24,29 @@ export async function fetchMenuDetail(id: number | string) {
     return normalizeDetailData(response, {} as Menu)
 }
 
-export async function createMenuItem(data: any) {
+export async function createMenuItem(data: Record<string, unknown>) {
     const response = await createMenu(data)
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
-export async function updateMenuItem(data: any) {
+export async function updateMenuItem(data: Record<string, unknown>) {
     const response = await updateMenu(data)
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
 export async function deleteMenuItem(id: number | string) {
     const response = await deleteMenu({ id })
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
-export async function fetchRolePage(params?: any) {
+export async function fetchRolePage(params?: Record<string, unknown>) {
     const response = await getRoleList(params)
     return normalizeListData<Role>(response)
 }
 
-export async function fetchRoleTree(params?: any) {
+export async function fetchRoleTree(params?: Record<string, unknown>) {
     const response = await getRoleList(params)
-    return normalizeArrayData<Role>(response as any)
+    return normalizeArrayData<Role>(response as unknown as ApiResponse<Role[] | { data: Role[] }>)
 }
 
 export async function fetchRoleDetail(id: number | string) {
@@ -53,17 +54,17 @@ export async function fetchRoleDetail(id: number | string) {
     return normalizeDetailData(response, {} as Role)
 }
 
-export async function createRoleItem(data: any) {
+export async function createRoleItem(data: Record<string, unknown>) {
     const response = await createRole(data)
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
-export async function updateRoleItem(data: any) {
+export async function updateRoleItem(data: Record<string, unknown>) {
     const response = await updateRole(data)
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
 export async function deleteRoleItem(id: number | string) {
     const response = await deleteRole({ id })
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }

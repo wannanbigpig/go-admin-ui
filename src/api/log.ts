@@ -3,7 +3,7 @@ import type { ApiResponse, PageData } from '@/types/common'
 import type { RequestLog, LoginLog } from '@/types/log'
 
 // 获取请求日志列表
-export function getRequestLogList(params?: any) {
+export function getRequestLogList(params?: Record<string, unknown>) {
     return get<ApiResponse<PageData<RequestLog>>>('/v1/log/request/list', params)
 }
 
@@ -13,7 +13,7 @@ export function getRequestLogDetail(id: number | string) {
 }
 
 // 获取登录日志列表
-export function getLoginLogList(params?: any) {
+export function getLoginLogList(params?: Record<string, unknown>) {
     return get<ApiResponse<PageData<LoginLog>>>('/v1/log/login/list', params)
 }
 

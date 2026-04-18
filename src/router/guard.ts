@@ -50,7 +50,7 @@ export async function beforeEach(to: RouteLocationNormalized) {
 }
 
 // ==================== 工具函数 ====================
-function handleLoginRoute(authStore: any, to: RouteLocationNormalized) {
+function handleLoginRoute(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {
     if (authStore.token) {
         return (to.query.redirect as string) || ROUTE_PATH.HOME
     }
@@ -64,7 +64,7 @@ function redirectToLogin(to: RouteLocationNormalized) {
     }
 }
 
-async function refreshUserInfoIfNeeded(authStore: any) {
+async function refreshUserInfoIfNeeded(authStore: ReturnType<typeof useAuthStore>) {
     const needRefresh = isEmpty(authStore.userInfo) || isEmpty(authStore.routerData)
     if (needRefresh) {
         try {
@@ -75,7 +75,7 @@ async function refreshUserInfoIfNeeded(authStore: any) {
     }
 }
 
-async function handleDynamicRoutes(authStore: any, to: RouteLocationNormalized) {
+async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {
     if (checkDynamicRouteExists()) {
         return undefined
     }

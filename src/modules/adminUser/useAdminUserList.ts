@@ -1,10 +1,9 @@
 import { reactive, ref, type Ref } from 'vue'
 import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
-import { createAdminUserQuery } from '@/modules/adminUser/model'
 import { fetchAdminUserFullEmail, fetchAdminUserFullPhone, fetchAdminUserList } from '@/modules/adminUser/service'
 import { fetchDepartmentList } from '@/modules/department/service'
 import { filterNullUndefined, flattenTree } from '@/utils/helper'
-import type { AdminUser, AdminUserQuery } from '@/types/adminUser'
+import type { AdminUser } from '@/types/adminUser'
 import type { FormInstance } from 'element-plus'
 
 export function useAdminUserList() {
@@ -12,18 +11,21 @@ export function useAdminUserList() {
     const adminUserList = ref([]) as Ref<AdminUser[]>
     const departmentOptions = ref<{ label: string; value: string | number }[]>([])
     const queryFormRef = ref<FormInstance>()
-    const queryWhere = reactive(createAdminUserQuery()) as AdminUserQuery & { page?: number; per_page?: number }
+    const queryWhere = reactive({
+        page: 1,
+        per_page: 10,
+        username: undefined as string | undefined,
+        phone_number: undefined as string | undefined,
+        status: undefined as number | undefined,
+        email: undefined as string | undefined,
+        dept_id: null as number | null,
+    })
 
     const getDepartmentOptions = async () => {
         try {
             const departmentData = await fetchDepartmentList()
-            // 假设 flattenTree 处理后返回符合 el-select options 格式的数据
-            departmentOptions.value = Array.isArray(departmentData)
-                ? flattenTree(departmentData).map((d: any) => ({
-                      label: d.name,
-                      value: d.id,
-                  }))
-                : []
+            // flattenTree 返回的数据已经包含 label 和 value 属性
+            departmentOptions.value = Array.isArray(departmentData) ? (flattenTree(departmentData as unknown as Record<string, unknown>[]) as Array<{ label: string; value: any }>) : []
         } catch (error) {
             console.error('获取部门列表失败:', error)
         }
@@ -63,22 +65,23 @@ export function useAdminUserList() {
         getList()
     }
 
-    const createToggleFullInfo = (field: string, oldField: string, fetchFn: (id: string | number) => Promise<any>) => {
-        return (row: any) => {
+    const createToggleFullInfo = (field: string, oldField: string, fetchFn: (id: string | number) => Promise<Record<string, unknown>>) => {
+        return (row: AdminUser) => {
+            const r = row as AdminUser & Record<string, unknown>
             const showField = `showFull${field.charAt(0).toUpperCase() + field.slice(1)}`
-            row[showField] = !row[showField]
+            r[showField] = !r[showField]
 
             const swapValues = () => {
-                const oldValue = row[oldField]
-                row[oldField] = row[field]
-                row[field] = oldValue
+                const oldValue = r[oldField]
+                r[oldField] = r[field]
+                r[field] = oldValue
             }
 
-            if (row[showField]) {
-                if (row[oldField] === undefined) {
-                    row[oldField] = row[field]
-                    fetchFn(row.id).then((detail) => {
-                        row[field] = detail[field]
+            if (r[showField]) {
+                if (r[oldField] === undefined) {
+                    r[oldField] = r[field]
+                    fetchFn(r.id).then((detail) => {
+                        r[field] = detail[field]
                     })
                 } else {
                     swapValues()

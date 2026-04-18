@@ -32,7 +32,7 @@ export interface UserInfo {
     dept_id?: number
     created_at?: string
     updated_at?: string
-    [key: string]: any
+    [key: string]: unknown
 }
 
 /**

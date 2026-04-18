@@ -2,7 +2,7 @@ import { reactive, ref, type Ref } from 'vue'
 import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
 import { fetchRequestLogList, fetchRequestLogDetail } from '@/modules/log/service'
 import { createRequestLogQuery } from '@/modules/log/model'
-import { applyDateRangeToQuery } from '@/modules/log/helpers'
+import { applyDateRangeToQuery, formatIpAddress, formatJsonContent } from '@/modules/log/helpers'
 import type { RequestLog } from '@/types/log'
 import type { FormInstance } from 'element-plus'
 
@@ -11,11 +11,12 @@ export function useRequestLogPage() {
     const logList = ref([]) as Ref<RequestLog[]>
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive(createRequestLogQuery())
-    const dateRange = ref<[string, string] | null>(null)
+    const dateRange = ref<[string, string]>([] as unknown as [string, string])
 
     const showDetailDrawer = ref(false)
     const currentDetail = ref<RequestLog | null>(null)
     const detailLoading = ref(false)
+    const activeCollapse = ref(['requestBody', 'responseBody'])
 
     const getList = async () => {
         loading.value = true
@@ -46,7 +47,7 @@ export function useRequestLogPage() {
         getList()
     }
 
-    const openDetail = async (row: RequestLog) => {
+    const openDetailDrawer = async (row: RequestLog) => {
         showDetailDrawer.value = true
         detailLoading.value = true
         try {
@@ -56,6 +57,24 @@ export function useRequestLogPage() {
         } finally {
             detailLoading.value = false
         }
+    }
+
+    const getMethodTagType = (method: string) => {
+        const types: Record<string, string> = {
+            GET: 'success',
+            POST: '',
+            PUT: 'warning',
+            DELETE: 'danger',
+            PATCH: 'info',
+        }
+        return types[method] || ''
+    }
+
+    const getResponseStatusTagType = (status: number) => {
+        if (status >= 200 && status < 300) return 'success'
+        if (status >= 400 && status < 500) return 'warning'
+        if (status >= 500) return 'danger'
+        return 'info'
     }
 
     return {
@@ -70,6 +89,11 @@ export function useRequestLogPage() {
         showDetailDrawer,
         currentDetail,
         detailLoading,
-        openDetail,
+        activeCollapse,
+        formatJson: formatJsonContent,
+        formatIpAddress,
+        getMethodTagType,
+        getResponseStatusTagType,
+        openDetailDrawer,
     }
 }

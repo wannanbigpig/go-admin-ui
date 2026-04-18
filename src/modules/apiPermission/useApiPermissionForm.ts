@@ -4,7 +4,7 @@ import { editPermission } from '@/api/permission'
 import { createApiPermissionForm, type ApiPermission } from '@/modules/apiPermission/model'
 
 interface UseApiPermissionFormOptions {
-    refreshList: () => Promise<any>
+    refreshList: () => Promise<void>
 }
 
 export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOptions) {
@@ -13,13 +13,37 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
     const isSubmitting = ref(false)
+    const sortNumericValue = ref<number | undefined>(undefined)
 
-    const initialFormData = createApiPermissionForm()
-    const formData = reactive({ ...initialFormData }) as any
+    const formData = reactive(createApiPermissionForm()) as ApiPermission
+
+    const editFormRules = {
+        name: [
+            { required: true, message: '接口名称不能为空', trigger: 'blur' },
+            { min: 1, max: 60, message: '名称不超过 60 个字符', trigger: 'blur' },
+        ],
+        is_auth: [
+            { required: true, message: '是否鉴权必填', trigger: 'change' },
+            { type: 'enum', enum: [0, 1], message: '选择的值只能是或否', trigger: 'change' },
+        ],
+        sort: [{ trigger: 'blur', type: 'number', message: '请输入整数类型' }],
+    }
 
     const resetFormData = () => {
-        Object.assign(formData, { ...createApiPermissionForm() })
+        Object.assign(formData, createApiPermissionForm())
         formDataRef.value?.clearValidate()
+    }
+
+    const handleSortNumberChange = (value: string | number) => {
+        if (value === '') {
+            formData.sort = 0
+            return
+        }
+        sortNumericValue.value = Number(value)
+    }
+
+    const setSortNumericValue = (value: number) => {
+        sortNumericValue.value = value
     }
 
     const openEditDrawer = (type: number, row?: ApiPermission, index?: number) => {
@@ -28,14 +52,20 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
 
         if (type === 2 && row) {
             formTitle.value = '编辑接口权限'
+            // 使用对象合并方式填充表单数据
             Object.assign(formData, {
                 id: row.id,
+                code: row.code || '',
                 name: row.name || '',
-                path: row.path || '',
+                route: row.route || '',
                 method: row.method || 'GET',
-                group_name: row.group_name || '',
+                is_auth: row.is_auth ?? 1,
+                is_effective: row.is_effective ?? 1,
+                sort: row.sort ?? 0,
+                func_path: row.func_path || '',
                 description: row.description || '',
             })
+            sortNumericValue.value = formData.sort
         } else {
             formTitle.value = '新增接口权限'
         }
@@ -64,11 +94,15 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
 
     return {
         showDrawer,
-        formDataRef,
+        currentRowRef: formDataRef,
         formTitle,
         currentIndex,
         isSubmitting,
-        formData,
+        currentRow: formData,
+        sortNumericValue,
+        setSortNumericValue,
+        editFormRules,
+        handleSortNumberChange,
         openEditDrawer,
         editConfirmSubmit,
     }

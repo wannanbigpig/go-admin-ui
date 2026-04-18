@@ -11,7 +11,7 @@
                 :disabled="normalizeDisabled(button)"
                 :tooltip-content="normalizeTooltip(button)"
                 :button-info="button.buttonInfo"
-                :text="button.text || button.buttonInfo?.title || button.permission"
+                :text="button.text || String(button.buttonInfo?.title || button.permission || '')"
                 @click="handleClick(button, scope)"
             />
         </template>
@@ -26,24 +26,29 @@
                 :disabled="normalizeDisabled(button)"
                 :tooltip-content="normalizeTooltip(button)"
                 :button-info="button.buttonInfo"
-                :text="button.text || button.buttonInfo?.title || button.permission"
+                :text="button.text || String(button.buttonInfo?.title || button.permission || '')"
                 @click="handleClick(button, scope)"
             />
-            <el-dropdown v-if="hasMoreButtons" trigger="hover" size="small">
+            <el-dropdown v-if="hasMoreButtons" trigger="click" size="small" teleported persistent>
                 <el-button type="primary" link>
                     更多
                     <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
                     <el-dropdown-menu>
-                        <el-tooltip v-for="(button, index) in moreButtons" :key="index" :content="normalizeTooltip(button)" placement="top" :disabled="!normalizeTooltip(button)">
-                            <el-dropdown-item :divided="button.divided" :disabled="normalizeDisabled(button)" :title="normalizeTooltip(button) || undefined" @click="handleClick(button, scope)">
-                                <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
-                                    <xl-icon :icon="button.buttonInfo.icon" />
-                                </el-icon>
-                                {{ button.buttonInfo?.title || button.text || '操作' }}
-                            </el-dropdown-item>
-                        </el-tooltip>
+                        <el-dropdown-item
+                            v-for="(button, index) in moreButtons"
+                            :key="index"
+                            :divided="button.divided"
+                            :disabled="normalizeDisabled(button)"
+                            :title="normalizeTooltip(button) || undefined"
+                            @click="handleClick(button, scope)"
+                        >
+                            <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
+                                <xl-icon :icon="String(button.buttonInfo.icon)" />
+                            </el-icon>
+                            {{ String(button.buttonInfo?.title || button.text || '操作') }}
+                        </el-dropdown-item>
                     </el-dropdown-menu>
                 </template>
             </el-dropdown>
@@ -51,7 +56,30 @@
     </div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts">
+export interface TableScope<U> {
+    row: U
+    $index: number
+}
+
+export interface ActionButtonConfig<U> {
+    permission: string
+    buttonInfo?: Record<string, unknown>
+    text?: string
+    showIcon?: boolean
+    showText?: boolean
+    type?: string
+    link?: boolean
+    disabled?: boolean | ((row: U, index: number) => boolean)
+    visible?: (row: U, index: number) => boolean
+    tooltip?: string | ((row: U, index: number) => string)
+    divided?: boolean
+    click?: (row: U, index: number) => void
+    onClick?: (row: U, index: number) => void
+}
+</script>
+
+<script setup lang="ts" generic="T extends object">
 import { computed } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { Icon as XlIcon } from '@iconify/vue'
@@ -60,37 +88,42 @@ import { usePermission } from '@/composables/usePermission'
 
 const { checkPermission } = usePermission()
 
-interface ActionButtonConfig {
-    permission: string
-    buttonInfo?: any
-    text?: string
-    showIcon?: boolean
-    showText?: boolean
-    type?: string
-    link?: boolean
-    disabled?: boolean | ((row: any, index?: number) => boolean)
-    visible?: (row: any, index?: number) => boolean
-    tooltip?: string | ((row: any, index?: number) => string)
-    divided?: boolean
-    click?: (row: any, index: any) => void
-    onClick?: (row: any, index: any) => void
-}
-
-interface Props {
-    buttons: ActionButtonConfig[]
-    scope?: any
+interface Props<U> {
+    buttons: ActionButtonConfig<U>[] | ((scope: TableScope<U> | U) => ActionButtonConfig<U>[])
+    scope: TableScope<U> | U
     maxVisibleButtons?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
-    scope: () => ({}),
+const props = withDefaults(defineProps<Props<T>>(), {
     maxVisibleButtons: 2,
 })
 
+// 支持 buttons 为函数或数组
+const buttonsArray = computed(() => {
+    if (typeof props.buttons === 'function') {
+        return props.buttons(props.scope)
+    }
+    return props.buttons
+})
+
+const getRowData = (s: TableScope<T> | T): T => {
+    if (s && typeof s === 'object' && 'row' in s) {
+        return (s as TableScope<T>).row
+    }
+    return s as T
+}
+
+const getIndex = (s: TableScope<T> | T): number => {
+    if (s && typeof s === 'object' && '$index' in s) {
+        return (s as TableScope<T>).$index
+    }
+    return 0
+}
+
 const visibleButtons = computed(() => {
-    return props.buttons.filter((btn) => {
-        const row = props.scope?.row || props.scope
-        const index = props.scope?.$index
+    return buttonsArray.value.filter((btn) => {
+        const row = getRowData(props.scope)
+        const index = getIndex(props.scope)
         if (typeof btn.visible === 'function' && !btn.visible(row, index)) {
             return false
         }
@@ -99,18 +132,20 @@ const visibleButtons = computed(() => {
     })
 })
 
-const normalizeDisabled = (button: ActionButtonConfig) => {
+const normalizeDisabled = (button: ActionButtonConfig<T>) => {
     if (typeof button.disabled === 'function') {
-        const row = props.scope?.row || props.scope
-        return button.disabled(row, props.scope?.$index)
+        const row = getRowData(props.scope)
+        const index = getIndex(props.scope)
+        return button.disabled(row, index)
     }
     return !!button.disabled
 }
 
-const normalizeTooltip = (button: ActionButtonConfig) => {
+const normalizeTooltip = (button: ActionButtonConfig<T>) => {
     if (typeof button.tooltip === 'function') {
-        const row = props.scope?.row || props.scope
-        return button.tooltip(row, props.scope?.$index) || ''
+        const row = getRowData(props.scope)
+        const index = getIndex(props.scope)
+        return button.tooltip(row, index) || ''
     }
     return button.tooltip || ''
 }
@@ -128,10 +163,10 @@ const hasMoreButtons = computed(() => {
     return moreButtons.value.length > 0
 })
 
-const handleClick = (button: ActionButtonConfig, scope: any) => {
+const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T) => {
     if (normalizeDisabled(button)) return
-    const row = scope?.row || scope
-    const index = scope?.$index
+    const row = getRowData(scope)
+    const index = getIndex(scope)
     if (button.click) {
         button.click(row, index)
     } else if (button.onClick) {

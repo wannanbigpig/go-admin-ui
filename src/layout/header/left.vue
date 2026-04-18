@@ -2,7 +2,7 @@
     <div class="xl-left-content">
         <div class="xl-refresh-btn xl-cursor-pointer" @click="handleRefresh">
             <el-tooltip effect="dark" content="刷新页面" placement="bottom" :enterable="false">
-                <el-icon size="24" :class="{ 'xl-refresh-icon': (refreshStore as any).isRefreshing }">
+                <el-icon size="24" :class="{ 'xl-refresh-icon': refreshStore.isRefreshing }">
                     <i-ep-refresh />
                 </el-icon>
             </el-tooltip>
@@ -20,8 +20,8 @@ import { useRefreshStore } from '@/stores/refresh'
 const refreshStore = useRefreshStore()
 
 const handleRefresh = () => {
-    if (!(refreshStore as any).isRefreshing) {
-        refreshStore.triggerRefresh()
+    if (!refreshStore.isRefreshing) {
+        refreshStore.setKey()
     }
 }
 </script>

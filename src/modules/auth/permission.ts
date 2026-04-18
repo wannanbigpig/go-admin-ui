@@ -7,6 +7,7 @@ export interface ButtonPermissionInfo {
     icon: string
     title: string
     is_show: boolean
+    [key: string]: unknown
 }
 
 export function extractButtonPermissions(menuTree: UserPermission[] = []): string[] {
@@ -15,7 +16,7 @@ export function extractButtonPermissions(menuTree: UserPermission[] = []): strin
     const walk = (items?: UserPermission[]) => {
         if (!Array.isArray(items)) return
         items.forEach((item) => {
-            if (item?.type === ('button' as any) || item?.type === BUTTON_TYPE) {
+            if (item?.type === 'button' || item?.type === BUTTON_TYPE) {
                 if (item.code) {
                     permissions.push(item.code)
                 }
@@ -34,7 +35,7 @@ export function buildButtonPermissionMap(menuTree: UserPermission[] = []): Map<s
     const walk = (items?: UserPermission[]) => {
         if (!Array.isArray(items)) return
         items.forEach((item) => {
-            if (item?.type === ('button' as any) || item?.type === BUTTON_TYPE) {
+            if (item?.type === 'button' || item?.type === BUTTON_TYPE) {
                 if (item.code) {
                     map.set(item.code, {
                         icon: item.icon || '',

@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="部门名称" prop="name">
@@ -15,13 +15,13 @@
 
         <div class="xl-container">
             <div style="display: flex; align-items: center; margin-bottom: 10px">
-                <xl-action-button v-permission="'department:add'" :show-icon="false" type="primary" :button-info="addButtonInfo || {}" @click="openEditDrawer(1, null, null)" />
+                <xl-action-button v-permission="'department:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1, null, null)" />
             </div>
             <div>
                 <xl-table-list :loading="loading" ref="tableListRef" :data="departmentList" :tableTitle="tableTitle" :pagination="{ total: 0 }" row-key="id" :default-expand-all="true">
                     <template #td="{ item, val }">
-                        <el-tag v-if="item.tag" :type="item.tag[val]?.type || 'info'">
-                            {{ item.tag[val]?.text || val }}
+                        <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
+                            {{ item.tag[val as string | number]?.text || val }}
                         </el-tag>
                         <span v-else>{{ val }}</span>
                     </template>
@@ -37,14 +37,14 @@
         </div>
 
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting">
+        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="30%">
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules()" :key="currentIndex ?? 0">
                 <el-row :gutter="20">
                     <el-col :span="24">
                         <el-form-item label="上级部门" prop="pid">
                             <el-select v-model="formData.pid" placeholder="请选择上级部门" :disabled="isProtectedEditingDepartment" clearable filterable style="width: 100%">
                                 <el-option label="顶级部门" :value="0" />
-                                <el-option v-for="dept in filteredParentOptions" :key="dept.id" :label="dept.label || dept.name" :value="dept.id" />
+                                <el-option v-for="dept in filteredParentOptions" :key="dept.id" :label="(dept as Department & { label?: string }).label || dept.name" :value="dept.id" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -70,7 +70,7 @@
         </xl-drawer>
 
         <!-- 绑定角色抽屉 -->
-        <xl-drawer v-model="showBindRoleDrawer" title="绑定角色" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole">
+        <xl-drawer v-model="showBindRoleDrawer" title="绑定角色" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
             <el-skeleton v-if="roleOptionsLoading" animated />
             <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto">
                 <el-form-item label="部门名称">
@@ -108,6 +108,7 @@ import { useDepartmentTreeList } from '@/modules/department/useDepartmentTreeLis
 import { useDepartmentForm } from '@/modules/department/useDepartmentForm'
 import { useDepartmentRoleBinding } from '@/modules/department/useDepartmentRoleBinding'
 import type { Department } from '@/types/department'
+import type { TableColumn } from '@/types/common'
 
 const { getButtonInfoFull } = usePermission()
 const addChildButtonInfo = getButtonInfoFull('department:addChild')
@@ -128,28 +129,30 @@ const actionButtons = computed(() => {
     return [
         {
             permission: 'department:addChild',
-            buttonInfo: addChildButtonInfo,
+            buttonInfo: addChildButtonInfo || undefined,
             showIcon: false,
             click: (row: Department) => handleAddChild(row),
         },
         {
             permission: 'department:update',
-            buttonInfo: updateButtonInfo,
+            buttonInfo: updateButtonInfo || undefined,
             showIcon: false,
             click: (row: Department, index: number) => openEditDrawer(2, row, index),
         },
         {
             permission: 'department:bindRole',
-            buttonInfo: bindRoleButtonInfo,
+            buttonInfo: bindRoleButtonInfo || undefined,
             showIcon: false,
             click: (row: Department) => handleBindRole(row),
         },
         {
             permission: 'department:delete',
-            buttonInfo: deleteButtonInfo,
+            buttonInfo: deleteButtonInfo || undefined,
             showIcon: false,
             click: (row: Department) => handleDelete(row),
             disabled: (row: Department) => isProtectedDepartment(row),
+            tooltip: (row: Department) => (isProtectedDepartment(row) ? '该系统保留对象不允许删除' : ''),
+            divided: true,
         },
     ]
 })
@@ -176,7 +179,7 @@ onMounted(() => {
     getList()
 })
 
-const tableTitle: any[] = [
+const tableTitle: TableColumn<Department>[] = [
     { prop: 'name', h_label: '部门名称', width: 200, overflow: true },
     { prop: 'description', h_label: '描述', minWidth: 200, overflow: true },
     { prop: 'sort', h_label: '排序', align: 'center', width: 100 },

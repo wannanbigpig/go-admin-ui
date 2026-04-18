@@ -4,7 +4,7 @@ import { flattenDepartmentTree } from '@/modules/department/model'
 import type { Department } from '@/types/department'
 import type { FormInstance } from 'element-plus'
 
-export function useDepartmentTreeList(_tableListRef: any) {
+export function useDepartmentTreeList(_tableListRef: unknown) {
     const loading = ref(false)
     const departmentList = ref<Department[]>([])
     const departmentOptions = ref<(Department & { label: string })[]>([])

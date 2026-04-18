@@ -1,5 +1,6 @@
 import { reactive, ref, type Ref } from 'vue'
 import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
+import { normalizeListData } from '@/modules/shared/response'
 import { getRoleList } from '@/api/permission'
 import type { Role } from '@/types/role'
 import type { FormInstance } from 'element-plus'
@@ -21,10 +22,10 @@ export function useRoleList() {
             const params = {
                 ...queryWhere,
                 page: pagination.page,
-                page_size: pagination.pageSize,
+                per_page: pagination.pageSize,
             }
             const response = await getRoleList(params)
-            const result = response.data
+            const result = normalizeListData<Role>(response)
             pagination.total = result.total
             roleList.value = result.list
         } catch (error) {

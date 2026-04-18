@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="操作名称" prop="operation_name">
@@ -14,15 +14,8 @@
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="请求方法" prop="method">
-                            <el-select v-model="queryWhere.method" clearable placeholder="请选择请求方法">
-                                <el-option v-for="item in METHOD_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
                         <el-form-item label="操作状态" prop="operation_status">
-                            <el-select v-model="queryWhere.operation_status" clearable placeholder="请选择操作状态">
+                            <el-select v-model="queryWhere.operation_status" clearable placeholder="请选择状态">
                                 <el-option label="成功" :value="0" />
                                 <el-option label="失败" :value="1" />
                             </el-select>
@@ -30,7 +23,7 @@
                     </el-col>
                     <el-col :span="4">
                         <el-form-item label="操作账号" prop="operator_account">
-                            <el-input placeholder="请输入操作账号" v-model.trim="queryWhere.operator_account" clearable></el-input>
+                            <el-input placeholder="操作账号" v-model.trim="queryWhere.operator_account" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
@@ -45,22 +38,17 @@
 
         <div class="xl-container">
             <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
-                <!-- 渲染表格列的内容 -->
                 <template #td="{ item, val }">
-                    <el-icon v-if="item.icon" :color="item.icon[val]?.color">
-                        <xl-icon :icon="item.icon[val]?.text" />
-                    </el-icon>
-                    <el-tag v-else-if="item.tag" :type="item.tag[val]?.type || item.tag['other']?.type">
-                        {{ item.tag[val]?.text || val }}
+                    <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
+                        {{ item.tag[val as keyof typeof item.tag]?.text || val }}
                     </el-tag>
                     <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" content="复制成功" placement="left">
-                        <span @click="handleCopyClick(val)" class="xl-cursor-pointer"> {{ val }}</span>
+                        <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
                     </el-tooltip>
                     <span v-else>
                         {{ val }}
                     </span>
                 </template>
-                <!-- 操作列 -->
                 <template #operation>
                     <el-table-column width="100" label="操作" align="center" fixed="right">
                         <template #default="scope">
@@ -73,55 +61,27 @@
 
         <!-- 详情抽屉 -->
         <el-drawer v-model="showDetailDrawer" title="操作日志详细信息" direction="rtl" size="50%">
-            <template #header="{ titleId, titleClass }">
-                <h4 :id="titleId" :class="titleClass">操作日志详细信息</h4>
-            </template>
-            <div v-loading="detailLoading" element-loading-text="加载中..." element-loading-background="rgba(255, 255, 255, 0.8)" class="detail-content">
+            <div v-loading="detailLoading" element-loading-text="加载中..." class="detail-content">
                 <template v-if="currentDetail">
                     <el-descriptions :column="2" border>
-                        <el-descriptions-item label="操作名称" :span="2">
-                            {{ currentDetail.operation_name || '-' }}
-                        </el-descriptions-item>
+                        <el-descriptions-item label="操作名称" :span="2">{{ currentDetail.operation_name || '-' }}</el-descriptions-item>
                         <el-descriptions-item label="操作接口" :span="2">
-                            <el-tag :type="getMethodTagType(currentDetail.method)" class="xl-m-right-10">
-                                {{ currentDetail.method || '-' }}
-                            </el-tag>
+                            <el-tag :type="getMethodTagType(currentDetail.method)" class="xl-m-right-10">{{ currentDetail.method || '-' }}</el-tag>
                             {{ currentDetail.base_url || '-' }}
                         </el-descriptions-item>
                         <el-descriptions-item label="操作状态">
                             <el-tag :type="currentDetail.operation_status === 0 ? 'success' : 'danger'">
-                                {{ currentDetail.operation_status_name || (currentDetail.operation_status === 0 ? '成功' : '失败') }}
+                                {{ currentDetail.operation_status === 0 ? '成功' : '失败' }}
                             </el-tag>
                         </el-descriptions-item>
-                        <el-descriptions-item label="耗时ms">
-                            {{ currentDetail.execution_time || '-' }}
-                        </el-descriptions-item>
+                        <el-descriptions-item label="耗时(ms)">{{ currentDetail.execution_time || '-' }}</el-descriptions-item>
                         <el-descriptions-item label="响应代码">
-                            <el-tag :type="getResponseStatusTagType(currentDetail.response_status)">
-                                {{ currentDetail.response_status || '-' }}
-                            </el-tag>
+                            <el-tag :type="getResponseStatusTagType(currentDetail.response_status)">{{ currentDetail.response_status || '-' }}</el-tag>
                         </el-descriptions-item>
-                        <el-descriptions-item label="IP地址" :span="2">
-                            {{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.browser" label="浏览器信息" :span="2">
-                            {{ currentDetail.browser || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.os" label="操作系统" :span="2">
-                            {{ currentDetail.os || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item label="操作账号">
-                            {{ currentDetail.operator_account || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item label="操作人员">
-                            {{ currentDetail.operator_name || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item label="JWT ID">
-                            {{ currentDetail.jwt_id || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item label="创建时间">
-                            {{ currentDetail.created_at || '-' }}
-                        </el-descriptions-item>
+                        <el-descriptions-item label="IP地址" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
+                        <el-descriptions-item label="操作账号">{{ currentDetail.operator_account || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="操作人员">{{ currentDetail.operator_name || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="创建时间" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
                     </el-descriptions>
 
                     <el-divider />
@@ -130,14 +90,8 @@
                         <el-collapse-item v-if="currentDetail.request_query" name="requestQuery" title="请求查询参数">
                             <pre class="json-content">{{ formatJson(currentDetail.request_query) }}</pre>
                         </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.request_headers" name="requestHeaders" title="请求头">
-                            <pre class="json-content">{{ formatJson(currentDetail.request_headers) }}</pre>
-                        </el-collapse-item>
                         <el-collapse-item v-if="currentDetail.request_body" name="requestBody" title="请求体">
                             <pre class="json-content">{{ formatJson(currentDetail.request_body) }}</pre>
-                        </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.response_header" name="responseHeader" title="响应头">
-                            <pre class="json-content">{{ formatJson(currentDetail.response_header) }}</pre>
                         </el-collapse-item>
                         <el-collapse-item v-if="currentDetail.response_body" name="responseBody" title="响应体">
                             <pre class="json-content">{{ formatJson(currentDetail.response_body) }}</pre>
@@ -149,43 +103,20 @@
     </div>
 </template>
 
-<style lang="scss" scoped>
-.el-form-item {
-    width: 100% !important;
-}
-
-.detail-content {
-    padding: 20px 0;
-
-    .json-content {
-        background-color: var(--el-fill-color-light);
-        padding: 15px;
-        border-radius: 4px;
-        font-size: 12px;
-        line-height: 1.6;
-        overflow-x: auto;
-        margin: 0;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-    }
-}
-</style>
-
-<script setup>
-import { Icon as XlIcon } from '@iconify/vue'
+<script setup lang="ts">
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { onMounted } from 'vue'
-import Clipboard from 'clipboard'
 import { usePermission } from '@/composables/usePermission'
-import { LOG_METHOD_OPTIONS } from '@/modules/log/model'
 import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
+import type { TableColumn } from '@/types/common'
+import type { RequestLog } from '@/types/log'
 
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('requestLog:detail')
-const METHOD_OPTIONS = LOG_METHOD_OPTIONS
+
 const {
     loading,
     logList,
@@ -195,133 +126,77 @@ const {
     dateRange,
     showDetailDrawer,
     currentDetail,
-    activeCollapse,
     detailLoading,
+    activeCollapse,
     formatJson,
     formatIpAddress,
     getMethodTagType,
     getResponseStatusTagType,
     handleSearch,
-    loadList,
+    getList,
     openDetailDrawer,
 } = useRequestLogPage()
 
-const handleCopyClick = (text) => {
-    Clipboard.copy(text)
+const handleCopyClick = async (text: string) => {
+    try {
+        await navigator.clipboard.writeText(text)
+    } catch (error) {
+        console.error('复制失败:', error)
+    }
 }
 
 onMounted(() => {
-    loadList()
+    getList()
 })
 
-// ==================== 表格配置 ====================
-const tableTitle = [
-    {
-        prop: 'id',
-        align: 'center',
-        h_label: 'ID',
-        width: 80,
-    },
-    {
-        prop: 'request_id',
-        h_label: '请求ID',
-        minWidth: 250,
-        copy: true,
-        customRow: true,
-        overflow: true,
-    },
-    {
-        prop: 'operation_name',
-        h_label: '操作名称',
-        minWidth: 150,
-        overflow: true,
-    },
-    {
-        prop: 'operator_name',
-        h_label: '操作人',
-        minWidth: 120,
-        overflow: true,
-    },
-    {
-        prop: 'operator_account',
-        h_label: '操作账号',
-        minWidth: 120,
-        overflow: true,
-    },
-    {
-        prop: 'ip',
-        h_label: 'IP地址',
-        minWidth: 130,
-        copy: true,
-        customRow: true,
-    },
+const tableTitle: TableColumn<RequestLog>[] = [
+    { prop: 'id', align: 'center', h_label: 'ID', width: 80 },
+    { prop: 'operation_name', h_label: '操作名称', minWidth: 150, overflow: true },
+    { prop: 'operator_account', h_label: '账号', width: 120, overflow: true },
     {
         prop: 'method',
-        h_label: '请求方法',
+        h_label: '方法',
         align: 'center',
-        width: 120,
+        width: 100,
         customRow: true,
         tag: {
             GET: { type: 'success', text: 'GET' },
             POST: { type: 'primary', text: 'POST' },
             PUT: { type: 'warning', text: 'PUT' },
             DELETE: { type: 'danger', text: 'DELETE' },
-            PATCH: { type: 'info', text: 'PATCH' },
-            OPTIONS: { type: '', text: 'OPTIONS' },
-            HEAD: { type: '', text: 'HEAD' },
         },
     },
-    {
-        prop: 'base_url',
-        h_label: '接口路由',
-        minWidth: 200,
-        copy: true,
-        customRow: true,
-        overflow: true,
-    },
+    { prop: 'base_url', h_label: '路由', minWidth: 200, overflow: true, copy: true, customRow: true },
     {
         prop: 'operation_status',
-        h_label: '操作状态',
+        h_label: '状态',
         align: 'center',
-        width: 120,
+        width: 100,
         customRow: true,
         tag: {
-            成功: { type: 'success', text: '成功' },
-            失败: { type: 'danger', text: '失败' },
-        },
-        formatter: (row) => {
-            return row.operation_status === 0 ? '成功' : '失败'
+            0: { type: 'success', text: '成功' },
+            1: { type: 'danger', text: '失败' },
         },
     },
-    {
-        prop: 'response_status',
-        h_label: '响应状态',
-        align: 'center',
-        width: 120,
-        customRow: true,
-        tag: {
-            200: { type: 'success', text: '200' },
-            400: { type: 'warning', text: '400' },
-            401: { type: 'danger', text: '401' },
-            403: { type: 'danger', text: '403' },
-            404: { type: 'warning', text: '404' },
-            500: { type: 'danger', text: '500' },
-        },
-        formatter: (row) => {
-            return row.response_status || '-'
-        },
-    },
-    {
-        prop: 'execution_time',
-        h_label: '执行时间(ms)',
-        align: 'center',
-        width: 130,
-    },
-    {
-        prop: 'created_at',
-        h_label: '创建时间',
-        align: 'center',
-        width: 160,
-    },
+    { prop: 'execution_time', h_label: '耗时(ms)', align: 'center', width: 100 },
+    { prop: 'created_at', h_label: '创建时间', align: 'center', width: 160 },
 ]
 </script>
+
+<style lang="scss" scoped>
+.el-form-item {
+    width: 100% !important;
+}
+.detail-content {
+    padding: 20px;
+    .json-content {
+        background-color: var(--el-fill-color-light);
+        padding: 15px;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1.6;
+        overflow-x: auto;
+        white-space: pre-wrap;
+    }
+}
+</style>

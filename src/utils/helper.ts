@@ -88,28 +88,29 @@ export function isExternal(path: string): boolean {
  * @param value - 需要判断的值
  * @returns 是否为空
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: unknown): boolean {
     // 处理 Vue 的 Ref 对象
-    if (value && typeof value === 'object' && '__v_isRef' in value) {
-        value = value.value
+    let val = value
+    if (val && typeof val === 'object' && '__v_isRef' in (val as Record<string, unknown>)) {
+        val = (val as { value: unknown }).value
     }
 
-    if (value == null) return true
+    if (val == null) return true
 
-    switch (typeof value) {
+    switch (typeof val) {
         case 'boolean':
-            return !value
+            return !val
         case 'number':
-            return value === 0
+            return val === 0
         case 'string':
-            return value.trim() === ''
+            return val.trim() === ''
     }
 
-    if (value instanceof Map || value instanceof Set) return value.size === 0
-    if (Array.isArray(value)) return value.length === 0
+    if (val instanceof Map || val instanceof Set) return val.size === 0
+    if (Array.isArray(val)) return val.length === 0
 
-    if (typeof value === 'object') {
-        return Reflect.ownKeys(value).length === 0
+    if (typeof val === 'object') {
+        return Reflect.ownKeys(val as object).length === 0
     }
 
     return false
@@ -127,9 +128,9 @@ export function filterNullUndefined<T extends object>(obj: T): Partial<T> {
 /**
  * 防重复执行函数
  */
-export function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
+export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, delay: number): (...args: Parameters<T>) => void {
     let timer: ReturnType<typeof setTimeout> | null = null
-    return function (this: any, ...args: Parameters<T>) {
+    return function (this: unknown, ...args: Parameters<T>) {
         if (timer) clearTimeout(timer)
         timer = setTimeout(() => {
             fn.apply(this, args)
@@ -157,7 +158,7 @@ export function formatDate(date: Date | string | number): string {
  */
 export interface TreeOption {
     label: string
-    value: any
+    value: unknown
 }
 
 export interface FlattenOptions {
@@ -167,18 +168,20 @@ export interface FlattenOptions {
     separator?: string
 }
 
-export function flattenTree(tree: any[], prefix: string = '', options: FlattenOptions = {}): TreeOption[] {
+export function flattenTree(tree: Record<string, unknown>[], prefix: string = '', options: FlattenOptions = {}): TreeOption[] {
     const { idKey = 'id', nameKey = 'name', childrenKey = 'children', separator = ' / ' } = options
 
     const result: TreeOption[] = []
     tree.forEach((item) => {
-        const label = prefix ? `${prefix}${separator}${item[nameKey]}` : item[nameKey]
+        const name = String(item[nameKey] ?? '')
+        const label = prefix ? `${prefix}${separator}${name}` : name
         result.push({
             label,
             value: item[idKey],
         })
-        if (item[childrenKey] && item[childrenKey].length > 0) {
-            result.push(...flattenTree(item[childrenKey], label, options))
+        const children = item[childrenKey]
+        if (Array.isArray(children) && children.length > 0) {
+            result.push(...flattenTree(children as Record<string, unknown>[], label, options))
         }
     })
     return result
@@ -194,6 +197,6 @@ export function getImageUrl(value: string): string {
         return value
     }
 
-    const { VITE_BASE_URL } = (import.meta as any).env
+    const { VITE_BASE_URL } = import.meta.env
     return `${VITE_BASE_URL}/admin/v1/file/${value}`
 }

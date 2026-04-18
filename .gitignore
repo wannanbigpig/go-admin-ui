@@ -31,3 +31,4 @@ dist-ssr
 *.sln
 *.sw?
 PROJECT_ARCHITECTURE.md
+.claude

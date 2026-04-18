@@ -53,7 +53,7 @@ service.interceptors.request.use(
  * - 处理网络错误
  */
 service.interceptors.response.use(
-    (response: AxiosResponse<ApiResponse>) => {
+    (response: AxiosResponse<ApiResponse<unknown>>) => {
         const authStore = useAuthStore()
 
         // 处理 token 刷新
@@ -79,7 +79,7 @@ service.interceptors.response.use(
         }
 
         // 返回数据
-        return response.data as any
+        return response.data as unknown as AxiosResponse<ApiResponse<unknown>>
     },
     (error) => {
         const authStore = useAuthStore()
@@ -130,12 +130,26 @@ service.interceptors.response.use(
  * @param {AxiosRequestConfig} options - 请求配置选项（data、params、headers 等）
  * @returns {Promise<T>} 请求 Promise
  */
-export function request<T = any>(url: string, method: string, options: AxiosRequestConfig = {}): Promise<T> {
+export function request<T = unknown>(url: string, method: string, options: AxiosRequestConfig = {}): Promise<T> {
     return service.request({
         url,
         method: method.toUpperCase(),
         ...options,
     }) as unknown as Promise<T>
+}
+
+const isEmptyQueryValue = (value: unknown) => {
+    if (value === null || value === undefined) return true
+    if (typeof value === 'string') return value.trim() === ''
+    if (Array.isArray(value)) return value.length === 0
+    return false
+}
+
+const sanitizeQueryParams = (params?: Record<string, unknown>) => {
+    if (!params) return undefined
+
+    const nextParams = Object.fromEntries(Object.entries(params).filter(([, value]) => !isEmptyQueryValue(value)))
+    return Object.keys(nextParams).length > 0 ? nextParams : undefined
 }
 
 /**
@@ -144,7 +158,7 @@ export function request<T = any>(url: string, method: string, options: AxiosRequ
  * @param {Object} params - 查询参数
  * @returns {Promise<T>} 请求 Promise
  */
-export const get = <T = any>(url: string, params?: any): Promise<T> => request<T>(url, 'GET', { params })
+export const get = <T = unknown>(url: string, params?: Record<string, unknown>): Promise<T> => request<T>(url, 'GET', { params: sanitizeQueryParams(params) })
 
 /**
  * POST 请求
@@ -152,7 +166,7 @@ export const get = <T = any>(url: string, params?: any): Promise<T> => request<T
  * @param {Object} data - 请求体数据
  * @returns {Promise<T>} 请求 Promise
  */
-export const post = <T = any>(url: string, data?: any): Promise<T> => request<T>(url, 'POST', { data })
+export const post = <T = unknown>(url: string, data?: unknown): Promise<T> => request<T>(url, 'POST', { data })
 
 /**
  * 文件上传方法（支持单文件/多文件上传）
@@ -161,7 +175,7 @@ export const post = <T = any>(url: string, data?: any): Promise<T> => request<T>
  * @param {Object} extra - 额外附带的字段（可选）
  * @returns {Promise<T>} 上传请求 Promise
  */
-export const upload = <T = any>(url: string, files: File | File[], extra: Record<string, any> = {}): Promise<T> => {
+export const upload = <T = unknown>(url: string, files: File | File[], extra: Record<string, unknown> = {}): Promise<T> => {
     const formData = new FormData()
 
     // 处理多文件上传
@@ -176,7 +190,7 @@ export const upload = <T = any>(url: string, files: File | File[], extra: Record
 
     // 添加额外参数
     Object.entries(extra).forEach(([key, value]) => {
-        formData.append(key, value)
+        formData.append(key, value as string | Blob)
     })
 
     return request<T>(url, 'POST', {

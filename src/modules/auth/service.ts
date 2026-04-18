@@ -5,10 +5,10 @@ import type { LoginResult, UserInfo, UserPermission } from '@/types/auth'
 
 export async function fetchCaptcha() {
     const response = await getCaptcha()
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 
-export async function loginWithCredentials(data: any): Promise<LoginResult> {
+export async function loginWithCredentials(data: Record<string, unknown>): Promise<LoginResult> {
     const response = await login(data)
     return normalizeDetailData(response, {} as LoginResult)
 }
@@ -23,7 +23,7 @@ export async function fetchUserMenuTree(): Promise<UserPermission[]> {
     return normalizeArrayData(response)
 }
 
-export async function saveProfile(data: any) {
+export async function saveProfile(data: Record<string, unknown>) {
     const response = await updateProfile(data)
-    return normalizeDetailData(response, {} as any)
+    return normalizeDetailData(response, {} as Record<string, unknown>)
 }

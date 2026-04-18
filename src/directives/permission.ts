@@ -4,7 +4,7 @@ import type { Directive, DirectiveBinding } from 'vue'
 
 interface PermissionHTMLElement extends HTMLElement {
     disabled?: boolean
-    [key: string]: any
+    [key: string]: unknown
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw, RouteLocationRaw } from 'vue-router'
 import router from './index'
 import { isEmpty } from '@/utils/helper'
 import type { UserPermission } from '@/types/auth'
@@ -54,10 +54,10 @@ const getComponentLoader = (componentPath?: string) => {
  */
 export function convertRoute(routesData: UserPermission[]): RouteRecordRaw[] {
     return routesData.map((route) => {
-        const converted: any = {
+        const converted = {
             path: route.path || '',
             name: route.name || route.code,
-            redirect: (route.redirect || '') !== '' ? { name: route.redirect } : undefined,
+            redirect: (route.redirect || '') !== '' ? ({ name: route.redirect } as RouteLocationRaw) : undefined,
             meta: {
                 title: route.title || '',
                 isDynamic: true,
@@ -67,7 +67,7 @@ export function convertRoute(routesData: UserPermission[]): RouteRecordRaw[] {
                 isNewWindow: Number(route.is_new_window ?? 0) === 1,
                 isExternalLinks: Number(route.is_external_links ?? 0) === 1,
             },
-        }
+        } as RouteRecordRaw & { children?: RouteRecordRaw[]; component?: unknown }
 
         // 处理组件路径
         if (route.component) {

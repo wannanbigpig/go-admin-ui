@@ -1,5 +1,6 @@
 import { reactive, ref, type Ref } from 'vue'
 import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
+import { normalizeListData } from '@/modules/shared/response'
 import { getPermissionList } from '@/api/permission'
 import type { ApiPermission } from '@/modules/apiPermission/model'
 import type { FormInstance } from 'element-plus'
@@ -9,12 +10,17 @@ export function useApiPermissionList() {
     const permissionList = ref([]) as Ref<ApiPermission[]>
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive({
-        name: '',
-        path: '',
+        keyword: '',
         method: '',
-        group_name: '',
+        is_auth: undefined as number | undefined,
+        is_effective: undefined as number | undefined,
         page: 1,
         per_page: 10,
+    })
+
+    const pagination: PaginationState = createPaginationState(() => getList(), {
+        page: queryWhere.page,
+        pageSize: queryWhere.per_page,
     })
 
     const getList = async () => {
@@ -23,10 +29,10 @@ export function useApiPermissionList() {
             const params = {
                 ...queryWhere,
                 page: pagination.page,
-                page_size: pagination.pageSize,
+                per_page: pagination.pageSize,
             }
             const response = await getPermissionList(params)
-            const result = response.data
+            const result = normalizeListData<ApiPermission>(response)
             pagination.total = result.total
             permissionList.value = result.list
         } catch (error) {
@@ -35,11 +41,6 @@ export function useApiPermissionList() {
             loading.value = false
         }
     }
-
-    const pagination: PaginationState = createPaginationState(() => getList(), {
-        page: queryWhere.page,
-        pageSize: queryWhere.per_page,
-    })
 
     const handleSearch = () => {
         pagination.page = 1

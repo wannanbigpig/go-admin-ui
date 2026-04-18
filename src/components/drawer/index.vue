@@ -7,14 +7,16 @@
             <slot />
         </template>
         <template #footer>
-            <el-divider />
-            <div class="drawer-footer">
-                <el-button v-if="withReset" type="warning" @click="handleReset">重置</el-button>
-                <el-button @click="handleCancel">取消</el-button>
-                <el-button type="primary" :disabled="isSubmitting" :loading="isSubmitting" @click="handleConfirm">
-                    {{ isSubmitting ? '提交中...' : '提交' }}
-                </el-button>
-            </div>
+            <slot name="footer">
+                <el-divider />
+                <div class="drawer-footer">
+                    <el-button v-if="withReset" type="warning" @click="handleReset">重置</el-button>
+                    <el-button @click="handleCancel">取消</el-button>
+                    <el-button type="primary" :disabled="isSubmitting" :loading="isSubmitting" @click="handleConfirm">
+                        {{ isSubmitting ? '提交中...' : '提交' }}
+                    </el-button>
+                </div>
+            </slot>
         </template>
     </el-drawer>
 </template>

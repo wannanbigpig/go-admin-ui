@@ -60,13 +60,16 @@ export default tseslint.config(
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 
             // 允许显式使用 any（在迁移初期可以适当放宽，后续再收紧）
-            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-explicit-any': 'warn',
 
             // 允许非空断言（看项目习惯）
             '@typescript-eslint/no-non-null-assertion': 'off',
 
             // 允许空函数
             '@typescript-eslint/no-empty-function': 'warn',
+
+            // 禁止使用 var
+            'no-var': 'error',
 
             // 常规规则
             'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',

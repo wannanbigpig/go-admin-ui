@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="用户名" prop="username">
@@ -33,19 +33,17 @@
 
         <div class="xl-container">
             <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
-                <!-- 渲染表格列的内容 -->
-                <template #td="{ item, val, row }">
-                    <el-tag v-if="item.tag" :type="item.tag[row[item.prop]]?.type || item.tag[val]?.type || item.tag['other']?.type">
-                        {{ val }}
+                <template #td="{ item, val }">
+                    <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
+                        {{ item.tag[val as keyof typeof item.tag]?.text || val }}
                     </el-tag>
                     <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" content="复制成功" placement="left">
-                        <span @click="handleCopyClick(val)" class="xl-cursor-pointer"> {{ val }}</span>
+                        <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
                     </el-tooltip>
                     <span v-else>
                         {{ val }}
                     </span>
                 </template>
-                <!-- 操作列 -->
                 <template #operation>
                     <el-table-column width="100" label="操作" align="center" fixed="right">
                         <template #default="scope">
@@ -58,18 +56,11 @@
 
         <!-- 详情抽屉 -->
         <el-drawer v-model="showDetailDrawer" title="登录日志详细信息" direction="rtl" size="50%">
-            <template #header="{ titleId, titleClass }">
-                <h4 :id="titleId" :class="titleClass">登录日志详细信息</h4>
-            </template>
-            <div v-loading="detailLoading" element-loading-text="加载中..." element-loading-background="rgba(255, 255, 255, 0.8)" class="detail-content">
+            <div v-loading="detailLoading" element-loading-text="加载中..." class="detail-content">
                 <template v-if="currentDetail">
                     <el-descriptions :column="2" border>
-                        <el-descriptions-item label="用户名" :span="2">
-                            {{ currentDetail.username || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item label="IP地址" :span="2">
-                            {{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}
-                        </el-descriptions-item>
+                        <el-descriptions-item label="用户名" :span="2">{{ currentDetail.username || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="IP地址" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
                         <el-descriptions-item label="操作类型">
                             <el-tag :type="currentDetail.type === 1 ? 'primary' : 'info'">
                                 {{ currentDetail.type_name || (currentDetail.type === 1 ? '登录操作' : currentDetail.type === 2 ? '刷新token' : '-') }}
@@ -80,133 +71,65 @@
                                 {{ currentDetail.login_status_name || (currentDetail.login_status === 1 ? '成功' : '失败') }}
                             </el-tag>
                         </el-descriptions-item>
-                        <el-descriptions-item label="执行时间(ms)">
-                            {{ currentDetail.execution_time || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.device_name" label="设备名称" :span="2">
-                            {{ currentDetail.device_name || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.os" label="操作系统" :span="2">
-                            {{ currentDetail.os || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.browser" label="浏览器" :span="2">
-                            {{ currentDetail.browser || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.user_agent" label="User Agent" :span="2">
-                            {{ currentDetail.user_agent || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item label="登录时间" :span="2">
-                            {{ currentDetail.created_at || '-' }}
-                        </el-descriptions-item>
+                        <el-descriptions-item label="执行时间(ms)">{{ currentDetail.execution_time || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="currentDetail.os" label="操作系统">{{ currentDetail.os || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="currentDetail.browser" label="浏览器">{{ currentDetail.browser || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="登录时间" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
                         <el-descriptions-item v-if="currentDetail.login_status === 0 && currentDetail.login_fail_reason" label="失败原因" :span="2">
                             {{ currentDetail.login_fail_reason || '-' }}
                         </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.jwt_id" label="JWT ID" :span="2">
-                            {{ currentDetail.jwt_id || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.token_expires" label="Token过期时间" :span="2">
-                            {{ currentDetail.token_expires || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.refresh_expires" label="Refresh Token过期时间" :span="2">
-                            {{ currentDetail.refresh_expires || '-' }}
-                        </el-descriptions-item>
                         <el-descriptions-item v-if="currentDetail.is_revoked === 1" label="是否撤销">
-                            <el-tag :type="currentDetail.is_revoked === 1 ? 'danger' : 'success'">
-                                {{ currentDetail.is_revoked_name || (currentDetail.is_revoked === 1 ? '是' : '否') }}
-                            </el-tag>
+                            <el-tag type="danger">是</el-tag>
                         </el-descriptions-item>
                         <el-descriptions-item v-if="currentDetail.is_revoked === 1 && currentDetail.revoked_reason" label="撤销说明" :span="2">
                             {{ currentDetail.revoked_reason || '-' }}
                         </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.is_revoked === 1 && currentDetail.revoked_at" label="撤销时间" :span="2">
-                            {{ currentDetail.revoked_at || '-' }}
-                        </el-descriptions-item>
                     </el-descriptions>
 
-                    <el-divider />
+                    <template v-if="currentDetail.access_token || currentDetail.refresh_token">
+                        <el-divider />
 
-                    <el-collapse v-model="activeCollapse">
-                        <el-collapse-item v-if="currentDetail.access_token" name="accessToken">
-                            <template #title>
-                                <span>Access Token</span>
-                                <el-button v-if="currentDetail.access_token" link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('accessToken')">
-                                    {{ tokenFormatState.accessToken ? '还原' : '格式化' }}
-                                </el-button>
-                            </template>
-                            <div v-if="currentDetail.token_hash" class="hash-label">Token Hash: {{ currentDetail.token_hash }}</div>
-                            <pre class="json-content">{{ tokenFormatState.accessToken ? formatJwtToken(currentDetail.access_token) : currentDetail.access_token }}</pre>
-                        </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken">
-                            <template #title>
-                                <span>Refresh Token</span>
-                                <el-button v-if="currentDetail.refresh_token" link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('refreshToken')">
-                                    {{ tokenFormatState.refreshToken ? '还原' : '格式化' }}
-                                </el-button>
-                            </template>
-                            <div v-if="currentDetail.refresh_token_hash" class="hash-label">Refresh Token Hash: {{ currentDetail.refresh_token_hash }}</div>
-                            <pre class="json-content">{{ tokenFormatState.refreshToken ? formatJwtToken(currentDetail.refresh_token) : currentDetail.refresh_token }}</pre>
-                        </el-collapse-item>
-                    </el-collapse>
+                        <el-collapse v-model="activeCollapse">
+                            <el-collapse-item v-if="currentDetail.access_token" name="accessToken">
+                                <template #title>
+                                    <span>Access Token</span>
+                                    <el-button link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('accessToken')">
+                                        {{ accessTokenFormatted ? '还原' : '格式化' }}
+                                    </el-button>
+                                </template>
+                                <pre class="json-content">{{ accessTokenFormatted ? formatJwtToken(currentDetail.access_token) : currentDetail.access_token }}</pre>
+                            </el-collapse-item>
+                            <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken">
+                                <template #title>
+                                    <span>Refresh Token</span>
+                                    <el-button link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('refreshToken')">
+                                        {{ refreshTokenFormatted ? '还原' : '格式化' }}
+                                    </el-button>
+                                </template>
+                                <pre class="json-content">{{ refreshTokenFormatted ? formatJwtToken(currentDetail.refresh_token) : currentDetail.refresh_token }}</pre>
+                            </el-collapse-item>
+                        </el-collapse>
+                    </template>
                 </template>
             </div>
         </el-drawer>
     </div>
 </template>
 
-<style lang="scss" scoped>
-.el-form-item {
-    width: 100% !important;
-}
-
-.detail-content {
-    padding: 20px 0;
-
-    :deep(.el-descriptions__label) {
-        font-weight: 500;
-    }
-
-    :deep(.el-descriptions__content) {
-        word-break: break-all;
-        word-wrap: break-word;
-    }
-
-    .json-content {
-        background-color: var(--el-fill-color-light);
-        padding: 15px;
-        border-radius: 4px;
-        font-size: 12px;
-        line-height: 1.6;
-        overflow-x: auto;
-        margin: 0;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-    }
-
-    .hash-label {
-        color: var(--el-color-danger);
-        font-size: 12px;
-        margin-bottom: 10px;
-        padding: 8px 0;
-    }
-
-    .format-btn {
-        margin-left: 10px;
-    }
-}
-</style>
-
-<script setup>
+<script setup lang="ts">
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { onMounted } from 'vue'
-import Clipboard from 'clipboard'
 import { usePermission } from '@/composables/usePermission'
 import { useAdminLoginLogPage } from '@/modules/log/useAdminLoginLogPage'
+import type { TableColumn } from '@/types/common'
+import type { LoginLog } from '@/types/log'
 
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
+
 const {
     loading,
     logList,
@@ -216,138 +139,91 @@ const {
     dateRange,
     showDetailDrawer,
     currentDetail,
-    activeCollapse,
     detailLoading,
-    tokenFormatState,
+    activeCollapse,
+    accessTokenFormatted,
+    refreshTokenFormatted,
     formatIpAddress,
     toggleTokenFormat,
     formatJwtToken,
     handleSearch,
-    loadList,
+    getList,
     openDetailDrawer,
 } = useAdminLoginLogPage()
 
-const handleCopyClick = (text) => {
-    Clipboard.copy(text)
+const handleCopyClick = async (text: string) => {
+    try {
+        await navigator.clipboard.writeText(text)
+    } catch (error) {
+        console.error('复制失败:', error)
+    }
 }
+
 onMounted(() => {
-    loadList()
+    getList()
 })
 
-// ==================== 表格配置 ====================
-const tableTitle = [
-    {
-        prop: 'id',
-        align: 'center',
-        h_label: 'ID',
-        width: 80,
-    },
-    {
-        prop: 'username',
-        h_label: '用户名',
-        minWidth: 120,
-        overflow: true,
-    },
+const tableTitle: TableColumn<LoginLog>[] = [
+    { prop: 'id', align: 'center', h_label: 'ID', width: 80 },
+    { prop: 'username', h_label: '用户名', minWidth: 120, overflow: true },
     {
         prop: 'type',
-        h_label: '操作类型',
+        h_label: '类型',
         align: 'center',
-        width: 120,
+        width: 100,
         customRow: true,
         tag: {
-            1: { type: 'primary', text: '登录操作' },
-            2: { type: 'info', text: '刷新token' },
-        },
-        formatter: (row) => {
-            return row.type_name || (row.type === 1 ? '登录操作' : row.type === 2 ? '刷新token' : '')
+            1: { type: 'primary', text: '登录' },
+            2: { type: 'info', text: '刷新' },
         },
     },
     {
         prop: 'login_status',
-        h_label: '登录状态',
+        h_label: '状态',
         align: 'center',
-        width: 120,
+        width: 100,
         customRow: true,
         tag: {
             1: { type: 'success', text: '成功' },
             0: { type: 'danger', text: '失败' },
         },
-        formatter: (row) => {
-            return row.login_status_name || ''
-        },
     },
-    {
-        prop: 'ip',
-        h_label: 'IP地址',
-        minWidth: 130,
-        copy: true,
-        customRow: true,
-    },
-    {
-        prop: 'os',
-        h_label: '操作系统',
-        minWidth: 150,
-        overflow: true,
-    },
-    {
-        prop: 'browser',
-        h_label: '浏览器',
-        minWidth: 120,
-        overflow: true,
-    },
-
-    {
-        prop: 'created_at',
-        h_label: '登录时间',
-        align: 'center',
-        width: 160,
-    },
-    {
-        prop: 'login_fail_reason',
-        h_label: '失败原因',
-        minWidth: 150,
-        overflow: true,
-        formatter: (row) => {
-            return row.login_status === 0 ? row.login_fail_reason || '' : ''
-        },
-    },
-    {
-        prop: 'execution_time',
-        h_label: '执行时间(ms)',
-        align: 'center',
-        width: 130,
-    },
+    { prop: 'ip', h_label: 'IP地址', minWidth: 130, customRow: true, copy: true },
+    { prop: 'os', h_label: 'OS', width: 120, overflow: true },
+    { prop: 'browser', h_label: '浏览器', width: 120, overflow: true },
+    { prop: 'execution_time', h_label: '耗时(ms)', align: 'center', width: 100 },
     {
         prop: 'is_revoked',
-        h_label: '是否撤销',
+        h_label: '撤销',
         align: 'center',
-        width: 120,
+        width: 80,
         customRow: true,
         tag: {
             0: { type: 'success', text: '否' },
             1: { type: 'danger', text: '是' },
         },
-        formatter: (row) => {
-            return row.is_revoked_name || ''
-        },
     },
-    {
-        prop: 'revoked_reason',
-        h_label: '撤销说明',
-        minWidth: 150,
-        overflow: true,
-        formatter: (row) => {
-            return row.is_revoked === 1 ? row.revoked_reason || '' : ''
-        },
-    },
-    {
-        prop: 'revoked_at',
-        h_label: '撤销时间',
-        align: 'center',
-        width: 160,
-        formatter: (row) => {
-            return row.is_revoked === 1 ? row.revoked_at || '' : ''
-        },
-    },
+    { prop: 'created_at', h_label: '时间', align: 'center', width: 160 },
 ]
 </script>
+
+<style lang="scss" scoped>
+.el-form-item {
+    width: 100% !important;
+}
+.detail-content {
+    padding: 20px;
+    .json-content {
+        background-color: var(--el-fill-color-light);
+        padding: 15px;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1.6;
+        overflow-x: auto;
+        white-space: pre-wrap;
+    }
+    .format-btn {
+        margin-left: 10px;
+    }
+}
+</style>

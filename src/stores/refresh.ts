@@ -3,17 +3,21 @@ import { ref } from 'vue'
 
 export const useRefreshStore = defineStore('refresh', () => {
     // ==================== State ====================
-    /** 刷新标志位 */
-    const refreshKey = ref(0)
+    /** 刷新键值，用于触发组件重新渲染 */
+    const key = ref(0)
+
+    /** 是否正在刷新 */
+    const isRefreshing = ref(false)
 
     // ==================== Actions ====================
-    /** 触发刷新 */
-    const triggerRefresh = () => {
-        refreshKey.value += 1
+    /** 更新刷新键值，触发组件重新渲染 */
+    const setKey = () => {
+        key.value += 1
     }
 
     return {
-        refreshKey,
-        triggerRefresh,
+        key,
+        isRefreshing,
+        setKey,
     }
 })

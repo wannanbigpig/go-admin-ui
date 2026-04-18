@@ -1,30 +1,49 @@
-import { createAdminUserQuery, type AdminUser } from '@/types/adminUser'
+import type { AdminUser } from '@/types/adminUser'
 
-export function createAdminUserDefault(): AdminUser {
+/**
+ * 创建默认的管理员用户对象
+ */
+export function createAdminUserForm(): AdminUser {
     return {
-        id: '',
+        id: 0,
         username: '',
         nickname: '',
         avatar: '',
-        mobile: '',
+        phone_number: '',
         email: '',
-        status: 1, // 默认启用
-        remark: '',
-        role_ids: [],
-        dept_id: undefined,
+        status: ADMIN_USER_STATUS.NORMAL,
+        dept_ids: [],
+        password: '',
+        confirm_password: '',
+        created_at: '',
+        updated_at: '',
     }
 }
 
-export { createAdminUserQuery }
+/**
+ * 创建管理员用户查询对象
+ */
+export function createAdminUserQuery() {
+    return {
+        page: 1,
+        per_page: 10,
+        username: null,
+        phone_number: null,
+        status: null,
+        email: null,
+        dept_id: null,
+    }
+}
 
 export const ADMIN_USER_STATUS = {
-    ENABLED: 1,
-    DISABLED: 2,
+    NORMAL: 1,
+    ENABLED: 1, // 别名，保持兼容性
+    DISABLED: 0,
 }
 
 export const ADMIN_USER_STATUS_OPTIONS = [
-    { label: '启用', value: ADMIN_USER_STATUS.ENABLED, type: 'success' },
-    { label: '禁用', value: ADMIN_USER_STATUS.DISABLED, type: 'danger' },
+    { label: '正常', value: ADMIN_USER_STATUS.NORMAL, type: 'success' as const },
+    { label: '禁用', value: ADMIN_USER_STATUS.DISABLED, type: 'danger' as const },
 ]
 
 export function getStatusLabel(status: number) {
@@ -33,4 +52,22 @@ export function getStatusLabel(status: number) {
 
 export function getStatusType(status: number) {
     return ADMIN_USER_STATUS_OPTIONS.find((opt) => opt.value === status)?.type || 'info'
+}
+
+export const ADMIN_USER_EDIT_TYPE = {
+    ADD: 1,
+    EDIT: 2,
+}
+
+export const ADMIN_USER_SUBMIT_DELAY = 3000
+export const ROOT_ADMIN_USER_ID = 1
+
+export const ADMIN_USER_AVATAR_CONFIG = {
+    ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
+    MAX_SIZE: 2 * 1024 * 1024,
+    UPLOAD_PATH: 'avatar',
+}
+
+export function isRootAdminUser(user: Partial<AdminUser> | null) {
+    return Number(user?.id) === ROOT_ADMIN_USER_ID
 }

@@ -1,7 +1,7 @@
 /**
  * 通用 API 响应接口
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
     code: number
     msg: string
     data: T
@@ -12,8 +12,8 @@ export interface ApiResponse<T = any> {
  */
 export interface PageParams {
     page?: number
-    page_size?: number
-    [key: string]: any
+    per_page?: number
+    [key: string]: unknown
 }
 
 /**
@@ -42,7 +42,7 @@ export interface WithTimestamp {
 /**
  * 表格列配置定义
  */
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
     prop: keyof T | string
     h_label: string
     align?: 'left' | 'center' | 'right'
@@ -51,12 +51,13 @@ export interface TableColumn<T = any> {
     overflow?: boolean
     h_tip?: string
     customRow?: boolean
-    tag?: Record<string | number, { type: 'success' | 'warning' | 'danger' | 'info' | 'primary'; text?: string }>
+    tag?: Record<string | number, { type: string; text?: string }>
     tagKey?: keyof T | string
+    icon?: Record<string | number, { color: string; text: string }>
     eye?: boolean
     avatar?: boolean
     copy?: boolean
     hidden?: boolean
     getFullInfo?: (row: T, item: TableColumn<T>) => void
-    formatter?: (row: T) => any
+    formatter?: (row: T) => unknown
 }

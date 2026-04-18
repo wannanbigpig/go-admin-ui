@@ -4,7 +4,7 @@ import type { UserInfo, UserPermission } from '@/types/auth'
 
 // 退出登录
 export function logout() {
-    return post<ApiResponse<any>>('/v1/auth/logout')
+    return post<ApiResponse<unknown>>('/v1/auth/logout')
 }
 
 // 获取用户信息
@@ -18,6 +18,6 @@ export function getUserMenuList() {
 }
 
 // 更新个人信息
-export function updateProfile(data: any) {
-    return post<ApiResponse<any>>('/v1/admin-user/update-profile', data)
+export function updateProfile(data: Record<string, unknown>) {
+    return post<ApiResponse<unknown>>('/v1/admin-user/update-profile', data)
 }

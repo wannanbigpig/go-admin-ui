@@ -106,12 +106,19 @@ const validateRules = {
 }
 
 // ==================== 方法 ====================
+interface CaptchaResult {
+    b64s: string
+    id: string
+    answer: string
+}
+
 /**
  * 刷新验证码
  */
 const refreshCaptcha = async () => {
     try {
-        const captcha = await fetchCaptcha()
+        const response = await fetchCaptcha()
+        const captcha = response as unknown as CaptchaResult
         captchaSrc.value = captcha.b64s
         loginForm.captchaId = captcha.id
         captchaAnswer.value = captcha.answer
