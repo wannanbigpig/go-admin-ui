@@ -48,7 +48,7 @@ export const Logger = {
      */
     debug(message?: unknown, ...optionalParams: unknown[]): void {
         if (config.enabled && config.debugEnabled) {
-            console.debug('[DEBUG]', message, ...optionalParams)
+            globalThis.console.debug('[DEBUG]', message, ...optionalParams)
         }
     },
 
@@ -58,7 +58,7 @@ export const Logger = {
      */
     info(message?: unknown, ...optionalParams: unknown[]): void {
         if (config.enabled && config.infoEnabled) {
-            console.info('[INFO]', message, ...optionalParams)
+            globalThis.console.info('[INFO]', message, ...optionalParams)
         }
     },
 
@@ -68,7 +68,7 @@ export const Logger = {
      */
     warn(message?: unknown, ...optionalParams: unknown[]): void {
         if (config.enabled && config.warnEnabled) {
-            console.warn('[WARN]', message, ...optionalParams)
+            globalThis.console.warn('[WARN]', message, ...optionalParams)
         }
     },
 
@@ -78,7 +78,7 @@ export const Logger = {
      */
     error(message?: unknown, ...optionalParams: unknown[]): void {
         if (config.enabled && config.errorEnabled) {
-            console.error('[ERROR]', message, ...optionalParams)
+            globalThis.console.error('[ERROR]', message, ...optionalParams)
         }
     },
 }
