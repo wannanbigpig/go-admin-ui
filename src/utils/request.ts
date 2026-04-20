@@ -5,13 +5,37 @@ import type { ApiResponse } from '@/types/common'
 import { MESSAGE_ERROR_DURATION, REQUEST_TIMEOUT } from '@/modules/shared/constants'
 import { Logger } from '@/utils/logger'
 
+const normalizeEnvValue = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+
+/**
+ * 解析请求 baseURL
+ * - 开发环境默认走同源代理（/admin），避免浏览器跨域限制
+ * - 生产环境按 VITE_BASE_URL + VITE_BASE_API 组合
+ */
+const resolveBaseURL = () => {
+    const apiPrefixRaw = normalizeEnvValue(import.meta.env.VITE_BASE_API)
+    const apiPrefix = apiPrefixRaw ? (apiPrefixRaw.startsWith('/') ? apiPrefixRaw : `/${apiPrefixRaw}`) : '/admin'
+
+    const useProxyInDev = import.meta.env.DEV && normalizeEnvValue(import.meta.env.VITE_USE_PROXY) !== 'false'
+    if (useProxyInDev) {
+        return apiPrefix
+    }
+
+    const baseHost = normalizeEnvValue(import.meta.env.VITE_BASE_URL).replace(/\/+$/, '')
+    if (!baseHost) {
+        return apiPrefix
+    }
+
+    return `${baseHost}${apiPrefix}`
+}
+
 // ==================== 创建 axios 实例 ====================
 /**
  * 创建 axios 实例
  * baseURL = VITE_BASE_URL + VITE_BASE_API
  */
 const service = axios.create({
-    baseURL: import.meta.env.VITE_BASE_URL + import.meta.env.VITE_BASE_API,
+    baseURL: resolveBaseURL(),
     timeout: REQUEST_TIMEOUT,
 })
 

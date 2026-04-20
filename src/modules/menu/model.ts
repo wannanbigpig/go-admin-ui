@@ -83,7 +83,7 @@ export const MENU_SUBMIT_DEBOUNCE_TIME = 3000
 export const MENU_PERMISSION_QUERY_PARAMS = {
     page: 1,
     per_page: 9999,
-    is_auth: 1,
+    is_auth: 2,
 }
 
 export const MENU_CASCADER_PROPS = {

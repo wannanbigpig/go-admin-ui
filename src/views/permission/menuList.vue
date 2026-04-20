@@ -354,9 +354,9 @@
                         :filter-method="filterPermission"
                         :props="{ key: 'id', label: 'name' }"
                         :data="permissionList || []"
-                        :titles="['全部接口', '已授权接口']"
+                        :titles="['可绑定接口', '已绑定接口']"
                         target-order="push"
-                        filter-placeholder="接口名称或路由"
+                        filter-placeholder="接口名称、请求方法或路由"
                     />
                 </el-form-item>
             </div>

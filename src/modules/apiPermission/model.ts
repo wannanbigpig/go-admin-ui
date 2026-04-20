@@ -5,6 +5,7 @@ export interface ApiPermission {
     route: string
     method: string
     is_auth: number
+    is_auth_name?: string
     is_effective: number
     sort: number
     func_path: string
@@ -21,7 +22,7 @@ export function createApiPermissionForm(): Partial<ApiPermission> {
         name: '',
         route: '',
         method: 'GET',
-        is_auth: 1,
+        is_auth: 2,
         is_effective: 1,
         sort: 0,
         func_path: '',
@@ -39,6 +40,18 @@ export const API_PERMISSION_METHODS = [
 
 // 别名，兼容旧代码
 export const API_PERMISSION_METHOD_OPTIONS = API_PERMISSION_METHODS
+
+export const API_PERMISSION_AUTH_MODE = {
+    NONE: 0,
+    LOGIN: 1,
+    AUTHZ: 2,
+} as const
+
+export const API_PERMISSION_AUTH_MODE_OPTIONS = [
+    { label: '公开', value: API_PERMISSION_AUTH_MODE.NONE, type: 'info' as const },
+    { label: '需登录', value: API_PERMISSION_AUTH_MODE.LOGIN, type: 'warning' as const },
+    { label: '需鉴权', value: API_PERMISSION_AUTH_MODE.AUTHZ, type: 'success' as const },
+]
 
 export const API_PERMISSION_SWITCH_VALUE = {
     YES: 1,

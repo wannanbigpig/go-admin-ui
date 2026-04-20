@@ -27,7 +27,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     // 权限列表相关
     const permissionListLoading = ref(false)
-    const permissionList = ref<Array<{ id: number | string; name: string; route: string }>>([])
+    const permissionList = ref<Array<{ id: number | string; name: string; route: string; method: string; display_name: string }>>([])
     const permissionListLoaded = ref(false)
 
     const normalizePermissionId = (value: unknown): number | string | null => {
@@ -61,6 +61,13 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             .filter((item): item is number | string => item !== null)
     }
 
+    const buildPermissionDisplayName = (item: ApiPermission, fallbackId: number | string) => {
+        const name = item.name || item.code || `接口 ${fallbackId}`
+        const method = item.method ? `[${item.method}]` : ''
+        const route = item.route || ''
+        return [name, method, route].filter(Boolean).join(' ')
+    }
+
     const fetchPermissionList = async () => {
         if (permissionListLoaded.value) return
         permissionListLoading.value = true
@@ -76,9 +83,11 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                         id: normalizedId,
                         name: item.name || item.code || item.route || String(normalizedId),
                         route: item.route || '',
+                        method: item.method || '',
+                        display_name: buildPermissionDisplayName(item, normalizedId),
                     }
                 })
-                .filter((item): item is { id: number | string; name: string; route: string } => item !== null)
+                .filter((item): item is { id: number | string; name: string; route: string; method: string; display_name: string } => item !== null)
             permissionListLoaded.value = true
         } catch (error) {
             Logger.error('获取权限列表失败:', error)
@@ -91,6 +100,23 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
     const clearPermissionListCache = () => {
         permissionListLoaded.value = false
         permissionList.value = []
+    }
+
+    const appendMissingSelectedPermissions = (selectedIds: number[]) => {
+        const existedIds = new Set(permissionList.value.map((item) => String(item.id)))
+        const missingItems = selectedIds
+            .filter((id) => !existedIds.has(String(id)))
+            .map((id) => ({
+                id,
+                name: `[不可再绑定] 历史接口 #${id}`,
+                route: '',
+                method: '',
+                display_name: `[不可再绑定] 历史接口 #${id}`,
+            }))
+
+        if (missingItems.length > 0) {
+            permissionList.value = [...permissionList.value, ...missingItems]
+        }
     }
 
     // 菜单级联选项
@@ -341,6 +367,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                     }
                     return result
                 }, [])
+                appendMissingSelectedPermissions(formData.api_list)
                 currentIndex.value = index
                 showDrawer.value = true
             } else {
@@ -426,8 +453,9 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         }
     }
 
-    const filterPermission = (query: string, item: { name?: string; route?: string }) => {
-        return item.name?.includes(query) || item.route?.includes(query)
+    const filterPermission = (query: string, item: { name?: string; route?: string; method?: string; display_name?: string }) => {
+        const keyword = query.toLowerCase()
+        return item.name?.toLowerCase().includes(keyword) || item.route?.toLowerCase().includes(keyword) || item.method?.toLowerCase().includes(keyword) || item.display_name?.toLowerCase().includes(keyword)
     }
 
     // 需要从 useMenuList 获取 menuList

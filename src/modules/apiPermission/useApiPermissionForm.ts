@@ -2,7 +2,7 @@ import { reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { editPermission } from '@/api/permission'
-import { createApiPermissionForm, type ApiPermission } from '@/modules/apiPermission/model'
+import { API_PERMISSION_AUTH_MODE, createApiPermissionForm, type ApiPermission } from '@/modules/apiPermission/model'
 import { validateFormSafely } from '@/modules/shared/form'
 
 interface UseApiPermissionFormOptions {
@@ -25,8 +25,8 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
             { min: 1, max: 60, message: '名称不超过 60 个字符', trigger: 'blur' },
         ],
         is_auth: [
-            { required: true, message: '是否鉴权必填', trigger: 'change' },
-            { type: 'enum', enum: [0, 1], message: '选择的值只能是或否', trigger: 'change' },
+            { required: true, message: '鉴权模式必填', trigger: 'change' },
+            { type: 'enum', enum: [API_PERMISSION_AUTH_MODE.NONE, API_PERMISSION_AUTH_MODE.LOGIN, API_PERMISSION_AUTH_MODE.AUTHZ], message: '请选择正确的鉴权模式', trigger: 'change' },
         ],
         sort: [{ trigger: 'blur', type: 'number', message: '请输入整数类型' }],
     }
@@ -61,7 +61,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
                 name: row.name || '',
                 route: row.route || '',
                 method: row.method || 'GET',
-                is_auth: row.is_auth ?? 1,
+                is_auth: row.is_auth ?? API_PERMISSION_AUTH_MODE.AUTHZ,
                 is_effective: row.is_effective ?? 1,
                 sort: row.sort ?? 0,
                 func_path: row.func_path || '',

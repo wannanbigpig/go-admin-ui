@@ -16,10 +16,9 @@
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="是否鉴权" prop="is_auth" for="api-query-is-auth">
-                            <el-select id="api-query-is-auth" v-model="queryWhere.is_auth" clearable placeholder="请选择是否鉴权">
-                                <el-option label="是" :value="SWITCH_VALUE.YES" />
-                                <el-option label="否" :value="SWITCH_VALUE.NO" />
+                        <el-form-item label="鉴权模式" prop="is_auth" for="api-query-is-auth">
+                            <el-select id="api-query-is-auth" v-model="queryWhere.is_auth" clearable placeholder="请选择鉴权模式">
+                                <el-option v-for="item in AUTH_MODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -72,20 +71,19 @@
                 </el-form-item>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="是否鉴权" prop="is_auth" required for="api-edit-is-auth">
+                        <el-form-item label="鉴权模式" prop="is_auth" required for="api-edit-is-auth">
                             <template #label>
                                 <span class="xl-label-with-icon">
-                                    是否鉴权
-                                    <el-tooltip effect="dark" content="勾选否，则请求该接口跳过鉴权步骤" placement="top">
+                                    鉴权模式
+                                    <el-tooltip effect="dark" content="公开：无需登录；需登录：登录后可访问；需鉴权：登录后还必须分配 API 权限" placement="top">
                                         <el-icon style="font-size: 16px" class="xl-cursor-help">
                                             <i-ant-design-question-circle-outlined />
                                         </el-icon>
                                     </el-tooltip>
                                 </span>
                             </template>
-                            <el-select id="api-edit-is-auth" v-model="currentRow.is_auth" placeholder="请选择是否鉴权" clearable>
-                                <el-option label="是" :value="SWITCH_VALUE.YES" />
-                                <el-option label="否" :value="SWITCH_VALUE.NO" />
+                            <el-select id="api-edit-is-auth" v-model="currentRow.is_auth" placeholder="请选择鉴权模式" clearable>
+                                <el-option v-for="item in AUTH_MODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -150,7 +148,15 @@ import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import { onMounted, computed } from 'vue'
 import { usePermission } from '@/composables/usePermission'
-import { useApiPermissionList, useApiPermissionForm, API_PERMISSION_METHOD_OPTIONS, API_PERMISSION_SWITCH_VALUE, type ApiPermission } from '@/modules/apiPermission'
+import {
+    useApiPermissionList,
+    useApiPermissionForm,
+    API_PERMISSION_AUTH_MODE,
+    API_PERMISSION_AUTH_MODE_OPTIONS,
+    API_PERMISSION_METHOD_OPTIONS,
+    API_PERMISSION_SWITCH_VALUE,
+    type ApiPermission,
+} from '@/modules/apiPermission'
 import type { TableColumn } from '@/types/common'
 import { Logger } from '@/utils/logger'
 
@@ -169,6 +175,7 @@ const actionButtons = computed(() => {
 })
 
 const METHOD_OPTIONS = API_PERMISSION_METHOD_OPTIONS
+const AUTH_MODE_OPTIONS = API_PERMISSION_AUTH_MODE_OPTIONS
 const SWITCH_VALUE = API_PERMISSION_SWITCH_VALUE
 
 const { loading, permissionList, pagination, queryFormRef, queryWhere, handleSearch, getList } = useApiPermissionList()
@@ -232,21 +239,25 @@ const tableTitle: TableColumn<ApiPermission>[] = [
     },
     {
         prop: 'is_auth',
-        h_label: '是否鉴权',
+        h_label: '鉴权模式',
         align: 'center',
         width: 120,
         customRow: true,
         tag: {
-            1: {
+            [API_PERMISSION_AUTH_MODE.AUTHZ]: {
                 type: 'success',
-                text: '是',
+                text: '需鉴权',
             },
-            0: {
-                type: 'danger',
-                text: '否',
+            [API_PERMISSION_AUTH_MODE.LOGIN]: {
+                type: 'warning',
+                text: '需登录',
+            },
+            [API_PERMISSION_AUTH_MODE.NONE]: {
+                type: 'info',
+                text: '公开',
             },
         },
-        h_tip: '表示该接口是否需要授权访问（此处鉴权指的没有授予该接口访问权限能否请求的意思，与登录授权无关，需要鉴权的接口必定需要先登录）',
+        h_tip: '0=公开，1=需登录，2=需鉴权。',
     },
     {
         prop: 'is_effective',
