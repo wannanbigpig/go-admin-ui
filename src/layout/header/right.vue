@@ -44,20 +44,14 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { logout } from '@/api/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { getImageUrl } from '@/utils/helper'
+import { Logger } from '@/utils/logger'
 
 enum COMMAND {
     USER_DETAIL = 'user-detail',
     USER_REFRESH = 'user-refresh',
     LOGOUT = 'logout',
-}
-
-const MESSAGE = {
-    LOGOUT_CONFIRM_TITLE: '温馨提示',
-    LOGOUT_CONFIRM_CONTENT: '确定退出系统当前登录账号吗?',
-    LOGOUT_SUCCESS: '退出成功',
-    LOGOUT_CANCEL: '已取消操作',
-    REFRESH_SUCCESS: '刷新成功',
 }
 
 const AVATAR_CONFIG = {
@@ -69,21 +63,21 @@ const authStore = useAuthStore()
 
 const handleLogout = async () => {
     try {
-        await ElMessageBox.confirm(MESSAGE.LOGOUT_CONFIRM_CONTENT, MESSAGE.LOGOUT_CONFIRM_TITLE, {
-            confirmButtonText: '确认',
-            cancelButtonText: '取消',
+        await ElMessageBox.confirm(CONFIRM_MESSAGES.LOGOUT, CONFIRM_DIALOG_TITLE, {
+            confirmButtonText: CONFIRM_BUTTON_TEXT,
+            cancelButtonText: CANCEL_BUTTON_TEXT,
             autofocus: false,
             type: 'warning',
         })
 
         await logout()
         authStore.logout(router.currentRoute.value.fullPath)
-        ElMessage({ type: 'success', message: MESSAGE.LOGOUT_SUCCESS })
+        ElMessage({ type: 'success', message: RESULT_MESSAGES.LOGOUT_SUCCESS })
     } catch (error) {
         if (error !== 'cancel') {
-            console.error('退出登录失败:', error)
+            Logger.error('退出登录失败:', error)
         } else {
-            ElMessage({ type: 'info', message: MESSAGE.LOGOUT_CANCEL })
+            ElMessage({ type: 'info', message: RESULT_MESSAGES.LOGOUT_CANCEL })
         }
     }
 }
@@ -91,10 +85,10 @@ const handleLogout = async () => {
 const handleRefresh = async () => {
     try {
         await authStore.refreshUserInfo()
-        ElMessage({ type: 'success', message: MESSAGE.REFRESH_SUCCESS })
+        ElMessage({ type: 'success', message: RESULT_MESSAGES.REFRESH_SUCCESS })
     } catch (error) {
-        console.error('刷新缓存失败:', error)
-        ElMessage({ type: 'error', message: '刷新失败，请稍后重试' })
+        Logger.error('刷新缓存失败:', error)
+        ElMessage({ type: 'error', message: RESULT_MESSAGES.REFRESH_FAILED })
     }
 }
 
@@ -110,7 +104,7 @@ const handleCommand = (command: COMMAND) => {
             router.push({ name: 'Profile' })
             break
         default:
-            console.warn('未知的命令类型:', command)
+            Logger.warn('未知的命令类型:', command)
     }
 }
 </script>

@@ -1,21 +1,22 @@
 import { login, getCaptcha } from '@/api/login'
 import { getUserInfo, getUserMenuList, updateProfile } from '@/api/auth'
+import { createEmptyLoginResult, createEmptyUserInfo } from '@/modules/auth/model'
 import { normalizeArrayData, normalizeDetailData } from '@/modules/shared/response'
-import type { LoginResult, UserInfo, UserPermission } from '@/types/auth'
+import type { CaptchaResult, LoginResult, UserInfo, UserPermission } from '@/types/auth'
 
-export async function fetchCaptcha() {
+export async function fetchCaptcha(): Promise<CaptchaResult> {
     const response = await getCaptcha()
-    return normalizeDetailData(response, {} as Record<string, unknown>)
+    return normalizeDetailData(response, { b64s: '', id: '', answer: '' })
 }
 
 export async function loginWithCredentials(data: Record<string, unknown>): Promise<LoginResult> {
     const response = await login(data)
-    return normalizeDetailData(response, {} as LoginResult)
+    return normalizeDetailData(response, createEmptyLoginResult())
 }
 
 export async function fetchCurrentUser(): Promise<UserInfo> {
     const response = await getUserInfo()
-    return normalizeDetailData(response, {} as UserInfo)
+    return normalizeDetailData(response, createEmptyUserInfo())
 }
 
 export async function fetchUserMenuTree(): Promise<UserPermission[]> {

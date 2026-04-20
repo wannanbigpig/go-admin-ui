@@ -42,3 +42,9 @@ export interface LoginResult {
     access_token: string
     expires_at: number
 }
+
+export interface CaptchaResult {
+    b64s: string
+    id: string
+    answer: string
+}

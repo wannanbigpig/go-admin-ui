@@ -63,6 +63,7 @@ import { fetchCaptcha } from '@/modules/auth/service'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, type FormInstance } from 'element-plus'
 import router from '@/router'
+import { Logger } from '@/utils/logger'
 import { ref, reactive, onBeforeMount } from 'vue'
 
 // ==================== 常量定义 ====================
@@ -106,24 +107,17 @@ const validateRules = {
 }
 
 // ==================== 方法 ====================
-interface CaptchaResult {
-    b64s: string
-    id: string
-    answer: string
-}
-
 /**
  * 刷新验证码
  */
 const refreshCaptcha = async () => {
     try {
-        const response = await fetchCaptcha()
-        const captcha = response as unknown as CaptchaResult
+        const captcha = await fetchCaptcha()
         captchaSrc.value = captcha.b64s
         loginForm.captchaId = captcha.id
         captchaAnswer.value = captcha.answer
     } catch (error) {
-        console.error('获取验证码失败:', error)
+        Logger.error('获取验证码失败:', error)
         ElMessage.error('获取验证码失败')
     }
 }
@@ -146,14 +140,11 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
         })
 
         ElMessage.success('登录成功')
-
-        // 等待一下确保路由已准备好，然后跳转
-        await new Promise((resolve) => setTimeout(resolve, 100))
-
-        const redirectPath = (router.currentRoute.value.query.redirect as string) || '/'
+        const redirectQuery = router.currentRoute.value.query.redirect
+        const redirectPath = typeof redirectQuery === 'string' ? redirectQuery : '/'
         await router.push(redirectPath)
     } catch (error) {
-        console.error('登录失败:', error)
+        Logger.error('登录失败:', error)
         await refreshCaptcha()
         loginForm.captcha = ''
     } finally {

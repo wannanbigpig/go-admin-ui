@@ -92,7 +92,8 @@ export default defineConfig(({ mode }) => {
 
             // ESLint 插件
             eslintPlugin({
-                cache: false, // 禁用缓存，确保每次都能检查到最新代码
+                cache: mode === 'development',
+                cacheLocation: 'node_modules/.cache/.eslintcache',
             }),
 
             // Gzip 压缩插件
@@ -146,6 +147,14 @@ export default defineConfig(({ mode }) => {
                 },
             },
             outDir: 'dist',
+            // 生产环境移除 console 日志
+            minify: 'terser',
+            terserOptions: {
+                compress: {
+                    drop_console: true,
+                    drop_debugger: true,
+                },
+            },
         },
 
         // ==================== CSS 配置 ====================

@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="部门名称" prop="name">
@@ -102,6 +102,7 @@ import xlActionButton from '@/components/actionButton/index.vue'
 import { onMounted, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { isProtectedDepartment } from '@/modules/department/model'
 import { removeDepartment } from '@/modules/department/service'
 import { useDepartmentTreeList } from '@/modules/department/useDepartmentTreeList'
@@ -164,11 +165,11 @@ const handleDelete = async (row: Department) => {
     }
 
     try {
-        await ElMessageBox.confirm('确认删除该部门吗?', '温馨提示', {
+        await ElMessageBox.confirm(CONFIRM_MESSAGES.DELETE_DEPARTMENT, CONFIRM_DIALOG_TITLE, {
             type: 'warning',
         })
         await removeDepartment(row.id)
-        ElMessage.success('删除成功')
+        ElMessage.success(RESULT_MESSAGES.DELETE_SUCCESS)
         getList()
     } catch {
         // 取消

@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { getMenuList } from '@/api/permission'
 import { normalizeListData } from '@/modules/shared/response'
 import type { Menu } from '@/types/menu'
@@ -15,7 +16,7 @@ export function useMenuList() {
             const result = normalizeListData<Menu>(response)
             menuList.value = result.list
         } catch (error) {
-            console.error('获取菜单列表失败:', error)
+            Logger.error('获取菜单列表失败:', error)
         } finally {
             loading.value = false
         }

@@ -1,7 +1,10 @@
 import { computed, reactive, ref, type Ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
+import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createDepartmentItem, fetchDepartmentDetail, updateDepartmentItem } from '@/modules/department/service'
 import { createDepartmentForm, createDepartmentRules, DEPARTMENT_EDIT_TYPE, DEPARTMENT_SUBMIT_DELAY, isProtectedDepartment } from '@/modules/department/model'
+import { validateFormSafely } from '@/modules/shared/form'
 import type { Department } from '@/types/department'
 
 interface UseDepartmentFormOptions {
@@ -15,7 +18,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
-    const isSubmitting = ref(false)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock(DEPARTMENT_SUBMIT_DELAY)
 
     const initialFormData = createDepartmentForm()
     const formData = reactive({ ...initialFormData }) as Department
@@ -73,7 +76,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
                 })
                 saveOriginalData()
             } catch (error) {
-                console.error('获取部门详情失败:', error)
+                Logger.error('获取部门详情失败:', error)
                 return
             }
         } else {
@@ -88,30 +91,23 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     }
 
     const editConfirmSubmit = async () => {
-        if (isSubmitting.value) return
-
-        const valid = await formDataRef.value?.validate().catch(() => false)
+        const valid = await validateFormSafely(formDataRef.value, '部门表单')
         if (!valid) return
 
-        isSubmitting.value = true
-        try {
+        await runWithSubmitLock(async () => {
             const submitData = { ...formData }
             if (isEditMode.value) {
-                await updateDepartmentItem(submitData as unknown as Record<string, unknown>)
+                await updateDepartmentItem(submitData)
             } else {
-                await createDepartmentItem(submitData as unknown as Record<string, unknown>)
+                await createDepartmentItem(submitData)
             }
 
             await refreshList()
             showDrawer.value = false
             ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
-        } catch (error) {
-            console.error('提交失败:', error)
-        } finally {
-            setTimeout(() => {
-                isSubmitting.value = false
-            }, DEPARTMENT_SUBMIT_DELAY)
-        }
+        }).catch((error) => {
+            Logger.error('提交失败:', error)
+        })
     }
 
     return {

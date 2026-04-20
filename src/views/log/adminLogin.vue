@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="用户名" prop="username">
@@ -126,6 +126,7 @@ import { usePermission } from '@/composables/usePermission'
 import { useAdminLoginLogPage } from '@/modules/log/useAdminLoginLogPage'
 import type { TableColumn } from '@/types/common'
 import type { LoginLog } from '@/types/log'
+import { Logger } from '@/utils/logger'
 
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
@@ -155,7 +156,7 @@ const handleCopyClick = async (text: string) => {
     try {
         await navigator.clipboard.writeText(text)
     } catch (error) {
-        console.error('复制失败:', error)
+        Logger.error('复制失败:', error)
     }
 }
 

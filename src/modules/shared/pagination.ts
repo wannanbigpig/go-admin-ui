@@ -8,6 +8,12 @@ export interface PaginationState {
     pageChange: (value: number) => void
 }
 
+interface PaginationResultData {
+    total?: number
+    page?: number
+    pageSize?: number
+}
+
 export function createPaginationState(fetcher: () => void, initial: Partial<PaginationState> = {}): PaginationState {
     const pagination = reactive({
         total: initial.total ?? 0,
@@ -31,13 +37,13 @@ export function createPaginationState(fetcher: () => void, initial: Partial<Pagi
     return pagination as PaginationState
 }
 
-export function applyPaginationResult(target: PaginationState, data: Record<string, unknown> = {}) {
+export function applyPaginationResult(target: PaginationState, data: PaginationResultData = {}) {
     target.total = Number(data.total ?? 0)
     target.page = Number(data.page ?? 1)
     target.pageSize = Number(data.pageSize ?? 10)
 }
 
-export function syncQueryPagination(query: Record<string, unknown>, pagination: PaginationState) {
+export function syncQueryPagination<Q extends { page?: number; per_page?: number }>(query: Q, pagination: PaginationState) {
     query.page = pagination.page
     query.per_page = pagination.pageSize
 }

@@ -1,5 +1,5 @@
 <template>
-    <el-drawer v-model="model" :direction="direction" :size="size">
+    <el-drawer v-model="model" :direction="direction" :size="size" @closed="handleClosed">
         <template #header>
             <h4>{{ title }}</h4>
         </template>
@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import type { FormInstance } from 'element-plus'
+import { Logger } from '@/utils/logger'
 
 // ==================== Props 定义 ====================
 interface Props {
@@ -56,7 +57,7 @@ const handleReset = () => {
     } else if (props.formRef?.resetFields) {
         props.formRef.resetFields()
     } else {
-        console.warn('[XlDrawer] 自定义重置方法和表单Ref二者必传一个')
+        Logger.warn('[XlDrawer] 自定义重置方法和表单Ref二者必传一个')
     }
 }
 
@@ -72,7 +73,14 @@ const handleConfirm = () => {
     if (props.onConfirm) {
         props.onConfirm()
     } else {
-        console.error('[XlDrawer] onConfirm 必传')
+        Logger.error('[XlDrawer] onConfirm 必传')
+    }
+}
+
+const handleClosed = () => {
+    const activeElement = document.activeElement
+    if (activeElement instanceof HTMLElement) {
+        activeElement.blur()
     }
 }
 </script>

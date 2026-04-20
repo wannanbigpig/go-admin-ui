@@ -1,7 +1,10 @@
 import { computed, reactive, ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
+import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createAdminUserItem, updateAdminUserItem, uploadAvatarFile, fetchAdminUserDetail } from '@/modules/adminUser/service'
 import { ADMIN_USER_AVATAR_CONFIG, ADMIN_USER_STATUS, ADMIN_USER_SUBMIT_DELAY, createAdminUserForm, isRootAdminUser } from '@/modules/adminUser/model'
+import { validateFormSafely } from '@/modules/shared/form'
 import type { AdminUser } from '@/types/adminUser'
 
 interface UseAdminUserFormOptions {
@@ -13,7 +16,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
-    const isSubmitting = ref(false)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock(ADMIN_USER_SUBMIT_DELAY)
     const initialFormData = createAdminUserForm()
     const formData = reactive({ ...initialFormData })
     const originalFormData = ref<Partial<AdminUser> | null>(null)
@@ -52,7 +55,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
             ElMessage.error(res?.failure_reason || '上传失败')
             return null
         } catch (err) {
-            console.error('上传失败:', err)
+            Logger.error('上传失败:', err)
             onError?.(err as Error)
             return null
         }
@@ -214,7 +217,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
                 })
                 saveOriginalData()
             } catch (error) {
-                console.error('获取管理员详情失败:', error)
+                Logger.error('获取管理员详情失败:', error)
                 return
             }
         } else {
@@ -227,15 +230,10 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
     const editConfirmSubmit = async () => {
         if (isSubmitting.value) return
-        isSubmitting.value = true
+        const valid = await validateFormSafely(formDataRef.value, '管理员表单')
+        if (!valid) return
 
-        try {
-            const valid = await formDataRef.value?.validate().catch(() => false)
-            if (!valid) {
-                isSubmitting.value = false
-                return
-            }
-
+        await runWithSubmitLock(async () => {
             const submitData = getSubmitData()
             if (isEditMode.value) {
                 await updateAdminUserItem(submitData)
@@ -246,13 +244,9 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
             await refreshList()
             showDrawer.value = false
             ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
-        } catch (error) {
-            console.error('提交失败:', error)
-        } finally {
-            setTimeout(() => {
-                isSubmitting.value = false
-            }, ADMIN_USER_SUBMIT_DELAY)
-        }
+        }).catch((error) => {
+            Logger.error('提交失败:', error)
+        })
     }
 
     return {

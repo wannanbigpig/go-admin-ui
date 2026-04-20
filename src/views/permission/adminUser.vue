@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="用户名" prop="username">
@@ -47,7 +47,7 @@
                         <div v-else-if="item.eye" style="display: flex; align-items: center; gap: 3px">
                             <span>{{ val || '-' }}</span>
                             <el-icon v-show="val !== ''" size="small" class="xl-cursor-hover" @click="item.getFullInfo?.(row, item)">
-                                <i-ant-design-eye-invisible-outlined v-if="(row as Record<string, any>)['showFull' + (item.prop as string).charAt(0).toUpperCase() + (item.prop as string).slice(1)]" />
+                                <i-ant-design-eye-invisible-outlined v-if="isFieldRevealed(row, String(item.prop))" />
                                 <i-ant-design-eye-outlined v-else />
                             </el-icon>
                         </div>
@@ -158,6 +158,7 @@ import { getImageUrl } from '@/utils/helper'
 import { onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { ADMIN_USER_STATUS, isRootAdminUser } from '@/modules/adminUser/model'
 import { removeAdminUser } from '@/modules/adminUser/service'
 import { useAdminUserList } from '@/modules/adminUser/useAdminUserList'
@@ -221,15 +222,20 @@ const handleDelete = async (row: AdminUser) => {
     }
 
     try {
-        await ElMessageBox.confirm('确认删除该管理员吗?', '温馨提示', {
+        await ElMessageBox.confirm(CONFIRM_MESSAGES.DELETE_ADMIN_USER, CONFIRM_DIALOG_TITLE, {
             type: 'warning',
         })
         await removeAdminUser(row.id)
-        ElMessage.success('删除成功')
+        ElMessage.success(RESULT_MESSAGES.DELETE_SUCCESS)
         getList()
     } catch {
         // 取消或失败
     }
+}
+
+const isFieldRevealed = (row: AdminUser, field: string) => {
+    const showField = `showFull${field.charAt(0).toUpperCase()}${field.slice(1)}`
+    return Boolean((row as Record<string, unknown>)[showField])
 }
 
 onMounted(() => {

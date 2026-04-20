@@ -1,6 +1,7 @@
 import type { RouteRecordRaw, RouteLocationRaw } from 'vue-router'
 import router from './index'
 import { isEmpty } from '@/utils/helper'
+import { Logger } from '@/utils/logger'
 import type { UserPermission } from '@/types/auth'
 
 // ==================== 常量定义 ====================
@@ -39,11 +40,11 @@ const getComponentLoader = (componentPath?: string) => {
         }
     }
 
-    console.warn(`组件路径未找到: ${componentPath}，尝试直接导入: ${normalizedPath}`)
+    Logger.warn(`组件路径未找到: ${componentPath}，尝试直接导入: ${normalizedPath}`)
 
     return () => {
         return import(/* @vite-ignore */ normalizedPath).catch((error) => {
-            console.error(`导入组件失败: ${normalizedPath}`, error)
+            Logger.error(`导入组件失败: ${normalizedPath}`, error)
             return import(/* @vite-ignore */ NOT_FOUND_COMPONENT)
         })
     }

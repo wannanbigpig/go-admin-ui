@@ -1,5 +1,6 @@
-import { reactive, ref, type Ref } from 'vue'
-import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
+import { reactive, ref } from 'vue'
+import { Logger } from '@/utils/logger'
+import { useListPage } from '@/composables/useListPage'
 import { fetchLoginLogList, fetchLoginLogDetail } from '@/modules/log/service'
 import { createAdminLoginLogQuery } from '@/modules/log/model'
 import { applyDateRangeToQuery, formatIpAddress, formatJwtToken } from '@/modules/log/helpers'
@@ -7,11 +8,9 @@ import type { LoginLog } from '@/types/log'
 import type { FormInstance } from 'element-plus'
 
 export function useAdminLoginLogPage() {
-    const loading = ref(false)
-    const logList = ref([]) as Ref<LoginLog[]>
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive(createAdminLoginLogQuery())
-    const dateRange = ref<[string, string]>([] as unknown as [string, string])
+    const dateRange = ref<[string, string] | []>([])
 
     const showDetailDrawer = ref(false)
     const currentDetail = ref<LoginLog | null>(null)
@@ -20,34 +19,35 @@ export function useAdminLoginLogPage() {
     const accessTokenFormatted = ref(true)
     const refreshTokenFormatted = ref(true)
 
-    const getList = async () => {
-        loading.value = true
-        try {
-            applyDateRangeToQuery(queryWhere, dateRange.value)
-            const result = await fetchLoginLogList({
-                ...queryWhere,
-                page: pagination.page,
-                per_page: pagination.pageSize,
-            })
-            pagination.total = result.total
-            logList.value = result.list
-        } catch (error) {
-            console.error('获取登录日志失败:', error)
-        } finally {
-            loading.value = false
-        }
-    }
-
-    const pagination: PaginationState = createPaginationState(() => getList(), {
-        page: queryWhere.page,
-        pageSize: queryWhere.per_page,
+    const {
+        loading,
+        items: logList,
+        pagination,
+        getList,
+        handleSearch,
+    } = useListPage<LoginLog, typeof queryWhere>({
+        query: queryWhere,
+        queryFormRef,
+        transformParams: (query) => {
+            const params = { ...query }
+            const selectedDateRange = dateRange.value.length === 2 ? dateRange.value : null
+            applyDateRangeToQuery(params, selectedDateRange)
+            return params
+        },
+        fetcher: async (params) => {
+            try {
+                return await fetchLoginLogList(params)
+            } catch (error) {
+                Logger.error('获取登录日志失败:', error)
+                return {
+                    list: [],
+                    total: 0,
+                    page: params.page ?? 1,
+                    pageSize: params.per_page ?? 10,
+                }
+            }
+        },
     })
-
-    const handleSearch = () => {
-        pagination.page = 1
-        queryWhere.page = 1
-        getList()
-    }
 
     const openDetailDrawer = async (row: LoginLog) => {
         showDetailDrawer.value = true
@@ -58,7 +58,7 @@ export function useAdminLoginLogPage() {
             accessTokenFormatted.value = true
             refreshTokenFormatted.value = true
         } catch (error) {
-            console.error('获取详情失败:', error)
+            Logger.error('获取详情失败:', error)
         } finally {
             detailLoading.value = false
         }

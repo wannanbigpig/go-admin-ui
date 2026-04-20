@@ -1,24 +1,24 @@
 import { onMounted, reactive, ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
+import { useSubmitLock } from '@/composables/useSubmitLock'
 import { useAuthStore } from '@/stores/auth'
+import { createEmptyUserInfo } from '@/modules/auth/model'
 import { fetchProfile, modifyProfile, uploadProfileAvatar } from '@/modules/profile/service'
 import { PROFILE_AVATAR_CONFIG, PROFILE_SUBMIT_DELAY } from '@/modules/profile/model'
+import { validateFormSafely } from '@/modules/shared/form'
+import { pauseSync } from '@/utils/helper'
+import type { UploadAvatarResult } from '@/modules/adminUser/service'
 import type { UserInfo } from '@/types/auth'
-
-interface UploadResult {
-    status: string
-    failure_reason?: string
-    uuid?: string
-}
 
 export function useProfilePage() {
     const authStore = useAuthStore()
-    const userInfo = ref<UserInfo>(authStore.userInfo || ({} as UserInfo))
+    const userInfo = ref<UserInfo>({ ...createEmptyUserInfo(), ...authStore.userInfo })
     const loading = ref(false)
     const showDrawer = ref(false)
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('编辑资料')
-    const isSubmitting = ref(false)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock(0)
     const formKey = ref(0)
 
     const formData = reactive({
@@ -63,9 +63,17 @@ export function useProfilePage() {
         return dateTime
     }
 
-    const handleAvatarSuccess = (response: Record<string, unknown>) => {
-        if (response && response.uuid) {
-            formData.avatar = response.uuid as string
+    const isUploadResult = (value: unknown): value is UploadAvatarResult => {
+        return typeof value === 'object' && value !== null
+    }
+
+    const handleAvatarSuccess = (response: UploadAvatarResult) => {
+        if (response.uuid) {
+            formData.avatar = response.uuid
+            return
+        }
+        if (response.url) {
+            formData.avatar = response.url
         }
     }
 
@@ -84,10 +92,14 @@ export function useProfilePage() {
     const customUpload = async ({ file, onError }: { file: File; onError?: (err?: Error) => void }) => {
         try {
             const result = await uploadProfileAvatar(file, { path: PROFILE_AVATAR_CONFIG.UPLOAD_PATH })
-            const res = result as unknown as UploadResult
+            if (!isUploadResult(result)) {
+                ElMessage.error('上传失败')
+                return null
+            }
+            const res = result
             if (res.status === 'SUCCESS') {
                 ElMessage.success('上传成功')
-                handleAvatarSuccess(res as unknown as Record<string, unknown>)
+                handleAvatarSuccess(res)
                 return res
             }
             ElMessage.error(res.failure_reason || '上传失败')
@@ -106,7 +118,7 @@ export function useProfilePage() {
             // 刷新 Store 中的用户信息
             await authStore.refreshUserInfo()
         } catch (error) {
-            console.error('获取个人信息失败:', error)
+            Logger.error('获取个人信息失败:', error)
         } finally {
             loading.value = false
         }
@@ -116,8 +128,8 @@ export function useProfilePage() {
         formTitle.value = '编辑个人资料'
         formData.id = userInfo.value.id
         formData.nickname = userInfo.value.nickname
-        formData.phone_number = (userInfo.value.phone_number as string) || ''
-        formData.email = (userInfo.value.email as string) || ''
+        formData.phone_number = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number : ''
+        formData.email = typeof userInfo.value.email === 'string' ? userInfo.value.email : ''
         formData.avatar = userInfo.value.avatar || ''
         formData.password = ''
 
@@ -127,15 +139,10 @@ export function useProfilePage() {
 
     const editConfirmSubmit = async () => {
         if (isSubmitting.value) return
-        isSubmitting.value = true
+        const valid = await validateFormSafely(formDataRef.value, '个人资料表单')
+        if (!valid) return
 
-        try {
-            const valid = await formDataRef.value?.validate().catch(() => false)
-            if (!valid) {
-                isSubmitting.value = false
-                return
-            }
-
+        await runWithSubmitLock(async () => {
             const submitData: Record<string, unknown> = {
                 id: formData.id,
                 nickname: formData.nickname,
@@ -148,16 +155,12 @@ export function useProfilePage() {
 
             await modifyProfile(submitData)
             ElMessage.success('修改成功')
-
-            setTimeout(async () => {
-                await getProfile()
-                showDrawer.value = false
-            }, PROFILE_SUBMIT_DELAY)
-        } catch (error) {
-            console.error('修改失败:', error)
-        } finally {
-            isSubmitting.value = false
-        }
+            await pauseSync(PROFILE_SUBMIT_DELAY)
+            await getProfile()
+            showDrawer.value = false
+        }, 0).catch((error) => {
+            Logger.error('修改失败:', error)
+        })
     }
 
     onMounted(() => {

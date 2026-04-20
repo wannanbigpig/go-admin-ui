@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="6">
                         <el-form-item label="关键字" prop="keyword" for="api-query-keyword">
@@ -152,6 +152,7 @@ import { onMounted, computed } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useApiPermissionList, useApiPermissionForm, API_PERMISSION_METHOD_OPTIONS, API_PERMISSION_SWITCH_VALUE, type ApiPermission } from '@/modules/apiPermission'
 import type { TableColumn } from '@/types/common'
+import { Logger } from '@/utils/logger'
 
 const { getButtonInfoFull } = usePermission()
 const buttonInfo = getButtonInfoFull('api:update')
@@ -177,7 +178,7 @@ const handleCopyClick = async (text: string) => {
     try {
         await navigator.clipboard.writeText(text)
     } catch (error) {
-        console.error('复制失败:', error)
+        Logger.error('复制失败:', error)
     }
 }
 

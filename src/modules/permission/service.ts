@@ -2,7 +2,6 @@ import { getPermissionList, editPermission, getMenuList, createMenu, updateMenu,
 import { normalizeArrayData, normalizeDetailData, normalizeListData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
-import type { ApiResponse } from '@/types/common'
 
 export async function fetchPermissionPage(params?: Record<string, unknown>) {
     const response = await getPermissionList(params)
@@ -46,7 +45,11 @@ export async function fetchRolePage(params?: Record<string, unknown>) {
 
 export async function fetchRoleTree(params?: Record<string, unknown>) {
     const response = await getRoleList(params)
-    return normalizeArrayData<Role>(response as unknown as ApiResponse<Role[] | { data: Role[] }>)
+    const normalizedPageData = normalizeListData<Role>(response)
+    if (normalizedPageData.list.length > 0) {
+        return normalizedPageData.list
+    }
+    return normalizeArrayData<Role>(response)
 }
 
 export async function fetchRoleDetail(id: number | string) {

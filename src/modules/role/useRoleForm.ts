@@ -1,7 +1,10 @@
 import { computed, nextTick, reactive, ref, type Ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
+import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createRole, updateRole, getMenuList, getRoleDetail } from '@/api/permission'
 import { createRoleForm, createRoleRules, isSuperAdminRole, ROLE_EDIT_TYPE, ROLE_STATUS, ROLE_SUBMIT_DELAY } from '@/modules/role/model'
+import { validateFormSafely } from '@/modules/shared/form'
 import { normalizeDetailData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
@@ -16,7 +19,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
-    const isSubmitting = ref(false)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock(ROLE_SUBMIT_DELAY)
     const menuTreeRef = ref()
     const menuTreeData = ref<Menu[]>([])
     const menuTreeDataLoaded = ref(false)
@@ -83,18 +86,23 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     }
 
     const saveOriginalData = () => {
-        originalFormData.value = JSON.parse(
-            JSON.stringify({
-                id: formData.id,
-                name: formData.name,
-                code: formData.code,
-                sort: formData.sort,
-                pid: formData.pid,
-                description: formData.description,
-                menu_list: [...(formData.menu_list || [])],
-                status: formData.status,
-            })
-        )
+        originalFormData.value = {
+            id: formData.id,
+            name: formData.name,
+            code: formData.code,
+            sort: formData.sort,
+            pid: formData.pid,
+            description: formData.description,
+            menu_list: [...(formData.menu_list || [])],
+            status: formData.status,
+        }
+    }
+
+    const cloneMenuTree = (menus: Menu[]): Menu[] => {
+        return menus.map((menu) => ({
+            ...menu,
+            children: Array.isArray(menu.children) ? cloneMenuTree(menu.children) : menu.children,
+        }))
     }
 
     const getRoleChildrenIds = (targetId: number) => {
@@ -182,11 +190,16 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     }
 
     const setMenuTreeChecked = async () => {
+        const waitForNextFrame = () =>
+            new Promise<void>((resolve) => {
+                requestAnimationFrame(() => resolve())
+            })
+
         // 增加重试机制，确保 el-tree 已挂载
         for (let i = 0; i < 10; i++) {
             await nextTick()
             if (menuTreeRef.value) break
-            await new Promise((resolve) => setTimeout(resolve, 100))
+            await waitForNextFrame()
         }
 
         if (menuTreeRef.value && menuTreeData.value.length > 0) {
@@ -233,7 +246,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
         try {
             const response = await getRoleDetail({ id: parentId })
-            const roleData = normalizeDetailData<Role>(response as Parameters<typeof normalizeDetailData<Role>>[0], {} as Role)
+            const roleData = normalizeDetailData<Role>(response, {} as Role)
             const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
             parentRoleMenuList.value = normalizeMenuList(rawMenuList)
 
@@ -241,7 +254,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 updateMenuTreeDisabled(menuTreeData.value)
             }
         } catch (error) {
-            console.error('获取父角色权限失败:', error)
+            Logger.error('获取父角色权限失败:', error)
             parentRoleMenuList.value = []
             if (menuTreeDataLoaded.value && menuTreeData.value.length > 0) {
                 updateMenuTreeDisabled(menuTreeData.value)
@@ -256,11 +269,9 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
     const getMenuTreeData = async () => {
         try {
-            const response = await getMenuList({ status: ROLE_STATUS.NORMAL })
-            // API 返回的是 ApiResponse<Menu[]> 结构，需要提取 data
-            const menuData = response?.data || response
+            const menuData = await getMenuList({ status: ROLE_STATUS.NORMAL })
             if (Array.isArray(menuData)) {
-                const clonedData = JSON.parse(JSON.stringify(menuData))
+                const clonedData = cloneMenuTree(menuData)
                 updateMenuTreeDisabled(clonedData)
                 menuTreeData.value = clonedData
                 return clonedData
@@ -269,7 +280,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             menuTreeData.value = []
             return []
         } catch (error) {
-            console.error('获取菜单树数据失败:', error)
+            Logger.error('获取菜单树数据失败:', error)
             menuTreeData.value = []
             return []
         }
@@ -294,7 +305,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
             try {
                 const response = await getRoleDetail({ id: row.id })
-                const roleData = normalizeDetailData<Role>(response as Parameters<typeof normalizeDetailData<Role>>[0], {} as Role)
+                const roleData = normalizeDetailData<Role>(response, {} as Role)
                 const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
                 const menuIds = normalizeMenuList(rawMenuList)
 
@@ -322,7 +333,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                     await setMenuTreeChecked()
                 }
             } catch (error) {
-                console.error('获取角色详情失败:', error)
+                Logger.error('获取角色详情失败:', error)
                 showDrawer.value = false
                 return
             }
@@ -355,7 +366,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                     setMenuTreeChecked()
                 })
                 .catch((error) => {
-                    console.error('获取菜单列表失败:', error)
+                    Logger.error('获取菜单列表失败:', error)
                     ElMessage.error('获取菜单列表失败')
                 })
                 .finally(() => {
@@ -372,13 +383,12 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     }
 
     const editConfirmSubmit = async () => {
-        if (isSubmitting.value) return
-        isSubmitting.value = true
+        const valid = await validateFormSafely(formDataRef.value, '角色表单')
+        if (!valid) return
 
-        try {
-            const valid = await formDataRef.value?.validate().catch(() => false)
-            if (!valid) {
-                isSubmitting.value = false
+        await runWithSubmitLock(async () => {
+            if (isSuperAdminEditing.value) {
+                ElMessage.warning('超级管理员角色为只读，不允许编辑')
                 return
             }
 
@@ -390,13 +400,9 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             }
 
             const submitData = getSubmitData()
-            const parentId = submitData.pid || 0
+            const parentId = Number(submitData.pid ?? 0)
 
             if (isEditMode.value) {
-                if (isSuperAdminEditing.value) {
-                    ElMessage.warning('超级管理员角色为只读，不允许编辑')
-                    return
-                }
                 await updateRole(submitData)
             } else {
                 await createRole(submitData)
@@ -423,13 +429,9 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
             showDrawer.value = false
             ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
-        } catch (error) {
-            console.error('提交失败:', error)
-        } finally {
-            setTimeout(() => {
-                isSubmitting.value = false
-            }, ROLE_SUBMIT_DELAY)
-        }
+        }).catch((error) => {
+            Logger.error('提交失败:', error)
+        })
     }
 
     return {

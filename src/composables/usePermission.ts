@@ -3,7 +3,9 @@ import { useAuthStore } from '@/stores/auth'
 import { hasPermission } from '@/utils/auth'
 
 /**
- * 权限相关的组合式函数
+ * 权限相关的组合式函数。
+ *
+ * @returns 提供按钮权限列表与权限判断方法
  */
 export function usePermission() {
     const authStore = useAuthStore()

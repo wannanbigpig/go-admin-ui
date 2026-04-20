@@ -1,7 +1,9 @@
 import { reactive, ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { editPermission } from '@/api/permission'
 import { createApiPermissionForm, type ApiPermission } from '@/modules/apiPermission/model'
+import { validateFormSafely } from '@/modules/shared/form'
 
 interface UseApiPermissionFormOptions {
     refreshList: () => Promise<void>
@@ -76,7 +78,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
     const editConfirmSubmit = async () => {
         if (isSubmitting.value) return
 
-        const valid = await formDataRef.value?.validate().catch(() => false)
+        const valid = await validateFormSafely(formDataRef.value, '接口权限表单')
         if (!valid) return
 
         isSubmitting.value = true
@@ -86,7 +88,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
             showDrawer.value = false
             ElMessage.success('操作成功')
         } catch (error) {
-            console.error('提交失败:', error)
+            Logger.error('提交失败:', error)
         } finally {
             isSubmitting.value = false
         }

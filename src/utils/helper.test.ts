@@ -1,0 +1,120 @@
+import { describe, it, expect } from 'vitest'
+import { checkNumber, isEmpty, pick, filterNullUndefined, formatDate, isExternal } from '@/utils/helper'
+
+describe('helper.ts', () => {
+    describe('checkNumber', () => {
+        it('应该验证整数', () => {
+            expect(checkNumber(123)).toBe(true)
+            expect(checkNumber('123')).toBe(true)
+        })
+
+        it('应该验证小数位数', () => {
+            expect(checkNumber(123.45, 2)).toBe(true)
+            expect(checkNumber(123.456, 2)).toBe(false)
+        })
+
+        it('应该处理负数验证', () => {
+            expect(checkNumber(-1, 2, false)).toBe(false)
+            expect(checkNumber(-1, 2, true)).toBe(true)
+        })
+
+        it('应该处理无效输入', () => {
+            expect(checkNumber(NaN)).toBe(false)
+            expect(checkNumber('abc')).toBe(false)
+        })
+    })
+
+    describe('isEmpty', () => {
+        it('应该判断 null 和 undefined 为空', () => {
+            expect(isEmpty(null)).toBe(true)
+            expect(isEmpty(undefined)).toBe(true)
+        })
+
+        it('应该判断空字符串为空', () => {
+            expect(isEmpty('')).toBe(true)
+            expect(isEmpty('   ')).toBe(true)
+        })
+
+        it('应该判断 0 为空', () => {
+            expect(isEmpty(0)).toBe(true)
+            expect(isEmpty(false)).toBe(true)
+        })
+
+        it('应该判断空数组为空', () => {
+            expect(isEmpty([])).toBe(true)
+            expect(isEmpty([1, 2, 3])).toBe(false)
+        })
+
+        it('应该判断空对象为空', () => {
+            expect(isEmpty({})).toBe(true)
+            expect(isEmpty({ key: 'value' })).toBe(false)
+        })
+
+        it('非空值应该返回 false', () => {
+            expect(isEmpty('hello')).toBe(false)
+            expect(isEmpty(123)).toBe(false)
+            expect(isEmpty(true)).toBe(false)
+        })
+    })
+
+    describe('pick', () => {
+        it('应该提取指定的属性', () => {
+            const obj = { a: 1, b: 2, c: 3 }
+            expect(pick(obj, ['a', 'c'])).toEqual({ a: 1, c: 3 })
+        })
+
+        it('应该处理不存在的属性', () => {
+            const obj = { a: 1, b: 2 }
+            expect(pick(obj, ['a'])).toEqual({ a: 1 })
+        })
+
+        it('空对象应该返回空对象', () => {
+            expect(pick({}, [])).toEqual({})
+        })
+    })
+
+    describe('filterNullUndefined', () => {
+        it('应该过滤 null 和 undefined', () => {
+            const obj = { a: 1, b: null, c: undefined, d: 'hello' }
+            expect(filterNullUndefined(obj)).toEqual({ a: 1, d: 'hello' })
+        })
+
+        it('应该保留空字符串和 0', () => {
+            const obj = { a: '', b: 0, c: false }
+            expect(filterNullUndefined(obj)).toEqual({ a: '', b: 0, c: false })
+        })
+
+        it('空对象应该返回空对象', () => {
+            expect(filterNullUndefined({})).toEqual({})
+        })
+    })
+
+    describe('formatDate', () => {
+        it('应该格式化 Date 对象', () => {
+            const date = new Date('2024-01-15 10:30:45')
+            expect(formatDate(date)).toBe('2024-01-15 10:30:45')
+        })
+
+        it('应该格式化日期字符串', () => {
+            expect(formatDate('2024-01-15T10:30:45')).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+        })
+
+        it('应该格式化时间戳', () => {
+            const timestamp = new Date('2024-01-15T10:30:45').getTime()
+            expect(formatDate(timestamp)).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+        })
+    })
+
+    describe('isExternal', () => {
+        it('应该识别外部链接', () => {
+            expect(isExternal('https://example.com')).toBe(true)
+            expect(isExternal('http://example.com')).toBe(true)
+        })
+
+        it('应该识别内部路径', () => {
+            expect(isExternal('/dashboard')).toBe(false)
+            expect(isExternal('dashboard')).toBe(false)
+            expect(isExternal('./dashboard')).toBe(false)
+        })
+    })
+})

@@ -1,8 +1,11 @@
 import { reactive, ref } from 'vue'
+import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
+import { useSubmitLock } from '@/composables/useSubmitLock'
 import { updateAdminUserRoles, fetchAdminUserDetail } from '@/modules/adminUser/service'
+import { ADMIN_USER_SUBMIT_DELAY } from '@/modules/adminUser/model'
 import { getRoleList } from '@/api/permission'
-import { normalizeListData } from '@/modules/shared/response'
+import { extractListData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { AdminUser } from '@/types/adminUser'
 
@@ -13,7 +16,7 @@ interface UseAdminUserRoleBindingOptions {
 export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBindingOptions) {
     const showBindRoleDrawer = ref(false)
     const bindRoleFormRef = ref<FormInstance>()
-    const isBindingRole = ref(false)
+    const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock(ADMIN_USER_SUBMIT_DELAY)
     const currentAdminUserName = ref('')
     const roleOptions = ref<Role[]>([])
     const roleOptionsLoading = ref(false)
@@ -46,32 +49,9 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
             .filter((item): item is number => item !== null)
     }
 
-    const extractRoleList = (response: unknown): Role[] => {
-        const normalizedResult = normalizeListData<Role>(response as Parameters<typeof normalizeListData<Role>>[0])
-        if (normalizedResult.list.length > 0) {
-            return normalizedResult.list
-        }
-
-        const payload = (response as { data?: unknown })?.data
-        if (!payload || typeof payload !== 'object') return []
-
-        const rawPayload = payload as Record<string, unknown>
-        if (Array.isArray(rawPayload.list)) {
-            return rawPayload.list as Role[]
-        }
-        if (rawPayload.data && typeof rawPayload.data === 'object' && Array.isArray((rawPayload.data as Record<string, unknown>).list)) {
-            return (rawPayload.data as Record<string, unknown>).list as Role[]
-        }
-        if (Array.isArray(rawPayload.data)) {
-            return rawPayload.data as Role[]
-        }
-
-        return []
-    }
-
     const getRoleOptions = async () => {
         const response = await getRoleList({ page: 1, per_page: 999 })
-        const list = extractRoleList(response)
+        const list = extractListData<Role>(response)
         roleOptions.value = list.reduce<Role[]>((result, role) => {
             const roleId = normalizeRoleId(role.id)
             if (roleId === null) return result
@@ -105,7 +85,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
                     roleOptionsLoaded.value = true
                 })
                 .catch((error) => {
-                    console.error('获取角色列表失败:', error)
+                    Logger.error('获取角色列表失败:', error)
                     roleOptionsLoaded.value = false
                 })
                 .finally(() => {
@@ -125,15 +105,12 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
                 bindRoleData.role_ids = [...bindRoleData.role_ids, superAdminRoleId.value]
             }
         } catch (error) {
-            console.error('获取管理员详情失败:', error)
+            Logger.error('获取管理员详情失败:', error)
         }
     }
 
     const bindRoleConfirmSubmit = async () => {
-        if (isBindingRole.value) return
-        isBindingRole.value = true
-
-        try {
+        await runWithSubmitLock(async () => {
             const roleIds = normalizeRoleIds(bindRoleData.role_ids)
             if (currentUserIsRootAdmin.value && superAdminRoleId.value && !roleIds.includes(superAdminRoleId.value)) {
                 roleIds.push(superAdminRoleId.value)
@@ -143,11 +120,9 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
             ElMessage.success('绑定角色成功')
             showBindRoleDrawer.value = false
             await refreshList()
-        } catch (error) {
-            console.error('绑定角色失败:', error)
-        } finally {
-            isBindingRole.value = false
-        }
+        }).catch((error) => {
+            Logger.error('绑定角色失败:', error)
+        })
     }
 
     return {

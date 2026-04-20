@@ -20,8 +20,6 @@
 > 📦 **相关项目**：本项目为前端项目，后端 API 服务请参考 [后端代码库](https://github.com/wannanbigpig/gin-layout)
 >
 > 📚 **API 文档**：查看完整的 API 接口文档请访问 [https://wannanbigpig.apifox.cn/](https://wannanbigpig.apifox.cn/)
->
-> 🧭 **架构文档**：如果你是首次接手本项目，或准备开启新的 AI 会话，建议先阅读 [PROJECT_ARCHITECTURE.md](./PROJECT_ARCHITECTURE.md)
 
 </div>
 

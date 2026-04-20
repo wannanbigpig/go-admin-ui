@@ -1,13 +1,11 @@
-import { reactive, ref, type Ref } from 'vue'
-import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
+import { reactive, ref } from 'vue'
+import { useListPage } from '@/composables/useListPage'
 import { normalizeListData } from '@/modules/shared/response'
 import { getPermissionList } from '@/api/permission'
 import type { ApiPermission } from '@/modules/apiPermission/model'
 import type { FormInstance } from 'element-plus'
 
 export function useApiPermissionList() {
-    const loading = ref(false)
-    const permissionList = ref([]) as Ref<ApiPermission[]>
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive({
         keyword: '',
@@ -18,35 +16,24 @@ export function useApiPermissionList() {
         per_page: 10,
     })
 
-    const pagination: PaginationState = createPaginationState(() => getList(), {
-        page: queryWhere.page,
-        pageSize: queryWhere.per_page,
-    })
-
-    const getList = async () => {
-        loading.value = true
-        try {
-            const params = {
-                ...queryWhere,
-                page: pagination.page,
-                per_page: pagination.pageSize,
-            }
+    const {
+        loading,
+        items: permissionList,
+        pagination,
+        getList,
+        handleSearch,
+    } = useListPage<ApiPermission, typeof queryWhere>({
+        query: queryWhere,
+        queryFormRef,
+        transformParams: (query) => ({
+            ...query,
+            keyword: query.keyword?.trim() || '',
+        }),
+        fetcher: async (params) => {
             const response = await getPermissionList(params)
-            const result = normalizeListData<ApiPermission>(response)
-            pagination.total = result.total
-            permissionList.value = result.list
-        } catch (error) {
-            console.error('获取接口权限列表失败:', error)
-        } finally {
-            loading.value = false
-        }
-    }
-
-    const handleSearch = () => {
-        pagination.page = 1
-        queryWhere.page = 1
-        getList()
-    }
+            return normalizeListData<ApiPermission>(response)
+        },
+    })
 
     return {
         loading,

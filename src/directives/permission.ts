@@ -1,5 +1,6 @@
 import { hasPermission } from '@/utils/auth'
 import { ElMessage } from 'element-plus'
+import { Logger } from '@/utils/logger'
 import type { Directive, DirectiveBinding } from 'vue'
 
 interface PermissionHTMLElement extends HTMLElement {
@@ -51,7 +52,7 @@ function handlePermission(el: PermissionHTMLElement, binding: DirectiveBinding, 
 
         resetElement(el)
     } catch (error) {
-        console.error('[v-permission] 权限检查出错:', error)
+        Logger.error('[v-permission] 权限检查出错:', error)
         hideElement(el)
     }
 }

@@ -3,6 +3,7 @@ import 'nprogress/nprogress.css'
 import { useAuthStore } from '@/stores/auth'
 import { addDynamicRoutes, checkDynamicRouteExists } from './dynamicRoutes'
 import { isEmpty } from '@/utils/helper'
+import { Logger } from '@/utils/logger'
 import type { RouteLocationNormalized } from 'vue-router'
 
 // ==================== 配置 ====================
@@ -70,7 +71,7 @@ async function refreshUserInfoIfNeeded(authStore: ReturnType<typeof useAuthStore
         try {
             await authStore.refreshUserInfo()
         } catch (error) {
-            console.error('刷新用户信息失败:', error)
+            Logger.error('刷新用户信息失败:', error)
         }
     }
 }
@@ -81,7 +82,7 @@ async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, t
     }
 
     if (isEmpty(authStore.routerData)) {
-        console.warn('路由数据为空，无法添加动态路由')
+        Logger.warn('路由数据为空，无法添加动态路由')
         return undefined
     }
 
@@ -89,7 +90,7 @@ async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, t
         addDynamicRoutes(authStore.routerData)
         return rebuildToRoute(to)
     } catch (error) {
-        console.error('添加动态路由失败:', error)
+        Logger.error('添加动态路由失败:', error)
         return ROUTE_PATH.HOME
     }
 }

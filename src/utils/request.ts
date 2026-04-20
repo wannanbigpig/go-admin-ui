@@ -2,10 +2,8 @@ import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import type { ApiResponse } from '@/types/common'
-
-// ==================== 常量定义 ====================
-/** 请求超时时间（毫秒） */
-const REQUEST_TIMEOUT = 10000
+import { MESSAGE_ERROR_DURATION, REQUEST_TIMEOUT } from '@/modules/shared/constants'
+import { Logger } from '@/utils/logger'
 
 // ==================== 创建 axios 实例 ====================
 /**
@@ -40,7 +38,7 @@ service.interceptors.request.use(
         return config
     },
     (error) => {
-        console.error('请求拦截器错误:', error)
+        Logger.error('请求拦截器错误:', error)
         return Promise.reject(error)
     }
 )
@@ -78,8 +76,8 @@ service.interceptors.response.use(
             return Promise.reject(response.data)
         }
 
-        // 返回数据
-        return response.data as unknown as AxiosResponse<ApiResponse<unknown>>
+        // 返回业务数据，避免将 AxiosResponse 结构透传到业务层
+        return (response.data?.data ?? response.data) as AxiosResponse
     },
     (error) => {
         const authStore = useAuthStore()
@@ -95,7 +93,7 @@ service.interceptors.response.use(
             ElMessage({
                 message: '服务器连接异常，请检查服务器！',
                 type: 'error',
-                duration: 5 * 1000,
+                duration: MESSAGE_ERROR_DURATION,
             })
             return Promise.reject(error)
         }
@@ -105,7 +103,7 @@ service.interceptors.response.use(
             ElMessage({
                 message: '请求超时，请稍后重试',
                 type: 'error',
-                duration: 5 * 1000,
+                duration: MESSAGE_ERROR_DURATION,
             })
             return Promise.reject(error)
         }
@@ -115,7 +113,7 @@ service.interceptors.response.use(
         ElMessage({
             message: errorMessage,
             type: 'error',
-            duration: 5 * 1000,
+            duration: MESSAGE_ERROR_DURATION,
         })
 
         return Promise.reject(error)
@@ -131,11 +129,11 @@ service.interceptors.response.use(
  * @returns {Promise<T>} 请求 Promise
  */
 export function request<T = unknown>(url: string, method: string, options: AxiosRequestConfig = {}): Promise<T> {
-    return service.request({
+    return service.request<T, T>({
         url,
         method: method.toUpperCase(),
         ...options,
-    }) as unknown as Promise<T>
+    })
 }
 
 const isEmptyQueryValue = (value: unknown) => {

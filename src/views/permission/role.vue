@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch">
+            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item label="角色名称" prop="name">
@@ -95,6 +95,7 @@ import xlActionButton from '@/components/actionButton/index.vue'
 import { onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
+import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { deleteRole } from '@/api/permission'
 import { ROLE_STATUS } from '@/modules/role/model'
 import { useRoleList } from '@/modules/role/useRoleList'
@@ -180,11 +181,11 @@ const handleDelete = async (row: Role) => {
     }
 
     try {
-        await ElMessageBox.confirm('确认删除该角色吗?', '温馨提示', {
+        await ElMessageBox.confirm(CONFIRM_MESSAGES.DELETE_ROLE, CONFIRM_DIALOG_TITLE, {
             type: 'warning',
         })
         await deleteRole({ id: row.id })
-        ElMessage.success('删除成功')
+        ElMessage.success(RESULT_MESSAGES.DELETE_SUCCESS)
         getList()
     } catch {
         // 用户取消或报错

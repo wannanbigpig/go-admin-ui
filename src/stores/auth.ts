@@ -1,23 +1,27 @@
 import { defineStore } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
+import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
 import { removeDynamicRoute, convertRoute } from '@/router/dynamicRoutes'
 import { ref, computed } from 'vue'
 import { buildButtonPermissionMap, extractButtonPermissions } from '@/modules/auth/permission'
 import { ElMessageBox } from 'element-plus'
+import { Logger } from '@/utils/logger'
 import type { UserInfo, UserPermission } from '@/types/auth'
 
 // ==================== 常量定义 ====================
+/** 当前刷新用户信息的 Promise（用于并发控制） */
+let refreshingPromise: Promise<void> | null = null
+
 export const useAuthStore = defineStore(
     'auth',
     () => {
         // ==================== State ====================
         const access_token = ref<string>('')
         const expires_at = ref<number>(0)
-        const userInfo = ref<UserInfo>({} as UserInfo)
+        const userInfo = ref<UserInfo>(createEmptyUserInfo())
         const menu = ref<UserPermission[]>([])
         const isTokenExpiredModalShown = ref<boolean>(false)
-        const isRefreshUserInfo = ref<boolean>(false)
 
         // ==================== Getters ====================
         /**
@@ -90,31 +94,32 @@ export const useAuthStore = defineStore(
             try {
                 await refreshUserInfo()
             } catch (error) {
-                console.error('登录后刷新用户信息失败:', error)
+                Logger.error('登录后刷新用户信息失败:', error)
             }
             return result
         }
 
         /**
-         * 刷新用户信息
+         * 刷新用户信息（支持并发控制，多次调用共享同一个 Promise）
          */
         const refreshUserInfo = async () => {
-            if (isRefreshUserInfo.value) {
-                while (isRefreshUserInfo.value) {
-                    await new Promise((resolve) => setTimeout(resolve, 50))
-                }
-                return
+            // 如果已有刷新请求在进行中，直接返回共享该 Promise
+            if (refreshingPromise) {
+                return refreshingPromise
             }
 
-            isRefreshUserInfo.value = true
-            try {
-                const [userInfoRes, menuListRes] = await Promise.all([fetchCurrentUser(), fetchUserMenuTree()])
-                userInfo.value = userInfoRes
-                menu.value = menuListRes
-                removeDynamicRoute()
-            } finally {
-                isRefreshUserInfo.value = false
-            }
+            refreshingPromise = (async () => {
+                try {
+                    const [userInfoRes, menuListRes] = await Promise.all([fetchCurrentUser(), fetchUserMenuTree()])
+                    userInfo.value = userInfoRes
+                    menu.value = menuListRes
+                    removeDynamicRoute()
+                } finally {
+                    refreshingPromise = null
+                }
+            })()
+
+            return refreshingPromise
         }
 
         /**
@@ -131,10 +136,10 @@ export const useAuthStore = defineStore(
         const resetAuthStore = () => {
             access_token.value = ''
             expires_at.value = 0
-            userInfo.value = {} as UserInfo
+            userInfo.value = createEmptyUserInfo()
             menu.value = []
             isTokenExpiredModalShown.value = false
-            isRefreshUserInfo.value = false
+            refreshingPromise = null
             localStorage.removeItem('__persisted__auth')
             removeDynamicRoute()
         }

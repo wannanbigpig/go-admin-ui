@@ -88,11 +88,15 @@ export function isExternal(path: string): boolean {
  * @param value - 需要判断的值
  * @returns 是否为空
  */
+function isVueRef(value: unknown): value is { value: unknown } {
+    return typeof value === 'object' && value !== null && '__v_isRef' in value
+}
+
 export function isEmpty(value: unknown): boolean {
     // 处理 Vue 的 Ref 对象
     let val = value
-    if (val && typeof val === 'object' && '__v_isRef' in (val as Record<string, unknown>)) {
-        val = (val as { value: unknown }).value
+    if (isVueRef(val)) {
+        val = val.value
     }
 
     if (val == null) return true
@@ -110,7 +114,7 @@ export function isEmpty(value: unknown): boolean {
     if (Array.isArray(val)) return val.length === 0
 
     if (typeof val === 'object') {
-        return Reflect.ownKeys(val as object).length === 0
+        return Reflect.ownKeys(val).length === 0
     }
 
     return false
@@ -161,15 +165,15 @@ export interface TreeOption {
     value: unknown
 }
 
-export interface FlattenOptions {
-    idKey?: string
-    nameKey?: string
-    childrenKey?: string
+export interface FlattenOptions<T extends object = Record<string, unknown>> {
+    idKey?: keyof T
+    nameKey?: keyof T
+    childrenKey?: keyof T
     separator?: string
 }
 
-export function flattenTree(tree: Record<string, unknown>[], prefix: string = '', options: FlattenOptions = {}): TreeOption[] {
-    const { idKey = 'id', nameKey = 'name', childrenKey = 'children', separator = ' / ' } = options
+export function flattenTree<T extends object>(tree: T[], prefix: string = '', options: FlattenOptions<T> = {}): TreeOption[] {
+    const { idKey = 'id' as keyof T, nameKey = 'name' as keyof T, childrenKey = 'children' as keyof T, separator = ' / ' } = options
 
     const result: TreeOption[] = []
     tree.forEach((item) => {
@@ -181,7 +185,7 @@ export function flattenTree(tree: Record<string, unknown>[], prefix: string = ''
         })
         const children = item[childrenKey]
         if (Array.isArray(children) && children.length > 0) {
-            result.push(...flattenTree(children as Record<string, unknown>[], label, options))
+            result.push(...flattenTree(children as T[], label, options))
         }
     })
     return result

@@ -1,13 +1,11 @@
-import { reactive, ref, type Ref } from 'vue'
-import { createPaginationState, type PaginationState } from '@/modules/shared/pagination'
+import { reactive, ref } from 'vue'
+import { useListPage } from '@/composables/useListPage'
 import { normalizeListData } from '@/modules/shared/response'
 import { getRoleList } from '@/api/permission'
 import type { Role } from '@/types/role'
 import type { FormInstance } from 'element-plus'
 
 export function useRoleList() {
-    const loading = ref(false)
-    const roleList = ref([]) as Ref<Role[]>
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive({
         name: '',
@@ -16,35 +14,25 @@ export function useRoleList() {
         per_page: 10,
     })
 
-    const getList = async () => {
-        loading.value = true
-        try {
-            const params = {
-                ...queryWhere,
-                page: pagination.page,
-                per_page: pagination.pageSize,
-            }
+    const {
+        loading,
+        items: roleList,
+        pagination,
+        getList,
+        handleSearch,
+    } = useListPage<Role, typeof queryWhere>({
+        query: queryWhere,
+        queryFormRef,
+        transformParams: (query) => ({
+            ...query,
+            name: query.name?.trim() || '',
+            code: query.code?.trim() || '',
+        }),
+        fetcher: async (params) => {
             const response = await getRoleList(params)
-            const result = normalizeListData<Role>(response)
-            pagination.total = result.total
-            roleList.value = result.list
-        } catch (error) {
-            console.error('获取角色列表失败:', error)
-        } finally {
-            loading.value = false
-        }
-    }
-
-    const pagination: PaginationState = createPaginationState(() => getList(), {
-        page: queryWhere.page,
-        pageSize: queryWhere.per_page,
+            return normalizeListData<Role>(response)
+        },
     })
-
-    const handleSearch = () => {
-        pagination.page = 1
-        queryWhere.page = 1
-        getList()
-    }
 
     return {
         loading,

@@ -1,4 +1,5 @@
 import { ref, reactive } from 'vue'
+import { Logger } from '@/utils/logger'
 import { fetchDepartmentList } from '@/modules/department/service'
 import { flattenDepartmentTree } from '@/modules/department/model'
 import type { Department } from '@/types/department'
@@ -22,7 +23,7 @@ export function useDepartmentTreeList(_tableListRef: unknown) {
                 departmentOptions.value = flattenDepartmentTree(deptData)
             }
         } catch (error) {
-            console.error('获取部门列表失败:', error)
+            Logger.error('获取部门列表失败:', error)
         } finally {
             loading.value = false
         }
