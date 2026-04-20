@@ -1,5 +1,35 @@
 <template>
     <div class="xl-right-content">
+        <el-dropdown size="default" type="default" trigger="click" @command="handleThemeCommand" class="xl-theme-dropdown" teleported persistent>
+            <div class="xl-theme-trigger xl-cursor-pointer" title="主题切换">
+                <el-icon size="20">
+                    <i-ep-brush />
+                </el-icon>
+            </div>
+            <template #dropdown>
+                <el-dropdown-menu>
+                    <el-dropdown-item :command="THEME_MODE.LIGHT" :disabled="settingStore.theme === THEME_MODE.LIGHT">
+                        <el-icon class="el-icon--right">
+                            <i-ep-sunny />
+                        </el-icon>
+                        浅色
+                    </el-dropdown-item>
+                    <el-dropdown-item :command="THEME_MODE.DARK" :disabled="settingStore.theme === THEME_MODE.DARK">
+                        <el-icon class="el-icon--right">
+                            <i-ep-moon />
+                        </el-icon>
+                        深色
+                    </el-dropdown-item>
+                    <el-dropdown-item :command="THEME_MODE.SYSTEM" :disabled="settingStore.theme === THEME_MODE.SYSTEM">
+                        <el-icon class="el-icon--right">
+                            <i-ep-monitor />
+                        </el-icon>
+                        跟随系统
+                    </el-dropdown-item>
+                </el-dropdown-menu>
+            </template>
+        </el-dropdown>
+
         <el-dropdown size="large" type="default" trigger="click" @command="handleCommand" class="xl-user-dropdown" teleported persistent>
             <div class="xl-user-info xl-cursor-pointer">
                 <div class="user-name">
@@ -42,6 +72,7 @@
 <script setup lang="ts">
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingStore, type ThemeMode } from '@/stores/setting'
 import { logout } from '@/api/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
@@ -59,7 +90,14 @@ const AVATAR_CONFIG = {
     ICON_SIZE: 30,
 }
 
+const THEME_MODE = {
+    LIGHT: 'light' as ThemeMode,
+    DARK: 'dark' as ThemeMode,
+    SYSTEM: 'system' as ThemeMode,
+}
+
 const authStore = useAuthStore()
+const settingStore = useSettingStore()
 
 const handleLogout = async () => {
     try {
@@ -107,6 +145,10 @@ const handleCommand = (command: COMMAND) => {
             Logger.warn('未知的命令类型:', command)
     }
 }
+
+const handleThemeCommand = (mode: ThemeMode) => {
+    settingStore.setTheme(mode)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -115,7 +157,33 @@ const handleCommand = (command: COMMAND) => {
 .xl-right-content {
     display: flex;
     align-items: center;
+    gap: 8px;
     height: 100%;
+
+    .xl-theme-dropdown {
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
+
+    .xl-theme-trigger {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--el-border-color);
+        border-radius: 6px;
+        color: var(--el-text-color-primary);
+        transition: all 0.2s ease;
+
+        &:hover {
+            color: var(--el-color-primary);
+            border-color: var(--el-color-primary-light-5);
+            background-color: var(--el-fill-color-light);
+        }
+    }
+
     .xl-user-dropdown {
         height: 100%;
         padding-left: 20px;

@@ -40,8 +40,16 @@ const visibleRoutes = computed(() => {
     })
 })
 
+const blurActiveElement = () => {
+    const activeElement = document.activeElement
+    if (activeElement instanceof HTMLElement && activeElement !== document.body) {
+        activeElement.blur()
+    }
+}
+
 const handleMenuSelect = () => {
-    // 导航由 linkItem 处理
+    // 导航由 linkItem 处理，这里主动移除焦点，避免焦点残留在即将隐藏的 popper 内触发 aria-hidden 警告
+    blurActiveElement()
 }
 
 watch(
@@ -60,6 +68,6 @@ watch(
 .empty-text {
     padding: 20px;
     text-align: center;
-    color: #999;
+    color: var(--el-text-color-secondary);
 }
 </style>

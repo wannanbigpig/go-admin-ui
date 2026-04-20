@@ -326,7 +326,7 @@ const tableTitle: TableColumn<AdminUser>[] = [
 }
 .avatar-uploader-icon {
     font-size: 28px;
-    color: #8c939d;
+    color: var(--el-text-color-secondary);
     width: 98px;
     height: 98px;
     text-align: center;

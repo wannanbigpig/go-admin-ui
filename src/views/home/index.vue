@@ -1,16 +1,16 @@
 <template>
-  <div>
-    <h1>欢迎来到首页</h1>
-    <div class="welcome-info">
-      <p>登录用户名：{{ username }}</p>
-      <p>登录时间：{{ loginTime }}</p>
-      <p>上次登录IP：{{ lastLoginIP }}</p>
+    <div class="home-page">
+        <h1>欢迎来到首页</h1>
+        <div class="welcome-info">
+            <p>登录用户名：{{ username }}</p>
+            <p>登录时间：{{ loginTime }}</p>
+            <p>上次登录IP：{{ lastLoginIP }}</p>
+        </div>
+        <div class="random-str">
+            <h2>随机字符串</h2>
+            <p>{{ str }}</p>
+        </div>
     </div>
-    <div class="random-str">
-      <h2>随机字符串</h2>
-      <p>{{ str }}</p>
-    </div>
-  </div>
 </template>
 
 <script setup>
@@ -26,38 +26,47 @@ const lastLoginIP = ref('')
 
 // ==================== 生命周期 ====================
 onMounted(() => {
-  const authStore = useAuthStore()
-  const userInfo = authStore.userInfo || {}
+    const authStore = useAuthStore()
+    const userInfo = authStore.userInfo || {}
 
-  str.value = randomStr()
-  username.value = userInfo.nickname || userInfo.username || '未知用户'
-  loginTime.value = new Date().toLocaleString()
-  lastLoginIP.value = userInfo.last_ip || '未知'
+    str.value = randomStr()
+    username.value = userInfo.nickname || userInfo.username || '未知用户'
+    loginTime.value = new Date().toLocaleString()
+    lastLoginIP.value = userInfo.last_ip || '未知'
 })
 </script>
 
 <style scoped>
+.home-page {
+    color: var(--el-text-color-primary);
+}
+
 .welcome-info {
-  margin-bottom: 20px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  background-color: #f9f9f9;
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 5px;
+    background-color: var(--xl-bg-color);
 }
 
 .welcome-info p {
-  margin: 5px 0;
+    margin: 5px 0;
+    color: var(--el-text-color-secondary);
 }
 
 .random-str {
-  margin-top: 20px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: #fff;
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 5px;
+    background-color: var(--xl-bg-color);
 }
 
 .random-str h2 {
-  margin-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.random-str p {
+    color: var(--el-text-color-secondary);
 }
 </style>

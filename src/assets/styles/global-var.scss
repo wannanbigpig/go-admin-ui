@@ -1,8 +1,8 @@
 // ==================== CSS 变量（用于动态样式） ====================
 :root {
     // 颜色变量
-    --xl-bg-color: #{$--xl-bg-color};
-    --xl-main-bg-color: #{$--xl-main-bg-color};
+    --xl-bg-color: var(--el-bg-color, #{$--xl-bg-color});
+    --xl-main-bg-color: var(--el-bg-color-page, #{$--xl-main-bg-color});
 
     // 侧边栏宽度
     --xl-aside-width: #{$--xl-aside-width};

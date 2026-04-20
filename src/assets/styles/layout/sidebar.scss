@@ -1,23 +1,23 @@
 #xl-aside {
-  width: var(--xl-aside-width);
-  height: 100%;
-  color: var(--el-text-color-primary);
-  background-color: $--xl-bg-color;
-  border-right: 1px solid var(--el-color-info-light-8);
-  overflow: hidden;
-  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: width;
+    width: var(--xl-aside-width);
+    height: 100%;
+    color: var(--el-text-color-primary);
+    background-color: var(--xl-bg-color);
+    border-right: 1px solid var(--el-color-info-light-8);
+    overflow: hidden;
+    transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: width;
 
-  .xl-scrollbar {
-    height: calc(100% - $--xl-side-logo-height - $--xl-side-logo-border);
+    .xl-scrollbar {
+        height: calc(100% - $--xl-side-logo-height - $--xl-side-logo-border);
 
-    .el-menu {
-      border-right: none;
-      background: $--xl-bg-color;
+        .el-menu {
+            border-right: none;
+            background: var(--xl-bg-color);
+        }
     }
-  }
 
-  &.collapse {
-    width: var(--xl-aside-min-width) !important;
-  }
+    &.collapse {
+        width: var(--xl-aside-min-width) !important;
+    }
 }

@@ -3,14 +3,14 @@
 @import './header.scss';
 
 .common-layout {
-  background-color: $--xl-main-bg-color;
+    background-color: var(--xl-main-bg-color);
 
-  .right-container {
-    width: calc(100% - var(--xl-aside-width));
-    overflow: auto;
-    scrollbar-color: var(--el-scrollbar-bg-color) var(--el-fill-color-light);
-    transition:
-      0.3s width,
-      0.3s margin-left ease-in-out;
-  }
+    .right-container {
+        width: calc(100% - var(--xl-aside-width));
+        overflow: auto;
+        scrollbar-color: var(--el-scrollbar-bg-color) var(--el-fill-color-light);
+        transition:
+            0.3s width,
+            0.3s margin-left ease-in-out;
+    }
 }

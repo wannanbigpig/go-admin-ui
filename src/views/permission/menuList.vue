@@ -112,7 +112,7 @@
                                     图标
                                     <el-tooltip
                                         effect="dark"
-                                        content="支持的图标库：<a href='https://icon-sets.iconify.design/' target='_blank' style='color:white'>https://icon-sets.iconify.design/</a>"
+                                        content="支持的图标库：<a href='https://icon-sets.iconify.design/' target='_blank' style='color:var(--el-color-white)'>https://icon-sets.iconify.design/</a>"
                                         raw-content
                                         placement="top"
                                     >
@@ -124,7 +124,7 @@
                             </template>
                             <el-input v-model.trim="formData.icon" placeholder="请输入图标">
                                 <template #suffix>
-                                    <el-icon size="20" color="#409eff">
+                                    <el-icon size="20" :color="'var(--el-color-primary)'">
                                         <xl-icon :icon="formData.icon || ''" />
                                     </el-icon>
                                 </template>

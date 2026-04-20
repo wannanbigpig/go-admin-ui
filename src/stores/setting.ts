@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+export type ThemeMode = 'light' | 'dark' | 'system'
+
 export interface SettingState {
     isCollapse: boolean
     watermarkEnabled: boolean
     watermarkContent: string
-    theme: 'light' | 'dark'
+    theme: ThemeMode
 }
 
 export const useSettingStore = defineStore(
@@ -15,7 +17,7 @@ export const useSettingStore = defineStore(
         const isCollapse = ref(false)
         const watermarkEnabled = ref(true)
         const watermarkContent = ref('X-L-Admin')
-        const theme = ref<'light' | 'dark'>('light')
+        const theme = ref<ThemeMode>('system')
 
         // ==================== Actions ====================
         const toggleCollapse = () => {
@@ -30,6 +32,10 @@ export const useSettingStore = defineStore(
             watermarkEnabled.value = enabled
         }
 
+        const setTheme = (mode: ThemeMode) => {
+            theme.value = mode
+        }
+
         return {
             isCollapse,
             watermarkEnabled,
@@ -38,6 +44,7 @@ export const useSettingStore = defineStore(
             toggleCollapse,
             updateWatermark,
             toggleWatermark,
+            setTheme,
         }
     },
     {

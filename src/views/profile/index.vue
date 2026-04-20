@@ -205,7 +205,7 @@
 
 .el-icon.avatar-uploader-icon {
     font-size: 28px;
-    color: #8c939d;
+    color: var(--el-text-color-secondary);
     width: 98px;
     height: 98px;
     text-align: center;
@@ -219,6 +219,21 @@ import { PROFILE_STATUS } from '@/modules/profile/model'
 import { useProfilePage } from '@/modules/profile/useProfilePage'
 
 const STATUS = PROFILE_STATUS
-const { userInfo, showDrawer, formDataRef, formTitle, isSubmitting, formKey, formData, formRules, formatDepartments, formatDateTime, handleAvatarSuccess, beforeAvatarUpload, customUpload, openEditDrawer, editConfirmSubmit } =
-    useProfilePage()
+const {
+    userInfo,
+    showDrawer,
+    formDataRef,
+    formTitle,
+    isSubmitting,
+    formKey,
+    formData,
+    formRules,
+    formatDepartments,
+    formatDateTime,
+    handleAvatarSuccess,
+    beforeAvatarUpload,
+    customUpload,
+    openEditDrawer,
+    editConfirmSubmit,
+} = useProfilePage()
 </script>

@@ -198,7 +198,7 @@ onBeforeMount(refreshCaptcha)
         .login-top-text {
             font-size: 26px !important;
             font-weight: 600 !important;
-            color: #ffffff !important;
+            color: var(--el-color-white) !important;
         }
     }
 
@@ -232,7 +232,7 @@ onBeforeMount(refreshCaptcha)
                     text-align: center;
                     font-size: 28px;
                     font-weight: 600;
-                    color: #ffffff;
+                    color: var(--el-color-white);
                 }
             }
         }
@@ -240,13 +240,13 @@ onBeforeMount(refreshCaptcha)
             border-radius: 0 10px 10px 0;
             width: 360px;
             height: 100%;
-            background-color: #eaf1ff;
+            background-color: var(--xl-bg-color);
             .login-title {
                 width: 100%;
                 margin: 50px 0 50px 0;
                 font-size: 25px;
                 font-weight: 500;
-                color: #000000;
+                color: var(--el-text-color-primary);
                 text-align: center;
             }
             .login-form {
@@ -258,7 +258,7 @@ onBeforeMount(refreshCaptcha)
                 margin: auto;
                 font-size: 25px;
                 font-weight: 500;
-                color: #191919;
+                color: var(--el-text-color-primary);
                 .input {
                     flex: 1;
                     height: 48px;

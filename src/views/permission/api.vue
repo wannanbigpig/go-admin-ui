@@ -256,11 +256,11 @@ const tableTitle: TableColumn<ApiPermission>[] = [
         customRow: true,
         icon: {
             1: {
-                color: '#67C23A',
+                color: 'var(--el-color-success)',
                 text: 'ant-design:check-outlined',
             },
             0: {
-                color: '#F56C6C',
+                color: 'var(--el-color-danger)',
                 text: 'ant-design:close-outlined',
             },
         },
