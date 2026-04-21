@@ -137,36 +137,76 @@ const { checkPermission, getButtonInfoFull } = usePermission()
 
 ## 环境变量
 
-示例（`.env.development`）：
+### 配置项说明
+
+| 变量名              | 说明                                | 默认值                  | 示例值                  |
+| ------------------- | ----------------------------------- | ----------------------- | ----------------------- |
+| `VITE_APP_TITLE`    | 应用标题                            | `X-L-Admin`             | `X-L-Admin (dev)`       |
+| `VITE_APP_BASE`     | 应用基础路径（GitHub Pages 部署用） | `/`                     | `/my-repo/`             |
+| `VITE_BASE_URL`     | 后端 API 地址                       | -                       | `http://127.0.0.1:9001` |
+| `VITE_BASE_API`     | API 基础前缀                        | `/admin`                | `/admin`                |
+| `VITE_BASE_STATIC`  | 静态资源路径                        | `/static`               | `/static`               |
+| `VITE_PROXY_TARGET` | 开发环境代理目标                    | `http://127.0.0.1:9001` | `http://localhost:8080` |
+| `VITE_USE_PROXY`    | 是否启用代理                        | `true`                  | `true` / `false`        |
+| `AUTO_OPEN_BROWSER` | 开发环境自动打开浏览器              | `true`                  | `true` / `false`        |
+
+### 环境文件
+
+| 文件               | 用途                             |
+| ------------------ | -------------------------------- |
+| `.env.example`     | 配置模板（首次使用请复制此文件） |
+| `.env.development` | 开发环境配置                     |
+| `.env.location`    | 本地环境配置（个人自定义）       |
+| `.env.production`  | 生产环境配置                     |
+
+### 快速配置
+
+```bash
+# 复制示例配置
+cp .env.example .env.development
+
+# 根据实际情况修改 .env.development
+```
+
+### 示例（.env.development）
 
 ```env
 VITE_APP_TITLE=X-L-Admin (dev)
-VITE_BASE_URL=http://127.0.0.1:9001
+VITE_APP_BASE=/
+VITE_BASE_URL=
 VITE_BASE_API=/admin
 VITE_BASE_STATIC=/static
+VITE_PROXY_TARGET=http://127.0.0.1:9001
+VITE_USE_PROXY=true
+AUTO_OPEN_BROWSER=true
 ```
 
 ## 目录结构（简版）
 
 ```text
 x-l-admin-vue3/
+├── .env.example        # 环境变量配置模板
+├── .env.development    # 开发环境配置
+├── .env.location       # 本地环境配置
+├── .env.production     # 生产环境配置
 ├── src/
-│   ├── api/                # API 定义
-│   ├── assets/             # 样式与静态资源
-│   ├── components/         # 通用组件
-│   ├── composables/        # 组合式函数（含测试）
-│   ├── directives/         # 自定义指令
-│   ├── layout/             # 后台布局
-│   ├── modules/            # 业务模块（service/model/useXxx）
-│   ├── router/             # 路由配置与守卫
-│   ├── stores/             # Pinia 状态
-│   ├── test/               # 测试初始化
-│   ├── utils/              # 工具函数（含测试）
-│   ├── views/              # 页面
+│   ├── api/            # API 定义
+│   ├── assets/         # 样式与静态资源
+│   ├── components/     # 通用组件
+│   ├── composables/    # 组合式函数（含测试）
+│   ├── directives/     # 自定义指令
+│   ├── layout/         # 后台布局
+│   ├── modules/        # 业务模块（service/model/useXxx）
+│   ├── router/         # 路由配置与守卫
+│   ├── stores/         # Pinia 状态管理
+│   ├── test/           # 测试初始化配置
+│   ├── utils/          # 工具函数（含测试）
+│   ├── views/          # 页面组件
 │   ├── App.vue
 │   └── main.ts
-├── vite.config.js
-├── vitest.config.ts
+├── vite.config.js      # Vite 构建配置
+├── vitest.config.ts    # Vitest 测试配置
+├── OPTIMIZATION-TODO.md # 优化待办清单
 └── README.md
 ```
 
