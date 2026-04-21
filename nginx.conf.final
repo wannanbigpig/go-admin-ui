@@ -61,6 +61,32 @@ server
     }
 
     # ==================== Vue Router History 模式支持 ====================
+    # ==================== API 反向代理（必须在 location / 之前）====================
+    # 重要：否则 /admin 会被 location / 回退到 index.html，前端拿到 HTML 导致请求异常
+    location ^~ /admin/
+    {
+        proxy_pass http://127.0.0.1:9001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 60s;
+    }
+
+    location ^~ /static/
+    {
+        proxy_pass http://127.0.0.1:9001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 60s;
+    }
+
     # 支持 Vue Router History 模式
     # 所有请求都尝试查找文件，找不到则返回 index.html，让 Vue Router 处理路由
     # 注意：静态资源已经在上面处理了，这里不会匹配到静态资源
@@ -91,4 +117,3 @@ server
 
     error_log  /www/wwwlogs/112.124.53.17.error.log;
 }
-

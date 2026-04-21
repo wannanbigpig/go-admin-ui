@@ -35,6 +35,11 @@ export default defineConfig(({ mode }) => {
         },
     })
 
+    const proxy = {
+        '/admin': createProxyConfig(),
+        '/static': createProxyConfig(),
+    }
+
     return {
         // ==================== Base 路径配置 ====================
         base,
@@ -113,10 +118,16 @@ export default defineConfig(({ mode }) => {
             port: 3000,
             strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
             https: false,
-            proxy: {
-                '/admin': createProxyConfig(),
-                '/static': createProxyConfig(),
-            }, // 代理配置
+            proxy, // 代理配置
+        },
+
+        // ==================== 预览服务器配置 ====================
+        // 解决打包后本地预览时 /admin 与 /static 请求被回退到 index.html 的问题
+        preview: {
+            host: '127.0.0.1',
+            port: 4173,
+            strictPort: false,
+            proxy,
         },
 
         // ==================== 构建配置 ====================

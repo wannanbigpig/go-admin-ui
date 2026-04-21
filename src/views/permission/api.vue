@@ -257,7 +257,7 @@ const tableTitle: TableColumn<ApiPermission>[] = [
                 text: '公开',
             },
         },
-        h_tip: '0=公开，1=需登录，2=需鉴权。',
+        h_tip: '公开：无需登录；需登录：登录后可访问；需鉴权：登录后还必须分配 API 权限',
     },
     {
         prop: 'is_effective',
