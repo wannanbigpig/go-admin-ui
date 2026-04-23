@@ -97,7 +97,7 @@ watch(
     margin-top: 40px;
     padding-top: 20px;
     // padding-bottom: 20px;
-    border-top: 1px solid var(--el-border-color-lighter);
+    // border-top: 1px solid var(--el-border-color-lighter);
     text-align: center;
     color: var(--el-text-color-secondary);
     font-size: 12px;
