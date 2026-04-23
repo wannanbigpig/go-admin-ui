@@ -5,7 +5,7 @@ import { useSubmitLock } from '@/composables/useSubmitLock'
 import { useAuthStore } from '@/stores/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import { fetchProfile, modifyProfile, uploadProfileAvatar } from '@/modules/profile/service'
-import { PROFILE_AVATAR_CONFIG, PROFILE_SUBMIT_DELAY } from '@/modules/profile/model'
+import { PROFILE_AVATAR_CONFIG, PROFILE_SUBMIT_DELAY, createProfileForm } from '@/modules/profile/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import { pauseSync } from '@/utils/helper'
 import type { UploadAvatarResult } from '@/modules/adminUser/service'
@@ -22,14 +22,7 @@ export function useProfilePage() {
     const { isSubmitting, runWithSubmitLock } = useSubmitLock(0)
     const formKey = ref(0)
 
-    const formData = reactive({
-        id: 0,
-        nickname: '',
-        phone_number: '',
-        email: '',
-        avatar: '',
-        password: '',
-    })
+    const formData = reactive(createProfileForm())
 
     const formRules = {
         nickname: [
@@ -52,16 +45,29 @@ export function useProfilePage() {
         ],
     }
 
-    const formatDepartments = (departments: Array<{ name: string }>) => {
-        if (!departments || !Array.isArray(departments) || departments.length === 0) {
+    const formatDepartments = (departments: unknown) => {
+        if (!Array.isArray(departments) || departments.length === 0) {
             return '-'
         }
-        return departments.map((dept) => dept.name).join(', ')
+        const names = departments
+            .map((dept) => {
+                if (typeof dept === 'object' && dept !== null && 'name' in dept) {
+                    return String((dept as { name?: unknown }).name ?? '').trim()
+                }
+                return ''
+            })
+            .filter(Boolean)
+        return names.length > 0 ? names.join(', ') : '-'
     }
 
-    const formatDateTime = (dateTime: string) => {
-        if (!dateTime) return '-'
-        return dateTime
+    const formatDateTime = (dateTime: unknown) => {
+        if (typeof dateTime === 'string') {
+            return dateTime || '-'
+        }
+        if (typeof dateTime === 'number') {
+            return String(dateTime)
+        }
+        return '-'
     }
 
     const isUploadResult = (value: unknown): value is UploadAvatarResult => {
@@ -129,10 +135,12 @@ export function useProfilePage() {
         formTitle.value = translate('profile.editProfileInfo')
         formData.id = userInfo.value.id
         formData.nickname = userInfo.value.nickname
+        formData.username = userInfo.value.username
         formData.phone_number = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number : ''
         formData.email = typeof userInfo.value.email === 'string' ? userInfo.value.email : ''
         formData.avatar = userInfo.value.avatar || ''
         formData.password = ''
+        formData.confirm_password = ''
 
         showDrawer.value = true
         formKey.value++

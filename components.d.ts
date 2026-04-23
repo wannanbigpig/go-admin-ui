@@ -79,7 +79,6 @@ declare module 'vue' {
     IEpArrowUp: typeof import('~icons/ep/arrow-up')['default']
     IEpAvatar: typeof import('~icons/ep/avatar')['default']
     IEpBrush: typeof import('~icons/ep/brush')['default']
-    IEpLocationInformation: typeof import('~icons/ep/location-information')['default']
     IEpLock: typeof import('~icons/ep/lock')['default']
     IEpMonitor: typeof import('~icons/ep/monitor')['default']
     IEpMoon: typeof import('~icons/ep/moon')['default']

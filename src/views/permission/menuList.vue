@@ -28,7 +28,7 @@
                             {{ item.tag[val as string | number]?.text || val }}
                         </el-tag>
                         <span v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
-                            <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer">
+                            <span @click="copyText(String(val))" class="xl-cursor-pointer">
                                 {{ val }}
                             </span>
                         </span>
@@ -411,18 +411,20 @@ import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
-import { nextTick, onMounted, ref, reactive, computed, watch } from 'vue'
+import { onMounted, ref, reactive, computed, watch } from 'vue'
 import { usePermission } from '@/composables/usePermission'
+import { useClipboard } from '@/composables/useClipboard'
 import { MENU_STATUS, MENU_TYPE, MENU_SWITCH_VALUE, MENU_CASCADER_PROPS } from '@/modules/menu/model'
 import { useMenuList } from '@/modules/menu/useMenuList'
 import { useMenuForm } from '@/modules/menu/useMenuForm'
+import { useMenuTreeExpand } from '@/modules/menu/useMenuTreeExpand'
 import type { Menu } from '@/types/menu'
 import type { TableColumn } from '@/types/common'
-import { Logger } from '@/utils/logger'
 import { LOCALE_OPTIONS } from '@/locales'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
+const { copyText } = useClipboard()
 const { t } = useI18n()
 const addChildButtonInfo = getButtonInfoFull('menu:addChild')
 const addButtonInfo = getButtonInfoFull('menu:add')
@@ -464,7 +466,6 @@ const queryWhere = reactive({
     status: MENU_STATUS.ALL,
 })
 
-const isExpanded = ref(false)
 const titleLocaleOptions = computed(() => LOCALE_OPTIONS)
 const isSingleTitleLocale = computed(() => titleLocaleOptions.value.length <= 1)
 const singleTitleLocale = computed(() => titleLocaleOptions.value[0] ?? null)
@@ -503,34 +504,13 @@ const handleTitleI18nDialogConfirm = async () => {
     await formDataRef.value?.validateField('title_i18n').catch(() => undefined)
 }
 
-const toggleMenuRowsExpansion = (rows: Menu[], expanded: boolean) => {
-    rows.forEach((row) => {
-        if (!Array.isArray(row.children) || row.children.length === 0) {
-            return
-        }
-
-        tableListRef.value?.toggleRowExpansion(row, expanded)
-        toggleMenuRowsExpansion(row.children, expanded)
-    })
-}
-
-const handleToggleExpand = async () => {
-    const nextExpandedState = !isExpanded.value
-    await nextTick()
-    toggleMenuRowsExpansion(menuList.value, nextExpandedState)
-    isExpanded.value = nextExpandedState
-}
-
-const handleCopyClick = async (text: string) => {
-    try {
-        await navigator.clipboard.writeText(text)
-    } catch (error) {
-        Logger.error('复制失败:', error)
-    }
-}
+const { isExpanded, handleToggleExpand, resetExpanded } = useMenuTreeExpand({
+    menuList,
+    tableListRef,
+})
 
 const handleSearch = () => {
-    isExpanded.value = false
+    resetExpanded()
     getList()
 }
 

@@ -3,7 +3,7 @@
         <div class="xl-container">
             <div class="xl-profile-header">
                 <div class="xl-profile-avatar">
-                    <el-avatar :size="120" :src="getImageUrl(userInfo.avatar)" shape="circle">
+                    <el-avatar :size="120" :src="getImageUrl(String(userInfo.avatar ?? ''))" shape="circle">
                         <el-icon size="80">
                             <i-ep-avatar />
                         </el-icon>
@@ -212,7 +212,7 @@
 }
 </style>
 
-<script setup>
+<script setup lang="ts">
 import xlDrawer from '@/components/drawer/index.vue'
 import { getImageUrl } from '@/utils/helper'
 import { PROFILE_STATUS } from '@/modules/profile/model'

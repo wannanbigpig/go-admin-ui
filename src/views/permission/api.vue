@@ -46,7 +46,7 @@
                         {{ item.tag[val as string | number]?.text || val }}
                     </el-tag>
                     <span v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
-                        <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
+                        <span @click="copyText(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
                     </span>
                     <span v-else>{{ val }}</span>
                 </template>
@@ -155,6 +155,7 @@ import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import { onMounted, computed } from 'vue'
 import { usePermission } from '@/composables/usePermission'
+import { useClipboard } from '@/composables/useClipboard'
 import {
     useApiPermissionList,
     useApiPermissionForm,
@@ -165,10 +166,10 @@ import {
     type ApiPermission,
 } from '@/modules/apiPermission'
 import type { TableColumn } from '@/types/common'
-import { Logger } from '@/utils/logger'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
+const { copyText } = useClipboard()
 const buttonInfo = getButtonInfoFull('api:update')
 const { t } = useI18n()
 
@@ -199,14 +200,6 @@ const SWITCH_VALUE = API_PERMISSION_SWITCH_VALUE
 
 const { loading, permissionList, pagination, queryFormRef, queryWhere, handleSearch, getList } = useApiPermissionList()
 const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, editFormRules, handleSortNumberChange, setSortNumericValue, openEditDrawer, editConfirmSubmit } = useApiPermissionForm({ refreshList: getList })
-
-const handleCopyClick = async (text: string) => {
-    try {
-        await navigator.clipboard.writeText(text)
-    } catch (error) {
-        Logger.error('复制失败:', error)
-    }
-}
 
 onMounted(() => {
     getList()

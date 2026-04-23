@@ -38,7 +38,7 @@
                         {{ item.tag[val as keyof typeof item.tag]?.text || val }}
                     </el-tag>
                     <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
-                        <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
+                        <span @click="copyText(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
                     </el-tooltip>
                     <span v-else>
                         {{ val }}
@@ -123,13 +123,14 @@ import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { computed, onMounted } from 'vue'
 import { usePermission } from '@/composables/usePermission'
+import { useClipboard } from '@/composables/useClipboard'
 import { useAdminLoginLogPage } from '@/modules/log/useAdminLoginLogPage'
 import type { TableColumn } from '@/types/common'
 import type { LoginLog } from '@/types/log'
-import { Logger } from '@/utils/logger'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
+const { copyText } = useClipboard()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
 const { t } = useI18n()
 
@@ -153,14 +154,6 @@ const {
     getList,
     openDetailDrawer,
 } = useAdminLoginLogPage()
-
-const handleCopyClick = async (text: string) => {
-    try {
-        await navigator.clipboard.writeText(text)
-    } catch (error) {
-        Logger.error('复制失败:', error)
-    }
-}
 
 onMounted(() => {
     getList()
