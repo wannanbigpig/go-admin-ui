@@ -8,6 +8,7 @@ import { buildButtonPermissionMap, extractButtonPermissions } from '@/modules/au
 import { ElMessageBox } from 'element-plus'
 import { Logger } from '@/utils/logger'
 import type { UserInfo, UserPermission } from '@/types/auth'
+import { translate } from '@/locales'
 
 // ==================== 常量定义 ====================
 /** 当前刷新用户信息的 Promise（用于并发控制） */
@@ -159,9 +160,9 @@ export const useAuthStore = defineStore(
             if (isTokenExpiredModalShown.value) return
 
             isTokenExpiredModalShown.value = true
-            ElMessageBox.alert('登录状态已过期，请重新登录', '系统提示', {
+            ElMessageBox.alert(translate('validation.tokenExpired.content'), translate('validation.tokenExpired.title'), {
                 type: 'warning',
-                confirmButtonText: '重新登陆',
+                confirmButtonText: translate('validation.tokenExpired.relogin'),
                 callback: (action: string) => {
                     if (action === 'confirm') {
                         isTokenExpiredModalShown.value = false

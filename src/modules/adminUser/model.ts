@@ -1,4 +1,5 @@
 import type { AdminUser } from '@/types/adminUser'
+import { translate } from '@/locales'
 
 /**
  * 创建默认的管理员用户对象
@@ -42,12 +43,12 @@ export const ADMIN_USER_STATUS = {
 }
 
 export const ADMIN_USER_STATUS_OPTIONS = [
-    { label: '正常', value: ADMIN_USER_STATUS.NORMAL, type: 'success' as const },
-    { label: '禁用', value: ADMIN_USER_STATUS.DISABLED, type: 'danger' as const },
+    { label: 'common.status.enabled', value: ADMIN_USER_STATUS.NORMAL, type: 'success' as const },
+    { label: 'common.status.disabled', value: ADMIN_USER_STATUS.DISABLED, type: 'danger' as const },
 ]
 
 export function getStatusLabel(status: number) {
-    return ADMIN_USER_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || '未知'
+    return translate(ADMIN_USER_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
 }
 
 export function getStatusType(status: number) {

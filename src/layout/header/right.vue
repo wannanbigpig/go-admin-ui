@@ -1,7 +1,22 @@
 <template>
     <div class="xl-right-content">
+        <el-dropdown size="default" type="default" trigger="click" @command="handleLanguageCommand" class="xl-theme-dropdown" teleported persistent>
+            <div class="xl-theme-trigger xl-cursor-pointer" :title="t('layout.language.switch')">
+                <el-icon size="20">
+                    <i-ant-design-global-outlined />
+                </el-icon>
+            </div>
+            <template #dropdown>
+                <el-dropdown-menu>
+                    <el-dropdown-item v-for="item in localeOptions" :key="item.value" :command="item.value" :disabled="settingStore.locale === item.value">
+                        {{ item.label }}
+                    </el-dropdown-item>
+                </el-dropdown-menu>
+            </template>
+        </el-dropdown>
+
         <el-dropdown size="default" type="default" trigger="click" @command="handleThemeCommand" class="xl-theme-dropdown" teleported persistent>
-            <div class="xl-theme-trigger xl-cursor-pointer" title="主题切换">
+            <div class="xl-theme-trigger xl-cursor-pointer" :title="t('layout.themeSwitch')">
                 <el-icon size="20">
                     <i-ep-brush />
                 </el-icon>
@@ -12,19 +27,19 @@
                         <el-icon class="el-icon--right">
                             <i-ep-sunny />
                         </el-icon>
-                        浅色
+                        {{ t('layout.theme.light') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="THEME_MODE.DARK" :disabled="settingStore.theme === THEME_MODE.DARK">
                         <el-icon class="el-icon--right">
                             <i-ep-moon />
                         </el-icon>
-                        深色
+                        {{ t('layout.theme.dark') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="THEME_MODE.SYSTEM" :disabled="settingStore.theme === THEME_MODE.SYSTEM">
                         <el-icon class="el-icon--right">
                             <i-ep-monitor />
                         </el-icon>
-                        跟随系统
+                        {{ t('layout.theme.system') }}
                     </el-dropdown-item>
                 </el-dropdown-menu>
             </template>
@@ -49,19 +64,19 @@
                         <el-icon class="el-icon--right">
                             <i-ep-postcard />
                         </el-icon>
-                        个人中心
+                        {{ t('layout.userDetail') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="COMMAND.USER_REFRESH">
                         <el-icon class="el-icon--right">
                             <i-ep-refresh />
                         </el-icon>
-                        刷新缓存
+                        {{ t('layout.userRefresh') }}
                     </el-dropdown-item>
                     <el-dropdown-item divided :command="COMMAND.LOGOUT">
                         <el-icon class="el-icon--right">
                             <i-ant-design-logout-outlined />
                         </el-icon>
-                        退出登录
+                        {{ t('layout.logout') }}
                     </el-dropdown-item>
                 </el-dropdown-menu>
             </template>
@@ -78,6 +93,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { getImageUrl } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
+import { useI18n } from 'vue-i18n'
+import type { LocaleCode } from '@/types/i18n'
+import { LOCALE_OPTIONS } from '@/locales'
+import { addDynamicRoutes } from '@/router/dynamicRoutes'
 
 enum COMMAND {
     USER_DETAIL = 'user-detail',
@@ -98,24 +117,27 @@ const THEME_MODE = {
 
 const authStore = useAuthStore()
 const settingStore = useSettingStore()
+const { t } = useI18n()
+
+const localeOptions = LOCALE_OPTIONS
 
 const handleLogout = async () => {
     try {
-        await ElMessageBox.confirm(CONFIRM_MESSAGES.LOGOUT, CONFIRM_DIALOG_TITLE, {
-            confirmButtonText: CONFIRM_BUTTON_TEXT,
-            cancelButtonText: CANCEL_BUTTON_TEXT,
+        await ElMessageBox.confirm(t(CONFIRM_MESSAGES.LOGOUT), t(CONFIRM_DIALOG_TITLE), {
+            confirmButtonText: t(CONFIRM_BUTTON_TEXT),
+            cancelButtonText: t(CANCEL_BUTTON_TEXT),
             autofocus: false,
             type: 'warning',
         })
 
         await logout()
         authStore.logout(router.currentRoute.value.fullPath)
-        ElMessage({ type: 'success', message: RESULT_MESSAGES.LOGOUT_SUCCESS })
+        ElMessage({ type: 'success', message: t(RESULT_MESSAGES.LOGOUT_SUCCESS) })
     } catch (error) {
         if (error !== 'cancel') {
             Logger.error('退出登录失败:', error)
         } else {
-            ElMessage({ type: 'info', message: RESULT_MESSAGES.LOGOUT_CANCEL })
+            ElMessage({ type: 'info', message: t(RESULT_MESSAGES.LOGOUT_CANCEL) })
         }
     }
 }
@@ -123,10 +145,10 @@ const handleLogout = async () => {
 const handleRefresh = async () => {
     try {
         await authStore.refreshUserInfo()
-        ElMessage({ type: 'success', message: RESULT_MESSAGES.REFRESH_SUCCESS })
+        ElMessage({ type: 'success', message: t(RESULT_MESSAGES.REFRESH_SUCCESS) })
     } catch (error) {
         Logger.error('刷新缓存失败:', error)
-        ElMessage({ type: 'error', message: RESULT_MESSAGES.REFRESH_FAILED })
+        ElMessage({ type: 'error', message: t(RESULT_MESSAGES.REFRESH_FAILED) })
     }
 }
 
@@ -148,6 +170,25 @@ const handleCommand = (command: COMMAND) => {
 
 const handleThemeCommand = (mode: ThemeMode) => {
     settingStore.setTheme(mode)
+}
+
+const handleLanguageCommand = async (locale: LocaleCode) => {
+    if (settingStore.locale === locale) return
+
+    settingStore.setLocale(locale)
+
+    // 菜单标题由后端按请求语言返回，切换语言后需刷新菜单缓存
+    if (!authStore.token) return
+
+    try {
+        await authStore.refreshUserInfo()
+        if (authStore.routerData.length > 0) {
+            addDynamicRoutes(authStore.routerData)
+        }
+    } catch (error) {
+        Logger.error('切换语言后刷新菜单失败:', error)
+        ElMessage({ type: 'error', message: t(RESULT_MESSAGES.REFRESH_FAILED) })
+    }
 }
 </script>
 

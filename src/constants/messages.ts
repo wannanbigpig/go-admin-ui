@@ -1,29 +1,36 @@
-/** 统一确认弹窗标题 */
-export const CONFIRM_DIALOG_TITLE = '温馨提示'
+/** 统一确认弹窗标题 key */
+export const CONFIRM_DIALOG_TITLE = 'common.confirm.title'
 
-/** 统一确认按钮文案 */
-export const CONFIRM_BUTTON_TEXT = '确认'
+/** 统一确认按钮文案 key */
+export const CONFIRM_BUTTON_TEXT = 'common.actions.confirm'
 
-/** 统一取消按钮文案 */
-export const CANCEL_BUTTON_TEXT = '取消'
+/** 统一取消按钮文案 key */
+export const CANCEL_BUTTON_TEXT = 'common.actions.cancel'
 
-/** 统一确认弹窗内容文案 */
+/** 统一确认弹窗内容 key */
 export const CONFIRM_MESSAGES = {
-    LOGOUT: '确定退出系统当前登录账号吗?',
-    DELETE_ADMIN_USER: '确认删除该管理员吗?',
-    DELETE_DEPARTMENT: '确认删除该部门吗?',
-    DELETE_ROLE: '确认删除该角色吗?',
-    DELETE_MENU: '确认删除该菜单吗？',
+    LOGOUT: 'common.confirm.logout',
+    DELETE_ADMIN_USER: 'common.confirm.deleteAdminUser',
+    DELETE_DEPARTMENT: 'common.confirm.deleteDepartment',
+    DELETE_ROLE: 'common.confirm.deleteRole',
+    DELETE_MENU: 'common.confirm.deleteMenu',
 } as const
 
-/** 统一操作结果文案 */
+/** 统一操作结果文案 key */
 export const RESULT_MESSAGES = {
-    DELETE_SUCCESS: '删除成功',
-    LOGOUT_SUCCESS: '退出成功',
-    LOGOUT_CANCEL: '已取消操作',
-    REFRESH_SUCCESS: '刷新成功',
-    REFRESH_FAILED: '刷新失败，请稍后重试',
+    DELETE_SUCCESS: 'common.result.deleteSuccess',
+    LOGOUT_SUCCESS: 'common.result.logoutSuccess',
+    LOGOUT_CANCEL: 'common.result.logoutCancel',
+    REFRESH_SUCCESS: 'common.result.refreshSuccess',
+    REFRESH_FAILED: 'common.result.refreshFailed',
+    OPERATION_SUCCESS: 'common.result.operationSuccess',
+    ADD_SUCCESS: 'common.result.addSuccess',
+    EDIT_SUCCESS: 'common.result.editSuccess',
+    BIND_ROLE_SUCCESS: 'common.result.bindRoleSuccess',
+    UPDATE_SUCCESS: 'common.result.updateSuccess',
+    UPLOAD_SUCCESS: 'common.result.uploadSuccess',
+    UPLOAD_FAILED: 'common.result.uploadFailed',
 } as const
 
-/** 生成抽屉关闭前确认文案 */
-export const getDrawerExitConfirmMessage = (formTitle: string) => `已填写数据将会重置，确认退出${formTitle}吗？`
+/** 生成抽屉关闭前确认文案 key */
+export const DRAWER_EXIT_CONFIRM_MESSAGE_KEY = 'common.confirm.drawerExit'

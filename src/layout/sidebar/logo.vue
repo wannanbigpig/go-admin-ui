@@ -46,7 +46,7 @@ const settingStore = useSettingStore()
             font-weight: 600;
             font-size: 20px;
             white-space: nowrap;
-            font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
             color: var(--el-text-color-primary);
             transform-origin: left center;
             transition:

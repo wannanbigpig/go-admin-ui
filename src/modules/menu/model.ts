@@ -1,10 +1,20 @@
 import type { Menu } from '@/types/menu'
+import { LOCALE_OPTIONS, translate } from '@/locales'
+
+export const MENU_TITLE_LOCALES = LOCALE_OPTIONS.map((option) => option.value)
+
+export function createEmptyTitleI18n(): Record<string, string> {
+    return MENU_TITLE_LOCALES.reduce<Record<string, string>>((result, locale) => {
+        result[locale] = ''
+        return result
+    }, {})
+}
 
 export function createMenuForm(): Menu {
     return {
         id: 0,
         parent_id: 0,
-        title: '',
+        title_i18n: createEmptyTitleI18n(),
         code: '',
         name: '',
         type: MENU_TYPE.MENU,
@@ -35,13 +45,13 @@ export const MENU_TYPE = {
 }
 
 export const MENU_TYPE_OPTIONS = [
-    { label: '目录', value: MENU_TYPE.DIRECTORY, type: 'info' as const },
-    { label: '菜单', value: MENU_TYPE.MENU, type: 'success' as const },
-    { label: '按钮', value: MENU_TYPE.BUTTON, type: 'warning' as const },
+    { label: 'permission.menu.typeDirectory', value: MENU_TYPE.DIRECTORY, type: 'info' as const },
+    { label: 'permission.menu.typeMenu', value: MENU_TYPE.MENU, type: 'success' as const },
+    { label: 'permission.menu.typeButton', value: MENU_TYPE.BUTTON, type: 'warning' as const },
 ]
 
 export function getMenuTypeLabel(type: number) {
-    return MENU_TYPE_OPTIONS.find((opt) => opt.value === type)?.label || '未知'
+    return translate(MENU_TYPE_OPTIONS.find((opt) => opt.value === type)?.label || 'common.unknown')
 }
 
 export function getMenuTypeTag(type: number) {
@@ -65,12 +75,12 @@ export const MENU_STATUS = {
 }
 
 export const MENU_STATUS_OPTIONS = [
-    { label: '禁用', value: MENU_STATUS.DISABLED, type: 'danger' as const },
-    { label: '启用', value: MENU_STATUS.ENABLED, type: 'success' as const },
+    { label: 'common.status.disabled', value: MENU_STATUS.DISABLED, type: 'danger' as const },
+    { label: 'common.status.enabled', value: MENU_STATUS.ENABLED, type: 'success' as const },
 ]
 
 export function getMenuStatusLabel(status: number) {
-    return MENU_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || '未知'
+    return translate(MENU_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
 }
 
 export const MENU_SWITCH_VALUE = {

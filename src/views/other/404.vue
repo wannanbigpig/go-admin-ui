@@ -1,10 +1,16 @@
 <template>
     <div class="not-found">
         <i-custom-404 class="svg-404-icon" />
-        <div class="not-found-desc">抱歉，您访问的页面不存在...</div>
-        <router-link to="/" class="home-link">返回首页</router-link>
+        <div class="not-found-desc">{{ t('other.notFound.pageNotFound') }}</div>
+        <router-link to="/" class="home-link">{{ t('other.notFound.backHome') }}</router-link>
     </div>
 </template>
+
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+</script>
 
 <style lang="scss" scoped>
 .not-found {

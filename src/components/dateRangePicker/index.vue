@@ -2,9 +2,9 @@
     <el-date-picker
         v-model="modelValue"
         type="datetimerange"
-        range-separator="至"
-        start-placeholder="开始时间"
-        end-placeholder="结束时间"
+        :range-separator="t('common.to')"
+        :start-placeholder="t('common.date.start')"
+        :end-placeholder="t('common.date.end')"
         format="YYYY-MM-DD HH:mm:ss"
         value-format="YYYY-MM-DD HH:mm:ss"
         style="width: 100%"
@@ -19,6 +19,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 
 // ==================== Props ====================
 const props = defineProps({
@@ -32,6 +33,7 @@ const props = defineProps({
         default: true,
     },
 })
+const { t } = useI18n()
 
 // ==================== Emits ====================
 const emit = defineEmits(['update:modelValue'])
@@ -59,9 +61,9 @@ const formatDateTime = (date) => {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-const shortcuts = [
+const shortcuts = computed(() => [
     {
-        text: '今天',
+        text: t('common.date.today'),
         value: () => {
             const now = new Date()
             const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
@@ -70,7 +72,7 @@ const shortcuts = [
         },
     },
     {
-        text: '昨天',
+        text: t('common.date.yesterday'),
         value: () => {
             const now = new Date()
             const yesterday = new Date(now)
@@ -81,7 +83,7 @@ const shortcuts = [
         },
     },
     {
-        text: '近七天',
+        text: t('common.date.last7Days'),
         value: () => {
             const now = new Date()
             const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
@@ -92,7 +94,7 @@ const shortcuts = [
         },
     },
     {
-        text: '近一个月',
+        text: t('common.date.last30Days'),
         value: () => {
             const now = new Date()
             const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
@@ -102,7 +104,7 @@ const shortcuts = [
             return [formatDateTime(start), formatDateTime(end)]
         },
     },
-]
+])
 
 // ==================== 方法 ====================
 /**
@@ -127,7 +129,7 @@ const handleDateRangeChange = (val) => {
             // 如果范围超过1个月（31天），提示用户并清空选择
             // 允许正好31天，因为"近一个月"是30天，加上边界情况可能正好31天
             if (diffDays > 31) {
-                ElMessage.warning('日期范围不能超过1个月，请重新选择')
+                ElMessage.warning(t('common.date.rangeLimitOneMonth'))
                 modelValue.value = null
                 currentSelectingRange.value = null
             }

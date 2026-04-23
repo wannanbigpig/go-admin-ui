@@ -7,6 +7,9 @@ const hoisted = vi.hoisted(() => {
         updateToken: vi.fn(),
         handleTokenExpired: vi.fn(),
     }
+    const mockSettingStore = {
+        locale: 'zh-CN',
+    }
 
     const mockLogger = {
         error: vi.fn(),
@@ -42,6 +45,7 @@ const hoisted = vi.hoisted(() => {
 
     return {
         mockAuthStore,
+        mockSettingStore,
         mockLogger,
         mockService,
         callbacks: {
@@ -75,6 +79,10 @@ vi.mock('@/stores/auth', () => ({
     useAuthStore: () => hoisted.mockAuthStore,
 }))
 
+vi.mock('@/stores/setting', () => ({
+    useSettingStore: () => hoisted.mockSettingStore,
+}))
+
 vi.mock('@/utils/logger', () => ({
     Logger: hoisted.mockLogger,
 }))
@@ -92,6 +100,7 @@ const getCallback = <T>(value: T | undefined, name: string): T => {
 describe('utils/request.ts', () => {
     beforeEach(() => {
         hoisted.mockAuthStore.token = ''
+        hoisted.mockSettingStore.locale = 'zh-CN'
         hoisted.mockService.request.mockReset()
         hoisted.mockAuthStore.updateToken.mockClear()
         hoisted.mockAuthStore.handleTokenExpired.mockClear()
@@ -117,7 +126,20 @@ describe('utils/request.ts', () => {
 
         expect(config.headers).toMatchObject({
             Authorization: 'Bearer access-token',
+            'Accept-Language': 'zh-CN',
             'Content-Type': 'application/json',
+        })
+    })
+
+    it('请求拦截器应自动注入当前语言标记头', async () => {
+        hoisted.mockSettingStore.locale = 'en-US'
+        const onFulfilled = getCallback(hoisted.callbacks.requestOnFulfilled, 'requestOnFulfilled')
+        const config = await onFulfilled({
+            headers: {},
+        })
+
+        expect(config.headers).toMatchObject({
+            'Accept-Language': 'en-US',
         })
     })
 

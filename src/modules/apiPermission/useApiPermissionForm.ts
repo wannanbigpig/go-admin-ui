@@ -1,9 +1,10 @@
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { editPermission } from '@/api/permission'
 import { API_PERMISSION_AUTH_MODE, createApiPermissionForm, type ApiPermission } from '@/modules/apiPermission/model'
 import { validateFormSafely } from '@/modules/shared/form'
+import { translate } from '@/locales'
 
 interface UseApiPermissionFormOptions {
     refreshList: () => Promise<void>
@@ -19,17 +20,17 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
 
     const formData = reactive(createApiPermissionForm()) as ApiPermission
 
-    const editFormRules = {
+    const editFormRules = computed(() => ({
         name: [
-            { required: true, message: '接口名称不能为空', trigger: 'blur' },
-            { min: 1, max: 60, message: '名称不超过 60 个字符', trigger: 'blur' },
+            { required: true, message: translate('permission.api.form.nameRequired'), trigger: 'blur' },
+            { min: 1, max: 60, message: translate('permission.api.form.nameMax'), trigger: 'blur' },
         ],
         is_auth: [
-            { required: true, message: '鉴权模式必填', trigger: 'change' },
-            { type: 'enum', enum: [API_PERMISSION_AUTH_MODE.NONE, API_PERMISSION_AUTH_MODE.LOGIN, API_PERMISSION_AUTH_MODE.AUTHZ], message: '请选择正确的鉴权模式', trigger: 'change' },
+            { required: true, message: translate('permission.api.form.authModeRequired'), trigger: 'change' },
+            { type: 'enum', enum: [API_PERMISSION_AUTH_MODE.NONE, API_PERMISSION_AUTH_MODE.LOGIN, API_PERMISSION_AUTH_MODE.AUTHZ], message: translate('permission.api.form.authModeInvalid'), trigger: 'change' },
         ],
-        sort: [{ trigger: 'blur', type: 'number', message: '请输入整数类型' }],
-    }
+        sort: [{ trigger: 'blur', type: 'number', message: translate('permission.api.form.sortInvalid') }],
+    }))
 
     const resetFormData = () => {
         Object.assign(formData, createApiPermissionForm())
@@ -53,7 +54,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
         currentIndex.value = index ?? null
 
         if (type === 2 && row) {
-            formTitle.value = '编辑接口权限'
+            formTitle.value = translate('permission.api.editPermissionTitle')
             // 使用对象合并方式填充表单数据
             Object.assign(formData, {
                 id: row.id,
@@ -69,7 +70,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
             })
             sortNumericValue.value = formData.sort
         } else {
-            formTitle.value = '新增接口权限'
+            formTitle.value = translate('permission.api.addTitle')
         }
 
         showDrawer.value = true
@@ -78,7 +79,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
     const editConfirmSubmit = async () => {
         if (isSubmitting.value) return
 
-        const valid = await validateFormSafely(formDataRef.value, '接口权限表单')
+        const valid = await validateFormSafely(formDataRef.value, translate('validation.apiPermission.formName'))
         if (!valid) return
 
         isSubmitting.value = true
@@ -86,7 +87,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
             await editPermission(formData)
             await refreshList()
             showDrawer.value = false
-            ElMessage.success('操作成功')
+            ElMessage.success(translate('common.result.operationSuccess'))
         } catch (error) {
             Logger.error('提交失败:', error)
         } finally {

@@ -9,6 +9,8 @@ import router from './router'
 import { Icon } from '@iconify/vue'
 import permissionDirective from '@/directives/permission'
 import { Logger, setupGlobalErrorHandlers } from '@/utils/logger'
+import { i18n } from '@/locales'
+import type { LocaleCode } from '@/types/i18n'
 
 const app = createApp(App)
 
@@ -25,7 +27,7 @@ setupGlobalErrorHandlers()
 app.component('AppIcons', Icon)
 // 注册权限指令
 app.directive('permission', permissionDirective)
-app.use(pinia).use(router)
+app.use(pinia).use(i18n).use(router)
 
 const settingStore = useSettingStore()
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -39,6 +41,11 @@ if (!isThemeMode(settingStore.theme)) {
     settingStore.setTheme('system')
 }
 
+const isLocaleCode = (locale: unknown): locale is LocaleCode => locale === 'zh-CN' || locale === 'en-US'
+if (!isLocaleCode(settingStore.locale)) {
+    settingStore.setLocale('zh-CN')
+}
+
 const applyTheme = () => {
     const useDark = settingStore.theme === 'dark' || (settingStore.theme === 'system' && systemThemeQuery.matches)
 
@@ -50,6 +57,14 @@ watch(
     () => settingStore.theme,
     () => {
         applyTheme()
+    },
+    { immediate: true }
+)
+
+watch(
+    () => settingStore.locale,
+    (locale) => {
+        i18n.global.locale.value = locale
     },
     { immediate: true }
 )

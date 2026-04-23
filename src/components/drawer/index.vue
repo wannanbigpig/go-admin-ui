@@ -10,10 +10,10 @@
             <slot name="footer">
                 <el-divider />
                 <div class="drawer-footer">
-                    <el-button v-if="withReset" type="warning" @click="handleReset">重置</el-button>
-                    <el-button @click="handleCancel">取消</el-button>
+                    <el-button v-if="withReset" type="warning" @click="handleReset">{{ t('common.actions.reset') }}</el-button>
+                    <el-button @click="handleCancel">{{ t('common.actions.cancel') }}</el-button>
                     <el-button type="primary" :disabled="isSubmitting" :loading="isSubmitting" @click="handleConfirm">
-                        {{ isSubmitting ? '提交中...' : '提交' }}
+                        {{ isSubmitting ? t('common.actions.submitting') : t('common.actions.submit') }}
                     </el-button>
                 </div>
             </slot>
@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import type { FormInstance } from 'element-plus'
 import { Logger } from '@/utils/logger'
+import { useI18n } from 'vue-i18n'
 
 // ==================== Props 定义 ====================
 interface Props {
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<Props>(), {
     size: '30%',
     formRef: null,
 })
+const { t } = useI18n()
 
 // ==================== 响应式数据 ====================
 const model = defineModel<boolean>()
@@ -57,7 +59,7 @@ const handleReset = () => {
     } else if (props.formRef?.resetFields) {
         props.formRef.resetFields()
     } else {
-        Logger.warn('[XlDrawer] 自定义重置方法和表单Ref二者必传一个')
+        Logger.warn(t('validation.drawer.resetOrFormRefRequired'))
     }
 }
 
@@ -73,7 +75,7 @@ const handleConfirm = () => {
     if (props.onConfirm) {
         props.onConfirm()
     } else {
-        Logger.error('[XlDrawer] onConfirm 必传')
+        Logger.error(t('validation.drawer.onConfirmRequired'))
     }
 }
 

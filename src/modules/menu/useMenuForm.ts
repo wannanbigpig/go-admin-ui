@@ -2,13 +2,14 @@ import { computed, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElLoading, ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
-import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES, getDrawerExitConfirmMessage } from '@/constants/messages'
+import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, DRAWER_EXIT_CONFIRM_MESSAGE_KEY, RESULT_MESSAGES } from '@/constants/messages'
 import { createMenu, updateMenu, getMenuDetail, deleteMenu, getPermissionList, getMenuList } from '@/api/permission'
-import { createMenuForm, MENU_OPERATION_TYPE, MENU_PERMISSION_QUERY_PARAMS, MENU_STEP, MENU_SUBMIT_DEBOUNCE_TIME, MENU_SWITCH_VALUE, MENU_TYPE } from '@/modules/menu/model'
+import { createEmptyTitleI18n, createMenuForm, MENU_OPERATION_TYPE, MENU_PERMISSION_QUERY_PARAMS, MENU_STEP, MENU_SUBMIT_DEBOUNCE_TIME, MENU_SWITCH_VALUE, MENU_TITLE_LOCALES, MENU_TYPE } from '@/modules/menu/model'
 import { normalizeDetailData, normalizeListData } from '@/modules/shared/response'
 import type { ApiPermission } from '@/modules/apiPermission'
 import { checkNumber, pick } from '@/utils/helper'
 import type { Menu } from '@/types/menu'
+import { translate } from '@/locales'
 
 interface UseMenuFormOptions {
     getList: () => Promise<void>
@@ -17,13 +18,14 @@ interface UseMenuFormOptions {
 export function useMenuForm({ getList }: UseMenuFormOptions) {
     const showDrawer = ref(false)
     const step = ref(MENU_STEP.BASIC_INFO)
-    const formTitle = ref('新增菜单')
+    const formTitle = ref(translate('permission.menu.addTitle'))
     const formDataRef = ref<FormInstance>()
     const isParentFixed = ref(false)
     const currentIndex = ref<number | null>(null)
     const { isSubmitting, runWithSubmitLock } = useSubmitLock(MENU_SUBMIT_DEBOUNCE_TIME)
     const initialFormData = createMenuForm()
-    const formData = reactive({ ...initialFormData })
+    const formData = reactive(createMenuForm()) as Menu & { title_i18n: Record<string, string> }
+    const formDataKeys = Object.keys(initialFormData) as Array<keyof typeof initialFormData>
 
     // 权限列表相关
     const permissionListLoading = ref(false)
@@ -62,7 +64,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
     }
 
     const buildPermissionDisplayName = (item: ApiPermission, fallbackId: number | string) => {
-        const name = item.name || item.code || `接口 ${fallbackId}`
+        const name = item.name || item.code || translate('permission.menu.historicalApi', { id: fallbackId })
         const method = item.method ? `[${item.method}]` : ''
         const route = item.route || ''
         return [name, method, route].filter(Boolean).join(' ')
@@ -108,15 +110,40 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             .filter((id) => !existedIds.has(String(id)))
             .map((id) => ({
                 id,
-                name: `[不可再绑定] 历史接口 #${id}`,
+                name: translate('permission.menu.historicalApi', { id }),
                 route: '',
                 method: '',
-                display_name: `[不可再绑定] 历史接口 #${id}`,
+                display_name: translate('permission.menu.historicalApi', { id }),
             }))
 
         if (missingItems.length > 0) {
             permissionList.value = [...permissionList.value, ...missingItems]
         }
+    }
+
+    const normalizeTitleI18n = (value: unknown): Record<string, string> => {
+        const normalized = createEmptyTitleI18n()
+        if (!value || typeof value !== 'object') {
+            return normalized
+        }
+
+        for (const locale of MENU_TITLE_LOCALES) {
+            const localeValue = (value as Record<string, unknown>)[locale]
+            normalized[locale] = typeof localeValue === 'string' ? localeValue : ''
+        }
+
+        return normalized
+    }
+
+    const sanitizeTitleI18n = (value: unknown): Record<string, string> => {
+        const normalized = normalizeTitleI18n(value)
+        return Object.entries(normalized).reduce<Record<string, string>>((result, [locale, title]) => {
+            const trimmedTitle = title.trim()
+            if (trimmedTitle) {
+                result[locale] = trimmedTitle
+            }
+            return result
+        }, {})
     }
 
     // 菜单级联选项
@@ -143,7 +170,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             ...createMenuForm(),
             id: 0,
             parent_id: 0,
-            title: '顶级菜单',
+            title: translate('permission.common.topMenu'),
         }
         return [topMenuOption, ...filterMenu(menuList.value)]
     })
@@ -160,7 +187,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
     }
 
     const resetFormData = () => {
-        Object.assign(formData, initialFormData)
+        Object.assign(formData, createMenuForm())
         formDataRef.value?.clearValidate()
     }
 
@@ -189,35 +216,45 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
     }
 
     const editFormRules = {
-        title: [
-            { required: true, message: '名称不能为空', trigger: 'blur' },
-            { min: 1, max: 12, message: '名称不超过 12 个字符', trigger: 'blur' },
-        ],
-        parent_id: [
+        title_i18n: [
             {
                 required: true,
-                message: '上级菜单不能为空',
-                trigger: 'blur',
-                validator: (_rule: unknown, value: unknown, callback: (error?: Error) => void) => {
-                    if (value === null || value === undefined || value === '') {
-                        callback(new Error('上级菜单不能为空'))
+                trigger: ['blur', 'change'],
+                validator: (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
+                    const sanitizedTitles = sanitizeTitleI18n(formData.title_i18n)
+                    if (Object.keys(sanitizedTitles).length === 0) {
+                        callback(new Error(translate('permission.menu.form.titleI18nRequired')))
                     } else {
                         callback()
                     }
                 },
             },
         ],
-        type: [{ required: true, message: '菜单类型不能为空', trigger: 'blur' }],
-        is_auth: [{ required: true, message: '是否鉴权不能为空', trigger: 'blur' }],
-        is_show: [{ required: true, message: '是否显示不能为空', trigger: 'blur' }],
-        sort: [{ trigger: 'blur', type: 'integer', message: '请输入整数类型' }],
+        parent_id: [
+            {
+                required: true,
+                message: translate('permission.menu.form.parentRequired'),
+                trigger: 'blur',
+                validator: (_rule: unknown, value: unknown, callback: (error?: Error) => void) => {
+                    if (value === null || value === undefined || value === '') {
+                        callback(new Error(translate('permission.menu.form.parentRequired')))
+                    } else {
+                        callback()
+                    }
+                },
+            },
+        ],
+        type: [{ required: true, message: translate('permission.menu.form.typeRequired'), trigger: 'blur' }],
+        is_auth: [{ required: true, message: translate('permission.menu.form.authRequired'), trigger: 'blur' }],
+        is_show: [{ required: true, message: translate('permission.menu.form.showRequired'), trigger: 'blur' }],
+        sort: [{ trigger: 'blur', type: 'integer', message: translate('permission.menu.form.sortInteger') }],
         path: [{ trigger: 'blur', validator: (_rule: unknown, _value: unknown, callback: () => void) => callback() }],
         name: [
             {
                 trigger: 'blur',
                 validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
                     if (formData.type === MENU_TYPE.MENU && !value) {
-                        callback(new Error('请输入路由名称'))
+                        callback(new Error(translate('permission.menu.form.routeNameRequired')))
                     }
                     callback()
                 },
@@ -228,14 +265,14 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                 trigger: 'blur',
                 validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
                     if (formData.type === MENU_TYPE.MENU && formData.is_external_links !== MENU_SWITCH_VALUE.YES && !value) {
-                        callback(new Error('请输入组件路径'))
+                        callback(new Error(translate('permission.menu.form.componentRequired')))
                     }
                     if (value) {
                         if (value.startsWith('/')) {
-                            callback(new Error('组件路径不能以 / 开头'))
+                            callback(new Error(translate('permission.menu.form.componentCannotStartWithSlash')))
                         }
                         if (!/^[a-zA-Z0-9/._-]+$/.test(value)) {
-                            callback(new Error('组件路径只能包含字母、数字、/、.、_、-'))
+                            callback(new Error(translate('permission.menu.form.componentInvalid')))
                         }
                     }
                     callback()
@@ -247,7 +284,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                 trigger: 'blur',
                 validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
                     if (formData.type === MENU_TYPE.BUTTON && !value) {
-                        callback(new Error('请输入权限标识'))
+                        callback(new Error(translate('permission.menu.form.permissionCodeRequired')))
                     }
                     callback()
                 },
@@ -270,7 +307,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                         formDataRef.value.scrollToField(firstErrorField)
                     }
                 }
-                ElMessage.warning('请先完善基础信息')
+                ElMessage.warning(translate('permission.menu.form.completeBasicInfo'))
             }
         } else {
             step.value = targetStep
@@ -279,7 +316,15 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const handleSubmit = async () => {
         await runWithSubmitLock(async () => {
-            const submitData: Record<string, unknown> = { ...formData }
+            const titleI18n = sanitizeTitleI18n(formData.title_i18n)
+            if (Object.keys(titleI18n).length === 0) {
+                ElMessage.warning(translate('permission.menu.form.titleI18nRequired'))
+                step.value = MENU_STEP.BASIC_INFO
+                return
+            }
+
+            const submitData: Record<string, unknown> = { ...formData, title_i18n: titleI18n }
+            delete submitData.title
 
             // 按钮类型：清空路由、组件、动画相关字段
             if (formData.type === MENU_TYPE.BUTTON) {
@@ -302,7 +347,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             } else {
                 await createMenu(submitData)
             }
-            ElMessage.success('操作成功')
+            ElMessage.success(translate('permission.menu.form.operationSuccess'))
             await getList()
             showDrawer.value = false
         }).catch((error) => {
@@ -317,7 +362,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const handleCancel = () => {
         if (Number(formData.id) > 0) {
-            ElMessageBox.confirm(getDrawerExitConfirmMessage(formTitle.value), CONFIRM_DIALOG_TITLE)
+            ElMessageBox.confirm(translate(DRAWER_EXIT_CONFIRM_MESSAGE_KEY, { formTitle: formTitle.value }), translate(CONFIRM_DIALOG_TITLE))
                 .then(() => closeDrawer())
                 .catch(() => {
                     // 取消操作
@@ -329,7 +374,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const handleDrawerClose = (done: () => void) => {
         if (Number(formData.id) > 0) {
-            ElMessageBox.confirm(getDrawerExitConfirmMessage(formTitle.value), CONFIRM_DIALOG_TITLE)
+            ElMessageBox.confirm(translate(DRAWER_EXIT_CONFIRM_MESSAGE_KEY, { formTitle: formTitle.value }), translate(CONFIRM_DIALOG_TITLE))
                 .then(() => {
                     isParentFixed.value = false
                     done()
@@ -346,7 +391,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
     const loadMenuDetail = async (menuId: number, index: number) => {
         const loadingInstance = ElLoading.service({
             lock: true,
-            text: '加载中...',
+            text: translate('log.request.loadingText'),
             background: 'rgba(0, 0, 0, 0.7)',
         })
 
@@ -354,11 +399,12 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             const response = await getMenuDetail({ id: menuId })
             const menuDetail = normalizeDetailData<Menu>(response, {} as Menu)
             if (menuDetail) {
-                Object.assign(formData, pick(menuDetail, Object.keys(initialFormData) as Array<keyof typeof initialFormData>))
+                Object.assign(formData, pick(menuDetail, formDataKeys))
                 // 确保 parent_id 正确设置（API 可能返回 pid 而不是 parent_id）
                 if (menuDetail.pid !== undefined && menuDetail.parent_id === undefined) {
                     formData.parent_id = menuDetail.pid
                 }
+                formData.title_i18n = normalizeTitleI18n(menuDetail.title_i18n)
                 const rawPermissionSelection = menuDetail.api_list ?? menuDetail.api_ids ?? menuDetail.permission_ids ?? menuDetail.permission_list
                 formData.api_list = normalizePermissionSelection(rawPermissionSelection).reduce<number[]>((result, item) => {
                     const numericId = typeof item === 'number' ? item : Number(item)
@@ -371,10 +417,10 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                 currentIndex.value = index
                 showDrawer.value = true
             } else {
-                throw new Error('获取的数据无效')
+                throw new Error(translate('common.unknown'))
             }
         } catch (error) {
-            ElMessage.error('获取菜单详情失败')
+            ElMessage.error(translate('request.failed'))
             Logger.error(error)
         } finally {
             loadingInstance.close()
@@ -387,7 +433,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         }
 
         if (type === MENU_OPERATION_TYPE.EDIT && (!row || typeof row.id !== 'number')) {
-            ElMessage.error('无效的行数据')
+            ElMessage.error(translate('validation.menu.invalidRow'))
             return
         }
 
@@ -401,11 +447,11 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         await fetchPermissionList()
 
         if (type === MENU_OPERATION_TYPE.EDIT && row) {
-            formTitle.value = '编辑菜单'
+            formTitle.value = translate('permission.menu.editTitle')
             isParentFixed.value = false
             await loadMenuDetail(Number(row.id), index ?? 0)
         } else {
-            formTitle.value = '新增菜单'
+            formTitle.value = translate('permission.menu.addTitle')
             if (fixedParentId !== null) {
                 formData.parent_id = fixedParentId
                 isParentFixed.value = true
@@ -418,7 +464,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const handleAddChild = (parentRow: Menu) => {
         if (!parentRow || typeof parentRow.id !== 'number') {
-            ElMessage.error('无效的行数据')
+            ElMessage.error(translate('validation.menu.invalidRow'))
             return
         }
         openEditDrawer(MENU_OPERATION_TYPE.ADD, undefined, 0, parentRow.id)
@@ -426,22 +472,22 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const handleDelete = async (row: Menu) => {
         try {
-            await ElMessageBox.confirm(CONFIRM_MESSAGES.DELETE_MENU, CONFIRM_DIALOG_TITLE, {
-                confirmButtonText: CONFIRM_BUTTON_TEXT,
-                cancelButtonText: CANCEL_BUTTON_TEXT,
+            await ElMessageBox.confirm(translate(CONFIRM_MESSAGES.DELETE_MENU), translate(CONFIRM_DIALOG_TITLE), {
+                confirmButtonText: translate(CONFIRM_BUTTON_TEXT),
+                cancelButtonText: translate(CANCEL_BUTTON_TEXT),
                 beforeClose: async (action, instance, done) => {
                     if (action === 'confirm') {
                         instance.confirmButtonLoading = true
-                        instance.confirmButtonText = '删除中...'
+                        instance.confirmButtonText = translate('common.actions.submitting')
                         try {
                             await deleteMenu({ id: row.id })
-                            ElMessage.success(RESULT_MESSAGES.DELETE_SUCCESS)
+                            ElMessage.success(translate(RESULT_MESSAGES.DELETE_SUCCESS))
                             await getList()
                             done()
                         } catch (error) {
                             Logger.error('删除失败:', error)
                             instance.confirmButtonLoading = false
-                            instance.confirmButtonText = CONFIRM_BUTTON_TEXT
+                            instance.confirmButtonText = translate(CONFIRM_BUTTON_TEXT)
                         }
                     } else {
                         done()

@@ -4,25 +4,25 @@
             <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
-                        <el-form-item label="用户名" prop="username">
-                            <el-input placeholder="请输入用户名" v-model.trim="queryWhere.username" clearable></el-input>
+                        <el-form-item :label="t('log.login.username')" prop="username">
+                            <el-input :placeholder="t('log.login.inputUsername')" v-model.trim="queryWhere.username" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="IP地址" prop="ip">
-                            <el-input placeholder="请输入IP地址" v-model.trim="queryWhere.ip" clearable></el-input>
+                        <el-form-item :label="t('log.login.ipAddress')" prop="ip">
+                            <el-input :placeholder="t('log.login.inputIp')" v-model.trim="queryWhere.ip" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="登录状态" prop="login_status">
-                            <el-select v-model="queryWhere.login_status" clearable placeholder="请选择登录状态">
-                                <el-option label="成功" :value="1" />
-                                <el-option label="失败" :value="0" />
+                        <el-form-item :label="t('log.login.loginStatus')" prop="login_status">
+                            <el-select v-model="queryWhere.login_status" clearable :placeholder="t('log.login.selectStatus')">
+                                <el-option :label="t('common.status.success')" :value="1" />
+                                <el-option :label="t('common.status.failed')" :value="0" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="登录时间" prop="dateRange">
+                        <el-form-item :label="t('log.login.loginTime')" prop="dateRange">
                             <xl-date-range-picker v-model="dateRange" />
                         </el-form-item>
                     </el-col>
@@ -37,7 +37,7 @@
                     <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
                         {{ item.tag[val as keyof typeof item.tag]?.text || val }}
                     </el-tag>
-                    <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" content="复制成功" placement="left">
+                    <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
                         <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
                     </el-tooltip>
                     <span v-else>
@@ -45,7 +45,7 @@
                     </span>
                 </template>
                 <template #operation>
-                    <el-table-column width="100" label="操作" align="center" fixed="right">
+                    <el-table-column width="100" :label="t('common.labels.operation')" align="center" fixed="right">
                         <template #default="scope">
                             <xl-action-button v-permission="'adminLoginLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
                         </template>
@@ -55,33 +55,33 @@
         </div>
 
         <!-- 详情抽屉 -->
-        <el-drawer v-model="showDetailDrawer" title="登录日志详细信息" direction="rtl" size="50%">
-            <div v-loading="detailLoading" element-loading-text="加载中..." class="detail-content">
+        <el-drawer v-model="showDetailDrawer" :title="t('log.login.detailTitle')" direction="rtl" size="50%">
+            <div v-loading="detailLoading" :element-loading-text="t('log.login.loadingText')" class="detail-content">
                 <template v-if="currentDetail">
                     <el-descriptions :column="2" border>
-                        <el-descriptions-item label="用户名" :span="2">{{ currentDetail.username || '-' }}</el-descriptions-item>
-                        <el-descriptions-item label="IP地址" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
-                        <el-descriptions-item label="操作类型">
+                        <el-descriptions-item :label="t('log.login.username')" :span="2">{{ currentDetail.username || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('log.login.ipAddress')" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('log.login.operationType')">
                             <el-tag :type="currentDetail.type === 1 ? 'primary' : 'info'">
-                                {{ currentDetail.type_name || (currentDetail.type === 1 ? '登录操作' : currentDetail.type === 2 ? '刷新token' : '-') }}
+                                {{ currentDetail.type_name || (currentDetail.type === 1 ? t('log.login.loginAction') : currentDetail.type === 2 ? t('log.login.refresh') : '-') }}
                             </el-tag>
                         </el-descriptions-item>
-                        <el-descriptions-item label="登录状态">
+                        <el-descriptions-item :label="t('log.login.loginStatus')">
                             <el-tag :type="currentDetail.login_status === 1 ? 'success' : 'danger'">
-                                {{ currentDetail.login_status_name || (currentDetail.login_status === 1 ? '成功' : '失败') }}
+                                {{ currentDetail.login_status_name || (currentDetail.login_status === 1 ? t('common.status.success') : t('common.status.failed')) }}
                             </el-tag>
                         </el-descriptions-item>
-                        <el-descriptions-item label="执行时间(ms)">{{ currentDetail.execution_time || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.os" label="操作系统">{{ currentDetail.os || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.browser" label="浏览器">{{ currentDetail.browser || '-' }}</el-descriptions-item>
-                        <el-descriptions-item label="登录时间" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.login_status === 0 && currentDetail.login_fail_reason" label="失败原因" :span="2">
+                        <el-descriptions-item :label="t('log.login.durationMs')">{{ currentDetail.execution_time || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="currentDetail.os" :label="t('log.login.os')">{{ currentDetail.os || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="currentDetail.browser" :label="t('log.login.browser')">{{ currentDetail.browser || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('log.login.loginTime')" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="currentDetail.login_status === 0 && currentDetail.login_fail_reason" :label="t('log.login.failReason')" :span="2">
                             {{ currentDetail.login_fail_reason || '-' }}
                         </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.is_revoked === 1" label="是否撤销">
-                            <el-tag type="danger">是</el-tag>
+                        <el-descriptions-item v-if="currentDetail.is_revoked === 1" :label="t('log.login.revoked')">
+                            <el-tag type="danger">{{ t('common.yes') }}</el-tag>
                         </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.is_revoked === 1 && currentDetail.revoked_reason" label="撤销说明" :span="2">
+                        <el-descriptions-item v-if="currentDetail.is_revoked === 1 && currentDetail.revoked_reason" :label="t('log.login.revokedReason')" :span="2">
                             {{ currentDetail.revoked_reason || '-' }}
                         </el-descriptions-item>
                     </el-descriptions>
@@ -92,18 +92,18 @@
                         <el-collapse v-model="activeCollapse">
                             <el-collapse-item v-if="currentDetail.access_token" name="accessToken">
                                 <template #title>
-                                    <span>Access Token</span>
+                                    <span>{{ t('log.login.accessToken') }}</span>
                                     <el-button link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('accessToken')">
-                                        {{ accessTokenFormatted ? '还原' : '格式化' }}
+                                        {{ accessTokenFormatted ? t('log.login.restore') : t('log.login.format') }}
                                     </el-button>
                                 </template>
                                 <pre class="json-content">{{ accessTokenFormatted ? formatJwtToken(currentDetail.access_token) : currentDetail.access_token }}</pre>
                             </el-collapse-item>
                             <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken">
                                 <template #title>
-                                    <span>Refresh Token</span>
+                                    <span>{{ t('log.login.refreshToken') }}</span>
                                     <el-button link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('refreshToken')">
-                                        {{ refreshTokenFormatted ? '还原' : '格式化' }}
+                                        {{ refreshTokenFormatted ? t('log.login.restore') : t('log.login.format') }}
                                     </el-button>
                                 </template>
                                 <pre class="json-content">{{ refreshTokenFormatted ? formatJwtToken(currentDetail.refresh_token) : currentDetail.refresh_token }}</pre>
@@ -121,15 +121,17 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useAdminLoginLogPage } from '@/modules/log/useAdminLoginLogPage'
 import type { TableColumn } from '@/types/common'
 import type { LoginLog } from '@/types/log'
 import { Logger } from '@/utils/logger'
+import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
+const { t } = useI18n()
 
 const {
     loading,
@@ -164,48 +166,51 @@ onMounted(() => {
     getList()
 })
 
-const tableTitle: TableColumn<LoginLog>[] = [
-    { prop: 'id', align: 'center', h_label: 'ID', width: 80 },
-    { prop: 'username', h_label: '用户名', minWidth: 120, overflow: true },
-    {
-        prop: 'type',
-        h_label: '类型',
-        align: 'center',
-        width: 100,
-        customRow: true,
-        tag: {
-            1: { type: 'primary', text: '登录' },
-            2: { type: 'info', text: '刷新' },
-        },
-    },
-    {
-        prop: 'login_status',
-        h_label: '状态',
-        align: 'center',
-        width: 100,
-        customRow: true,
-        tag: {
-            1: { type: 'success', text: '成功' },
-            0: { type: 'danger', text: '失败' },
-        },
-    },
-    { prop: 'ip', h_label: 'IP地址', minWidth: 130, customRow: true, copy: true },
-    { prop: 'os', h_label: 'OS', width: 120, overflow: true },
-    { prop: 'browser', h_label: '浏览器', width: 120, overflow: true },
-    { prop: 'execution_time', h_label: '耗时(ms)', align: 'center', width: 100 },
-    {
-        prop: 'is_revoked',
-        h_label: '撤销',
-        align: 'center',
-        width: 80,
-        customRow: true,
-        tag: {
-            0: { type: 'success', text: '否' },
-            1: { type: 'danger', text: '是' },
-        },
-    },
-    { prop: 'created_at', h_label: '时间', align: 'center', width: 160 },
-]
+const tableTitle = computed(
+    () =>
+        [
+            { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80 },
+            { prop: 'username', h_label: t('log.login.username'), minWidth: 120, overflow: true },
+            {
+                prop: 'type',
+                h_label: t('log.login.type'),
+                align: 'center',
+                width: 100,
+                customRow: true,
+                tag: {
+                    1: { type: 'primary', text: t('log.login.login') },
+                    2: { type: 'info', text: t('log.login.refresh') },
+                },
+            },
+            {
+                prop: 'login_status',
+                h_label: t('common.labels.status'),
+                align: 'center',
+                width: 100,
+                customRow: true,
+                tag: {
+                    1: { type: 'success', text: t('common.status.success') },
+                    0: { type: 'danger', text: t('common.status.failed') },
+                },
+            },
+            { prop: 'ip', h_label: t('log.login.ipAddress'), minWidth: 130, customRow: true, copy: true },
+            { prop: 'os', h_label: t('log.login.os'), width: 120, overflow: true },
+            { prop: 'browser', h_label: t('log.login.browser'), width: 120, overflow: true },
+            { prop: 'execution_time', h_label: t('log.login.durationMs'), align: 'center', width: 100 },
+            {
+                prop: 'is_revoked',
+                h_label: t('log.login.revoked'),
+                align: 'center',
+                width: 80,
+                customRow: true,
+                tag: {
+                    0: { type: 'success', text: t('common.no') },
+                    1: { type: 'danger', text: t('common.yes') },
+                },
+            },
+            { prop: 'created_at', h_label: t('log.login.time'), align: 'center', width: 160 },
+        ] as TableColumn<LoginLog>[]
+)
 </script>
 
 <style lang="scss" scoped>

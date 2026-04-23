@@ -2,10 +2,10 @@
     <el-scrollbar class="xl-scrollbar">
         <el-menu :default-active="activeMenu" class="el-menu-vertical-demo" :collapse-transition="false" :collapse="settingStore.isCollapse" :router="false" @select="handleMenuSelect">
             <!-- 加载状态 -->
-            <div v-if="loading" class="loading-text">菜单加载中...</div>
+            <div v-if="loading" class="loading-text">{{ t('layout.menuLoading') }}</div>
             <template v-else>
                 <!-- 空状态 -->
-                <div v-if="visibleRoutes.length === 0" class="empty-text">暂无可用菜单</div>
+                <div v-if="visibleRoutes.length === 0" class="empty-text">{{ t('layout.menuEmpty') }}</div>
                 <!-- 菜单项列表 -->
                 <sidebar-item v-for="routeItem in visibleRoutes" :key="String(routeItem.name || routeItem.path)" :route="routeItem" />
             </template>
@@ -19,10 +19,12 @@ import { useRoute } from 'vue-router'
 import SidebarItem from './sidebarItem.vue'
 import { useSettingStore } from '@/stores/setting'
 import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
 
 const settingStore = useSettingStore()
 const authStore = useAuthStore()
 const route = useRoute()
+const { t } = useI18n()
 
 /** 当前激活的菜单项 */
 const activeMenu = ref('')

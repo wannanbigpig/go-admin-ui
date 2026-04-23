@@ -1,9 +1,9 @@
 <template>
     <div class="xl-search-btn">
-        <el-button type="primary" @click="handleSearch" :disabled="loading">查询</el-button>
-        <el-button v-if="withReset" @click="handleReset" :disabled="loading">重置</el-button>
+        <el-button type="primary" @click="handleSearch" :disabled="loading">{{ t('common.actions.search') }}</el-button>
+        <el-button v-if="withReset" @click="handleReset" :disabled="loading">{{ t('common.actions.reset') }}</el-button>
         <el-text v-show="showCollapsible" class="xl-collapsible xl-cursor-pointer" type="primary" @click="toggleCollapse">
-            {{ isFolded ? '收起' : '展开' }}
+            {{ isFolded ? t('common.actions.collapse') : t('common.actions.expand') }}
             <el-icon>
                 <i-ep-arrow-down v-show="!isFolded" />
                 <i-ep-arrow-up v-show="isFolded" />
@@ -13,6 +13,7 @@
 </template>
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 // ==================== Props 定义 ====================
 const props = defineProps({
@@ -54,6 +55,7 @@ const props = defineProps({
         default: true,
     },
 })
+const { t } = useI18n()
 
 // ==================== 响应式数据 ====================
 const isFolded = ref(false)
@@ -87,7 +89,7 @@ const handleReset = () => {
     } else if (props.modelRef?.resetFields) {
         props.modelRef.resetFields()
     } else {
-        throw new Error('自定义重置方法和表单Ref二者必传一个，否则重置按钮无效')
+        throw new Error(t('validation.drawer.resetOrFormRefRequired'))
     }
 }
 

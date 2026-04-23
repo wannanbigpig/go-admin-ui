@@ -2,6 +2,7 @@ import { hasPermission } from '@/utils/auth'
 import { ElMessage } from 'element-plus'
 import { Logger } from '@/utils/logger'
 import type { Directive, DirectiveBinding } from 'vue'
+import { translate } from '@/locales'
 
 interface PermissionHTMLElement extends HTMLElement {
     disabled?: boolean
@@ -112,7 +113,7 @@ function showNoPermissionMessage(event: Event) {
     event.preventDefault()
     event.stopPropagation()
     event.stopImmediatePropagation()
-    ElMessage.warning('暂无权限')
+    ElMessage.warning(translate('layout.noPermission'))
 }
 
 export default permissionDirective

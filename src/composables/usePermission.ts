@@ -9,6 +9,7 @@ import { hasPermission } from '@/utils/auth'
  */
 export function usePermission() {
     const authStore = useAuthStore()
+    const buttonInfoProxyCache = new Map<string, Record<string, unknown>>()
 
     const buttonPermissions = computed(() => authStore.buttonPermissions || [])
 
@@ -20,8 +21,41 @@ export function usePermission() {
         return authStore.getButtonInfo(code)
     }
 
+    const createLiveButtonInfoProxy = (code: string) => {
+        return new Proxy<Record<string, unknown>>(
+            {},
+            {
+                get: (_target, key) => {
+                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
+                    if (!info) return undefined
+                    return info[key as keyof typeof info]
+                },
+                has: (_target, key) => {
+                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
+                    return !!info && key in info
+                },
+                ownKeys: () => {
+                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
+                    return info ? Reflect.ownKeys(info) : []
+                },
+                getOwnPropertyDescriptor: (_target, key) => {
+                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
+                    if (!info) return undefined
+                    return {
+                        configurable: true,
+                        enumerable: true,
+                        value: info[key as keyof typeof info],
+                    }
+                },
+            }
+        )
+    }
+
     const getButtonInfoFull = (code: string) => {
-        return authStore.getButtonInfoFull(code)
+        if (!buttonInfoProxyCache.has(code)) {
+            buttonInfoProxyCache.set(code, createLiveButtonInfoProxy(code))
+        }
+        return buttonInfoProxyCache.get(code) || null
     }
 
     const shouldShowButton = (code: string) => {

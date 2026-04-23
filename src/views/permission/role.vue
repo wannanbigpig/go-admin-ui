@@ -4,8 +4,8 @@
             <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
-                        <el-form-item label="角色名称" prop="name">
-                            <el-input placeholder="请输入角色名称" v-model.trim="queryWhere.name" clearable></el-input>
+                        <el-form-item :label="t('permission.role.name')" prop="name">
+                            <el-input :placeholder="t('permission.role.namePlaceholder')" v-model.trim="queryWhere.name" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
@@ -28,7 +28,7 @@
                     </template>
                     <!-- 操作列 -->
                     <template #operation>
-                        <el-table-column width="180" label="操作" align="center" fixed="right">
+                        <el-table-column width="180" :label="t('common.labels.operation')" align="center" fixed="right">
                             <template #default="scope">
                                 <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="3" />
                             </template>
@@ -43,30 +43,30 @@
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :key="currentIndex ?? 0">
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="角色名称" prop="name" :rules="[{ required: true, message: '请输入角色名称', trigger: 'blur' }]">
-                            <el-input v-model.trim="formData.name" placeholder="请输入角色名称" :disabled="isSuperAdminEditing"></el-input>
+                        <el-form-item :label="t('permission.role.name')" prop="name" :rules="[{ required: true, message: t('validation.role.nameInputRequired'), trigger: 'blur' }]">
+                            <el-input v-model.trim="formData.name" :placeholder="t('permission.role.namePlaceholder')" :disabled="isSuperAdminEditing"></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="标识" prop="code" :rules="[{ required: true, message: '请输入角色标识', trigger: 'blur' }]">
-                            <el-input v-model.trim="formData.code" placeholder="请输入角色标识" :disabled="isEditMode || isSuperAdminEditing"></el-input>
+                        <el-form-item :label="t('permission.role.code')" prop="code" :rules="[{ required: true, message: t('validation.role.codeInputRequired'), trigger: 'blur' }]">
+                            <el-input v-model.trim="formData.code" :placeholder="t('permission.role.codePlaceholder')" :disabled="isEditMode || isSuperAdminEditing"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item prop="status" label="状态">
-                            <el-select v-model="formData.status" placeholder="请选择状态" clearable :disabled="isSuperAdminEditing">
-                                <el-option label="正常" :value="STATUS.ENABLED" />
-                                <el-option label="禁用" :value="STATUS.DISABLED" />
+                        <el-form-item prop="status" :label="t('common.labels.status')">
+                            <el-select v-model="formData.status" :placeholder="t('permission.role.statusPlaceholder')" clearable :disabled="isSuperAdminEditing">
+                                <el-option :label="t('common.status.enabled')" :value="STATUS.ENABLED" />
+                                <el-option :label="t('common.status.disabled')" :value="STATUS.DISABLED" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                 </el-row>
-                <el-form-item label="角色描述" prop="description">
-                    <el-input v-model.trim="formData.description" maxlength="255" placeholder="请输入角色描述" show-word-limit type="textarea" :rows="3" :disabled="isSuperAdminEditing" />
+                <el-form-item :label="t('permission.role.description')" prop="description">
+                    <el-input v-model.trim="formData.description" maxlength="255" :placeholder="t('permission.role.descriptionPlaceholder')" show-word-limit type="textarea" :rows="3" :disabled="isSuperAdminEditing" />
                 </el-form-item>
-                <el-form-item label="菜单权限" prop="menu_list">
+                <el-form-item :label="t('permission.role.menuPermission')" prop="menu_list">
                     <div style="width: 100%; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 10px">
                         <el-skeleton v-if="menuTreeLoading" animated />
                         <el-tree
@@ -92,7 +92,7 @@ import xlTableList from '@/components/tableList/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
 import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
@@ -102,12 +102,14 @@ import { useRoleList } from '@/modules/role/useRoleList'
 import { useRoleForm } from '@/modules/role/useRoleForm'
 import type { Role } from '@/types/role'
 import type { TableColumn } from '@/types/common'
+import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
 const addChildButtonInfo = getButtonInfoFull('role:addChild')
 const addButtonInfo = getButtonInfoFull('role:add')
 const updateButtonInfo = getButtonInfoFull('role:update')
 const deleteButtonInfo = getButtonInfoFull('role:delete')
+const { t } = useI18n()
 
 const STATUS = ROLE_STATUS
 
@@ -176,16 +178,16 @@ const actionButtons = (scope: RoleActionScope): ActionButtonConfig<Role>[] => {
 
 const handleDelete = async (row: Role) => {
     if (row.code === 'super_admin') {
-        ElMessage.warning('超级管理员角色不允许删除')
+        ElMessage.warning(t('permission.role.superAdminDeleteForbidden'))
         return
     }
 
     try {
-        await ElMessageBox.confirm(CONFIRM_MESSAGES.DELETE_ROLE, CONFIRM_DIALOG_TITLE, {
+        await ElMessageBox.confirm(t(CONFIRM_MESSAGES.DELETE_ROLE), t(CONFIRM_DIALOG_TITLE), {
             type: 'warning',
         })
         await deleteRole({ id: row.id })
-        ElMessage.success(RESULT_MESSAGES.DELETE_SUCCESS)
+        ElMessage.success(t(RESULT_MESSAGES.DELETE_SUCCESS))
         getList()
     } catch {
         // 用户取消或报错
@@ -196,29 +198,32 @@ onMounted(() => {
     getList()
 })
 
-const tableTitle: TableColumn<Role>[] = [
-    { prop: 'id', align: 'center', h_label: 'ID', width: 80 },
-    { prop: 'name', h_label: '角色名称', width: 200, overflow: true },
-    { prop: 'code', h_label: '标识', width: 150 },
-    { prop: 'description', h_label: '角色描述', minWidth: 200, overflow: true },
-    {
-        prop: 'sort',
-        h_label: '排序',
-        align: 'center',
-        width: 100,
-    },
-    {
-        prop: 'status',
-        h_label: '状态',
-        align: 'center',
-        width: 120,
-        customRow: true,
-        tag: {
-            [STATUS.ENABLED]: { type: 'success', text: '正常' },
-            [STATUS.DISABLED]: { type: 'danger', text: '禁用' },
-        },
-    },
-    { prop: 'created_at', align: 'center', h_label: '创建时间', width: 160 },
-    { prop: 'updated_at', align: 'center', h_label: '更新时间', width: 160 },
-]
+const tableTitle = computed(
+    () =>
+        [
+            { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80 },
+            { prop: 'name', h_label: t('permission.role.name'), width: 200, overflow: true },
+            { prop: 'code', h_label: t('permission.role.code'), width: 150 },
+            { prop: 'description', h_label: t('permission.role.description'), minWidth: 200, overflow: true },
+            {
+                prop: 'sort',
+                h_label: t('common.labels.sort'),
+                align: 'center',
+                width: 100,
+            },
+            {
+                prop: 'status',
+                h_label: t('common.labels.status'),
+                align: 'center',
+                width: 120,
+                customRow: true,
+                tag: {
+                    [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
+                    [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
+                },
+            },
+            { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
+            { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
+        ] as TableColumn<Role>[]
+)
 </script>

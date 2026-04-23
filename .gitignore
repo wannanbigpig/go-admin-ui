@@ -32,3 +32,4 @@ dist-ssr
 *.sw?
 .claude
 OPTIMIZATION-TODO.md
+.aitasks

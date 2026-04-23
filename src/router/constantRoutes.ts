@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 import Layout from '@/layout/index.vue'
 
+// 静态路由 meta 约定：title 是兜底标题，titleKey 仅用于前端静态路由国际化，show=false 表示不显示在侧边菜单。
 const constantRoutes: RouteRecordRaw[] = [
     {
         path: '/',
@@ -12,7 +13,8 @@ const constantRoutes: RouteRecordRaw[] = [
                 name: 'refresh',
                 component: () => import('@/views/other/refresh.vue'),
                 meta: {
-                    title: '刷新',
+                    title: 'Refresh',
+                    titleKey: 'common.actions.refresh',
                     show: false,
                 },
             },
@@ -30,7 +32,8 @@ const constantRoutes: RouteRecordRaw[] = [
                 name: 'Profile',
                 component: () => import('@/views/profile/index.vue'),
                 meta: {
-                    title: '个人中心',
+                    title: 'Profile',
+                    titleKey: 'layout.profile',
                     show: false,
                 },
             },
@@ -41,7 +44,8 @@ const constantRoutes: RouteRecordRaw[] = [
         name: 'Login',
         component: () => import('@/views/login/index.vue'),
         meta: {
-            title: '登录',
+            title: 'Login',
+            titleKey: 'login.login',
         },
     },
     // 所有未定义路由，全部重定向到404页

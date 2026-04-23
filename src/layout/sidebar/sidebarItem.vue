@@ -3,7 +3,7 @@
     <el-sub-menu v-if="hasChildren && shouldShow" :index="currentRoutePath">
         <template #title>
             <icon-item :icon="route.meta?.icon as string" />
-            <span>{{ route.meta?.title }}</span>
+            <span>{{ displayTitle }}</span>
         </template>
         <!-- 递归渲染子路由 -->
         <sidebar-item v-for="child in route.children" :key="String(child.name || child.path)" :route="child" :base-path="currentRoutePath" />
@@ -14,7 +14,7 @@
         <el-menu-item :index="currentRoutePath">
             <icon-item :icon="route.meta?.icon as string" />
             <template #title>
-                <span>{{ route.meta?.title }}</span>
+                <span>{{ displayTitle }}</span>
             </template>
         </el-menu-item>
     </link-item>
@@ -26,6 +26,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import LinkItem from './linkItem.vue'
 import IconItem from './iconItem.vue'
 import { isExternal } from '@/utils/helper'
+import { resolveRouteTitle } from '@/utils/routeTitle'
 
 defineOptions({
     name: 'SidebarItem',
@@ -57,6 +58,15 @@ const hasChildren = computed(() => {
 /** 是否应该显示该菜单项 */
 const shouldShow = computed(() => {
     return !!(props.route.meta && props.route.meta.show !== false)
+})
+
+const displayTitle = computed(() => {
+    return resolveRouteTitle({
+        titleKey: props.route.meta?.titleKey as string,
+        title: props.route.meta?.title as string,
+        name: typeof props.route.name === 'string' ? props.route.name : '',
+        path: props.route.path,
+    })
 })
 
 // ==================== 方法 ====================

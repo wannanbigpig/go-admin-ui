@@ -4,8 +4,8 @@
             <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
-                        <el-form-item label="部门名称" prop="name">
-                            <el-input placeholder="请输入部门名称" v-model.trim="queryWhere.name" clearable></el-input>
+                        <el-form-item :label="t('permission.department.name')" prop="name">
+                            <el-input :placeholder="t('permission.department.namePlaceholder')" v-model.trim="queryWhere.name" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
@@ -26,7 +26,7 @@
                         <span v-else>{{ val }}</span>
                     </template>
                     <template #operation>
-                        <el-table-column width="200" label="操作" align="center" fixed="right">
+                        <el-table-column width="200" :label="t('common.labels.operation')" align="center" fixed="right">
                             <template #default="scope">
                                 <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="3" />
                             </template>
@@ -41,9 +41,9 @@
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules()" :key="currentIndex ?? 0">
                 <el-row :gutter="20">
                     <el-col :span="24">
-                        <el-form-item label="上级部门" prop="pid">
-                            <el-select v-model="formData.pid" placeholder="请选择上级部门" :disabled="isProtectedEditingDepartment" clearable filterable style="width: 100%">
-                                <el-option label="顶级部门" :value="0" />
+                        <el-form-item :label="t('permission.department.parent')" prop="pid">
+                            <el-select v-model="formData.pid" :placeholder="t('permission.department.parentPlaceholder')" :disabled="isProtectedEditingDepartment" clearable filterable style="width: 100%">
+                                <el-option :label="t('permission.common.topDepartment')" :value="0" />
                                 <el-option v-for="dept in filteredParentOptions" :key="dept.id" :label="(dept as Department & { label?: string }).label || dept.name" :value="dept.id" />
                             </el-select>
                         </el-form-item>
@@ -51,41 +51,49 @@
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="部门名称" prop="name">
-                            <el-input v-model.trim="formData.name" placeholder="请输入部门名称"></el-input>
+                        <el-form-item :label="t('permission.department.name')" prop="name">
+                            <el-input v-model.trim="formData.name" :placeholder="t('permission.department.namePlaceholder')"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="排序" prop="sort">
-                            <el-input-number v-model.number="formData.sort" :min="0" :step="10" placeholder="请输入排序值" controls-position="right" style="width: 100%" :disabled="isProtectedEditingDepartment" />
+                        <el-form-item :label="t('common.labels.sort')" prop="sort">
+                            <el-input-number
+                                v-model.number="formData.sort"
+                                :min="0"
+                                :step="10"
+                                :placeholder="t('permission.department.sortPlaceholder')"
+                                controls-position="right"
+                                style="width: 100%"
+                                :disabled="isProtectedEditingDepartment"
+                            />
                         </el-form-item>
                     </el-col>
                 </el-row>
-                <el-form-item label="部门描述" prop="description">
-                    <el-input v-model.trim="formData.description" maxlength="255" placeholder="请输入部门描述" show-word-limit type="textarea" :rows="3" />
+                <el-form-item :label="t('permission.department.description')" prop="description">
+                    <el-input v-model.trim="formData.description" maxlength="255" :placeholder="t('permission.department.descriptionPlaceholder')" show-word-limit type="textarea" :rows="3" />
                 </el-form-item>
             </el-form>
         </xl-drawer>
 
         <!-- 绑定角色抽屉 -->
-        <xl-drawer v-model="showBindRoleDrawer" title="绑定角色" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
+        <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.department.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
             <el-skeleton v-if="roleOptionsLoading" animated />
             <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto">
-                <el-form-item label="部门名称">
+                <el-form-item :label="t('permission.department.name')">
                     <el-input :value="currentDeptName" disabled></el-input>
                 </el-form-item>
-                <el-form-item label="角色" prop="role_ids">
+                <el-form-item :label="t('common.labels.role')" prop="role_ids">
                     <el-transfer
                         v-model="bindRoleData.role_ids"
                         filterable
                         :filter-method="filterRole"
                         :props="{ key: 'id', label: 'name' }"
                         :data="roleOptions"
-                        :titles="['全部角色', '已绑定角色']"
+                        :titles="[t('permission.common.allRoles'), t('permission.common.boundRoles')]"
                         target-order="push"
-                        filter-placeholder="角色名称"
+                        :filter-placeholder="t('permission.department.roleFilterPlaceholder')"
                     />
                 </el-form-item>
             </el-form>
@@ -110,6 +118,7 @@ import { useDepartmentForm } from '@/modules/department/useDepartmentForm'
 import { useDepartmentRoleBinding } from '@/modules/department/useDepartmentRoleBinding'
 import type { Department } from '@/types/department'
 import type { TableColumn } from '@/types/common'
+import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
 const addChildButtonInfo = getButtonInfoFull('department:addChild')
@@ -117,6 +126,7 @@ const addButtonInfo = getButtonInfoFull('department:add')
 const updateButtonInfo = getButtonInfoFull('department:update')
 const bindRoleButtonInfo = getButtonInfoFull('department:bindRole')
 const deleteButtonInfo = getButtonInfoFull('department:delete')
+const { t } = useI18n()
 
 const tableListRef = ref(null)
 const { loading, departmentList, departmentOptions, queryFormRef, queryWhere, getList, handleSearch, getChildrenIds } = useDepartmentTreeList(tableListRef)
@@ -152,7 +162,7 @@ const actionButtons = computed(() => {
             showIcon: false,
             click: (row: Department) => handleDelete(row),
             disabled: (row: Department) => isProtectedDepartment(row),
-            tooltip: (row: Department) => (isProtectedDepartment(row) ? '该系统保留对象不允许删除' : ''),
+            tooltip: (row: Department) => (isProtectedDepartment(row) ? t('permission.department.systemReservedDeleteForbidden') : ''),
             divided: true,
         },
     ]
@@ -160,16 +170,16 @@ const actionButtons = computed(() => {
 
 const handleDelete = async (row: Department) => {
     if (isProtectedDepartment(row)) {
-        ElMessage.warning('默认部门不允许删除')
+        ElMessage.warning(t('permission.department.defaultDeleteForbidden'))
         return
     }
 
     try {
-        await ElMessageBox.confirm(CONFIRM_MESSAGES.DELETE_DEPARTMENT, CONFIRM_DIALOG_TITLE, {
+        await ElMessageBox.confirm(t(CONFIRM_MESSAGES.DELETE_DEPARTMENT), t(CONFIRM_DIALOG_TITLE), {
             type: 'warning',
         })
         await removeDepartment(row.id)
-        ElMessage.success(RESULT_MESSAGES.DELETE_SUCCESS)
+        ElMessage.success(t(RESULT_MESSAGES.DELETE_SUCCESS))
         getList()
     } catch {
         // 取消
@@ -180,12 +190,15 @@ onMounted(() => {
     getList()
 })
 
-const tableTitle: TableColumn<Department>[] = [
-    { prop: 'name', h_label: '部门名称', width: 200, overflow: true },
-    { prop: 'description', h_label: '描述', minWidth: 200, overflow: true },
-    { prop: 'sort', h_label: '排序', align: 'center', width: 100 },
-    { prop: 'created_at', align: 'center', h_label: '创建时间', width: 160 },
-]
+const tableTitle = computed(
+    () =>
+        [
+            { prop: 'name', h_label: t('permission.department.name'), width: 200, overflow: true },
+            { prop: 'description', h_label: t('common.labels.description'), minWidth: 200, overflow: true },
+            { prop: 'sort', h_label: t('common.labels.sort'), align: 'center', width: 100 },
+            { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
+        ] as TableColumn<Department>[]
+)
 </script>
 
 <style lang="scss" scoped>

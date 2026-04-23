@@ -19,7 +19,7 @@
                         <a href="https://github.com/wannanbigpig" target="_blank" rel="noopener noreferrer" class="footer-link"> 皖南大花猪(wannanbigpig) </a>
                         . All rights reserved.
                     </p>
-                    <p>基于 Vue 3 + Vite + Element Plus 构建</p>
+                    <p>{{ t('layout.footer.poweredBy') }}</p>
                 </div>
             </div>
         </transition>
@@ -30,10 +30,12 @@
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRefreshStore } from '@/stores/refresh'
+import { useI18n } from 'vue-i18n'
 
 // ==================== Store ====================
 const refreshStore = useRefreshStore()
 const route = useRoute()
+const { t } = useI18n()
 
 // ==================== 计算属性 ====================
 /** 路由动画持续时间 */

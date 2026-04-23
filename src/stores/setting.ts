@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type { LocaleCode } from '@/types/i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -8,6 +9,7 @@ export interface SettingState {
     watermarkEnabled: boolean
     watermarkContent: string
     theme: ThemeMode
+    locale: LocaleCode
 }
 
 export const useSettingStore = defineStore(
@@ -18,6 +20,7 @@ export const useSettingStore = defineStore(
         const watermarkEnabled = ref(true)
         const watermarkContent = ref('X-L-Admin')
         const theme = ref<ThemeMode>('system')
+        const locale = ref<LocaleCode>('zh-CN')
 
         // ==================== Actions ====================
         const toggleCollapse = () => {
@@ -36,22 +39,28 @@ export const useSettingStore = defineStore(
             theme.value = mode
         }
 
+        const setLocale = (value: LocaleCode) => {
+            locale.value = value
+        }
+
         return {
             isCollapse,
             watermarkEnabled,
             watermarkContent,
             theme,
+            locale,
             toggleCollapse,
             updateWatermark,
             toggleWatermark,
             setTheme,
+            setLocale,
         }
     },
     {
         persist: {
             key: 'setting',
             storage: localStorage,
-            paths: ['isCollapse', 'watermarkEnabled', 'watermarkContent', 'theme'],
+            paths: ['isCollapse', 'watermarkEnabled', 'watermarkContent', 'theme', 'locale'],
         },
     }
 )

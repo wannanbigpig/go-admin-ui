@@ -5,6 +5,7 @@ import { addDynamicRoutes, checkDynamicRouteExists } from './dynamicRoutes'
 import { isEmpty } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import type { RouteLocationNormalized } from 'vue-router'
+import { resolveRouteTitle } from '@/utils/routeTitle'
 
 // ==================== 配置 ====================
 NProgress.configure({ showSpinner: false })
@@ -112,7 +113,12 @@ export function afterEach(to: RouteLocationNormalized) {
 }
 
 function setPageTitle(to: RouteLocationNormalized) {
-    const title = (to.meta?.title as string) || ''
+    const title = resolveRouteTitle({
+        titleKey: to.meta?.titleKey as string,
+        title: to.meta?.title as string,
+        name: typeof to.name === 'string' ? to.name : '',
+        path: to.path,
+    })
     if (title) {
         document.title = `${title} - ${appTitle}`
     } else {

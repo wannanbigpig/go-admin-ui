@@ -8,6 +8,7 @@ import { getRoleList } from '@/api/permission'
 import { extractListData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { AdminUser } from '@/types/adminUser'
+import { translate } from '@/locales'
 
 interface UseAdminUserRoleBindingOptions {
     refreshList: () => Promise<void>
@@ -68,7 +69,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
 
     const handleBindRole = async (row: AdminUser) => {
         if (!row || !row.id) {
-            ElMessage.error('无效的行数据')
+            ElMessage.error(translate('validation.adminUser.invalidRow'))
             return
         }
 
@@ -117,7 +118,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
             }
 
             await updateAdminUserRoles(bindRoleData.id, roleIds)
-            ElMessage.success('绑定角色成功')
+            ElMessage.success(translate('common.result.bindRoleSuccess'))
             showBindRoleDrawer.value = false
             await refreshList()
         }).catch((error) => {

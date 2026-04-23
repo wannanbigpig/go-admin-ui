@@ -1,5 +1,6 @@
 import { DEFAULT_SUBMIT_DELAY } from '@/modules/shared/constants'
 import type { Department, DepartmentQuery } from '@/types/department'
+import { translate } from '@/locales'
 
 export const DEPARTMENT_EDIT_TYPE = {
     ADD: 1,
@@ -33,8 +34,8 @@ export function createDepartmentRules() {
     const trigger = ['blur', 'change']
 
     return {
-        name: [{ required: true, message: '部门名称不能为空', trigger }],
-        sort: [{ required: true, message: '排序不能为空', trigger, type: 'number' }],
+        name: [{ required: true, message: translate('validation.department.nameRequired'), trigger }],
+        sort: [{ required: true, message: translate('validation.department.sortRequired'), trigger, type: 'number' }],
     }
 }
 

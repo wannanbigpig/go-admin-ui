@@ -6,6 +6,7 @@ import { createAdminUserItem, updateAdminUserItem, uploadAvatarFile, fetchAdminU
 import { ADMIN_USER_AVATAR_CONFIG, ADMIN_USER_STATUS, ADMIN_USER_SUBMIT_DELAY, createAdminUserForm, isRootAdminUser } from '@/modules/adminUser/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { AdminUser } from '@/types/adminUser'
+import { translate } from '@/locales'
 
 interface UseAdminUserFormOptions {
     refreshList: () => Promise<void>
@@ -33,11 +34,11 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
     const beforeAvatarUpload = (rawFile: File) => {
         if (!ADMIN_USER_AVATAR_CONFIG.ALLOWED_TYPES.includes(rawFile.type)) {
-            ElMessage.error('头像图片必须是 JPG、PNG 或 GIF 格式！')
+            ElMessage.error(translate('validation.adminUser.avatarTypeInvalid'))
             return false
         }
         if (rawFile.size > ADMIN_USER_AVATAR_CONFIG.MAX_SIZE) {
-            ElMessage.error('头像图片大小不能超过 2MB！')
+            ElMessage.error(translate('validation.adminUser.avatarSizeInvalid'))
             return false
         }
         return true
@@ -48,11 +49,11 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
             const result = await uploadAvatarFile(file, { path: ADMIN_USER_AVATAR_CONFIG.UPLOAD_PATH })
             const res = result as { url?: string; status?: string; failure_reason?: string }
             if (res && res.status === 'SUCCESS' && res.url) {
-                ElMessage.success('上传成功')
+                ElMessage.success(translate('common.result.uploadSuccess'))
                 handleAvatarSuccess(res)
                 return res
             }
-            ElMessage.error(res?.failure_reason || '上传失败')
+            ElMessage.error(res?.failure_reason || translate('common.result.uploadFailed'))
             return null
         } catch (err) {
             Logger.error('上传失败:', err)
@@ -66,19 +67,21 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
         const trigger = ['blur', 'change']
 
         return {
-            nickname: [{ required: true, message: '昵称不能为空', trigger }],
+            nickname: [{ required: true, message: translate('validation.adminUser.nicknameRequired'), trigger }],
             username: [
-                { required: true, message: '用户名不能为空', trigger },
-                { min: 3, message: '用户名长度不能少于 3 个字符', trigger },
-                { pattern: /^[a-zA-Z0-9_]+$/, message: '由字母、数字和下划线组成', trigger },
+                { required: true, message: translate('validation.adminUser.usernameRequired'), trigger },
+                { min: 3, message: translate('validation.adminUser.usernameMin'), trigger },
+                { pattern: /^[a-zA-Z0-9_]+$/, message: translate('validation.adminUser.usernamePattern'), trigger },
             ],
-            password: [!isEdit && { required: true, message: '密码不能为空', trigger }, { min: 6, max: 20, message: '密码长度 6-20 个字符', trigger }].filter(Boolean),
+            password: [!isEdit && { required: true, message: translate('validation.adminUser.passwordRequired'), trigger }, { min: 6, max: 20, message: translate('validation.adminUser.passwordLength'), trigger }].filter(
+                Boolean
+            ),
             confirm_password: [
-                (!isEdit || formData.password) && { required: true, message: '请确认密码', trigger },
+                (!isEdit || formData.password) && { required: true, message: translate('validation.adminUser.confirmPasswordRequired'), trigger },
                 {
                     validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
                         if (formData.password && value !== formData.password) {
-                            callback(new Error('两次输入密码不一致'))
+                            callback(new Error(translate('validation.adminUser.passwordNotMatch')))
                         } else {
                             callback()
                         }
@@ -196,11 +199,11 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
         if (type === 2) {
             if (!row || (typeof row.id !== 'number' && typeof row.id !== 'string')) {
-                ElMessage.error('无效的行数据')
+                ElMessage.error(translate('validation.adminUser.invalidRow'))
                 return
             }
 
-            formTitle.value = '编辑管理员'
+            formTitle.value = translate('permission.adminUser.editTitle')
             try {
                 const userData = await fetchAdminUserDetail(row.id)
                 const mergedUserData = { ...row, ...userData }
@@ -221,7 +224,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
                 return
             }
         } else {
-            formTitle.value = '新增管理员'
+            formTitle.value = translate('permission.adminUser.addTitle')
             originalFormData.value = null
         }
 
@@ -230,7 +233,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
     const editConfirmSubmit = async () => {
         if (isSubmitting.value) return
-        const valid = await validateFormSafely(formDataRef.value, '管理员表单')
+        const valid = await validateFormSafely(formDataRef.value, translate('permission.adminUser.title'))
         if (!valid) return
 
         await runWithSubmitLock(async () => {
@@ -243,7 +246,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
             await refreshList()
             showDrawer.value = false
-            ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
+            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
         }).catch((error) => {
             Logger.error('提交失败:', error)
         })

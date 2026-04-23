@@ -1,11 +1,14 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingStore } from '@/stores/setting'
 import type { ApiResponse } from '@/types/common'
 import { MESSAGE_ERROR_DURATION, REQUEST_TIMEOUT } from '@/modules/shared/constants'
 import { Logger } from '@/utils/logger'
+import { DEFAULT_LOCALE, translate } from '@/locales'
 
 const normalizeEnvValue = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+const LANGUAGE_HEADER = 'Accept-Language'
 
 /**
  * 解析请求 baseURL
@@ -48,7 +51,10 @@ const service = axios.create({
 service.interceptors.request.use(
     (config) => {
         const authStore = useAuthStore()
+        const settingStore = useSettingStore()
         config.headers = config.headers || {}
+        // 后端不传语言头时默认中文，这里显式携带当前前端语言。
+        config.headers[LANGUAGE_HEADER] = settingStore.locale || DEFAULT_LOCALE
         // 添加认证 token
         if (authStore.token) {
             config.headers['Authorization'] = `Bearer ${authStore.token}`
@@ -94,7 +100,7 @@ service.interceptors.response.use(
         // 处理业务错误（code !== 0）
         if (code !== 0) {
             ElMessage({
-                message: response.data.msg || '请求失败',
+                message: response.data.msg || translate('request.failed'),
                 type: 'error',
             })
             return Promise.reject(response.data)
@@ -115,7 +121,7 @@ service.interceptors.response.use(
         // 处理网络错误
         if (error.message === 'Network Error') {
             ElMessage({
-                message: '服务器连接异常，请检查服务器！',
+                message: translate('request.networkError'),
                 type: 'error',
                 duration: MESSAGE_ERROR_DURATION,
             })
@@ -125,7 +131,7 @@ service.interceptors.response.use(
         // 处理请求超时
         if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
             ElMessage({
-                message: '请求超时，请稍后重试',
+                message: translate('request.timeout'),
                 type: 'error',
                 duration: MESSAGE_ERROR_DURATION,
             })
@@ -133,7 +139,7 @@ service.interceptors.response.use(
         }
 
         // 处理其他错误
-        const errorMessage = error.response?.data?.msg || error.message || '请求失败'
+        const errorMessage = error.response?.data?.msg || error.message || translate('request.failed')
         ElMessage({
             message: errorMessage,
             type: 'error',

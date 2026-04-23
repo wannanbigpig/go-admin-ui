@@ -8,6 +8,7 @@ import { validateFormSafely } from '@/modules/shared/form'
 import { normalizeDetailData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
+import { translate } from '@/locales'
 
 interface UseRoleFormOptions {
     roleList: Ref<Role[]>
@@ -229,10 +230,10 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
     const getParentRoleName = (pid: number) => {
         if (pid === 0 || pid === null) {
-            return '顶级角色'
+            return translate('permission.common.topRole')
         }
         const parentRole = roleList.value.find((role) => role.id === pid)
-        return parentRole ? parentRole.name : '未知角色'
+        return parentRole ? parentRole.name : translate('common.unknown')
     }
 
     const getParentRoleMenuList = async (parentId: number) => {
@@ -295,12 +296,12 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
         if (type === ROLE_EDIT_TYPE.EDIT) {
             if (!row || typeof row.id !== 'number') {
-                ElMessage.error('无效的行数据')
+                ElMessage.error(translate('validation.role.invalidRow'))
                 showDrawer.value = false
                 return
             }
 
-            formTitle.value = '编辑角色'
+            formTitle.value = translate('permission.role.editTitle')
             resetFormData()
 
             try {
@@ -338,14 +339,14 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 return
             }
         } else {
-            formTitle.value = parentId ? '创建下级角色' : '新增角色'
+            formTitle.value = parentId ? translate('permission.role.addChildTitle') : translate('permission.role.addTitle')
             resetFormData()
             originalFormData.value = null
             formData.pid = parentId !== null ? parentId : 0
 
             if (parentId !== null && parentId !== 0) {
                 const parentRoleName = getParentRoleName(parentId)
-                if (parentRoleName && parentRoleName !== '未知角色') {
+                if (parentRoleName && parentRoleName !== translate('common.unknown')) {
                     formData.name = `${parentRoleName}-`
                 }
                 await getParentRoleMenuList(parentId)
@@ -367,7 +368,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 })
                 .catch((error) => {
                     Logger.error('获取菜单列表失败:', error)
-                    ElMessage.error('获取菜单列表失败')
+                    ElMessage.error(translate('validation.role.fetchMenuFailed'))
                 })
                 .finally(() => {
                     menuTreeLoading.value = false
@@ -383,12 +384,12 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     }
 
     const editConfirmSubmit = async () => {
-        const valid = await validateFormSafely(formDataRef.value, '角色表单')
+        const valid = await validateFormSafely(formDataRef.value, translate('validation.role.formName'))
         if (!valid) return
 
         await runWithSubmitLock(async () => {
             if (isSuperAdminEditing.value) {
-                ElMessage.warning('超级管理员角色为只读，不允许编辑')
+                ElMessage.warning(translate('validation.role.readonlySuperAdmin'))
                 return
             }
 
@@ -428,7 +429,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             }
 
             showDrawer.value = false
-            ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
+            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
         }).catch((error) => {
             Logger.error('提交失败:', error)
         })

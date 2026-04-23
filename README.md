@@ -24,6 +24,8 @@
 ### 体验与交互
 
 -   主题切换：`浅色` / `深色` / `跟随系统`（默认跟随系统）
+-   国际化：`简体中文` / `English` 运行时切换
+-   语言切换后自动刷新用户信息与菜单缓存（侧边栏、按钮文案即时更新）
 -   响应式后台布局 + 路由动画
 -   水印开关与内容配置（Pinia 持久化）
 -   按钮级权限控制（`v-permission` + `usePermission`）
@@ -43,6 +45,7 @@
 -   Pinia（`pinia-plugin-persistedstate`）
 -   Element Plus
 -   Axios
+-   Vue I18n
 -   Animate.css
 -   @iconify/vue
 
@@ -119,6 +122,29 @@ npm run test:coverage
     -   切换 `document.documentElement.classList.dark`
     -   监听系统主题变化（`prefers-color-scheme`）
 
+## 国际化说明
+
+-   语言状态由 `src/stores/setting.ts` 管理，持久化键为 `setting.locale`
+-   当前支持语言：
+    -   `zh-CN`
+    -   `en-US`
+-   语言包目录：
+    -   `src/locales/zh-CN/*`
+    -   `src/locales/en-US/*`
+-   应用启动后在 `src/main.ts` 监听 `settingStore.locale` 并同步到 `vue-i18n`
+-   请求层在 `src/utils/request.ts` 自动注入 `Accept-Language` 请求头
+-   顶部语言切换在 `src/layout/header/right.vue` 中触发，切换后会刷新用户信息与菜单树，并重建动态路由
+
+## 菜单国际化契约（前端实现）
+
+-   菜单列表/树场景：使用接口返回的 `title` 直接展示
+-   菜单详情/编辑场景：使用 `title_i18n`
+-   菜单新增/编辑提交：仅提交 `title_i18n`，不提交 `title`
+-   表单校验：至少一个语言标题非空（`trim` 后判定）
+-   标题输入交互：
+    -   单语言：直接输入框
+    -   多语言：弹窗编辑各语言标题
+
 ## 权限系统说明
 
 ### 指令用法
@@ -134,6 +160,8 @@ import { usePermission } from '@/composables/usePermission'
 
 const { checkPermission, getButtonInfoFull } = usePermission()
 ```
+
+> `getButtonInfoFull` 已按当前权限映射做响应式读取，语言切换后按钮文案可即时更新，无需刷新页面。
 
 ## 环境变量
 
@@ -196,6 +224,7 @@ x-l-admin-vue3/
 │   ├── composables/    # 组合式函数（含测试）
 │   ├── directives/     # 自定义指令
 │   ├── layout/         # 后台布局
+│   ├── locales/        # 国际化语言包
 │   ├── modules/        # 业务模块（service/model/useXxx）
 │   ├── router/         # 路由配置与守卫
 │   ├── stores/         # Pinia 状态管理

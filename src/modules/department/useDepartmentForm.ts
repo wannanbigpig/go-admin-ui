@@ -6,6 +6,7 @@ import { createDepartmentItem, fetchDepartmentDetail, updateDepartmentItem } fro
 import { createDepartmentForm, createDepartmentRules, DEPARTMENT_EDIT_TYPE, DEPARTMENT_SUBMIT_DELAY, isProtectedDepartment } from '@/modules/department/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { Department } from '@/types/department'
+import { translate } from '@/locales'
 
 interface UseDepartmentFormOptions {
     departmentOptions: Ref<Department[]>
@@ -64,7 +65,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
         currentIndex.value = index
 
         if (type === DEPARTMENT_EDIT_TYPE.EDIT && row) {
-            formTitle.value = '编辑部门'
+            formTitle.value = translate('permission.department.editTitle')
             try {
                 const deptData = await fetchDepartmentDetail(row.id)
                 Object.assign(formData, {
@@ -80,7 +81,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
                 return
             }
         } else {
-            formTitle.value = '新增部门'
+            formTitle.value = translate('permission.department.addTitle')
             originalFormData.value = null
             if (fixedParentId !== null) {
                 formData.pid = fixedParentId
@@ -91,7 +92,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     }
 
     const editConfirmSubmit = async () => {
-        const valid = await validateFormSafely(formDataRef.value, '部门表单')
+        const valid = await validateFormSafely(formDataRef.value, translate('validation.department.formName'))
         if (!valid) return
 
         await runWithSubmitLock(async () => {
@@ -104,7 +105,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
 
             await refreshList()
             showDrawer.value = false
-            ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
+            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
         }).catch((error) => {
             Logger.error('提交失败:', error)
         })

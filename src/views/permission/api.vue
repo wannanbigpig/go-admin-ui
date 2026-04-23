@@ -4,29 +4,29 @@
             <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="6">
-                        <el-form-item label="关键字" prop="keyword" for="api-query-keyword">
-                            <el-input id="api-query-keyword" placeholder="支持CODE、接口名称、接口地址搜索" v-model.trim="queryWhere.keyword" clearable></el-input>
+                        <el-form-item :label="t('permission.api.keyword')" prop="keyword" for="api-query-keyword">
+                            <el-input id="api-query-keyword" :placeholder="t('permission.api.keywordPlaceholder')" v-model.trim="queryWhere.keyword" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="请求方法" prop="method" for="api-query-method">
-                            <el-select id="api-query-method" v-model="queryWhere.method" clearable placeholder="请选择请求方法">
+                        <el-form-item :label="t('permission.api.method')" prop="method" for="api-query-method">
+                            <el-select id="api-query-method" v-model="queryWhere.method" clearable :placeholder="t('common.placeholders.selectMethod')">
                                 <el-option v-for="item in METHOD_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="鉴权模式" prop="is_auth" for="api-query-is-auth">
-                            <el-select id="api-query-is-auth" v-model="queryWhere.is_auth" clearable placeholder="请选择鉴权模式">
+                        <el-form-item :label="t('permission.api.authMode')" prop="is_auth" for="api-query-is-auth">
+                            <el-select id="api-query-is-auth" v-model="queryWhere.is_auth" clearable :placeholder="t('permission.api.authModePlaceholder')">
                                 <el-option v-for="item in AUTH_MODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
-                        <el-form-item label="是否有效" prop="is_effective" for="api-query-is-effective">
-                            <el-select id="api-query-is-effective" v-model="queryWhere.is_effective" clearable placeholder="请选择是否有效">
-                                <el-option label="是" :value="SWITCH_VALUE.YES" />
-                                <el-option label="否" :value="SWITCH_VALUE.NO" />
+                        <el-form-item :label="t('permission.api.effective')" prop="is_effective" for="api-query-is-effective">
+                            <el-select id="api-query-is-effective" v-model="queryWhere.is_effective" clearable :placeholder="t('permission.api.effectivePlaceholder')">
+                                <el-option :label="t('common.yes')" :value="SWITCH_VALUE.YES" />
+                                <el-option :label="t('common.no')" :value="SWITCH_VALUE.NO" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -45,14 +45,14 @@
                     <el-tag v-else-if="item.tag" :type="item.tag[val as string | number]?.type || item.tag['other']?.type">
                         {{ item.tag[val as string | number]?.text || val }}
                     </el-tag>
-                    <span v-else-if="item.copy" trigger="click" effect="customized" content="复制成功" placement="left">
+                    <span v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
                         <span @click="handleCopyClick(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
                     </span>
                     <span v-else>{{ val }}</span>
                 </template>
                 <!-- 操作列 -->
                 <template #operation>
-                    <el-table-column width="120" label="操作" align="center" fixed="right">
+                    <el-table-column width="120" :label="t('common.labels.operation')" align="center" fixed="right">
                         <template #default="scope">
                             <xl-action-buttons :buttons="actionButtons" :scope="scope" />
                         </template>
@@ -61,37 +61,37 @@
             </xl-table-list>
         </div>
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" title="编辑接口" :formRef="currentRowRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting">
+        <xl-drawer v-model="showDrawer" :title="t('permission.api.editTitle')" :formRef="currentRowRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting">
             <el-form ref="currentRowRef" size="default" :model="currentRow" label-width="auto" :rules="editFormRules" :key="currentIndex">
                 <el-form-item label="CODE" for="api-edit-code">
                     <el-input id="api-edit-code" v-model.trim="currentRow.code" disabled></el-input>
                 </el-form-item>
-                <el-form-item label="接口名称" prop="name" for="api-edit-name">
-                    <el-input id="api-edit-name" v-model.trim="currentRow.name" placeholder="请输入接口名称"></el-input>
+                <el-form-item :label="t('permission.api.name')" prop="name" for="api-edit-name">
+                    <el-input id="api-edit-name" v-model.trim="currentRow.name" :placeholder="t('permission.api.namePlaceholder')"></el-input>
                 </el-form-item>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="鉴权模式" prop="is_auth" required for="api-edit-is-auth">
+                        <el-form-item :label="t('permission.api.authMode')" prop="is_auth" required for="api-edit-is-auth">
                             <template #label>
                                 <span class="xl-label-with-icon">
-                                    鉴权模式
-                                    <el-tooltip effect="dark" content="公开：无需登录；需登录：登录后可访问；需鉴权：登录后还必须分配 API 权限" placement="top">
+                                    {{ t('permission.api.authMode') }}
+                                    <el-tooltip effect="dark" :content="t('permission.api.authModeTip')" placement="top">
                                         <el-icon style="font-size: 16px" class="xl-cursor-help">
                                             <i-ant-design-question-circle-outlined />
                                         </el-icon>
                                     </el-tooltip>
                                 </span>
                             </template>
-                            <el-select id="api-edit-is-auth" v-model="currentRow.is_auth" placeholder="请选择鉴权模式" clearable>
+                            <el-select id="api-edit-is-auth" v-model="currentRow.is_auth" :placeholder="t('permission.api.authModePlaceholder')" clearable>
                                 <el-option v-for="item in AUTH_MODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="是否有效" required for="api-edit-is-effective">
+                        <el-form-item :label="t('permission.api.effective')" required for="api-edit-is-effective">
                             <el-select id="api-edit-is-effective" v-model="currentRow.is_effective" disabled>
-                                <el-option label="是" :value="SWITCH_VALUE.YES" />
-                                <el-option label="否" :value="SWITCH_VALUE.NO" />
+                                <el-option :label="t('common.yes')" :value="SWITCH_VALUE.YES" />
+                                <el-option :label="t('common.no')" :value="SWITCH_VALUE.NO" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -101,32 +101,39 @@
                         <el-form-item prop="sort" for="api-edit-sort">
                             <template #label>
                                 <span class="xl-label-with-icon">
-                                    权重
-                                    <el-tooltip effect="dark" content="权重值越大，排序越靠前" placement="top">
+                                    {{ t('permission.api.weight') }}
+                                    <el-tooltip effect="dark" :content="t('permission.api.weightTip')" placement="top">
                                         <el-icon style="font-size: 16px" class="xl-cursor-help">
                                             <i-ant-design-question-circle-outlined />
                                         </el-icon>
                                     </el-tooltip>
                                 </span>
                             </template>
-                            <el-input id="api-edit-sort" v-model.number="currentRow.sort" clearable placeholder="请输入权重值" @input="handleSortNumberChange" @focus="setSortNumericValue(currentRow.sort)"></el-input>
+                            <el-input
+                                id="api-edit-sort"
+                                v-model.number="currentRow.sort"
+                                clearable
+                                :placeholder="t('permission.api.weightPlaceholder')"
+                                @input="handleSortNumberChange"
+                                @focus="setSortNumericValue(currentRow.sort)"
+                            ></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="请求方法" for="api-edit-method">
+                        <el-form-item :label="t('permission.api.method')" for="api-edit-method">
                             <el-select id="api-edit-method" v-model="currentRow.method" disabled>
                                 <el-option v-for="item in METHOD_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                 </el-row>
-                <el-form-item label="接口描述" prop="description" for="api-edit-description">
-                    <el-input id="api-edit-description" v-model.trim="currentRow.description" maxlength="255" placeholder="描述" show-word-limit type="textarea" />
+                <el-form-item :label="t('common.labels.description')" prop="description" for="api-edit-description">
+                    <el-input id="api-edit-description" v-model.trim="currentRow.description" maxlength="255" :placeholder="t('permission.api.descriptionPlaceholder')" show-word-limit type="textarea" />
                 </el-form-item>
-                <el-form-item label="接口地址" for="api-edit-route">
+                <el-form-item :label="t('permission.api.route')" for="api-edit-route">
                     <el-input id="api-edit-route" v-model.trim="currentRow.route" disabled></el-input>
                 </el-form-item>
-                <el-form-item label="接口功能" for="api-edit-func-path">
+                <el-form-item :label="t('permission.api.funcPath')" for="api-edit-func-path">
                     <el-input id="api-edit-func-path" v-model.trim="currentRow.func_path" disabled></el-input>
                 </el-form-item>
             </el-form>
@@ -159,9 +166,11 @@ import {
 } from '@/modules/apiPermission'
 import type { TableColumn } from '@/types/common'
 import { Logger } from '@/utils/logger'
+import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
 const buttonInfo = getButtonInfoFull('api:update')
+const { t } = useI18n()
 
 const actionButtons = computed(() => {
     return [
@@ -175,7 +184,17 @@ const actionButtons = computed(() => {
 })
 
 const METHOD_OPTIONS = API_PERMISSION_METHOD_OPTIONS
-const AUTH_MODE_OPTIONS = API_PERMISSION_AUTH_MODE_OPTIONS
+const AUTH_MODE_OPTIONS = computed(() => {
+    return API_PERMISSION_AUTH_MODE_OPTIONS.map((item) => {
+        if (item.value === API_PERMISSION_AUTH_MODE.NONE) {
+            return { ...item, label: t('permission.api.authNone') }
+        }
+        if (item.value === API_PERMISSION_AUTH_MODE.LOGIN) {
+            return { ...item, label: t('permission.api.authLogin') }
+        }
+        return { ...item, label: t('permission.api.authAuthz') }
+    })
+})
 const SWITCH_VALUE = API_PERMISSION_SWITCH_VALUE
 
 const { loading, permissionList, pagination, queryFormRef, queryWhere, handleSearch, getList } = useApiPermissionList()
@@ -193,108 +212,111 @@ onMounted(() => {
     getList()
 })
 
-const tableTitle: TableColumn<ApiPermission>[] = [
-    {
-        prop: 'code',
-        h_label: 'CODE',
-        width: 120,
-        overflow: true,
-        h_tip: 'CODE生成方式（md5({$接口方法}_{$接口地址})）',
-        copy: true,
-        customRow: true,
-    },
-    {
-        prop: 'name',
-        h_label: '接口名称',
-        width: 200,
-        overflow: true,
-    },
-    {
-        prop: 'route',
-        h_label: '接口地址',
-        minWidth: 260,
-    },
-    {
-        prop: 'method',
-        h_label: '请求方法',
-        width: 120,
-        customRow: true,
-        tag: {
-            POST: {
-                type: 'primary',
+const tableTitle = computed(
+    () =>
+        [
+            {
+                prop: 'code',
+                h_label: 'CODE',
+                width: 120,
+                overflow: true,
+                h_tip: t('permission.api.codeTip'),
+                copy: true,
+                customRow: true,
             },
-            GET: {
-                type: 'success',
+            {
+                prop: 'name',
+                h_label: t('permission.api.name'),
+                width: 200,
+                overflow: true,
             },
-            PUT: {
-                type: 'warning',
+            {
+                prop: 'route',
+                h_label: t('permission.api.route'),
+                minWidth: 260,
             },
-            DELETE: {
-                type: 'danger',
+            {
+                prop: 'method',
+                h_label: t('permission.api.method'),
+                width: 120,
+                customRow: true,
+                tag: {
+                    POST: {
+                        type: 'primary',
+                    },
+                    GET: {
+                        type: 'success',
+                    },
+                    PUT: {
+                        type: 'warning',
+                    },
+                    DELETE: {
+                        type: 'danger',
+                    },
+                    other: {
+                        type: 'info',
+                    },
+                },
             },
-            other: {
-                type: 'info',
+            {
+                prop: 'is_auth',
+                h_label: t('permission.api.authMode'),
+                align: 'center',
+                width: 120,
+                customRow: true,
+                tag: {
+                    [API_PERMISSION_AUTH_MODE.AUTHZ]: {
+                        type: 'success',
+                        text: t('permission.api.authAuthz'),
+                    },
+                    [API_PERMISSION_AUTH_MODE.LOGIN]: {
+                        type: 'warning',
+                        text: t('permission.api.authLogin'),
+                    },
+                    [API_PERMISSION_AUTH_MODE.NONE]: {
+                        type: 'info',
+                        text: t('permission.api.authNone'),
+                    },
+                },
+                h_tip: t('permission.api.authModeTip'),
             },
-        },
-    },
-    {
-        prop: 'is_auth',
-        h_label: '鉴权模式',
-        align: 'center',
-        width: 120,
-        customRow: true,
-        tag: {
-            [API_PERMISSION_AUTH_MODE.AUTHZ]: {
-                type: 'success',
-                text: '需鉴权',
+            {
+                prop: 'is_effective',
+                h_label: t('permission.api.effective'),
+                align: 'center',
+                width: 120,
+                customRow: true,
+                icon: {
+                    1: {
+                        color: 'var(--el-color-success)',
+                        text: 'ant-design:check-outlined',
+                    },
+                    0: {
+                        color: 'var(--el-color-danger)',
+                        text: 'ant-design:close-outlined',
+                    },
+                },
+                h_tip: t('permission.api.effectiveTip'),
             },
-            [API_PERMISSION_AUTH_MODE.LOGIN]: {
-                type: 'warning',
-                text: '需登录',
+            {
+                prop: 'sort',
+                h_label: t('permission.api.weight'),
+                align: 'center',
+                width: 120,
+                h_tip: t('permission.api.weightTip'),
             },
-            [API_PERMISSION_AUTH_MODE.NONE]: {
-                type: 'info',
-                text: '公开',
+            {
+                prop: 'func_path',
+                h_label: t('permission.api.methodPath'),
+                width: 220,
+                h_tip: t('permission.api.methodPathTip'),
+                overflow: true,
             },
-        },
-        h_tip: '公开：无需登录；需登录：登录后可访问；需鉴权：登录后还必须分配 API 权限',
-    },
-    {
-        prop: 'is_effective',
-        h_label: '是否有效',
-        align: 'center',
-        width: 120,
-        customRow: true,
-        icon: {
-            1: {
-                color: 'var(--el-color-success)',
-                text: 'ant-design:check-outlined',
+            {
+                prop: 'description',
+                h_label: t('common.labels.description'),
+                overflow: true,
             },
-            0: {
-                color: 'var(--el-color-danger)',
-                text: 'ant-design:close-outlined',
-            },
-        },
-        h_tip: '表示该接口在当前版本是否有效',
-    },
-    {
-        prop: 'sort',
-        h_label: '权重',
-        align: 'center',
-        width: 120,
-        h_tip: '权重值越大，排序越靠前',
-    },
-    {
-        prop: 'func_path',
-        h_label: '方法路径',
-        width: 220,
-        h_tip: '接口对应的结构体方法路径',
-        overflow: true,
-    },
-    {
-        prop: 'description',
-        h_label: '描述',
-        overflow: true,
-    },
-]
+        ] as TableColumn<ApiPermission>[]
+)
 </script>

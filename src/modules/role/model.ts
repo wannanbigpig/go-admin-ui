@@ -1,4 +1,5 @@
 import type { Role } from '@/types/role'
+import { translate } from '@/locales'
 
 export function createRoleForm(): Role {
     return {
@@ -29,9 +30,9 @@ export function createRoleRules() {
     const trigger = ['blur', 'change']
 
     return {
-        name: [{ required: true, message: '角色名称不能为空', trigger }],
-        sort: [{ required: true, message: '排序不能为空', trigger, type: 'number' }],
-        status: [{ required: true, message: '状态不能为空', trigger }],
+        name: [{ required: true, message: translate('validation.role.nameRequired'), trigger }],
+        sort: [{ required: true, message: translate('validation.role.sortRequired'), trigger, type: 'number' }],
+        status: [{ required: true, message: translate('validation.role.statusRequired'), trigger }],
     }
 }
 
@@ -42,12 +43,12 @@ export const ROLE_STATUS = {
 }
 
 export const ROLE_STATUS_OPTIONS = [
-    { label: '正常', value: ROLE_STATUS.NORMAL, type: 'success' as const },
-    { label: '禁用', value: ROLE_STATUS.DISABLED, type: 'danger' as const },
+    { label: 'common.status.enabled', value: ROLE_STATUS.NORMAL, type: 'success' as const },
+    { label: 'common.status.disabled', value: ROLE_STATUS.DISABLED, type: 'danger' as const },
 ]
 
 export function getStatusLabel(status: number) {
-    return ROLE_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || '未知'
+    return translate(ROLE_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
 }
 
 export function getStatusType(status: number) {

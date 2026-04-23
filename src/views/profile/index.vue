@@ -9,53 +9,53 @@
                         </el-icon>
                     </el-avatar>
                     <div class="xl-profile-name">
-                        <h2>{{ userInfo.nickname || userInfo.username || '未设置昵称' }}</h2>
+                        <h2>{{ userInfo.nickname || userInfo.username || t('profile.notSetNickname') }}</h2>
                         <p class="xl-text-secondary">{{ userInfo.username }}</p>
                     </div>
                 </div>
                 <div class="xl-profile-actions">
-                    <el-button type="primary" @click="openEditDrawer">编辑资料</el-button>
+                    <el-button type="primary" @click="openEditDrawer">{{ t('profile.editProfile') }}</el-button>
                 </div>
             </div>
 
             <el-card class="xl-profile-card" shadow="never">
                 <div class="xl-info-list">
                     <div class="xl-info-item">
-                        <span class="xl-info-label">昵称</span>
+                        <span class="xl-info-label">{{ t('common.labels.nickname') }}</span>
                         <span class="xl-info-value">{{ userInfo.nickname || '-' }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">用户名</span>
+                        <span class="xl-info-label">{{ t('common.labels.username') }}</span>
                         <span class="xl-info-value">{{ userInfo.username || '-' }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">手机号</span>
+                        <span class="xl-info-label">{{ t('common.labels.phone') }}</span>
                         <span class="xl-info-value">{{ userInfo.phone_number || '-' }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">邮箱</span>
+                        <span class="xl-info-label">{{ t('common.labels.email') }}</span>
                         <span class="xl-info-value">{{ userInfo.email || '-' }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">状态</span>
+                        <span class="xl-info-label">{{ t('common.labels.status') }}</span>
                         <el-tag :type="userInfo.status === STATUS.NORMAL ? 'success' : 'danger'" size="small">
-                            {{ userInfo.status === STATUS.NORMAL ? '正常' : '禁用' }}
+                            {{ userInfo.status === STATUS.NORMAL ? t('common.status.enabled') : t('common.status.disabled') }}
                         </el-tag>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">部门</span>
+                        <span class="xl-info-label">{{ t('profile.departments') }}</span>
                         <span class="xl-info-value">{{ formatDepartments(userInfo.departments) }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">最后登录时间</span>
+                        <span class="xl-info-label">{{ t('profile.lastLoginTime') }}</span>
                         <span class="xl-info-value">{{ formatDateTime(userInfo.last_login) }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">最后登录IP</span>
+                        <span class="xl-info-label">{{ t('profile.lastLoginIp') }}</span>
                         <span class="xl-info-value">{{ userInfo.last_ip || '-' }}</span>
                     </div>
                     <div class="xl-info-item">
-                        <span class="xl-info-label">创建时间</span>
+                        <span class="xl-info-label">{{ t('common.labels.createdAt') }}</span>
                         <span class="xl-info-value">{{ formatDateTime(userInfo.created_at) }}</span>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="formRules" :key="formKey">
                 <el-row>
                     <el-col :span="12">
-                        <el-form-item label="头像" prop="avatar">
+                        <el-form-item :label="t('common.labels.avatar')" prop="avatar">
                             <el-upload class="avatar-uploader" :show-file-list="false" :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload" :http-request="customUpload">
                                 <img w-full v-if="formData.avatar" :src="getImageUrl(formData.avatar)" class="avatar" />
                                 <el-icon v-else class="avatar-uploader-icon"><i-ep-plus /></el-icon>
@@ -77,38 +77,38 @@
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="昵称" prop="nickname">
-                            <el-input v-model.trim="formData.nickname" placeholder="请输入昵称"></el-input>
+                        <el-form-item :label="t('common.labels.nickname')" prop="nickname">
+                            <el-input v-model.trim="formData.nickname" :placeholder="t('common.placeholders.inputNickname')"></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="用户名" prop="username">
-                            <el-input v-model.trim="formData.username" placeholder="请输入用户名" disabled></el-input>
+                        <el-form-item :label="t('common.labels.username')" prop="username">
+                            <el-input v-model.trim="formData.username" :placeholder="t('common.placeholders.inputUsername')" disabled></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="手机号" prop="phone_number">
-                            <el-input v-model.trim="formData.phone_number" placeholder="请输入手机号" />
+                        <el-form-item :label="t('common.labels.phone')" prop="phone_number">
+                            <el-input v-model.trim="formData.phone_number" :placeholder="t('common.placeholders.inputPhone')" />
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="邮箱" prop="email">
-                            <el-input v-model.trim="formData.email" placeholder="请输入邮箱"></el-input>
+                        <el-form-item :label="t('common.labels.email')" prop="email">
+                            <el-input v-model.trim="formData.email" :placeholder="t('common.placeholders.inputEmail')"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
                 <el-divider />
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="新密码" prop="password">
-                            <el-input v-model.trim="formData.password" placeholder="留空则不修改密码" type="password" show-password></el-input>
+                        <el-form-item :label="t('profile.newPassword')" prop="password">
+                            <el-input v-model.trim="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="确认密码" prop="confirm_password">
-                            <el-input v-model.trim="formData.confirm_password" placeholder="请再次输入新密码" type="password" show-password></el-input>
+                        <el-form-item :label="t('common.labels.confirmPassword')" prop="confirm_password">
+                            <el-input v-model.trim="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -217,8 +217,10 @@ import xlDrawer from '@/components/drawer/index.vue'
 import { getImageUrl } from '@/utils/helper'
 import { PROFILE_STATUS } from '@/modules/profile/model'
 import { useProfilePage } from '@/modules/profile/useProfilePage'
+import { useI18n } from 'vue-i18n'
 
 const STATUS = PROFILE_STATUS
+const { t } = useI18n()
 const {
     userInfo,
     showDrawer,

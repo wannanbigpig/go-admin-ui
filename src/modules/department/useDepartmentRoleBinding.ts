@@ -8,6 +8,7 @@ import { getRoleList } from '@/api/permission'
 import { extractListData } from '@/modules/shared/response'
 import type { Department } from '@/types/department'
 import type { Role } from '@/types/role'
+import { translate } from '@/locales'
 
 interface UseDepartmentRoleBindingOptions {
     refreshList: () => Promise<void>
@@ -64,7 +65,7 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
 
     const handleBindRole = async (row: Department) => {
         if (!row || !row.id) {
-            ElMessage.error('无效的行数据')
+            ElMessage.error(translate('validation.department.invalidRow'))
             return
         }
 
@@ -101,7 +102,7 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
     const bindRoleConfirmSubmit = async () => {
         await runWithSubmitLock(async () => {
             await bindDepartmentRoles(bindRoleData.id, normalizeRoleIds(bindRoleData.role_ids))
-            ElMessage.success('绑定角色成功')
+            ElMessage.success(translate('common.result.bindRoleSuccess'))
             showBindRoleDrawer.value = false
             await refreshList()
         }).catch((error) => {

@@ -3,7 +3,8 @@ import type { WithId, WithTimestamp } from './common'
 export interface Menu extends WithId, WithTimestamp {
     parent_id: number | string
     pid?: number | string // 别名，保持兼容性
-    title: string
+    title?: string
+    title_i18n?: Record<string, string>
     code: string
     name?: string
     type: number // 1: 目录，2: 菜单，3: 按钮

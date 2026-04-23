@@ -12,33 +12,41 @@
                     <div class="left-dh" v-if="showLeftDh">
                         <img src="@/assets/images/logo-frontend.png" alt="" />
 
-                        <div class="left-text">X-L-Admin 后台管理系统</div>
+                        <div class="left-text">{{ t('login.appTitle') }}</div>
                     </div>
                 </transition>
             </div>
             <div class="right">
                 <transition class="animate__animated animate__fadeInRight">
                     <div v-if="showRightDh">
-                        <div class="login-title">用 户 登 录</div>
+                        <div class="login-title">{{ t('login.title') }}</div>
 
                         <div class="login-form">
                             <el-form :model="loginForm" ref="loginFormRef" :rules="validateRules">
                                 <el-form-item prop="username">
-                                    <el-input v-model.trim="loginForm.username" class="input" placeholder="请输入用户名" @keyup.enter="handleLogin(loginFormRef)">
+                                    <el-input v-model.trim="loginForm.username" class="input" :placeholder="t('login.placeholders.username')" @keyup.enter="handleLogin(loginFormRef)">
                                         <template #prefix>
                                             <i-ep-user></i-ep-user>
                                         </template>
                                     </el-input>
                                 </el-form-item>
                                 <el-form-item prop="password">
-                                    <el-input v-model.trim="loginForm.password" class="input" placeholder="请输入密码" type="password" show-password @keyup.enter="handleLogin(loginFormRef)">
+                                    <el-input v-model.trim="loginForm.password" class="input" :placeholder="t('login.placeholders.password')" type="password" show-password @keyup.enter="handleLogin(loginFormRef)">
                                         <template #prefix>
                                             <i-ep-lock></i-ep-lock>
                                         </template>
                                     </el-input>
                                 </el-form-item>
                                 <el-form-item prop="captcha">
-                                    <el-input v-model.trim="loginForm.captcha" class="input input-captha" placeholder="验证码" maxlength="4" name="username" autocomplete="off" @keyup.enter="handleLogin(loginFormRef)">
+                                    <el-input
+                                        v-model.trim="loginForm.captcha"
+                                        class="input input-captha"
+                                        :placeholder="t('login.placeholders.captcha')"
+                                        maxlength="4"
+                                        name="username"
+                                        autocomplete="off"
+                                        @keyup.enter="handleLogin(loginFormRef)"
+                                    >
                                         <template #prefix>
                                             <i-ant-design-safety-outlined></i-ant-design-safety-outlined>
                                         </template>
@@ -47,7 +55,7 @@
                                 </el-form-item>
 
                                 <el-form-item>
-                                    <el-button class="button" type="primary" :disabled="loginLoading" @click="handleLogin(loginFormRef)">{{ !loginLoading ? '登录' : '登录中...' }}</el-button>
+                                    <el-button class="button" type="primary" :disabled="loginLoading" @click="handleLogin(loginFormRef)">{{ !loginLoading ? t('login.login') : t('login.loggingIn') }}</el-button>
                                 </el-form-item>
                             </el-form>
                         </div>
@@ -64,7 +72,8 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage, type FormInstance } from 'element-plus'
 import router from '@/router'
 import { Logger } from '@/utils/logger'
-import { ref, reactive, onBeforeMount } from 'vue'
+import { computed, ref, reactive, onBeforeMount } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 // ==================== 常量定义 ====================
 /** 默认用户名 */
@@ -81,6 +90,7 @@ const captchaSrc = ref('')
 const captchaAnswer = ref('')
 const loginFormRef = ref<FormInstance>()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 // 表单数据
 const loginForm = reactive({
@@ -91,20 +101,20 @@ const loginForm = reactive({
 })
 
 // ==================== 表单验证规则 ====================
-const validateRules = {
+const validateRules = computed(() => ({
     username: [
-        { required: true, message: '用户名不能为空' },
-        { pattern: /^[a-zA-Z0-9_]{3,16}$/, message: '用户名只能是数字+大小写字母+下划线，长度3-16位' },
+        { required: true, message: t('login.usernameRequired') },
+        { pattern: /^[a-zA-Z0-9_]{3,16}$/, message: t('login.usernameInvalid') },
     ],
     password: [
-        { required: true, message: '密码不能为空' },
-        { pattern: /^[a-zA-Z0-9!@#$%^&*()_+\-=\\[\]{};':"\\|,.<>\\/?]{6,18}$/, message: '密码只能包含数字、大小写字母和符号，长度6-18位' },
+        { required: true, message: t('login.passwordRequired') },
+        { pattern: /^[a-zA-Z0-9!@#$%^&*()_+\-=\\[\]{};':"\\|,.<>\\/?]{6,18}$/, message: t('login.passwordInvalid') },
     ],
     captcha: [
-        { required: true, message: '验证码不能为空' },
-        { pattern: /^[a-zA-Z0-9]{4}$/, message: '验证码只能是小写字母和数字，长度4位' },
+        { required: true, message: t('login.captchaRequired') },
+        { pattern: /^[a-zA-Z0-9]{4}$/, message: t('login.captchaInvalid') },
     ],
-}
+}))
 
 // ==================== 方法 ====================
 /**
@@ -118,7 +128,7 @@ const refreshCaptcha = async () => {
         captchaAnswer.value = captcha.answer
     } catch (error) {
         Logger.error('获取验证码失败:', error)
-        ElMessage.error('获取验证码失败')
+        ElMessage.error(t('login.fetchCaptchaFailed'))
     }
 }
 
@@ -139,7 +149,7 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
             captcha_id: loginForm.captchaId,
         })
 
-        ElMessage.success('登录成功')
+        ElMessage.success(t('login.loginSuccess'))
         const redirectQuery = router.currentRoute.value.query.redirect
         const redirectPath = typeof redirectQuery === 'string' ? redirectQuery : '/'
         await router.push(redirectPath)

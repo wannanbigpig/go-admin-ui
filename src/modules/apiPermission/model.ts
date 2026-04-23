@@ -48,9 +48,9 @@ export const API_PERMISSION_AUTH_MODE = {
 } as const
 
 export const API_PERMISSION_AUTH_MODE_OPTIONS = [
-    { label: '公开', value: API_PERMISSION_AUTH_MODE.NONE, type: 'info' as const },
-    { label: '需登录', value: API_PERMISSION_AUTH_MODE.LOGIN, type: 'warning' as const },
-    { label: '需鉴权', value: API_PERMISSION_AUTH_MODE.AUTHZ, type: 'success' as const },
+    { label: 'permission.api.authNone', value: API_PERMISSION_AUTH_MODE.NONE, type: 'info' as const },
+    { label: 'permission.api.authLogin', value: API_PERMISSION_AUTH_MODE.LOGIN, type: 'warning' as const },
+    { label: 'permission.api.authAuthz', value: API_PERMISSION_AUTH_MODE.AUTHZ, type: 'success' as const },
 ]
 
 export const API_PERMISSION_SWITCH_VALUE = {

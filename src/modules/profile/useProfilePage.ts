@@ -10,6 +10,7 @@ import { validateFormSafely } from '@/modules/shared/form'
 import { pauseSync } from '@/utils/helper'
 import type { UploadAvatarResult } from '@/modules/adminUser/service'
 import type { UserInfo } from '@/types/auth'
+import { translate } from '@/locales'
 
 export function useProfilePage() {
     const authStore = useAuthStore()
@@ -17,7 +18,7 @@ export function useProfilePage() {
     const loading = ref(false)
     const showDrawer = ref(false)
     const formDataRef = ref<FormInstance>()
-    const formTitle = ref('编辑资料')
+    const formTitle = ref(translate('profile.editProfile'))
     const { isSubmitting, runWithSubmitLock } = useSubmitLock(0)
     const formKey = ref(0)
 
@@ -32,20 +33,20 @@ export function useProfilePage() {
 
     const formRules = {
         nickname: [
-            { required: true, message: '昵称不能为空', trigger: 'blur' },
-            { min: 2, max: 20, message: '昵称长度应在 2-20 个字符之间', trigger: 'blur' },
+            { required: true, message: translate('validation.profile.nicknameRequired'), trigger: 'blur' },
+            { min: 2, max: 20, message: translate('validation.profile.nicknameLength'), trigger: 'blur' },
         ],
         phone_number: [
             {
                 pattern: /^1[3-9]\d{9}$/,
-                message: '请输入正确的手机号码',
+                message: translate('validation.profile.phoneInvalid'),
                 trigger: 'blur',
             },
         ],
         email: [
             {
                 type: 'email',
-                message: '请输入正确的邮箱地址',
+                message: translate('validation.profile.emailInvalid'),
                 trigger: ['blur', 'change'],
             },
         ],
@@ -79,11 +80,11 @@ export function useProfilePage() {
 
     const beforeAvatarUpload = (rawFile: File) => {
         if (!PROFILE_AVATAR_CONFIG.ALLOWED_TYPES.includes(rawFile.type)) {
-            ElMessage.error('头像图片必须是 JPG、PNG 或 GIF 格式！')
+            ElMessage.error(translate('validation.profile.avatarTypeInvalid'))
             return false
         }
         if (rawFile.size > PROFILE_AVATAR_CONFIG.MAX_SIZE) {
-            ElMessage.error('头像图片大小不能超过 2MB！')
+            ElMessage.error(translate('validation.profile.avatarSizeInvalid'))
             return false
         }
         return true
@@ -93,16 +94,16 @@ export function useProfilePage() {
         try {
             const result = await uploadProfileAvatar(file, { path: PROFILE_AVATAR_CONFIG.UPLOAD_PATH })
             if (!isUploadResult(result)) {
-                ElMessage.error('上传失败')
+                ElMessage.error(translate('common.result.uploadFailed'))
                 return null
             }
             const res = result
             if (res.status === 'SUCCESS') {
-                ElMessage.success('上传成功')
+                ElMessage.success(translate('common.result.uploadSuccess'))
                 handleAvatarSuccess(res)
                 return res
             }
-            ElMessage.error(res.failure_reason || '上传失败')
+            ElMessage.error(res.failure_reason || translate('common.result.uploadFailed'))
             return null
         } catch (err) {
             onError?.(err as Error)
@@ -125,7 +126,7 @@ export function useProfilePage() {
     }
 
     const openEditDrawer = () => {
-        formTitle.value = '编辑个人资料'
+        formTitle.value = translate('profile.editProfileInfo')
         formData.id = userInfo.value.id
         formData.nickname = userInfo.value.nickname
         formData.phone_number = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number : ''
@@ -139,7 +140,7 @@ export function useProfilePage() {
 
     const editConfirmSubmit = async () => {
         if (isSubmitting.value) return
-        const valid = await validateFormSafely(formDataRef.value, '个人资料表单')
+        const valid = await validateFormSafely(formDataRef.value, translate('validation.profileForm.formName'))
         if (!valid) return
 
         await runWithSubmitLock(async () => {
@@ -154,7 +155,7 @@ export function useProfilePage() {
             if (formData.password) submitData.password = formData.password
 
             await modifyProfile(submitData)
-            ElMessage.success('修改成功')
+            ElMessage.success(translate('common.result.updateSuccess'))
             await pauseSync(PROFILE_SUBMIT_DELAY)
             await getProfile()
             showDrawer.value = false

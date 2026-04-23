@@ -31,7 +31,7 @@
             />
             <el-dropdown v-if="hasMoreButtons" trigger="click" size="small" teleported persistent>
                 <el-button type="primary" link>
-                    更多
+                    {{ t('layout.more') }}
                     <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -47,7 +47,7 @@
                             <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
                                 <xl-icon :icon="String(button.buttonInfo.icon)" />
                             </el-icon>
-                            {{ String(button.buttonInfo?.title || button.text || '操作') }}
+                            {{ String(button.buttonInfo?.title || button.text || t('common.labels.operation')) }}
                         </el-dropdown-item>
                     </el-dropdown-menu>
                 </template>
@@ -85,8 +85,10 @@ import { ArrowDown } from '@element-plus/icons-vue'
 import { Icon as XlIcon } from '@iconify/vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { usePermission } from '@/composables/usePermission'
+import { useI18n } from 'vue-i18n'
 
 const { checkPermission } = usePermission()
+const { t } = useI18n()
 
 interface Props<U> {
     buttons: ActionButtonConfig<U>[] | ((scope: TableScope<U> | U) => ActionButtonConfig<U>[])

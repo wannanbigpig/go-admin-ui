@@ -1,3 +1,5 @@
+import { translate } from '@/locales'
+
 export const LOG_METHOD_OPTIONS = [
     { value: 'POST', label: 'POST' },
     { value: 'GET', label: 'GET' },
@@ -14,12 +16,12 @@ export const LOG_OPERATION_STATUS = {
 }
 
 export const LOG_OPERATION_STATUS_OPTIONS = [
-    { label: '成功', value: LOG_OPERATION_STATUS.SUCCESS, type: 'success' as const },
-    { label: '失败', value: LOG_OPERATION_STATUS.FAILED, type: 'danger' as const },
+    { label: 'common.status.success', value: LOG_OPERATION_STATUS.SUCCESS, type: 'success' as const },
+    { label: 'common.status.failed', value: LOG_OPERATION_STATUS.FAILED, type: 'danger' as const },
 ]
 
 export function getOperationStatusLabel(status: number) {
-    return LOG_OPERATION_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || '未知'
+    return translate(LOG_OPERATION_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
 }
 
 export function getOperationStatusType(status: number) {
@@ -32,12 +34,12 @@ export const LOGIN_STATUS = {
 }
 
 export const LOGIN_STATUS_OPTIONS = [
-    { label: '失败', value: LOGIN_STATUS.FAILED, type: 'danger' as const },
-    { label: '成功', value: LOGIN_STATUS.SUCCESS, type: 'success' as const },
+    { label: 'common.status.failed', value: LOGIN_STATUS.FAILED, type: 'danger' as const },
+    { label: 'common.status.success', value: LOGIN_STATUS.SUCCESS, type: 'success' as const },
 ]
 
 export function getLoginStatusLabel(status: number) {
-    return LOGIN_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || '未知'
+    return translate(LOGIN_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
 }
 
 export function getLoginStatusType(status: number) {

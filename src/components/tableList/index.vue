@@ -52,6 +52,7 @@
 
 <script setup lang="ts" generic="T extends object">
 import { computed, ref } from 'vue'
+import type { TableInstance } from 'element-plus'
 import xlPagination from '@/components/pagination/index.vue'
 import type { TableColumn } from '@/types/common'
 
@@ -87,7 +88,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits(['size-change', 'current-change'])
-const tableRef = ref(null)
+const tableRef = ref<TableInstance>()
 
 const showPagination = computed(() => props.pagination && typeof props.pagination.total === 'number')
 const currentPage = computed(() => props.pagination.currentPage ?? props.pagination.page ?? 1)
@@ -116,5 +117,12 @@ const handlePageChange = (page: number) => {
     props.pagination.pageChange?.(page)
 }
 
-defineExpose({ tableRef })
+const toggleRowExpansion = (row: T, expanded?: boolean) => {
+    tableRef.value?.toggleRowExpansion(row, expanded)
+}
+
+defineExpose({
+    tableRef,
+    toggleRowExpansion,
+})
 </script>
