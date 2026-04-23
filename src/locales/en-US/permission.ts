@@ -26,7 +26,7 @@ export default {
         authModeTip: 'Public: no login required; Login Required: login required; Auth Required: login and API permission required',
         effectiveTip: 'Whether this API is effective in current version',
         weightTip: 'Higher value means higher priority',
-        codeTip: 'CODE generation rule (md5({$method}_{$route}))',
+        codeTip: 'CODE generation rule (md5(method_route))',
         namePlaceholder: 'Please enter API name',
         authModePlaceholder: 'Please select auth mode',
         effectivePlaceholder: 'Please select effective status',

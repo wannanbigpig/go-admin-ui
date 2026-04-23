@@ -26,7 +26,7 @@ export default {
         authModeTip: '公开：无需登录；需登录：登录后可访问；需鉴权：登录后还必须分配 API 权限',
         effectiveTip: '表示该接口在当前版本是否有效',
         weightTip: '权重值越大，排序越靠前',
-        codeTip: 'CODE生成方式（md5({$接口方法}_{$接口地址})）',
+        codeTip: 'CODE生成方式（md5(接口方法_接口地址)）',
         namePlaceholder: '请输入接口名称',
         authModePlaceholder: '请选择鉴权模式',
         effectivePlaceholder: '请选择是否有效',
