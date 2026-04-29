@@ -9,6 +9,7 @@ import profile from './profile'
 import request from './request'
 import validation from './validation'
 import system from './system'
+import about from './about'
 
 export default {
     common,
@@ -20,6 +21,7 @@ export default {
     log,
     profile,
     system,
+    about,
     request,
     validation,
 }

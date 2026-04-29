@@ -8,17 +8,17 @@
 
                 <h1>X-L-Admin</h1>
 
-                <div class="meta-list" aria-label="project meta">
+                <div class="meta-list" :aria-label="t('about.metaAria')">
                     <span class="meta-pill">v{{ version }}</span>
-                    <span class="meta-pill">Vue 3 管理端</span>
+                    <span class="meta-pill">{{ t('about.meta.appType') }}</span>
                 </div>
 
-                <h2>Gin Layout 后台管理前端</h2>
-                <p>X-L-Admin 是一个面向后台管理场景的前端项目，用于承载权限管理、 系统参数、系统字典、任务中心和审计日志等后台能力。</p>
+                <h2>{{ t('about.hero.subtitle') }}</h2>
+                <p>{{ t('about.hero.description') }}</p>
             </header>
 
-            <section class="link-grid" aria-label="project links">
-                <a v-for="item in linkCards" :key="item.title" class="link-card" :href="item.href" target="_blank" rel="noopener noreferrer">
+            <section class="link-grid" :aria-label="t('about.linksAria')">
+                <a v-for="item in linkCards" :key="item.key" class="link-card" :href="item.href" target="_blank" rel="noopener noreferrer">
                     <Icon :icon="item.icon" class="link-icon" :class="item.tone" />
                     <strong>{{ item.title }}</strong>
                     <span>{{ item.text }}</span>
@@ -26,30 +26,40 @@
             </section>
 
             <section class="content-section">
-                <h3>项目用途说明</h3>
+                <h3>{{ t('about.purpose.title') }}</h3>
                 <ul>
-                    <li>可作为 <strong>业务后台、内部管理系统和工程化后台项目</strong> 的前后端基础骨架， 提供认证、RBAC 权限、菜单路由、日志、系统配置和任务中心等通用能力。</li>
                     <li>
-                        项目支持在生产等真实环境中二次开发和落地使用；上线前应结合业务场景补齐
-                        <strong>安全加固、权限验收、配置密钥、审计策略、数据备份和性能评估</strong>。
+                        {{ t('about.purpose.items.foundation.prefix') }}
+                        <strong>{{ t('about.purpose.items.foundation.strong') }}</strong>
+                        {{ t('about.purpose.items.foundation.suffix') }}
                     </li>
-                    <li>默认数据、演示配置和通用规则只提供项目启动基线，生产部署时应按实际组织、 业务流程、数据治理和运维规范进行收敛与替换。</li>
+                    <li>
+                        {{ t('about.purpose.items.production.prefix') }}
+                        <strong>{{ t('about.purpose.items.production.strong') }}</strong>
+                        {{ t('about.purpose.items.production.suffix') }}
+                    </li>
+                    <li>{{ t('about.purpose.items.baseline') }}</li>
                 </ul>
             </section>
 
             <section class="content-section">
-                <h3>使用须知与风险提示</h3>
+                <h3>{{ t('about.risk.title') }}</h3>
                 <ul>
-                    <li>生产环境使用前，请按业务实际情况检查 <strong>权限模型、默认账号、配置密钥和审计策略</strong>。</li>
-                    <li>如因权限配置错误、凭证泄露、服务限流、数据误操作或二次开发缺陷导致问题， 风险由使用者自行承担。</li>
+                    <li>
+                        {{ t('about.risk.items.check.prefix') }}
+                        <strong>{{ t('about.risk.items.check.strong') }}</strong>
+                        {{ t('about.risk.items.check.suffix') }}
+                    </li>
+                    <li>{{ t('about.risk.items.responsibility') }}</li>
                 </ul>
             </section>
 
             <section class="disclaimer">
-                <h3>免责声明</h3>
+                <h3>{{ t('about.disclaimer.title') }}</h3>
                 <p>
-                    本项目按 <strong>“现状”提供</strong>，不附带任何明示或默示担保。 项目可能存在缺陷、安全漏洞或与特定业务场景不匹配的实现；上线前请自行完成代码审查、
-                    安全加固、配置审查、权限验收和数据备份。因使用、依赖、部署、改造或运维本项目导致的问题， 由使用者自行承担。
+                    {{ t('about.disclaimer.prefix') }}
+                    <strong>{{ t('about.disclaimer.strong') }}</strong>
+                    {{ t('about.disclaimer.suffix') }}
                 </p>
             </section>
         </section>
@@ -58,11 +68,13 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import logoSrc from '@/assets/images/logo-frontend.png'
 import appPackage from '../../../package.json'
 
+const { t } = useI18n()
 const version = appPackage.version
 const isDark = ref(false)
 
@@ -85,50 +97,56 @@ onBeforeUnmount(() => {
     themeObserver?.disconnect()
 })
 
-const linkCards = [
+const linkCards = computed(() => [
     {
+        key: 'author',
         icon: 'lucide:user-round',
-        title: '主作者',
-        text: 'wannanbigpig',
+        title: t('about.links.author.title'),
+        text: t('about.links.author.text'),
         href: 'https://github.com/wannanbigpig',
         tone: 'tone-default',
     },
     {
+        key: 'frontendRepo',
         icon: 'lucide:github',
-        title: '前端仓库',
-        text: 'github.com/wannanbigpig/go-admin-ui',
+        title: t('about.links.frontendRepo.title'),
+        text: t('about.links.frontendRepo.text'),
         href: 'https://github.com/wannanbigpig/go-admin-ui',
         tone: 'tone-default',
     },
     {
+        key: 'backendRepo',
         icon: 'lucide:server',
-        title: '后端仓库',
-        text: 'github.com/wannanbigpig/gin-layout',
+        title: t('about.links.backendRepo.title'),
+        text: t('about.links.backendRepo.text'),
         href: 'https://github.com/wannanbigpig/gin-layout',
         tone: 'tone-default',
     },
     {
+        key: 'sponsor',
         icon: 'lucide:heart',
-        title: '赞助支持',
-        text: '后端赞赏文档',
+        title: t('about.links.sponsor.title'),
+        text: t('about.links.sponsor.text'),
         href: 'https://github.com/wannanbigpig/gin-layout/blob/main/docs/DONATE.md',
         tone: 'tone-danger',
     },
     {
+        key: 'frontendFeedback',
         icon: 'lucide:message-square',
-        title: '前端反馈',
-        text: 'Issues / Pull Requests',
+        title: t('about.links.frontendFeedback.title'),
+        text: t('about.links.frontendFeedback.text'),
         href: 'https://github.com/wannanbigpig/go-admin-ui/issues',
         tone: 'tone-primary',
     },
     {
+        key: 'backendFeedback',
         icon: 'lucide:message-circle',
-        title: '后端反馈',
-        text: 'Issues / Pull Requests',
+        title: t('about.links.backendFeedback.title'),
+        text: t('about.links.backendFeedback.text'),
         href: 'https://github.com/wannanbigpig/gin-layout/issues',
         tone: 'tone-primary',
     },
-] as const
+])
 </script>
 
 <style scoped lang="scss">
