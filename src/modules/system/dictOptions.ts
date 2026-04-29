@@ -34,7 +34,6 @@ export const taskRunStatusFallbackOptions: DictOption[] = [
     { value: 'pending', label: translate('system.task.options.status.pending'), tag_type: 'info' },
     { value: 'running', label: translate('system.task.options.status.running'), tag_type: 'warning' },
     { value: 'success', label: translate('system.task.options.status.succeeded'), tag_type: 'success' },
-    { value: 'succeeded', label: translate('system.task.options.status.succeeded'), tag_type: 'success' },
     { value: 'failed', label: translate('system.task.options.status.failed'), tag_type: 'danger' },
     { value: 'retrying', label: translate('system.task.options.status.retrying'), tag_type: 'warning' },
     { value: 'canceled', label: translate('system.task.options.status.canceled'), tag_type: 'info' },

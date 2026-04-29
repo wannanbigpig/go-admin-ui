@@ -2,7 +2,8 @@ import { computed, nextTick, reactive, ref, type Ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
-import { createRole, updateRole, getMenuList, getRoleDetail } from '@/api/permission'
+import { createRole, updateRole, getRoleDetail } from '@/api/permission'
+import { fetchMenuTree } from '@/modules/permission/service'
 import { createRoleForm, createRoleRules, isSuperAdminRole, ROLE_EDIT_TYPE, ROLE_STATUS, ROLE_SUBMIT_DELAY } from '@/modules/role/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import { normalizeDetailData } from '@/modules/shared/response'
@@ -267,16 +268,11 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
     const getMenuTreeData = async () => {
         try {
-            const menuData = await getMenuList({ status: ROLE_STATUS.NORMAL })
-            if (Array.isArray(menuData)) {
-                const clonedData = cloneMenuTree(menuData)
-                updateMenuTreeDisabled(clonedData)
-                menuTreeData.value = clonedData
-                return clonedData
-            }
-            // 如果返回的不是数组，可能是空数组或其他结构
-            menuTreeData.value = []
-            return []
+            const menuData = await fetchMenuTree({ status: ROLE_STATUS.NORMAL })
+            const clonedData = cloneMenuTree(menuData)
+            updateMenuTreeDisabled(clonedData)
+            menuTreeData.value = clonedData
+            return clonedData
         } catch (error) {
             Logger.error('获取菜单树数据失败:', error)
             menuTreeData.value = []

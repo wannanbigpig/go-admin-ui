@@ -1,6 +1,6 @@
 import { get, post } from '@/utils/request'
 import type { PageData } from '@/types/common'
-import type { SystemConfig, DictType, DictItem, DictOption, TaskDefinition, TaskRun, CronTaskState, TaskTriggerPayload, TaskTriggerResult, TaskCancelPayload } from '@/types/system'
+import type { SystemConfig, SystemConfigPayload, DictType, DictItem, DictOption, TaskDefinition, TaskRun, CronTaskState, TaskTriggerPayload, TaskTriggerResult, TaskCancelPayload } from '@/types/system'
 
 export function getSystemConfigList(params?: Record<string, unknown>) {
     return get<PageData<SystemConfig>>('/v1/system/config/list', params)
@@ -14,11 +14,11 @@ export function getSystemConfigValue(params: { config_key: string }) {
     return get<Record<string, unknown>>('/v1/system/config/value', params)
 }
 
-export function createSystemConfig(data: Record<string, unknown>) {
+export function createSystemConfig(data: SystemConfigPayload) {
     return post<unknown>('/v1/system/config/create', data)
 }
 
-export function updateSystemConfig(data: Record<string, unknown>) {
+export function updateSystemConfig(data: SystemConfigPayload) {
     return post<unknown>('/v1/system/config/update', data)
 }
 

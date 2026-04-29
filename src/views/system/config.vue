@@ -119,7 +119,7 @@ import { validateFormSafely } from '@/modules/shared/form'
 import { createLocaleTextMap, createSystemConfigQuery } from '@/modules/system/model'
 import { SYSTEM_DICT_TYPES, commonStatusFallbackOptions, yesNoFallbackOptions } from '@/modules/system/dictOptions'
 import { fetchSystemConfigList, fetchSystemConfigDetail, addSystemConfig, modifySystemConfig, removeSystemConfig, refreshSystemConfig } from '@/modules/system/service'
-import type { SystemConfig } from '@/types/system'
+import type { SystemConfig, SystemConfigPayload } from '@/types/system'
 import type { TableColumn } from '@/types/common'
 import { Logger } from '@/utils/logger'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
@@ -207,6 +207,18 @@ const formRules = computed(() => ({
     ],
 }))
 
+const buildConfigPayload = (): SystemConfigPayload => ({
+    config_key: formData.config_key,
+    config_name_i18n: formData.config_name_i18n,
+    config_value: formData.config_value,
+    value_type: formData.value_type,
+    group_code: formData.group_code,
+    is_sensitive: formData.is_sensitive,
+    status: formData.status,
+    sort: formData.sort,
+    remark: formData.remark,
+})
+
 const resetForm = () => {
     currentId.value = null
     Object.assign(formData, {
@@ -262,17 +274,7 @@ const submitForm = async () => {
     const valid = await validateFormSafely(formRef.value, 'system-config-form')
     if (!valid) return
 
-    const payload = {
-        config_key: formData.config_key,
-        config_name_i18n: formData.config_name_i18n,
-        config_value: formData.config_value,
-        value_type: formData.value_type,
-        group_code: formData.group_code,
-        is_sensitive: formData.is_sensitive,
-        status: formData.status,
-        sort: formData.sort,
-        remark: formData.remark,
-    }
+    const payload = buildConfigPayload()
 
     submitting.value = true
     try {

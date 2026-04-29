@@ -192,7 +192,7 @@ import xlDrawer from '@/components/drawer/index.vue'
 import { useI18n } from 'vue-i18n'
 import { useListPage } from '@/composables/useListPage'
 import { usePermission } from '@/composables/usePermission'
-import { useDictOptions } from '@/composables/useDictOptions'
+import { invalidateDictOptionsCache, useDictOptions } from '@/composables/useDictOptions'
 import { validateFormSafely } from '@/modules/shared/form'
 import { createLocaleTextMap, createDictTypeQuery, createDictItemQuery } from '@/modules/system/model'
 import { SYSTEM_DICT_TYPES, commonStatusFallbackOptions, yesNoFallbackOptions } from '@/modules/system/dictOptions'
@@ -478,6 +478,7 @@ const submitTypeForm = async () => {
             await addDictType(payload)
             ElMessage.success(t('common.result.addSuccess'))
         }
+        invalidateDictOptionsCache()
         showTypeDrawer.value = false
         await getTypeList()
     } catch (error) {
@@ -513,6 +514,7 @@ const submitItemForm = async () => {
             await addDictItem(payload)
             ElMessage.success(t('common.result.addSuccess'))
         }
+        invalidateDictOptionsCache()
         showItemDrawer.value = false
         await handleItemSearch()
     } catch (error) {
@@ -526,6 +528,7 @@ const handleDeleteType = async (row: DictType) => {
     try {
         await ElMessageBox.confirm(t('system.dict.deleteTypeConfirm'), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
         await removeDictType(row.id)
+        invalidateDictOptionsCache()
         ElMessage.success(t('common.result.deleteSuccess'))
         await getTypeList()
         await handleItemSearch()
@@ -538,6 +541,7 @@ const handleDeleteItem = async (row: DictItem) => {
     try {
         await ElMessageBox.confirm(t('system.dict.deleteItemConfirm'), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
         await removeDictItem(row.id)
+        invalidateDictOptionsCache(row.type_code)
         ElMessage.success(t('common.result.deleteSuccess'))
         await handleItemSearch()
     } catch {

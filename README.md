@@ -257,3 +257,7 @@ x-l-admin-vue3/
 -   前端仓库（当前）：https://github.com/wannanbigpig/go-admin-ui
 -   后端仓库：https://github.com/wannanbigpig/gin-layout
 -   Issue：https://github.com/wannanbigpig/go-admin-ui/issues
+
+## 免责声明
+
+本项目按 **“现状”提供**，不附带任何明示或默示担保。项目可能存在缺陷、安全漏洞或与特定业务场景不匹配的实现；上线前请自行完成代码审查、安全加固、配置审查、权限验收和数据备份。因使用、依赖、部署、改造或运维本项目导致的问题，由使用者自行承担。

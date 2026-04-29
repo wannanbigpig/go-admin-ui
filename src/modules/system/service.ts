@@ -2,7 +2,20 @@ import { request } from '@/utils/request'
 import * as systemApi from '@/api/system'
 import * as logApi from '@/api/log'
 import { normalizeDetailData, normalizeListData, normalizeArrayData } from '@/modules/shared/response'
-import type { SystemConfig, DictType, DictItem, DictOption, TaskDefinition, TaskRun, CronTaskState, TaskTriggerPayload, TaskTriggerResult, TaskCancelPayload, RequestLogMaskConfig } from '@/types/system'
+import type {
+    SystemConfig,
+    SystemConfigPayload,
+    DictType,
+    DictItem,
+    DictOption,
+    TaskDefinition,
+    TaskRun,
+    CronTaskState,
+    TaskTriggerPayload,
+    TaskTriggerResult,
+    TaskCancelPayload,
+    RequestLogMaskConfig,
+} from '@/types/system'
 
 export async function fetchSystemConfigList(params?: Record<string, unknown>) {
     const response = await systemApi.getSystemConfigList(params)
@@ -14,11 +27,11 @@ export async function fetchSystemConfigDetail(id: number | string) {
     return normalizeDetailData(response, {} as SystemConfig)
 }
 
-export async function addSystemConfig(data: Record<string, unknown>) {
+export async function addSystemConfig(data: SystemConfigPayload) {
     return systemApi.createSystemConfig(data)
 }
 
-export async function modifySystemConfig(data: Record<string, unknown>) {
+export async function modifySystemConfig(data: SystemConfigPayload) {
     return systemApi.updateSystemConfig(data)
 }
 

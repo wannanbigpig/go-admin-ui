@@ -7,6 +7,7 @@ import type { UserPermission } from '@/types/auth'
 // ==================== 常量定义 ====================
 /** 按钮类型标识 */
 const BUTTON_TYPE = 3
+const BUTTON_TYPE_TEXT = 'button'
 
 /** 动态导入所有视图组件 */
 const views = import.meta.glob('../views/**/*.vue')
@@ -15,6 +16,11 @@ const views = import.meta.glob('../views/**/*.vue')
 const NOT_FOUND_COMPONENT = '../views/other/notFound.vue'
 
 // ==================== 工具函数 ====================
+const isButtonRouteNode = (route: UserPermission) => {
+    const routeType = typeof route.type === 'string' ? route.type.toLowerCase() : route.type
+    return routeType === BUTTON_TYPE || routeType === BUTTON_TYPE_TEXT
+}
+
 const getComponentLoader = (componentPath?: string) => {
     if (!componentPath) return undefined
 
@@ -54,37 +60,39 @@ const getComponentLoader = (componentPath?: string) => {
  * 将后端返回的路由数据转换为 Vue Router 可用的路由配置
  */
 export function convertRoute(routesData: UserPermission[]): RouteRecordRaw[] {
-    return routesData.map((route) => {
-        const converted = {
-            path: route.path || '',
-            name: route.name || route.code,
-            redirect: (route.redirect || '') !== '' ? ({ name: route.redirect } as RouteLocationRaw) : undefined,
-            meta: {
-                title: route.title || '',
-                isDynamic: true,
-                icon: route.icon || '',
-                show: Number(route.is_show) === 1,
-                isAuth: Number(route.is_auth ?? 1) === 1,
-                isNewWindow: Number(route.is_new_window ?? 0) === 1,
-                isExternalLinks: Number(route.is_external_links ?? 0) === 1,
-            },
-        } as RouteRecordRaw & { children?: RouteRecordRaw[]; component?: unknown }
+    return routesData
+        .filter((route) => !isButtonRouteNode(route))
+        .map((route) => {
+            const converted = {
+                path: route.path || '',
+                name: route.name || route.code,
+                redirect: (route.redirect || '') !== '' ? ({ name: route.redirect } as RouteLocationRaw) : undefined,
+                meta: {
+                    title: route.title || '',
+                    isDynamic: true,
+                    icon: route.icon || '',
+                    show: Number(route.is_show) === 1,
+                    isAuth: Number(route.is_auth ?? 1) === 1,
+                    isNewWindow: Number(route.is_new_window ?? 0) === 1,
+                    isExternalLinks: Number(route.is_external_links ?? 0) === 1,
+                },
+            } as RouteRecordRaw & { children?: RouteRecordRaw[]; component?: unknown }
 
-        // 处理组件路径
-        if (route.component) {
-            converted.component = getComponentLoader(route.component)
-        }
-
-        // 处理子路由
-        if (route.children && route.children.length > 0) {
-            const validChildren = route.children.filter((child) => Number(child.type) !== BUTTON_TYPE)
-            if (validChildren.length > 0) {
-                converted.children = convertRoute(validChildren)
+            // 处理组件路径
+            if (route.component) {
+                converted.component = getComponentLoader(route.component)
             }
-        }
 
-        return converted as RouteRecordRaw
-    })
+            // 处理子路由
+            if (route.children && route.children.length > 0) {
+                const validChildren = route.children.filter((child) => !isButtonRouteNode(child))
+                if (validChildren.length > 0) {
+                    converted.children = convertRoute(validChildren)
+                }
+            }
+
+            return converted as RouteRecordRaw
+        })
 }
 
 // ==================== 路由管理 ====================
