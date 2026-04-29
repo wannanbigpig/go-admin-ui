@@ -5,17 +5,17 @@
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item :label="t('log.request.operationName')" prop="operation_name">
-                            <el-input :placeholder="t('log.request.inputOperationName')" v-model.trim="queryWhere.operation_name" clearable></el-input>
+                            <el-input name="operation_name" :placeholder="t('log.request.inputOperationName')" v-model.trim="queryWhere.operation_name" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="5">
                         <el-form-item :label="t('log.request.route')" prop="base_url">
-                            <el-input :placeholder="t('log.request.inputRoute')" v-model.trim="queryWhere.base_url" clearable></el-input>
+                            <el-input name="base_url" :placeholder="t('log.request.inputRoute')" v-model.trim="queryWhere.base_url" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
                         <el-form-item :label="t('log.request.operationStatus')" prop="operation_status">
-                            <el-select v-model="queryWhere.operation_status" clearable :placeholder="t('log.request.selectStatus')">
+                            <el-select name="operation_status" v-model="queryWhere.operation_status" clearable :placeholder="t('log.request.selectStatus')">
                                 <el-option :label="t('common.status.success')" :value="0" />
                                 <el-option :label="t('common.status.failed')" :value="1" />
                             </el-select>
@@ -23,7 +23,15 @@
                     </el-col>
                     <el-col :span="4">
                         <el-form-item :label="t('log.request.operatorAccount')" prop="operator_account">
-                            <el-input :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
+                            <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="4">
+                        <el-form-item :label="t('log.request.highRisk')" prop="is_high_risk">
+                            <el-select name="is_high_risk" v-model="queryWhere.is_high_risk" clearable :placeholder="t('log.request.selectHighRisk')">
+                                <el-option :label="t('common.yes')" :value="1" />
+                                <el-option :label="t('common.no')" :value="0" />
+                            </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
@@ -37,6 +45,10 @@
         </div>
 
         <div class="xl-container">
+            <div class="xl-table-actions">
+                <xl-action-button type="primary" :show-icon="false" :text="t('log.request.export')" :loading="exporting" @click="exportCsv" />
+                <xl-action-button type="primary" :show-icon="false" :text="t('log.request.maskConfig')" @click="openMaskConfigDialog" />
+            </div>
             <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
                 <template #td="{ item, val }">
                     <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
@@ -96,10 +108,34 @@
                         <el-collapse-item v-if="currentDetail.response_body" name="responseBody" :title="t('log.request.responseBody')">
                             <pre class="json-content">{{ formatJson(currentDetail.response_body) }}</pre>
                         </el-collapse-item>
+                        <el-collapse-item v-if="currentDetail.change_diff" name="changeDiff" :title="t('log.request.changeDiff')">
+                            <pre class="json-content">{{ formatJson(currentDetail.change_diff) }}</pre>
+                        </el-collapse-item>
                     </el-collapse>
                 </template>
             </div>
         </el-drawer>
+
+        <xl-drawer v-model="showMaskConfigDialog" :title="t('log.request.maskConfigTitle')" :is-submitting="savingMaskConfig" :on-confirm="saveMaskConfig" :with-reset="false" size="40%">
+            <el-skeleton v-if="maskConfigLoading" animated :rows="8" />
+            <el-form v-else label-position="top">
+                <el-form-item :label="t('log.request.maskCommon')">
+                    <el-input name="mask_common" v-model="maskConfigText.common" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
+                </el-form-item>
+                <el-form-item :label="t('log.request.maskRequestHeader')">
+                    <el-input name="mask_request_header" v-model="maskConfigText.request_header" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
+                </el-form-item>
+                <el-form-item :label="t('log.request.maskRequestBody')">
+                    <el-input name="mask_request_body" v-model="maskConfigText.request_body" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
+                </el-form-item>
+                <el-form-item :label="t('log.request.maskResponseHeader')">
+                    <el-input name="mask_response_header" v-model="maskConfigText.response_header" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
+                </el-form-item>
+                <el-form-item :label="t('log.request.maskResponseBody')">
+                    <el-input name="mask_response_body" v-model="maskConfigText.response_body" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
+                </el-form-item>
+            </el-form>
+        </xl-drawer>
     </div>
 </template>
 
@@ -108,6 +144,7 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
+import xlDrawer from '@/components/drawer/index.vue'
 import { computed, onMounted } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
@@ -132,6 +169,11 @@ const {
     currentDetail,
     detailLoading,
     activeCollapse,
+    showMaskConfigDialog,
+    maskConfigLoading,
+    savingMaskConfig,
+    maskConfigText,
+    exporting,
     formatJson,
     formatIpAddress,
     getMethodTagType,
@@ -139,6 +181,9 @@ const {
     handleSearch,
     getList,
     openDetailDrawer,
+    openMaskConfigDialog,
+    saveMaskConfig,
+    exportCsv,
 } = useRequestLogPage()
 
 onMounted(() => {
@@ -174,6 +219,17 @@ const tableTitle = computed(
                 tag: {
                     0: { type: 'success', text: t('common.status.success') },
                     1: { type: 'danger', text: t('common.status.failed') },
+                },
+            },
+            {
+                prop: 'is_high_risk',
+                h_label: t('log.request.highRisk'),
+                align: 'center',
+                width: 100,
+                customRow: true,
+                tag: {
+                    1: { type: 'danger', text: t('common.yes') },
+                    0: { type: 'info', text: t('common.no') },
                 },
             },
             { prop: 'execution_time', h_label: t('log.request.durationMs'), align: 'center', width: 100 },

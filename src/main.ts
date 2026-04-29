@@ -4,12 +4,14 @@ import 'element-plus/theme-chalk/dark/css-vars.css'
 import '@/assets/styles/index.scss'
 import App from './App.vue'
 import pinia from '@/stores/index'
+import { useAuthStore } from '@/stores/auth'
 import { useSettingStore, type ThemeMode } from '@/stores/setting'
 import router from './router'
+import { addDynamicRoutes, checkDynamicRouteExists } from '@/router/dynamicRoutes'
 import { Icon } from '@iconify/vue'
 import permissionDirective from '@/directives/permission'
 import { Logger, setupGlobalErrorHandlers } from '@/utils/logger'
-import { i18n } from '@/locales'
+import { i18n, ENABLE_I18N, DEFAULT_LOCALE } from '@/locales'
 import type { LocaleCode } from '@/types/i18n'
 
 const app = createApp(App)
@@ -27,7 +29,15 @@ setupGlobalErrorHandlers()
 app.component('AppIcons', Icon)
 // 注册权限指令
 app.directive('permission', permissionDirective)
-app.use(pinia).use(i18n).use(router)
+app.use(pinia).use(i18n)
+
+const authStore = useAuthStore()
+
+if (authStore.token && authStore.routerData.length > 0 && !checkDynamicRouteExists()) {
+    addDynamicRoutes(authStore.routerData)
+}
+
+app.use(router)
 
 const settingStore = useSettingStore()
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -42,8 +52,8 @@ if (!isThemeMode(settingStore.theme)) {
 }
 
 const isLocaleCode = (locale: unknown): locale is LocaleCode => locale === 'zh-CN' || locale === 'en-US'
-if (!isLocaleCode(settingStore.locale)) {
-    settingStore.setLocale('zh-CN')
+if (!isLocaleCode(settingStore.locale) || !ENABLE_I18N) {
+    settingStore.setLocale(DEFAULT_LOCALE)
 }
 
 const applyTheme = () => {

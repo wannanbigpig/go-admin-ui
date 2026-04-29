@@ -3,7 +3,7 @@
  */
 export interface UserPermission {
     id: number
-    parent_id: number
+    pid: number
     title: string
     code: string
     name?: string

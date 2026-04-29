@@ -169,7 +169,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         const topMenuOption: Menu = {
             ...createMenuForm(),
             id: 0,
-            parent_id: 0,
+            pid: 0,
             title: translate('permission.common.topMenu'),
         }
         return [topMenuOption, ...filterMenu(menuList.value)]
@@ -188,7 +188,6 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const resetFormData = () => {
         Object.assign(formData, createMenuForm())
-        formDataRef.value?.clearValidate()
     }
 
     let numericValue: number = 0
@@ -220,24 +219,24 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             {
                 required: true,
                 trigger: ['blur', 'change'],
-                validator: (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
+                validator: (_rule: unknown, _value: unknown, callback: (error?: string | Error) => void) => {
                     const sanitizedTitles = sanitizeTitleI18n(formData.title_i18n)
                     if (Object.keys(sanitizedTitles).length === 0) {
-                        callback(new Error(translate('permission.menu.form.titleI18nRequired')))
+                        callback(translate('permission.menu.form.titleI18nRequired'))
                     } else {
                         callback()
                     }
                 },
             },
         ],
-        parent_id: [
+        pid: [
             {
                 required: true,
                 message: translate('permission.menu.form.parentRequired'),
                 trigger: 'blur',
-                validator: (_rule: unknown, value: unknown, callback: (error?: Error) => void) => {
+                validator: (_rule: unknown, value: unknown, callback: (error?: string | Error) => void) => {
                     if (value === null || value === undefined || value === '') {
-                        callback(new Error(translate('permission.menu.form.parentRequired')))
+                        callback(translate('permission.menu.form.parentRequired'))
                     } else {
                         callback()
                     }
@@ -252,9 +251,9 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         name: [
             {
                 trigger: 'blur',
-                validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+                validator: (_rule: unknown, value: string, callback: (error?: string | Error) => void) => {
                     if (formData.type === MENU_TYPE.MENU && !value) {
-                        callback(new Error(translate('permission.menu.form.routeNameRequired')))
+                        callback(translate('permission.menu.form.routeNameRequired'))
                     }
                     callback()
                 },
@@ -263,16 +262,16 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         component: [
             {
                 trigger: 'blur',
-                validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+                validator: (_rule: unknown, value: string, callback: (error?: string | Error) => void) => {
                     if (formData.type === MENU_TYPE.MENU && formData.is_external_links !== MENU_SWITCH_VALUE.YES && !value) {
-                        callback(new Error(translate('permission.menu.form.componentRequired')))
+                        callback(translate('permission.menu.form.componentRequired'))
                     }
                     if (value) {
                         if (value.startsWith('/')) {
-                            callback(new Error(translate('permission.menu.form.componentCannotStartWithSlash')))
+                            callback(translate('permission.menu.form.componentCannotStartWithSlash'))
                         }
                         if (!/^[a-zA-Z0-9/._-]+$/.test(value)) {
-                            callback(new Error(translate('permission.menu.form.componentInvalid')))
+                            callback(translate('permission.menu.form.componentInvalid'))
                         }
                     }
                     callback()
@@ -282,9 +281,9 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         code: [
             {
                 trigger: 'blur',
-                validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+                validator: (_rule: unknown, value: string, callback: (error?: string | Error) => void) => {
                     if (formData.type === MENU_TYPE.BUTTON && !value) {
-                        callback(new Error(translate('permission.menu.form.permissionCodeRequired')))
+                        callback(translate('permission.menu.form.permissionCodeRequired'))
                     }
                     callback()
                 },
@@ -400,10 +399,6 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             const menuDetail = normalizeDetailData<Menu>(response, {} as Menu)
             if (menuDetail) {
                 Object.assign(formData, pick(menuDetail, formDataKeys))
-                // 确保 parent_id 正确设置（API 可能返回 pid 而不是 parent_id）
-                if (menuDetail.pid !== undefined && menuDetail.parent_id === undefined) {
-                    formData.parent_id = menuDetail.pid
-                }
                 formData.title_i18n = normalizeTitleI18n(menuDetail.title_i18n)
                 const rawPermissionSelection = menuDetail.api_list ?? menuDetail.api_ids ?? menuDetail.permission_ids ?? menuDetail.permission_list
                 formData.api_list = normalizePermissionSelection(rawPermissionSelection).reduce<number[]>((result, item) => {
@@ -453,13 +448,18 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         } else {
             formTitle.value = translate('permission.menu.addTitle')
             if (fixedParentId !== null) {
-                formData.parent_id = fixedParentId
+                formData.pid = fixedParentId
                 isParentFixed.value = true
             } else {
                 isParentFixed.value = false
             }
             showDrawer.value = true
         }
+
+        // 确保在抽屉和表单完全渲染后，清除可能因状态突变引起的验证警告
+        setTimeout(() => {
+            formDataRef.value?.clearValidate()
+        }, 50)
     }
 
     const handleAddChild = (parentRow: Menu) => {

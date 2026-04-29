@@ -1,6 +1,6 @@
 <template>
     <div class="xl-right-content">
-        <el-dropdown size="default" type="default" trigger="click" @command="handleLanguageCommand" class="xl-theme-dropdown" teleported persistent>
+        <el-dropdown v-if="ENABLE_I18N" size="default" type="default" trigger="click" @command="handleLanguageCommand" class="xl-theme-dropdown" teleported persistent>
             <div class="xl-theme-trigger xl-cursor-pointer" :title="t('layout.language.switch')">
                 <el-icon size="20">
                     <i-ant-design-global-outlined />
@@ -18,7 +18,7 @@
         <el-dropdown size="default" type="default" trigger="click" @command="handleThemeCommand" class="xl-theme-dropdown" teleported persistent>
             <div class="xl-theme-trigger xl-cursor-pointer" :title="t('layout.themeSwitch')">
                 <el-icon size="20">
-                    <i-ep-brush />
+                    <i-lucide-sun-moon />
                 </el-icon>
             </div>
             <template #dropdown>
@@ -95,7 +95,7 @@ import { getImageUrl } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import { useI18n } from 'vue-i18n'
 import type { LocaleCode } from '@/types/i18n'
-import { LOCALE_OPTIONS } from '@/locales'
+import { LOCALE_OPTIONS, ENABLE_I18N } from '@/locales'
 import { addDynamicRoutes } from '@/router/dynamicRoutes'
 
 enum COMMAND {

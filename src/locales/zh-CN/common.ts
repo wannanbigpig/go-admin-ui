@@ -45,6 +45,7 @@ export default {
         ipAddress: 'IP地址',
     },
     placeholders: {
+        input: '请输入',
         inputUsername: '请输入用户名',
         inputNickname: '请输入昵称',
         inputPhone: '请输入手机号',
@@ -93,5 +94,10 @@ export default {
         updateSuccess: '修改成功',
         uploadSuccess: '上传成功',
         uploadFailed: '上传失败',
+    },
+    i18n: {
+        dialogTitle: '编辑多语言内容',
+        filledStatus: '已填写 {filled}/{total} 种语言',
+        localePlaceholder: '请输入 {lang} 内容',
     },
 }

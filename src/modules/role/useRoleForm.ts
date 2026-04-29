@@ -81,9 +81,6 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     const resetFormData = () => {
         Object.assign(formData, { ...initialFormData })
         parentRoleMenuList.value = []
-        if (formDataRef.value) {
-            formDataRef.value.clearValidate()
-        }
     }
 
     const saveOriginalData = () => {
@@ -376,6 +373,12 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
         } else {
             updateMenuTreeDisabled(menuTreeData.value)
         }
+
+        setTimeout(() => {
+            if (formDataRef.value) {
+                formDataRef.value.clearValidate()
+            }
+        }, 50)
     }
 
     const handleAddChild = (row: Role) => {

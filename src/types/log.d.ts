@@ -2,11 +2,13 @@ import type { WithId } from './common'
 
 export interface RequestLog extends WithId {
     request_id: string
+    operator_id?: number | string
     operation_name: string
     method: string
     base_url: string
     operation_status: number
     operation_status_name?: string
+    is_high_risk?: number
     operator_account: string
     operator_name: string
     operator_ip: string
@@ -20,9 +22,11 @@ export interface RequestLog extends WithId {
     request_query?: string
     request_headers?: string
     request_body?: string
+    change_diff?: string
     response_header?: string
     response_body?: string
     created_at: string
+    updated_at?: string
 }
 
 export interface LoginLog extends WithId {

@@ -13,12 +13,11 @@
         "lib": ["ESNext", "DOM"],
         "skipLibCheck": true,
         "allowJs": true,
-        "baseUrl": ".",
+        "noEmit": true,
         "types": ["vite/client"],
         "paths": {
-            "@/*": ["src/*"]
-        },
-        "ignoreDeprecations": "6.0"
+            "@/*": ["./src/*"]
+        }
     },
     "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
     "references": [{ "path": "./tsconfig.node.json" }]

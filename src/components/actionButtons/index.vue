@@ -42,7 +42,7 @@
                             :divided="button.divided"
                             :disabled="normalizeDisabled(button)"
                             :title="normalizeTooltip(button) || undefined"
-                            @click="handleClick(button, scope)"
+                            @click="handleClick(button, scope, $event)"
                         >
                             <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
                                 <xl-icon :icon="String(button.buttonInfo.icon)" />
@@ -165,8 +165,14 @@ const hasMoreButtons = computed(() => {
     return moreButtons.value.length > 0
 })
 
-const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T) => {
+const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, event?: Event) => {
     if (normalizeDisabled(button)) return
+
+    // 移除焦点以解决 Element Plus 下拉菜单隐藏时的 aria-hidden 报错
+    if (event?.currentTarget && 'blur' in (event.currentTarget as HTMLElement)) {
+        ;(event.currentTarget as HTMLElement).blur()
+    }
+
     const row = getRowData(scope)
     const index = getIndex(scope)
     if (button.click) {

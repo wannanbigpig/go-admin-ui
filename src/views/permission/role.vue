@@ -14,7 +14,7 @@
         </div>
 
         <div class="xl-container">
-            <div style="display: flex; align-items: center; margin-bottom: 10px">
+            <div class="xl-table-actions">
                 <xl-action-button v-permission="'role:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1)" />
             </div>
             <div>

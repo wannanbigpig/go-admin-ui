@@ -31,9 +31,6 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
 
     const resetFormData = () => {
         Object.assign(formData, { ...createDepartmentForm() })
-        if (formDataRef.value) {
-            formDataRef.value.clearValidate()
-        }
     }
 
     const saveOriginalData = () => {
@@ -89,6 +86,12 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
         }
 
         showDrawer.value = true
+
+        setTimeout(() => {
+            if (formDataRef.value) {
+                formDataRef.value.clearValidate()
+            }
+        }, 50)
     }
 
     const editConfirmSubmit = async () => {

@@ -34,7 +34,6 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
 
     const resetFormData = () => {
         Object.assign(formData, createApiPermissionForm())
-        formDataRef.value?.clearValidate()
     }
 
     const handleSortNumberChange = (value: string | number) => {
@@ -74,6 +73,10 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
         }
 
         showDrawer.value = true
+
+        setTimeout(() => {
+            formDataRef.value?.clearValidate()
+        }, 50)
     }
 
     const editConfirmSubmit = async () => {

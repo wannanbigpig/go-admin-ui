@@ -8,6 +8,7 @@ import log from './log'
 import profile from './profile'
 import request from './request'
 import validation from './validation'
+import system from './system'
 
 export default {
     common,
@@ -18,6 +19,7 @@ export default {
     permission,
     log,
     profile,
+    system,
     request,
     validation,
 }

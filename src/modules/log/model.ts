@@ -50,11 +50,14 @@ export function createRequestLogQuery() {
     return {
         page: 1,
         per_page: 10,
+        operator_id: null,
         operation_name: null,
         method: null,
         base_url: null,
         operation_status: null,
+        is_high_risk: null,
         operator_account: null,
+        ip: null,
         start_time: null,
         end_time: null,
     }

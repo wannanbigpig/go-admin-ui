@@ -110,5 +110,5 @@ export function removeDynamicRoute() {
 }
 
 export function checkDynamicRouteExists() {
-    return router.getRoutes().some((route) => route.name === 'Home')
+    return router.getRoutes().some((route) => route.meta?.isDynamic === true)
 }

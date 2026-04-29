@@ -13,7 +13,7 @@ export function createEmptyTitleI18n(): Record<string, string> {
 export function createMenuForm(): Menu {
     return {
         id: 0,
-        parent_id: 0,
+        pid: 0,
         title_i18n: createEmptyTitleI18n(),
         code: '',
         name: '',

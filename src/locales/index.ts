@@ -3,7 +3,8 @@ import zhCN from './zh-CN'
 import enUS from './en-US'
 import type { LocaleCode } from '@/types/i18n'
 
-export const DEFAULT_LOCALE: LocaleCode = 'zh-CN'
+export const ENABLE_I18N = import.meta.env.VITE_ENABLE_I18N === 'true'
+export const DEFAULT_LOCALE: LocaleCode = (import.meta.env.VITE_DEFAULT_LOCALE as LocaleCode) || 'zh-CN'
 export const FALLBACK_LOCALE: LocaleCode = 'zh-CN'
 
 export const localeMessages = {

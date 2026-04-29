@@ -2,6 +2,7 @@
     <el-date-picker
         v-model="modelValue"
         type="datetimerange"
+        :name="['start_date', 'end_date']"
         :range-separator="t('common.to')"
         :start-placeholder="t('common.date.start')"
         :end-placeholder="t('common.date.end')"

@@ -107,3 +107,48 @@
         margin-right: 3px;
     }
 }
+
+// ==================== 操作栏工具类 ====================
+.xl-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+// ==================== 选项卡样式 ====================
+.xl-tabs {
+    &.xl-container {
+        padding: 0 20px;
+    }
+
+    .el-tabs__header {
+        margin: 0;
+    }
+
+    .el-tabs__nav-wrap::after {
+        height: 1px;
+        background-color: var(--el-border-color-extra-light);
+    }
+
+    .el-tabs__item {
+        height: 50px;
+        line-height: 50px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+
+        &.is-active {
+            font-weight: 600;
+        }
+    }
+
+    .el-tabs__active-bar {
+        height: 2px;
+        border-radius: 2px;
+    }
+
+    .el-tabs__content {
+        display: none;
+    }
+}

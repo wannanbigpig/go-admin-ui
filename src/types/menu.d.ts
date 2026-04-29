@@ -1,8 +1,8 @@
 import type { WithId, WithTimestamp } from './common'
 
 export interface Menu extends WithId, WithTimestamp {
-    parent_id: number | string
-    pid?: number | string // 别名，保持兼容性
+    pid: number | string
+    parent_id?: number | string // 别名，保持兼容性
     title?: string
     title_i18n?: Record<string, string>
     code: string

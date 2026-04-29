@@ -45,6 +45,7 @@ export default {
         ipAddress: 'IP Address',
     },
     placeholders: {
+        input: 'Please input',
         inputUsername: 'Please enter username',
         inputNickname: 'Please enter nickname',
         inputPhone: 'Please enter phone number',
@@ -93,5 +94,10 @@ export default {
         updateSuccess: 'Updated successfully',
         uploadSuccess: 'Upload successful',
         uploadFailed: 'Upload failed',
+    },
+    i18n: {
+        dialogTitle: 'Edit multi-language content',
+        filledStatus: '{filled}/{total} languages filled',
+        localePlaceholder: 'Please enter {lang} content',
     },
 }

@@ -110,20 +110,3 @@ const handleClick = (event: MouseEvent) => {
     cursor: not-allowed;
 }
 </style>
-
-<style lang="scss">
-.xl-action-button-wrapper + .el-button,
-.el-button + .xl-action-button-wrapper {
-    margin-left: 12px;
-}
-.xl-action-button-wrapper .el-button {
-    margin-left: 0;
-    margin-right: 0;
-}
-.xl-action-button-tooltip-trigger .el-button.is-disabled {
-    pointer-events: none;
-    & > * {
-        pointer-events: none;
-    }
-}
-</style>

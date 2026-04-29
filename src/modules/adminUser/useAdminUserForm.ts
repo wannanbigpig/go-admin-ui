@@ -152,7 +152,6 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
     const resetFormData = () => {
         Object.assign(formData, { ...initialFormData })
-        formDataRef.value?.clearValidate()
     }
 
     const extractDeptIds = (
@@ -229,6 +228,10 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
         }
 
         showDrawer.value = true
+
+        setTimeout(() => {
+            formDataRef.value?.clearValidate()
+        }, 50)
     }
 
     const editConfirmSubmit = async () => {

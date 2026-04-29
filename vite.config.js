@@ -77,7 +77,7 @@ export default defineConfig(({ mode }) => {
                 resolvers: [
                     ElementPlusResolver(),
                     IconsResolver({
-                        enabledCollections: ['ep', 'ant-design'], // 启用的图标集合
+                        enabledCollections: ['ep', 'ant-design', 'lucide'], // 启用的图标集合
                         customCollections: ['custom'], // 自定义图标集合
                     }),
                 ],
@@ -159,13 +159,10 @@ export default defineConfig(({ mode }) => {
             },
             outDir: 'dist',
             // 生产环境移除 console 日志
-            minify: 'terser',
-            terserOptions: {
-                compress: {
-                    drop_console: true,
-                    drop_debugger: true,
-                },
-            },
+            minify: 'esbuild',
+        },
+        esbuild: {
+            drop: mode === 'production' ? ['console', 'debugger'] : [],
         },
 
         // ==================== CSS 配置 ====================

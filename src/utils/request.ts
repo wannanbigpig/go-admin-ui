@@ -82,6 +82,10 @@ service.interceptors.request.use(
  */
 service.interceptors.response.use(
     (response: AxiosResponse<ApiResponse<unknown>>) => {
+        if (response.config?.responseType === 'blob' || response.data instanceof Blob) {
+            return response.data as unknown as AxiosResponse
+        }
+
         const authStore = useAuthStore()
 
         // 处理 token 刷新
@@ -107,7 +111,7 @@ service.interceptors.response.use(
         }
 
         // 返回业务数据，避免将 AxiosResponse 结构透传到业务层
-        return (response.data?.data ?? response.data) as AxiosResponse
+        return response.data.data as unknown as AxiosResponse
     },
     (error) => {
         const authStore = useAuthStore()
@@ -156,10 +160,10 @@ service.interceptors.response.use(
  * @param {string} url - 请求地址
  * @param {string} method - HTTP 方法（GET、POST、PUT、DELETE 等）
  * @param {AxiosRequestConfig} options - 请求配置选项（data、params、headers 等）
- * @returns {Promise<T>} 请求 Promise
+ * @returns {Promise<T>} 业务数据 Promise (ApiResponse.data)
  */
 export function request<T = unknown>(url: string, method: string, options: AxiosRequestConfig = {}): Promise<T> {
-    return service.request<T, T>({
+    return service.request<ApiResponse<T>, T>({
         url,
         method: method.toUpperCase(),
         ...options,
