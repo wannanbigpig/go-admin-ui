@@ -68,10 +68,7 @@
                 <el-row>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.avatar')" prop="avatar">
-                            <el-upload class="avatar-uploader" :show-file-list="false" :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload" :http-request="customUpload">
-                                <img w-full v-if="formData.avatar" :src="getImageUrl(formData.avatar)" class="avatar" />
-                                <el-icon v-else class="avatar-uploader-icon"><i-ep-plus /></el-icon>
-                            </el-upload>
+                            <FilePicker v-model="formData.avatar" accept="image/*" :max-size="PROFILE_AVATAR_CONFIG.MAX_SIZE" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -214,28 +211,13 @@
 
 <script setup lang="ts">
 import xlDrawer from '@/components/drawer/index.vue'
+import FilePicker from '@/components/filePicker/index.vue'
 import { getImageUrl } from '@/utils/helper'
-import { PROFILE_STATUS } from '@/modules/profile/model'
+import { PROFILE_AVATAR_CONFIG, PROFILE_STATUS } from '@/modules/profile/model'
 import { useProfilePage } from '@/modules/profile/useProfilePage'
 import { useI18n } from 'vue-i18n'
 
 const STATUS = PROFILE_STATUS
 const { t } = useI18n()
-const {
-    userInfo,
-    showDrawer,
-    formDataRef,
-    formTitle,
-    isSubmitting,
-    formKey,
-    formData,
-    formRules,
-    formatDepartments,
-    formatDateTime,
-    handleAvatarSuccess,
-    beforeAvatarUpload,
-    customUpload,
-    openEditDrawer,
-    editConfirmSubmit,
-} = useProfilePage()
+const { userInfo, showDrawer, formDataRef, formTitle, isSubmitting, formKey, formData, formRules, formatDepartments, formatDateTime, openEditDrawer, editConfirmSubmit } = useProfilePage()
 </script>

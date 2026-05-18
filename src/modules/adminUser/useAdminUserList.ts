@@ -10,6 +10,7 @@ import type { FormInstance } from 'element-plus'
 export function useAdminUserList() {
     const queryFormRef = ref<FormInstance>()
     const departmentOptions = ref<{ label: string; value: string | number }[]>([])
+    const fullInfoCache = new Map<string, unknown>()
     const queryWhere = reactive({
         page: 1,
         per_page: 10,
@@ -57,7 +58,9 @@ export function useAdminUserList() {
         }),
         fetcher: async (params) => {
             try {
-                return await fetchAdminUserList(params)
+                const result = await fetchAdminUserList(params)
+                fullInfoCache.clear()
+                return result
             } catch (error) {
                 Logger.error('获取管理员列表失败:', error)
                 return {
@@ -71,10 +74,12 @@ export function useAdminUserList() {
     })
 
     const createToggleFullInfo = (field: string, oldField: string, fetchFn: (id: string | number) => Promise<Record<string, unknown>>) => {
-        return (row: AdminUser) => {
+        return async (row: AdminUser) => {
             const r = row as AdminUser & Record<string, unknown>
             const showField = `showFull${field.charAt(0).toUpperCase() + field.slice(1)}`
-            r[showField] = !r[showField]
+            const loadingField = `${showField}Loading`
+            const cacheKey = `${r.id}:${field}`
+            if (r[loadingField]) return
 
             const swapValues = () => {
                 const oldValue = r[oldField]
@@ -83,18 +88,41 @@ export function useAdminUserList() {
             }
 
             if (r[showField]) {
-                if (r[oldField] === undefined) {
-                    r[oldField] = r[field]
-                    fetchFn(r.id).then((detail) => {
-                        r[field] = detail[field]
-                    })
-                } else {
-                    swapValues()
-                }
-            } else {
                 swapValues()
+                r[showField] = false
+                return
+            }
+
+            if (r[oldField] === undefined) {
+                r[oldField] = r[field]
+            }
+
+            if (fullInfoCache.has(cacheKey)) {
+                r[field] = fullInfoCache.get(cacheKey)
+                r[showField] = true
+                return
+            }
+
+            r[loadingField] = true
+            try {
+                const detail = await fetchFn(r.id)
+                const fullValue = detail[field]
+                fullInfoCache.set(cacheKey, fullValue)
+                r[field] = fullValue
+                r[showField] = true
+            } catch (error) {
+                Logger.error('获取完整敏感信息失败:', error)
+                r[field] = r[oldField]
+                r[showField] = false
+            } finally {
+                r[loadingField] = false
             }
         }
+    }
+
+    const isFullInfoLoading = (row: AdminUser, field: string) => {
+        const showField = `showFull${field.charAt(0).toUpperCase() + field.slice(1)}`
+        return Boolean((row as Record<string, unknown>)[`${showField}Loading`])
     }
 
     return {
@@ -108,6 +136,7 @@ export function useAdminUserList() {
         getDepartmentOptions,
         handleSearch,
         createToggleFullInfo,
+        isFullInfoLoading,
         fetchAdminUserFullPhone,
         fetchAdminUserFullEmail,
     }

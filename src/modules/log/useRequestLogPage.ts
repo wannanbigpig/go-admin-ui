@@ -1,24 +1,16 @@
 import { reactive, ref } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { Logger } from '@/utils/logger'
 import { useListPage } from '@/composables/useListPage'
-import { fetchRequestLogList, fetchRequestLogDetail, fetchRequestLogMaskConfig, saveRequestLogMaskConfig, exportRequestLog } from '@/modules/log/service'
+import { fetchRequestLogList, fetchRequestLogDetail, exportRequestLog } from '@/modules/log/service'
 import { createRequestLogQuery } from '@/modules/log/model'
 import { applyDateRangeToQuery, formatIpAddress, formatJsonContent } from '@/modules/log/helpers'
 import type { RequestLog } from '@/types/log'
-import type { RequestLogMaskConfig } from '@/types/system'
 import { translate } from '@/locales'
 
-const MASK_CONFIG_FIELDS: Array<keyof RequestLogMaskConfig> = ['common', 'request_header', 'request_body', 'response_header', 'response_body']
-
-function parseMaskConfigText(text: string) {
-    return text
-        .split('\n')
-        .map((item) => item.trim())
-        .filter((item) => item !== '')
-}
-
 export function useRequestLogPage() {
+    const router = useRouter()
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive(createRequestLogQuery())
     const dateRange = ref<[string, string] | []>([])
@@ -28,17 +20,7 @@ export function useRequestLogPage() {
     const detailLoading = ref(false)
     const activeCollapse = ref(['requestBody', 'responseBody'])
 
-    const showMaskConfigDialog = ref(false)
-    const maskConfigLoading = ref(false)
-    const savingMaskConfig = ref(false)
     const exporting = ref(false)
-    const maskConfigText = reactive<Record<keyof RequestLogMaskConfig, string>>({
-        common: '',
-        request_header: '',
-        request_body: '',
-        response_header: '',
-        response_body: '',
-    })
 
     const buildQueryParams = (query: typeof queryWhere) => {
         const params = { ...query }
@@ -84,45 +66,8 @@ export function useRequestLogPage() {
         }
     }
 
-    const loadMaskConfig = async () => {
-        maskConfigLoading.value = true
-        try {
-            const config = await fetchRequestLogMaskConfig()
-            MASK_CONFIG_FIELDS.forEach((field) => {
-                maskConfigText[field] = (config[field] || []).join('\n')
-            })
-        } catch (error) {
-            Logger.error('获取请求日志脱敏配置失败:', error)
-        } finally {
-            maskConfigLoading.value = false
-        }
-    }
-
     const openMaskConfigDialog = async () => {
-        showMaskConfigDialog.value = true
-        await loadMaskConfig()
-    }
-
-    const saveMaskConfig = async () => {
-        if (savingMaskConfig.value) return
-
-        savingMaskConfig.value = true
-        try {
-            const payload = {
-                common: parseMaskConfigText(maskConfigText.common),
-                request_header: parseMaskConfigText(maskConfigText.request_header),
-                request_body: parseMaskConfigText(maskConfigText.request_body),
-                response_header: parseMaskConfigText(maskConfigText.response_header),
-                response_body: parseMaskConfigText(maskConfigText.response_body),
-            }
-            await saveRequestLogMaskConfig(payload)
-            ElMessage.success(translate('common.result.updateSuccess'))
-            showMaskConfigDialog.value = false
-        } catch (error) {
-            Logger.error('更新请求日志脱敏配置失败:', error)
-        } finally {
-            savingMaskConfig.value = false
-        }
+        await router.push({ path: '/system/config', query: { tab: 'audit_mask' } })
     }
 
     const exportCsv = async () => {
@@ -178,10 +123,6 @@ export function useRequestLogPage() {
         currentDetail,
         detailLoading,
         activeCollapse,
-        showMaskConfigDialog,
-        maskConfigLoading,
-        savingMaskConfig,
-        maskConfigText,
         exporting,
         formatJson: formatJsonContent,
         formatIpAddress,
@@ -189,7 +130,6 @@ export function useRequestLogPage() {
         getResponseStatusTagType,
         openDetailDrawer,
         openMaskConfigDialog,
-        saveMaskConfig,
         exportCsv,
     }
 }

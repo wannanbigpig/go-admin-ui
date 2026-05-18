@@ -6,7 +6,7 @@
         </el-tabs>
 
         <div v-if="activeTab === 'type'" class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="typeQueryFormRef" :model="typeQuery" @submit.prevent="handleTypeSearch" @keydown.enter.prevent="handleTypeSearch">
+            <el-form class="xl-search-form" ref="typeQueryFormRef" :model="typeQuery" @submit.prevent="handleTypeSearch" @keydown.enter.prevent="handleTypeSearch">
                 <el-row id="typeSearchForm" :gutter="20">
                     <el-col :span="5">
                         <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
@@ -31,7 +31,7 @@
         </div>
 
         <div v-else class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="itemQueryFormRef" :model="itemQuery" @submit.prevent="handleItemSearch" @keydown.enter.prevent="handleItemSearch">
+            <el-form class="xl-search-form" ref="itemQueryFormRef" :model="itemQuery" @submit.prevent="handleItemSearch" @keydown.enter.prevent="handleItemSearch">
                 <el-row id="itemSearchForm" :gutter="20">
                     <el-col :span="6">
                         <el-form-item :label="t('system.dict.typeCode')" prop="type_code">

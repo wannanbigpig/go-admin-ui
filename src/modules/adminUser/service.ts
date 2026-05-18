@@ -41,7 +41,7 @@ export async function updateAdminUserRoles(userId: number | string, roleIds: num
 // 补充缺失的方法（保持与原有 JS 代码兼容）
 export async function fetchAdminUserFullPhone(id: number | string) {
     const response = await adminUserApi.getFullPhone({ id })
-    return normalizeDetailData(response, { phone: '' })
+    return normalizeDetailData(response, { phone_number: '' })
 }
 
 export async function fetchAdminUserFullEmail(id: number | string) {

@@ -41,7 +41,7 @@ function handlePermission(el: PermissionHTMLElement, binding: DirectiveBinding, 
         if (!hasAuth) {
             if (modifiers.disabled) {
                 disableElement(el)
-            } else if (modifiers.hide) {
+            } else if (modifiers.hide || !modifiers.remove) {
                 hideElement(el)
             } else if (isMounted) {
                 removeElement(el)
@@ -59,6 +59,9 @@ function handlePermission(el: PermissionHTMLElement, binding: DirectiveBinding, 
 }
 
 function disableElement(el: PermissionHTMLElement) {
+    if (el.hasAttribute('data-permission-disabled')) {
+        return
+    }
     if (!el.hasAttribute('data-original-disabled')) {
         el.setAttribute('data-original-disabled', el.disabled ? 'true' : 'false')
     }

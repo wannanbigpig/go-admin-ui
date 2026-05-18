@@ -1,7 +1,7 @@
 import * as logApi from '@/api/log'
 import { request } from '@/utils/request'
 import { normalizeListData, normalizeDetailData } from '@/modules/shared/response'
-import type { RequestLog, LoginLog } from '@/types/log'
+import type { RequestLog, LoginLog, OnlineSession } from '@/types/log'
 import type { RequestLogMaskConfig } from '@/types/system'
 
 export async function fetchRequestLogList(params?: Record<string, unknown>) {
@@ -38,6 +38,19 @@ export async function fetchRequestLogMaskConfig() {
 export async function saveRequestLogMaskConfig(data: RequestLogMaskConfig) {
     const response = await logApi.updateRequestLogMaskConfig(data)
     return normalizeDetailData(response, data)
+}
+
+export async function fetchOnlineSessionList(params?: Record<string, unknown>) {
+    const response = await logApi.getOnlineSessionList(params)
+    return normalizeListData<OnlineSession>(response)
+}
+
+export async function revokeOnlineSessionById(id: number | string, reason = '') {
+    const payload: { id: number | string; reason?: string } = { id }
+    if (reason.trim()) {
+        payload.reason = reason.trim()
+    }
+    return logApi.revokeOnlineSession(payload)
 }
 
 export async function exportRequestLog(params?: Record<string, unknown>) {

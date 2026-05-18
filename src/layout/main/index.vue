@@ -10,7 +10,14 @@
         >
             <div class="xl-main-inner" :key="refreshStore.key">
                 <div class="xl-main-content">
-                    <component :is="Component" @vue:updated="renderComplete" />
+                    <Suspense>
+                        <component :is="Component" @vue:updated="renderComplete" />
+                        <template #fallback>
+                            <div class="xl-main-loading">
+                                <el-skeleton :rows="8" animated />
+                            </div>
+                        </template>
+                    </Suspense>
                 </div>
                 <!-- 底部说明 -->
                 <div class="xl-main-footer">
@@ -90,6 +97,12 @@ watch(
 
 .xl-main-content {
     flex: 1;
+}
+
+.xl-main-loading {
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--xl-bg-color);
 }
 
 .xl-main-footer {

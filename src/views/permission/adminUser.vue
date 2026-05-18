@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
+            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item :label="t('common.labels.username')" prop="username">
@@ -46,8 +46,9 @@
                         </el-tag>
                         <div v-else-if="item.eye" style="display: flex; align-items: center; gap: 3px">
                             <span>{{ val || '-' }}</span>
-                            <el-icon v-show="val !== ''" size="small" class="xl-cursor-hover" @click="item.getFullInfo?.(row, item)">
-                                <i-ant-design-eye-invisible-outlined v-if="isFieldRevealed(row, String(item.prop))" />
+                            <el-icon v-show="hasSensitiveValue(row, String(item.prop))" size="small" class="xl-cursor-hover" @click="item.getFullInfo?.(row, item)">
+                                <Loading v-if="isFullInfoLoading(row, String(item.prop))" />
+                                <i-ant-design-eye-invisible-outlined v-else-if="isFieldRevealed(row, String(item.prop))" />
                                 <i-ant-design-eye-outlined v-else />
                             </el-icon>
                         </div>
@@ -70,10 +71,7 @@
                 <el-row>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.avatar')" prop="avatar">
-                            <el-upload class="avatar-uploader" :show-file-list="false" :before-upload="beforeAvatarUpload" :http-request="customUpload">
-                                <img v-if="formData.avatar" :src="getImageUrl(formData.avatar)" class="avatar" />
-                                <el-icon v-else class="avatar-uploader-icon"><i-ep-plus /></el-icon>
-                            </el-upload>
+                            <FilePicker v-model="formData.avatar" accept="image/*" :max-size="ADMIN_USER_AVATAR_CONFIG.MAX_SIZE" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -161,12 +159,14 @@ import xlTableList from '@/components/tableList/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
+import FilePicker from '@/components/filePicker/index.vue'
 import { getImageUrl } from '@/utils/helper'
 import { onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
-import { ADMIN_USER_STATUS, isRootAdminUser } from '@/modules/adminUser/model'
+import { ADMIN_USER_AVATAR_CONFIG, ADMIN_USER_STATUS, isRootAdminUser } from '@/modules/adminUser/model'
 import { removeAdminUser } from '@/modules/adminUser/service'
 import { useAdminUserList } from '@/modules/adminUser/useAdminUserList'
 import { useAdminUserForm } from '@/modules/adminUser/useAdminUserForm'
@@ -184,12 +184,23 @@ const { t } = useI18n()
 
 const STATUS = ADMIN_USER_STATUS
 
-const { loading, adminUserList, departmentOptions, queryFormRef, queryWhere, pagination, getList, getDepartmentOptions, handleSearch, createToggleFullInfo, fetchAdminUserFullPhone, fetchAdminUserFullEmail } =
-    useAdminUserList()
+const {
+    loading,
+    adminUserList,
+    departmentOptions,
+    queryFormRef,
+    queryWhere,
+    pagination,
+    getList,
+    getDepartmentOptions,
+    handleSearch,
+    createToggleFullInfo,
+    isFullInfoLoading,
+    fetchAdminUserFullPhone,
+    fetchAdminUserFullEmail,
+} = useAdminUserList()
 
-const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, formData, isEditMode, isRootAdminEditing, getDynamicRules, beforeAvatarUpload, customUpload, openEditDrawer, editConfirmSubmit } = useAdminUserForm(
-    { refreshList: getList }
-)
+const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, formData, isEditMode, isRootAdminEditing, getDynamicRules, openEditDrawer, editConfirmSubmit } = useAdminUserForm({ refreshList: getList })
 
 const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentAdminUserName, roleOptions, roleOptionsLoading, bindRoleData, filterRole, handleBindRole, bindRoleConfirmSubmit } = useAdminUserRoleBinding({
     refreshList: getList,
@@ -245,6 +256,11 @@ const handleDelete = async (row: AdminUser) => {
 const isFieldRevealed = (row: AdminUser, field: string) => {
     const showField = `showFull${field.charAt(0).toUpperCase()}${field.slice(1)}`
     return Boolean((row as Record<string, unknown>)[showField])
+}
+
+const hasSensitiveValue = (row: AdminUser, field: string) => {
+    const value = (row as Record<string, unknown>)[field]
+    return value !== null && value !== undefined && String(value).trim() !== ''
 }
 
 onMounted(() => {

@@ -46,26 +46,33 @@ const getComponentLoader = (componentPath?: string) => {
         }
     }
 
-    Logger.warn(`组件路径未找到: ${componentPath}，尝试直接导入: ${normalizedPath}`)
-
-    return () => {
-        return import(/* @vite-ignore */ normalizedPath).catch((error) => {
-            Logger.error(`导入组件失败: ${normalizedPath}`, error)
-            return import(/* @vite-ignore */ NOT_FOUND_COMPONENT)
-        })
-    }
+    Logger.warn(`组件路径未找到: ${componentPath}，使用默认未找到页面`)
+    return views[NOT_FOUND_COMPONENT]
 }
 
 /**
  * 将后端返回的路由数据转换为 Vue Router 可用的路由配置
  */
-export function convertRoute(routesData: UserPermission[]): RouteRecordRaw[] {
+export function convertRoute(routesData: UserPermission[], seenNames = new Set<string>(), seenPaths = new Set<string>()): RouteRecordRaw[] {
     return routesData
         .filter((route) => !isButtonRouteNode(route))
-        .map((route) => {
+        .flatMap((route) => {
+            const routeName = route.name || route.code
+            const routePath = route.path || ''
+            if (routeName && seenNames.has(routeName)) {
+                Logger.warn(`动态路由名称重复，已跳过: ${routeName}`)
+                return []
+            }
+            if (routePath && seenPaths.has(routePath)) {
+                Logger.warn(`动态路由路径重复，已跳过: ${routePath}`)
+                return []
+            }
+            if (routeName) seenNames.add(routeName)
+            if (routePath) seenPaths.add(routePath)
+
             const converted = {
-                path: route.path || '',
-                name: route.name || route.code,
+                path: routePath,
+                name: routeName,
                 redirect: (route.redirect || '') !== '' ? ({ name: route.redirect } as RouteLocationRaw) : undefined,
                 meta: {
                     title: route.title || '',
@@ -87,11 +94,11 @@ export function convertRoute(routesData: UserPermission[]): RouteRecordRaw[] {
             if (route.children && route.children.length > 0) {
                 const validChildren = route.children.filter((child) => !isButtonRouteNode(child))
                 if (validChildren.length > 0) {
-                    converted.children = convertRoute(validChildren)
+                    converted.children = convertRoute(validChildren, seenNames, seenPaths)
                 }
             }
 
-            return converted as RouteRecordRaw
+            return [converted as RouteRecordRaw]
         })
 }
 

@@ -1,9 +1,9 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
+            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
-                    <el-col :span="4">
+                    <el-col :span="5">
                         <el-form-item :label="t('log.request.operationName')" prop="operation_name">
                             <el-input name="operation_name" :placeholder="t('log.request.inputOperationName')" v-model.trim="queryWhere.operation_name" clearable></el-input>
                         </el-form-item>
@@ -13,17 +13,17 @@
                             <el-input name="base_url" :placeholder="t('log.request.inputRoute')" v-model.trim="queryWhere.base_url" clearable></el-input>
                         </el-form-item>
                     </el-col>
+                    <el-col :span="5">
+                        <el-form-item :label="t('log.request.operatorAccount')" prop="operator_account">
+                            <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
+                        </el-form-item>
+                    </el-col>
                     <el-col :span="4">
                         <el-form-item :label="t('log.request.operationStatus')" prop="operation_status">
                             <el-select name="operation_status" v-model="queryWhere.operation_status" clearable :placeholder="t('log.request.selectStatus')">
                                 <el-option :label="t('common.status.success')" :value="0" />
                                 <el-option :label="t('common.status.failed')" :value="1" />
                             </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('log.request.operatorAccount')" prop="operator_account">
-                            <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="4">
@@ -39,7 +39,7 @@
                             <xl-date-range-picker v-model="dateRange" />
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="6" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -115,27 +115,6 @@
                 </template>
             </div>
         </el-drawer>
-
-        <xl-drawer v-model="showMaskConfigDialog" :title="t('log.request.maskConfigTitle')" :is-submitting="savingMaskConfig" :on-confirm="saveMaskConfig" :with-reset="false" size="40%">
-            <el-skeleton v-if="maskConfigLoading" animated :rows="8" />
-            <el-form v-else label-position="top">
-                <el-form-item :label="t('log.request.maskCommon')">
-                    <el-input name="mask_common" v-model="maskConfigText.common" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
-                </el-form-item>
-                <el-form-item :label="t('log.request.maskRequestHeader')">
-                    <el-input name="mask_request_header" v-model="maskConfigText.request_header" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
-                </el-form-item>
-                <el-form-item :label="t('log.request.maskRequestBody')">
-                    <el-input name="mask_request_body" v-model="maskConfigText.request_body" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
-                </el-form-item>
-                <el-form-item :label="t('log.request.maskResponseHeader')">
-                    <el-input name="mask_response_header" v-model="maskConfigText.response_header" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
-                </el-form-item>
-                <el-form-item :label="t('log.request.maskResponseBody')">
-                    <el-input name="mask_response_body" v-model="maskConfigText.response_body" type="textarea" :rows="3" :placeholder="t('log.request.maskPlaceholder')" />
-                </el-form-item>
-            </el-form>
-        </xl-drawer>
     </div>
 </template>
 
@@ -144,7 +123,6 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import xlDrawer from '@/components/drawer/index.vue'
 import { computed, onMounted } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
@@ -169,10 +147,6 @@ const {
     currentDetail,
     detailLoading,
     activeCollapse,
-    showMaskConfigDialog,
-    maskConfigLoading,
-    savingMaskConfig,
-    maskConfigText,
     exporting,
     formatJson,
     formatIpAddress,
@@ -182,7 +156,6 @@ const {
     getList,
     openDetailDrawer,
     openMaskConfigDialog,
-    saveMaskConfig,
     exportCsv,
 } = useRequestLogPage()
 

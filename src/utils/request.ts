@@ -42,6 +42,52 @@ const service = axios.create({
     timeout: REQUEST_TIMEOUT,
 })
 
+const isJsonContentType = (contentType: unknown) => {
+    return typeof contentType === 'string' && contentType.toLowerCase().includes('application/json')
+}
+
+const parseBlobJson = async (response: AxiosResponse<ApiResponse<unknown>>) => {
+    const contentType = response.headers?.['content-type']
+    if (!(response.data instanceof Blob) || !isJsonContentType(contentType)) {
+        return null
+    }
+    try {
+        return JSON.parse(await response.data.text()) as ApiResponse<unknown>
+    } catch (error) {
+        Logger.error('解析 Blob JSON 响应失败:', error)
+        return null
+    }
+}
+
+const handleApiResponse = (response: AxiosResponse<ApiResponse<unknown>>) => {
+    const authStore = useAuthStore()
+
+    // 处理 token 刷新
+    if (response.headers['refresh-access-token']) {
+        authStore.updateToken(response.headers['refresh-access-token'], Number(response.headers['refresh-exp']))
+    }
+
+    const code = response.data.code
+
+    // 处理 401 未授权
+    if (code === 401) {
+        authStore.handleTokenExpired()
+        return Promise.reject(response.data)
+    }
+
+    // 处理业务错误（code !== 0）
+    if (code !== 0) {
+        ElMessage({
+            message: response.data.msg || translate('request.failed'),
+            type: 'error',
+        })
+        return Promise.reject(response.data)
+    }
+
+    // 返回业务数据，避免将 AxiosResponse 结构透传到业务层
+    return response.data.data
+}
+
 // ==================== 请求拦截器 ====================
 /**
  * 请求拦截器
@@ -81,37 +127,16 @@ service.interceptors.request.use(
  * - 处理网络错误
  */
 service.interceptors.response.use(
-    (response: AxiosResponse<ApiResponse<unknown>>) => {
+    async (response: AxiosResponse<ApiResponse<unknown>>) => {
         if (response.config?.responseType === 'blob' || response.data instanceof Blob) {
+            const jsonPayload = await parseBlobJson(response)
+            if (jsonPayload) {
+                return handleApiResponse({ ...response, data: jsonPayload }) as unknown as AxiosResponse
+            }
             return response.data as unknown as AxiosResponse
         }
 
-        const authStore = useAuthStore()
-
-        // 处理 token 刷新
-        if (response.headers['refresh-access-token']) {
-            authStore.updateToken(response.headers['refresh-access-token'], Number(response.headers['refresh-exp']))
-        }
-
-        const code = response.data.code
-
-        // 处理 401 未授权
-        if (code === 401) {
-            authStore.handleTokenExpired()
-            return Promise.reject(response.data)
-        }
-
-        // 处理业务错误（code !== 0）
-        if (code !== 0) {
-            ElMessage({
-                message: response.data.msg || translate('request.failed'),
-                type: 'error',
-            })
-            return Promise.reject(response.data)
-        }
-
-        // 返回业务数据，避免将 AxiosResponse 结构透传到业务层
-        return response.data.data as unknown as AxiosResponse
+        return handleApiResponse(response) as unknown as AxiosResponse
     },
     (error) => {
         const authStore = useAuthStore()
@@ -207,7 +232,7 @@ export const post = <T = unknown>(url: string, data?: unknown): Promise<T> => re
  * @param {Object} extra - 额外附带的字段（可选）
  * @returns {Promise<T>} 上传请求 Promise
  */
-export const upload = <T = unknown>(url: string, files: File | File[], extra: Record<string, unknown> = {}): Promise<T> => {
+export const upload = <T = unknown>(url: string, files: File | File[], extra: Record<string, unknown> = {}, options: AxiosRequestConfig = {}): Promise<T> => {
     const formData = new FormData()
 
     // 处理多文件上传
@@ -227,9 +252,7 @@ export const upload = <T = unknown>(url: string, files: File | File[], extra: Re
 
     return request<T>(url, 'POST', {
         data: formData,
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+        ...options,
     })
 }
 

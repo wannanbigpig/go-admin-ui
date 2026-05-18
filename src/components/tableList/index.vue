@@ -8,7 +8,20 @@
         </template>
 
         <template #default>
-            <el-table ref="tableRef" v-loading="loading" :data="data" class="xl-table" style="width: 100%" :border="border" :row-key="rowKey" :lazy="lazy" :load="load" :tree-props="treeProps">
+            <el-table
+                ref="tableRef"
+                v-loading="loading"
+                :data="data"
+                class="xl-table"
+                style="width: 100%"
+                :border="border"
+                :row-key="rowKey"
+                :lazy="lazy"
+                :load="load"
+                :tree-props="treeProps"
+                @selection-change="handleSelectionChange"
+            >
+                <el-table-column v-if="selectable" type="selection" width="48" align="center" />
                 <template v-if="hasTableTitle">
                     <el-table-column
                         v-for="(item, index) in tableTitle"
@@ -66,6 +79,7 @@ interface Props {
     lazy?: boolean
     load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
+    selectable?: boolean
     pagination?: {
         total: number
         page?: number
@@ -84,10 +98,11 @@ const props = withDefaults(defineProps<Props>(), {
     rowKey: 'id',
     lazy: false,
     treeProps: () => ({ children: 'children', hasChildren: 'hasChildren' }),
+    selectable: false,
     pagination: () => ({}) as NonNullable<Props['pagination']>,
 })
 
-const emit = defineEmits(['size-change', 'current-change'])
+const emit = defineEmits(['size-change', 'current-change', 'selection-change'])
 const tableRef = ref<TableInstance>()
 
 const showPagination = computed(() => props.pagination && typeof props.pagination.total === 'number')
@@ -115,6 +130,10 @@ const handlePageSizeChange = (size: number) => {
 const handlePageChange = (page: number) => {
     emit('current-change', page)
     props.pagination.pageChange?.(page)
+}
+
+const handleSelectionChange = (selection: T[]) => {
+    emit('selection-change', selection)
 }
 
 const toggleRowExpansion = (row: T, expanded?: boolean) => {

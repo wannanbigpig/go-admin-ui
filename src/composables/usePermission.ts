@@ -9,7 +9,7 @@ import { hasPermission } from '@/utils/auth'
  */
 export function usePermission() {
     const authStore = useAuthStore()
-    const buttonInfoProxyCache = new Map<string, Record<string, unknown>>()
+    const buttonInfoCache = new Map<string, Record<string, unknown>>()
 
     const buttonPermissions = computed(() => authStore.buttonPermissions || [])
 
@@ -21,41 +21,25 @@ export function usePermission() {
         return authStore.getButtonInfo(code)
     }
 
-    const createLiveButtonInfoProxy = (code: string) => {
-        return new Proxy<Record<string, unknown>>(
-            {},
-            {
-                get: (_target, key) => {
-                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
-                    if (!info) return undefined
-                    return info[key as keyof typeof info]
-                },
-                has: (_target, key) => {
-                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
-                    return !!info && key in info
-                },
-                ownKeys: () => {
-                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
-                    return info ? Reflect.ownKeys(info) : []
-                },
-                getOwnPropertyDescriptor: (_target, key) => {
-                    const info = authStore.getButtonInfoFull(code) as Record<string, unknown> | null
-                    if (!info) return undefined
-                    return {
-                        configurable: true,
-                        enumerable: true,
-                        value: info[key as keyof typeof info],
-                    }
-                },
-            }
-        )
+    const createLiveButtonInfo = (code: string) => {
+        return {
+            get icon() {
+                return authStore.getButtonInfoFull(code)?.icon || ''
+            },
+            get title() {
+                return authStore.getButtonInfoFull(code)?.title || ''
+            },
+            get is_show() {
+                return authStore.getButtonInfoFull(code)?.is_show === true
+            },
+        }
     }
 
     const getButtonInfoFull = (code: string) => {
-        if (!buttonInfoProxyCache.has(code)) {
-            buttonInfoProxyCache.set(code, createLiveButtonInfoProxy(code))
+        if (!buttonInfoCache.has(code)) {
+            buttonInfoCache.set(code, createLiveButtonInfo(code))
         }
-        return buttonInfoProxyCache.get(code) || null
+        return buttonInfoCache.get(code) || null
     }
 
     const shouldShowButton = (code: string) => {

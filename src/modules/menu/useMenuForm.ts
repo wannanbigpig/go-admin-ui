@@ -331,7 +331,6 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                 submitData.path = ''
                 submitData.redirect = ''
                 submitData.component = ''
-                submitData.is_show = MENU_SWITCH_VALUE.NO
                 submitData.is_auth = MENU_SWITCH_VALUE.YES
                 submitData.animate_duration = 0
                 submitData.animate_enter = ''

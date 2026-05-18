@@ -1,4 +1,4 @@
-import type { SystemConfigQuery, DictTypeQuery, DictItemQuery, TaskQuery, TaskRunQuery, CronTaskStateQuery, LocaleTextMap } from '@/types/system'
+import type { SystemConfigQuery, DictTypeQuery, DictItemQuery, TaskQuery, TaskRunQuery, CronTaskStateQuery, SystemFileQuery, LocaleTextMap } from '@/types/system'
 
 export function createLocaleTextMap(): LocaleTextMap {
     return {
@@ -15,6 +15,8 @@ export function createSystemConfigQuery(): SystemConfigQuery {
         config_name: null,
         group_code: null,
         value_type: null,
+        is_visible: 1,
+        include_hidden: null,
         status: null,
     }
 }
@@ -74,5 +76,26 @@ export function createCronTaskStateQuery(): CronTaskStateQuery {
         per_page: 10,
         task_code: null,
         last_status: null,
+    }
+}
+
+export function createSystemFileQuery(): SystemFileQuery {
+    return {
+        page: 1,
+        per_page: 10,
+        origin_name: null,
+        uuid: null,
+        mime_type: null,
+        file_type: null,
+        is_public: null,
+        storage_driver: null,
+        storage_status: null,
+        is_referenced: null,
+        is_deleted: null,
+        uid: null,
+        folder_id: null,
+        include_subfolder: 0,
+        start_time: null,
+        end_time: null,
     }
 }

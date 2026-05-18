@@ -7,7 +7,7 @@
         </el-tabs>
 
         <div v-if="activeTab === 'definition'" class="xl-container xl-m-bottom-10">
-            <el-form ref="taskQueryFormRef" class="xl-search-form xl-m-top-18" :model="taskQuery" @submit.prevent="handleTaskSearch" @keydown.enter.prevent="handleTaskSearch">
+            <el-form ref="taskQueryFormRef" class="xl-search-form" :model="taskQuery" @submit.prevent="handleTaskSearch" @keydown.enter.prevent="handleTaskSearch">
                 <el-row id="taskSearchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item :label="t('system.task.code')" prop="code">
@@ -39,7 +39,7 @@
         </div>
 
         <div v-if="activeTab === 'run'" class="xl-container xl-m-bottom-10">
-            <el-form ref="runQueryFormRef" class="xl-search-form xl-m-top-18" :model="runQuery" @submit.prevent="handleRunSearch" @keydown.enter.prevent="handleRunSearch">
+            <el-form ref="runQueryFormRef" class="xl-search-form" :model="runQuery" @submit.prevent="handleRunSearch" @keydown.enter.prevent="handleRunSearch">
                 <el-row id="runSearchForm" :gutter="20">
                     <el-col :span="5">
                         <el-form-item :label="t('system.task.code')" prop="task_code">
@@ -71,7 +71,7 @@
         </div>
 
         <div v-if="activeTab === 'cron'" class="xl-container xl-m-bottom-10">
-            <el-form ref="cronQueryFormRef" class="xl-search-form xl-m-top-18" :model="cronQuery" @submit.prevent="handleCronSearch" @keydown.enter.prevent="handleCronSearch">
+            <el-form ref="cronQueryFormRef" class="xl-search-form" :model="cronQuery" @submit.prevent="handleCronSearch" @keydown.enter.prevent="handleCronSearch">
                 <el-row id="cronSearchForm" :gutter="20">
                     <el-col :span="5">
                         <el-form-item :label="t('system.task.code')" prop="task_code">
@@ -159,6 +159,24 @@
                 <div class="task-payload-title">{{ t('system.task.payload') }}</div>
                 <pre>{{ formatPayload(currentRunDetail?.payload) }}</pre>
             </div>
+            <el-divider />
+            <div class="task-events-block">
+                <div class="task-payload-title">{{ t('system.task.events') }}</div>
+                <el-skeleton v-if="runEventsLoading" animated :rows="4" />
+                <el-empty v-else-if="runEvents.length === 0" :description="t('system.task.noEvents')" />
+                <el-timeline v-else>
+                    <el-timeline-item v-for="event in runEvents" :key="event.id" :timestamp="event.created_at" placement="top">
+                        <div class="task-event-card">
+                            <div class="task-event-header">
+                                <el-tag size="small" type="primary">{{ event.event_type || '-' }}</el-tag>
+                                <span>#{{ event.id }}</span>
+                            </div>
+                            <div class="task-event-message">{{ event.message || '-' }}</div>
+                            <pre v-if="event.meta" class="task-event-meta">{{ formatEventMeta(event.meta) }}</pre>
+                        </div>
+                    </el-timeline-item>
+                </el-timeline>
+            </div>
         </el-dialog>
     </div>
 </template>
@@ -176,11 +194,11 @@ import { useListPage } from '@/composables/useListPage'
 import { useDictOptions, getDictOptionLabel } from '@/composables/useDictOptions'
 import { createTaskQuery, createTaskRunQuery, createCronTaskStateQuery } from '@/modules/system/model'
 import { SYSTEM_DICT_TYPES, commonStatusFallbackOptions, yesNoFallbackOptions, taskKindFallbackOptions, taskSourceFallbackOptions, taskRunStatusFallbackOptions } from '@/modules/system/dictOptions'
-import { fetchTaskList, fetchTaskRunList, fetchTaskRunDetail, fetchCronTaskStateList, triggerTaskNow, retryTaskByRunId, cancelTaskByRunId } from '@/modules/system/service'
+import { fetchTaskList, fetchTaskRunList, fetchTaskRunDetail, fetchCronTaskStateList, fetchTaskRunEvents, triggerTaskNow, retryTaskByRunId, cancelTaskByRunId } from '@/modules/system/service'
 import { Logger } from '@/utils/logger'
 import { applyDateRangeToQuery } from '@/modules/log/helpers'
 import type { TableColumn } from '@/types/common'
-import type { TaskDefinition, TaskRun, CronTaskState, TaskTriggerPayload } from '@/types/system'
+import type { TaskDefinition, TaskRun, CronTaskState, TaskRunEvent, TaskTriggerPayload } from '@/types/system'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 
 const { t } = useI18n()
@@ -282,6 +300,8 @@ const triggeringTaskCode = ref('')
 const operatingRunId = ref<number | string | null>(null)
 const showRunDetailDialog = ref(false)
 const currentRunDetail = ref<TaskRun | null>(null)
+const runEvents = ref<TaskRunEvent[]>([])
+const runEventsLoading = ref(false)
 
 const formatPayload = (payload?: string) => {
     if (!payload) return '-'
@@ -290,6 +310,18 @@ const formatPayload = (payload?: string) => {
     } catch {
         return payload
     }
+}
+
+const formatEventMeta = (meta: TaskRunEvent['meta']) => {
+    if (!meta) return '-'
+    if (typeof meta === 'string') {
+        try {
+            return JSON.stringify(JSON.parse(meta), null, 2)
+        } catch {
+            return meta
+        }
+    }
+    return JSON.stringify(meta, null, 2)
 }
 
 const handleTrigger = async (row: TaskDefinition) => {
@@ -322,10 +354,15 @@ const handleTrigger = async (row: TaskDefinition) => {
 
 const handleRunDetail = async (row: TaskRun) => {
     try {
+        runEvents.value = []
         currentRunDetail.value = await fetchTaskRunDetail(row.id)
         showRunDetailDialog.value = true
+        runEventsLoading.value = true
+        runEvents.value = await fetchTaskRunEvents(row.id)
     } catch (error) {
         Logger.error('获取任务执行详情失败:', error)
+    } finally {
+        runEventsLoading.value = false
     }
 }
 
@@ -532,6 +569,47 @@ onMounted(async () => {
         max-height: 320px;
         overflow: auto;
         margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+}
+
+.task-events-block {
+    .task-payload-title {
+        font-size: 13px;
+        margin-bottom: 8px;
+        color: var(--el-text-color-secondary);
+    }
+
+    .task-event-card {
+        border: 1px solid var(--el-border-color-light);
+        border-radius: 6px;
+        padding: 10px 12px;
+    }
+
+    .task-event-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+        color: var(--el-text-color-secondary);
+        font-size: 12px;
+    }
+
+    .task-event-message {
+        color: var(--el-text-color-primary);
+        line-height: 1.6;
+        word-break: break-word;
+    }
+
+    .task-event-meta {
+        background: var(--el-fill-color-light);
+        padding: 10px;
+        border-radius: 6px;
+        max-height: 220px;
+        overflow: auto;
+        margin: 8px 0 0;
         white-space: pre-wrap;
         word-break: break-word;
     }

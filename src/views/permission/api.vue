@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form xl-m-top-18" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
+            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="6">
                         <el-form-item :label="t('permission.api.keyword')" prop="keyword" for="api-query-keyword">

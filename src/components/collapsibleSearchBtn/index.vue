@@ -135,14 +135,17 @@ watch([() => props.maxShow, isFolded], () => {
 
 <style lang="scss" scoped>
 .xl-search-btn {
-    height: 50px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
     flex: 1;
-    text-align: right;
     padding-right: 12px;
     min-width: 200px;
+    margin-bottom: 18px; /* Match el-form-item margin-bottom */
 }
 
 .xl-collapsible {
     margin-left: 12px;
+    line-height: 32px; /* Match standard button/input height */
 }
 </style>

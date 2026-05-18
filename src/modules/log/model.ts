@@ -74,3 +74,16 @@ export function createAdminLoginLogQuery() {
         end_time: null,
     }
 }
+
+export function createOnlineSessionQuery() {
+    return {
+        page: 1,
+        per_page: 10,
+        uid: null,
+        username: null,
+        ip: null,
+        is_revoked: null,
+        start_time: null,
+        end_time: null,
+    }
+}

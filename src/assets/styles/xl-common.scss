@@ -5,9 +5,16 @@
 
 // ==================== 容器工具类 ====================
 .xl-container {
-    padding: 10px;
+    padding: 20px;
     background-color: var(--xl-bg-color);
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--el-border-color-lighter);
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
 }
 
 // ==================== 加载状态 ====================
@@ -34,6 +41,15 @@
     display: none !important;
 }
 
+// ==================== 搜索表单样式 ====================
+.xl-search-form {
+    margin-bottom: -18px; // 抵消 el-form-item 的自带底部外边距，使得上下留白完美一致
+
+    .el-form-item {
+        margin-bottom: 18px; // 保持行间距正常的间距
+    }
+}
+
 // ==================== Mixins ====================
 /**
  * 生成指定方向的 margin 工具类
@@ -41,7 +57,7 @@
  */
 @mixin generate-margin-classes($property) {
     @for $i from 0 through 100 {
-        @if ($i % 2 == 0) {
+        @if ($i % 2==0) {
             .xl-m-#{$property}-#{$i} {
                 margin-#{$property}: #{$i}px;
             }
@@ -54,7 +70,7 @@
  */
 @mixin generate-margin-all-classes {
     @for $i from 0 through 100 {
-        @if ($i % 2 == 0) {
+        @if ($i % 2==0) {
             .xl-m-#{$i} {
                 margin: #{$i}px;
             }
@@ -81,6 +97,7 @@
 
 .xl-cursor-hover {
     cursor: pointer;
+
     &:hover {
         color: var(--el-color-primary);
     }
@@ -112,8 +129,10 @@
 .xl-table-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--el-border-color-lighter);
 }
 
 // ==================== 选项卡样式 ====================

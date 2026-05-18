@@ -58,8 +58,31 @@ export interface LoginLog extends WithId {
     created_at: string
 }
 
+export interface OnlineSession extends WithId {
+    uid: number | string
+    username: string
+    jwt_id?: string
+    ip: string
+    os?: string
+    browser?: string
+    is_revoked: number
+    revoked_reason?: string
+    revoked_at?: string
+    token_expires?: string
+    created_at: string
+}
+
 export interface LogQuery {
     page: number
     per_page: number
     [key: string]: unknown
+}
+
+export interface OnlineSessionQuery extends LogQuery {
+    uid?: number | string | null
+    username?: string | null
+    ip?: string | null
+    is_revoked?: number | null
+    start_time?: string | null
+    end_time?: string | null
 }

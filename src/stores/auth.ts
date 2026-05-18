@@ -13,6 +13,7 @@ import { translate } from '@/locales'
 // ==================== 常量定义 ====================
 /** 当前刷新用户信息的 Promise（用于并发控制） */
 let refreshingPromise: Promise<void> | null = null
+const AUTH_PERSIST_KEY = 'auth'
 
 export const useAuthStore = defineStore(
     'auth',
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore(
         const userInfo = ref<UserInfo>(createEmptyUserInfo())
         const menu = ref<UserPermission[]>([])
         const isTokenExpiredModalShown = ref<boolean>(false)
+        const authStateVersion = ref(0)
 
         // ==================== Getters ====================
         /**
@@ -96,6 +98,8 @@ export const useAuthStore = defineStore(
                 await refreshUserInfo()
             } catch (error) {
                 Logger.error('登录后刷新用户信息失败:', error)
+                resetAuthStore()
+                throw error
             }
             return result
         }
@@ -109,17 +113,24 @@ export const useAuthStore = defineStore(
                 return refreshingPromise
             }
 
-            refreshingPromise = (async () => {
+            const refreshPromise = (async () => {
+                const requestVersion = authStateVersion.value
                 try {
                     const [userInfoRes, menuListRes] = await Promise.all([fetchCurrentUser(), fetchUserMenuTree()])
+                    if (requestVersion !== authStateVersion.value) {
+                        return
+                    }
                     userInfo.value = userInfoRes
                     menu.value = menuListRes
                     removeDynamicRoute()
                 } finally {
-                    refreshingPromise = null
+                    if (requestVersion === authStateVersion.value) {
+                        refreshingPromise = null
+                    }
                 }
             })()
 
+            refreshingPromise = refreshPromise
             return refreshingPromise
         }
 
@@ -135,13 +146,14 @@ export const useAuthStore = defineStore(
          * 重置认证状态
          */
         const resetAuthStore = () => {
+            authStateVersion.value++
             access_token.value = ''
             expires_at.value = 0
             userInfo.value = createEmptyUserInfo()
             menu.value = []
             isTokenExpiredModalShown.value = false
             refreshingPromise = null
-            localStorage.removeItem('__persisted__auth')
+            localStorage.removeItem(AUTH_PERSIST_KEY)
             removeDynamicRoute()
         }
 
@@ -191,6 +203,7 @@ export const useAuthStore = defineStore(
             loginWithCredentials,
             refreshUserInfo,
             updateToken,
+            resetAuthStore,
             logout,
             handleTokenExpired,
             // Button Permission Helpers
@@ -201,7 +214,7 @@ export const useAuthStore = defineStore(
     },
     {
         persist: {
-            key: 'auth',
+            key: AUTH_PERSIST_KEY,
             storage: localStorage,
             paths: ['access_token', 'expires_at', 'userInfo', 'menu'],
         },

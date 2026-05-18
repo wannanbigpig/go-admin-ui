@@ -208,7 +208,7 @@ describe('utils/request.ts', () => {
         const lastCall = hoisted.mockService.request.mock.calls.at(-1)?.[0] as Record<string, unknown>
         expect(lastCall.url).toBe('/upload')
         expect(lastCall.method).toBe('POST')
-        expect(lastCall.headers).toEqual({ 'Content-Type': 'multipart/form-data' })
+        expect(lastCall.headers).toBeUndefined()
         expect(lastCall.data).toBeInstanceOf(FormData)
     })
 
@@ -254,6 +254,21 @@ describe('utils/request.ts', () => {
             message: '业务失败',
             type: 'error',
         })
+    })
+
+    it('响应拦截器应解析 Blob 中的 JSON 业务错误', async () => {
+        const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
+        const payload = { code: 401, msg: 'unauthorized', data: null }
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
+
+        await expect(
+            onFulfilled({
+                config: { responseType: 'blob' },
+                headers: { 'content-type': 'application/json' },
+                data: blob,
+            })
+        ).rejects.toEqual(payload)
+        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
     })
 
     it('响应错误拦截器应处理 401、网络错误、超时和兜底错误', async () => {

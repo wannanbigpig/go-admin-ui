@@ -10,6 +10,7 @@ import request from './request'
 import validation from './validation'
 import system from './system'
 import about from './about'
+import filePicker from './filePicker'
 
 export default {
     common,
@@ -22,6 +23,7 @@ export default {
     profile,
     system,
     about,
+    filePicker,
     request,
     validation,
 }

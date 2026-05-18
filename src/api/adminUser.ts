@@ -7,7 +7,7 @@ export function getAdminUserList(params: Partial<AdminUserQuery>) {
 }
 
 export function getFullPhone(query: Record<string, unknown>) {
-    return get<{ phone: string }>('/v1/admin-user/get-full-phone', query)
+    return get<{ phone_number: string }>('/v1/admin-user/get-full-phone', query)
 }
 
 export function getFullEmail(query: Record<string, unknown>) {

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { addDynamicRoutes, checkDynamicRouteExists } from './dynamicRoutes'
 import { isEmpty } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
+import { normalizeRedirectPath } from '@/utils/redirect'
 import type { RouteLocationNormalized } from 'vue-router'
 import { resolveRouteTitle } from '@/utils/routeTitle'
 
@@ -39,7 +40,10 @@ export async function beforeEach(to: RouteLocationNormalized) {
     }
 
     // 刷新用户信息（如果需要）
-    await refreshUserInfoIfNeeded(authStore)
+    const userInfoReady = await refreshUserInfoIfNeeded(authStore, to)
+    if (!userInfoReady) {
+        return redirectToLogin(to)
+    }
 
     // 动态添加路由（如果需要）
     const routeRedirect = await handleDynamicRoutes(authStore, to)
@@ -54,7 +58,7 @@ export async function beforeEach(to: RouteLocationNormalized) {
 // ==================== 工具函数 ====================
 function handleLoginRoute(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {
     if (authStore.token) {
-        return (to.query.redirect as string) || ROUTE_PATH.HOME
+        return normalizeRedirectPath(to.query.redirect, ROUTE_PATH.HOME)
     }
     return undefined
 }
@@ -66,15 +70,22 @@ function redirectToLogin(to: RouteLocationNormalized) {
     }
 }
 
-async function refreshUserInfoIfNeeded(authStore: ReturnType<typeof useAuthStore>) {
+async function refreshUserInfoIfNeeded(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {
     const needRefresh = isEmpty(authStore.userInfo) || isEmpty(authStore.routerData)
     if (needRefresh) {
         try {
             await authStore.refreshUserInfo()
         } catch (error) {
             Logger.error('刷新用户信息失败:', error)
+            authStore.resetAuthStore()
+            return false
         }
     }
+    if (isEmpty(authStore.routerData) && to.path !== ROUTE_PATH.HOME) {
+        Logger.warn('用户菜单为空，阻止进入受保护路由')
+        return false
+    }
+    return true
 }
 
 async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {

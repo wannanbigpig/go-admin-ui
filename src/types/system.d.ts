@@ -11,6 +11,8 @@ export interface SystemConfig extends WithId, WithTimestamp {
     group_code: string
     is_system: number
     is_sensitive: number
+    is_visible: number
+    manage_tab?: string
     status: number
     sort: number
     remark?: string
@@ -21,6 +23,8 @@ export interface SystemConfigQuery extends PageParams {
     config_name?: string | null
     group_code?: string | null
     value_type?: string | null
+    is_visible?: number | null
+    include_hidden?: number | null
     status?: number | null
 }
 
@@ -32,6 +36,8 @@ export interface SystemConfigPayload {
     value_type: string
     group_code?: string
     is_sensitive?: number
+    is_visible?: number
+    manage_tab?: string
     status?: number
     sort?: number
     remark?: string
@@ -148,6 +154,203 @@ export interface CronTaskState extends WithId {
     updated_at?: string
 }
 
+export interface SystemFile extends WithId, WithTimestamp {
+    uid: number | string
+    folder_id?: number | string | null
+    logical_path?: string
+    display_name?: string
+    origin_name: string
+    name: string
+    path: string
+    size: number
+    ext?: string
+    hash?: string
+    uuid: string
+    mime_type: string
+    file_type?: string
+    is_public: number
+    url?: string
+    storage_driver?: StorageDriver
+    storage_base?: string
+    bucket?: string
+    storage_path?: string
+    object_key?: string
+    etag?: string
+    storage_status?: FileStorageStatus
+    storage_status_name?: string
+    upload_source?: string
+    upload_source_name?: string
+    upload_scene?: string
+    upload_status?: string
+    upload_status_name?: string
+    reference_count?: number
+    deleted_at?: string
+    deleted_by?: number | string
+    deleted_reason?: string
+    references?: SystemFileReference[]
+}
+
+export interface SystemFileFolder extends WithId, WithTimestamp {
+    parent_id?: number | string | null
+    name: string
+    path?: string
+    level?: number
+    sort?: number
+    file_count?: number
+    children?: SystemFileFolder[]
+}
+
+export interface SystemFileFolderPayload {
+    id?: number | string
+    parent_id?: number | string | null
+    name?: string
+    sort?: number
+    target_parent_id?: number | string | null
+}
+
+export interface SystemFileMovePayload {
+    ids: Array<number | string>
+    folder_id?: number | string | null
+}
+
+export interface SystemFileUploadCredentialPayload {
+    hash: string
+    size: number
+    mime_type?: string
+    is_public?: number
+    folder_id?: number | string | null
+    driver?: StorageDriver
+    origin_name?: string
+}
+
+export interface SystemFileUploadCredential {
+    reuse?: boolean
+    file_object_id?: number | string
+    driver?: StorageDriver
+    bucket?: string
+    upload_url?: string
+    method?: string
+    headers?: Record<string, string>
+    form_data?: Record<string, string>
+    object_key?: string
+    upload_id?: string
+    file_id?: number | string
+    uuid?: string
+    url?: string
+    complete_payload?: Record<string, unknown>
+}
+
+export interface SystemFileUploadCompletePayload {
+    reuse?: boolean
+    file_object_id?: number | string
+    hash?: string
+    upload_id?: string
+    file_id?: number | string
+    uuid?: string
+    bucket?: string
+    object_key?: string
+    origin_name?: string
+    size?: number
+    mime_type?: string
+    folder_id?: number | string | null
+    is_public?: number
+    etag?: string
+    driver?: StorageDriver
+    [key: string]: unknown
+}
+
+export interface SystemFileUploadOptions {
+    folder_id?: number | string | null
+    driver?: StorageDriver
+    is_public?: number
+    hash?: string
+    mime_type?: string
+    origin_name?: string
+    onProgress?: (percent: number) => void
+    onReuse?: () => void
+}
+
+export type StorageDriver = 'local' | 'aliyun_oss' | 's3' | string
+
+export type FileStorageStatus = 'normal' | 'uploading' | 'delete_failed' | 'missing' | string
+
+export interface SystemFileReference extends WithId {
+    file_id?: number | string
+    owner_type?: string
+    owner_id?: number | string
+    owner_field?: string
+    owner_name?: string
+    source_type?: string
+    source_id?: number | string
+    source_name?: string
+    field_name?: string
+    reference_type?: string
+    remark?: string
+    created_at?: string
+}
+
+export interface FileDeleteBlockInfo {
+    message?: string
+    references?: SystemFileReference[]
+}
+
+export interface StorageLocalConfig {
+    base_path?: string
+    public_base_path?: string
+    private_base_path?: string
+}
+
+export interface StorageAliyunOssConfig {
+    endpoint?: string
+    region?: string
+    bucket?: string
+    access_key_id?: string
+    access_key_secret?: string
+    public_domain?: string
+    internal_endpoint?: string
+    force_path_style?: boolean
+}
+
+export interface StorageS3Config {
+    endpoint?: string
+    region?: string
+    bucket?: string
+    access_key_id?: string
+    secret_access_key?: string
+    public_domain?: string
+    force_path_style?: boolean
+}
+
+export interface StorageConfig {
+    active_driver: StorageDriver
+    config: {
+        local: StorageLocalConfig
+        aliyun_oss: StorageAliyunOssConfig
+        s3: StorageS3Config
+        signed_url_ttl_seconds?: number
+        max_file_size_mb?: number
+        allowed_mime_types?: string[] | string
+    }
+}
+
+export type StorageConfigPayload = StorageConfig
+
+export interface StorageTestResult {
+    success?: boolean
+    message?: string
+    driver?: StorageDriver
+    latency_ms?: number
+    detail?: Record<string, unknown>
+}
+
+export interface TaskRunEvent extends WithId {
+    run_id: number | string
+    event_type: string
+    message?: string
+    meta?: string | Record<string, unknown> | unknown[]
+    created_at: string
+}
+
 export interface TaskQuery extends PageParams {
     code?: string | null
     name?: string | null
@@ -171,6 +374,23 @@ export interface TaskRunQuery extends PageParams {
 export interface CronTaskStateQuery extends PageParams {
     task_code?: string | null
     last_status?: string | null
+}
+
+export interface SystemFileQuery extends PageParams {
+    origin_name?: string | null
+    uuid?: string | null
+    mime_type?: string | null
+    file_type?: string | null
+    is_public?: number | null
+    storage_driver?: string | null
+    storage_status?: string | null
+    is_referenced?: number | null
+    is_deleted?: number | null
+    uid?: number | string | null
+    folder_id?: number | string | null
+    include_subfolder?: number | null
+    start_time?: string | null
+    end_time?: string | null
 }
 
 export interface TaskTriggerPayload {
