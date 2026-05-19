@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
-import { removeDynamicRoute, convertRoute } from '@/router/dynamicRoutes'
+import { removeDynamicRoute, convertRoute, addDynamicRoutes } from '@/router/dynamicRoutes'
 import { ref, computed } from 'vue'
 import { buildButtonPermissionMap, extractButtonPermissions } from '@/modules/auth/permission'
 import { ElMessageBox } from 'element-plus'
@@ -59,6 +59,15 @@ export const useAuthStore = defineStore(
         const buttonPermissionMap = computed(() => {
             return buildButtonPermissionMap(menu.value)
         })
+
+        const syncDynamicRoutesFromMenu = (menuList: UserPermission[]) => {
+            const routes = convertRoute(menuList)
+            if (routes.length === 0) {
+                removeDynamicRoute()
+                return
+            }
+            addDynamicRoutes(routes)
+        }
 
         /**
          * 根据权限 code 获取按钮信息
@@ -122,7 +131,7 @@ export const useAuthStore = defineStore(
                     }
                     userInfo.value = userInfoRes
                     menu.value = menuListRes
-                    removeDynamicRoute()
+                    syncDynamicRoutesFromMenu(menuListRes)
                 } finally {
                     if (requestVersion === authStateVersion.value) {
                         refreshingPromise = null

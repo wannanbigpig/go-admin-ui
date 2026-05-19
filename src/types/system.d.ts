@@ -1,3 +1,4 @@
+import type { ExportTaskSubmitResult } from './exportCenter'
 import type { PageParams, WithId, WithTimestamp } from './common'
 
 export type LocaleTextMap = Record<string, string>
@@ -213,6 +214,25 @@ export interface SystemFileMovePayload {
     folder_id?: number | string | null
 }
 
+export interface SystemFileBatchDeletePayload {
+    ids: Array<number | string>
+    deleted_reason?: string
+}
+
+export interface SystemFileBatchDeleteFailure {
+    id: number | string
+    code?: number
+    message?: string
+    references?: SystemFileReference[]
+}
+
+export interface SystemFileBatchDeleteResult {
+    total: number
+    deleted: number
+    failed: number
+    failures?: SystemFileBatchDeleteFailure[]
+}
+
 export interface SystemFileUploadCredentialPayload {
     hash: string
     size: number
@@ -393,6 +413,12 @@ export interface SystemFileQuery extends PageParams {
     end_time?: string | null
 }
 
+export type SystemFileExportPayload = Omit<SystemFileQuery, 'page' | 'per_page'> & {
+    limit?: number
+}
+
+export type SystemFileExportResult = ExportTaskSubmitResult
+
 export interface TaskTriggerPayload {
     task_code: string
     queue?: string
@@ -425,4 +451,56 @@ export interface RequestLogMaskConfig {
     request_body: string[]
     response_header: string[]
     response_body: string[]
+}
+
+export interface MultipartInitPayload {
+    hash: string
+    origin_name: string
+    size: number
+    mime_type?: string
+    folder_id?: number | string | null
+    is_public?: number
+    driver?: StorageDriver
+    chunk_size?: number
+    part_count?: number
+}
+
+export interface MultipartPartInfo {
+    part_number: number
+    upload_url: string
+    headers?: Record<string, string>
+}
+
+export interface MultipartInitResult {
+    upload_id: string
+    bucket: string
+    object_key: string
+    parts: MultipartPartInfo[]
+}
+
+export interface MultipartCompletePart {
+    part_number: number
+    etag: string
+}
+
+export interface MultipartCompletePayload {
+    upload_id: string
+    bucket: string
+    object_key: string
+    origin_name: string
+    size?: number
+    hash?: string
+    mime_type?: string
+    file_type?: string
+    folder_id?: number | string | null
+    is_public?: number
+    driver?: StorageDriver
+    parts: MultipartCompletePart[]
+}
+
+export interface MultipartAbortPayload {
+    upload_id: string
+    bucket: string
+    object_key: string
+    driver?: StorageDriver
 }

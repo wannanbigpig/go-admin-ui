@@ -194,7 +194,7 @@ export function flattenTree<T extends object>(tree: T[], prefix: string = '', op
 /**
  * 获取图片 URL
  */
-export function getImageUrl(value: string): string {
+export function getSystemFileUrl(value: string): string {
     if (!value) return ''
 
     if (typeof value === 'string' && /^https?:\/\//.test(value)) {
@@ -203,4 +203,21 @@ export function getImageUrl(value: string): string {
 
     const { VITE_BASE_URL } = import.meta.env
     return `${VITE_BASE_URL}/admin/v1/file/${value}`
+}
+
+export function getImageUrl(value: string): string {
+    return getSystemFileUrl(value)
+}
+
+/**
+ * 将字节数格式化为可读的文件大小字符串。
+ * @param size - 字节数
+ * @returns 例如 "1.23 MB"
+ */
+export function formatFileSize(size?: number | null): string {
+    const bytes = Number(size || 0)
+    if (!bytes) return '0 B'
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+    return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 2)} ${units[index]}`
 }

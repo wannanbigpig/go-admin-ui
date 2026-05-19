@@ -19,16 +19,24 @@ import type {
     SystemFileReference,
     SystemFileFolder,
     SystemFileFolderPayload,
+    SystemFileBatchDeletePayload,
+    SystemFileBatchDeleteResult,
     SystemFileMovePayload,
     SystemFileUploadCompletePayload,
     SystemFileUploadCredential,
     SystemFileUploadCredentialPayload,
     SystemFileUploadOptions,
+    SystemFileExportPayload,
+    SystemFileExportResult,
     TaskRunEvent,
     TaskTriggerPayload,
     TaskTriggerResult,
     TaskCancelPayload,
     RequestLogMaskConfig,
+    MultipartInitPayload,
+    MultipartInitResult,
+    MultipartCompletePayload,
+    MultipartAbortPayload,
 } from '@/types/system'
 
 export async function fetchSystemConfigList(params?: Record<string, unknown>) {
@@ -126,6 +134,11 @@ export async function fetchSystemFileList(params?: Record<string, unknown>) {
     return normalizeListData<SystemFile>(response)
 }
 
+export async function submitSystemFileExportTask(payload: SystemFileExportPayload) {
+    const response = await systemApi.submitSystemFileExport(payload)
+    return normalizeDetailData(response, {} as SystemFileExportResult)
+}
+
 export async function fetchSystemFileTrashList(params?: Record<string, unknown>) {
     const response = await systemApi.getSystemFileTrashList(params)
     return normalizeListData<SystemFile>(response)
@@ -138,6 +151,16 @@ export async function fetchSystemFileDetail(id: number | string) {
 
 export async function removeSystemFile(id: number | string) {
     return systemApi.deleteSystemFile({ id })
+}
+
+export async function removeSystemFilesBatch(data: SystemFileBatchDeletePayload) {
+    const response = await systemApi.deleteSystemFileBatch(data)
+    return normalizeDetailData(response, {
+        total: 0,
+        deleted: 0,
+        failed: 0,
+        failures: [],
+    } as SystemFileBatchDeleteResult)
 }
 
 export async function restoreSystemFileFromTrash(id: number | string) {
@@ -383,4 +406,36 @@ export async function exportRequestLogCsv(params?: Record<string, unknown>) {
         params,
         responseType: 'blob',
     })
+}
+
+export async function downloadSystemFileBlob(uuid: string, fileName?: string) {
+    if (!uuid) return
+    const blob = await request<Blob>(`/v1/file/${encodeURIComponent(uuid)}`, 'GET', {
+        responseType: 'blob',
+    })
+    const objectUrl = URL.createObjectURL(blob)
+    try {
+        const anchor = document.createElement('a')
+        anchor.href = objectUrl
+        anchor.download = fileName || uuid
+        document.body.appendChild(anchor)
+        anchor.click()
+        document.body.removeChild(anchor)
+    } finally {
+        URL.revokeObjectURL(objectUrl)
+    }
+}
+
+export async function initMultipartUpload(data: MultipartInitPayload) {
+    const response = await systemApi.multipartInit(data as unknown as Record<string, unknown>)
+    return normalizeDetailData<MultipartInitResult>(response, {} as MultipartInitResult)
+}
+
+export async function completeMultipartUpload(data: MultipartCompletePayload) {
+    const response = await systemApi.multipartComplete(data as unknown as Record<string, unknown>)
+    return normalizeDetailData(response, {} as SystemFile)
+}
+
+export async function abortMultipartUpload(data: MultipartAbortPayload) {
+    return systemApi.multipartAbort(data as unknown as Record<string, unknown>)
 }

@@ -8,6 +8,33 @@ export default {
     logout: 'Log Out',
     userDetail: 'Profile',
     themeSwitch: 'Switch Theme',
+    exportCenter: 'Export Center',
+    notification: {
+        title: 'Notifications',
+        empty: 'No notifications',
+        markAllRead: 'Mark all read',
+        reconnect: 'Reconnect',
+        viewExportCenter: 'Open Export Center',
+        defaultTitle: 'System Notification',
+        connectionError: 'Notification channel disconnected. Reconnect has been scheduled.',
+        connection: {
+            idle: 'Disconnected',
+            disabled: 'Signed out',
+            connecting: 'Connecting',
+            connected: 'Connected',
+            reconnecting: 'Reconnecting',
+            error: 'Connection error',
+        },
+        source: {
+            websocket: 'Realtime',
+            export: 'Export',
+        },
+        export: {
+            success: '{scene} export completed',
+            failed: '{scene} export failed',
+            canceled: '{scene} export canceled',
+        },
+    },
     theme: {
         light: 'Light',
         dark: 'Dark',

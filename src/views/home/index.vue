@@ -38,6 +38,90 @@
             </el-col>
         </el-row>
 
+        <el-row v-if="dashboardStatistics?.trend.days.length" :gutter="16" class="dashboard-row">
+            <el-col :span="24">
+                <el-card shadow="never">
+                    <template #header>
+                        <span>{{ t('home.dashboard.trend.title') }}</span>
+                    </template>
+                    <div ref="trendChartRef" style="height: 300px"></div>
+                </el-card>
+            </el-col>
+        </el-row>
+
+        <el-row v-if="hasAdvancedStats" :gutter="16" class="dashboard-row">
+            <el-col :xs="24" :md="12" :lg="8">
+                <el-card shadow="never" class="stat-card">
+                    <template #header>
+                        <div class="card-header">
+                            <span>{{ t('home.dashboard.responseTime.title') }}</span>
+                            <span v-if="responseTimeAvgText" class="card-header-extra">{{ responseTimeAvgText }}</span>
+                        </div>
+                    </template>
+                    <div v-if="hasResponseTime" ref="responseTimeChartRef" style="height: 280px"></div>
+                    <el-empty v-else :description="t('home.dashboard.responseTime.empty')">
+                        <template #image>
+                            <el-icon size="60" color="var(--el-text-color-placeholder)">
+                                <i-lucide-activity />
+                            </el-icon>
+                        </template>
+                    </el-empty>
+                </el-card>
+            </el-col>
+            <el-col :xs="24" :md="12" :lg="8">
+                <el-card shadow="never" class="stat-card">
+                    <template #header>
+                        <span>{{ t('home.dashboard.errorCodes.title') }}</span>
+                    </template>
+                    <div v-if="hasErrorCodes" ref="errorCodesChartRef" style="height: 280px"></div>
+                    <el-empty v-else :description="t('home.dashboard.errorCodes.empty')">
+                        <template #image>
+                            <el-icon size="60" color="var(--el-text-color-placeholder)">
+                                <i-lucide-server-crash />
+                            </el-icon>
+                        </template>
+                    </el-empty>
+                </el-card>
+            </el-col>
+            <el-col :xs="24" :md="24" :lg="8">
+                <el-card shadow="never" class="stat-card">
+                    <template #header>
+                        <span>{{ t('home.dashboard.storage.title') }}</span>
+                    </template>
+                    <div v-if="hasStorage" class="storage-block">
+                        <div class="storage-summary">
+                            <div class="storage-summary-row">
+                                <span class="storage-summary-label">{{ t('home.dashboard.storage.totalCount') }}</span>
+                                <span class="storage-summary-value">{{ storageStats!.total_count }}</span>
+                            </div>
+                            <div class="storage-summary-row">
+                                <span class="storage-summary-label">{{ t('home.dashboard.storage.totalSize') }}</span>
+                                <span class="storage-summary-value">{{ formatFileSize(storageStats!.total_size_bytes) }}</span>
+                            </div>
+                        </div>
+                        <div class="storage-bytype">
+                            <div class="storage-bytype-title">{{ t('home.dashboard.storage.byType') }}</div>
+                            <div v-for="item in storageByType" :key="item.file_type" class="storage-bytype-row">
+                                <div class="storage-bytype-label">
+                                    <el-tag size="small" type="info">{{ item.label }}</el-tag>
+                                    <span class="storage-bytype-count">{{ item.count }}</span>
+                                </div>
+                                <el-progress class="storage-bytype-bar" :percentage="item.percentage" :stroke-width="8" :show-text="false" />
+                                <span class="storage-bytype-size">{{ formatFileSize(item.size_bytes) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <el-empty v-else :description="t('home.dashboard.storage.empty')">
+                        <template #image>
+                            <el-icon size="60" color="var(--el-text-color-placeholder)">
+                                <i-lucide-hard-drive />
+                            </el-icon>
+                        </template>
+                    </el-empty>
+                </el-card>
+            </el-col>
+        </el-row>
+
         <el-row :gutter="16" class="dashboard-row">
             <el-col :span="24">
                 <el-card shadow="never">
@@ -69,7 +153,13 @@
                             <div class="activity-desc">{{ item.desc }}</div>
                         </el-timeline-item>
                     </el-timeline>
-                    <el-empty v-else :description="t('home.dashboard.empty')" :image-size="90" />
+                    <el-empty v-else :description="t('home.dashboard.empty')">
+                        <template #image>
+                            <el-icon size="60" color="var(--el-text-color-placeholder)">
+                                <i-lucide-inbox />
+                            </el-icon>
+                        </template>
+                    </el-empty>
                 </el-card>
             </el-col>
         </el-row>
@@ -78,12 +168,14 @@
 
 <script setup lang="ts">
 import { CircleCheckFilled, DataAnalysis, Document, Lock, Menu as MenuIcon, RefreshRight, Setting, Tickets, User, UserFilled, WarningFilled } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, type Component } from 'vue'
+import * as echarts from 'echarts'
+import { computed, nextTick, onMounted, onUnmounted, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-import { fetchDashboardOverview, type DashboardOverview } from '@/modules/dashboard/service'
+import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
 import { useAuthStore } from '@/stores/auth'
+import { formatFileSize } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 
 const { t } = useI18n()
@@ -94,6 +186,13 @@ const loginTime = ref('')
 const lastLoginIP = ref('')
 const dashboardLoading = ref(false)
 const dashboardOverview = ref<DashboardOverview | null>(null)
+const dashboardStatistics = ref<DashboardStatistics | null>(null)
+const trendChartRef = ref<HTMLDivElement>()
+const responseTimeChartRef = ref<HTMLDivElement>()
+const errorCodesChartRef = ref<HTMLDivElement>()
+let trendChart: echarts.ECharts | null = null
+let responseTimeChart: echarts.ECharts | null = null
+let errorCodesChart: echarts.ECharts | null = null
 
 const metricMeta: Record<string, { icon: Component; tone: string; title: string }> = {
     users: { icon: UserFilled, tone: 'is-blue', title: t('home.dashboard.metrics.users') },
@@ -125,6 +224,56 @@ const shortcuts = computed(() => [
 ])
 
 const activities = computed(() => dashboardOverview.value?.activities || [])
+const trendSeriesNames = computed(() => ({
+    requests: t('home.dashboard.trend.series.requests'),
+    errors: t('home.dashboard.trend.series.errors'),
+    logins: t('home.dashboard.trend.series.logins'),
+}))
+
+const statisticsTrendDays = computed(() => dashboardStatistics.value?.trend.days || [])
+const responseTimeStats = computed(() => dashboardStatistics.value?.response_time)
+const errorCodeStats = computed(() => dashboardStatistics.value?.errors.status_codes || [])
+const storageStats = computed(() => dashboardStatistics.value?.storage)
+
+const hasResponseTime = computed(() => {
+    const stats = responseTimeStats.value
+    return !!stats && Array.isArray(stats.buckets) && stats.buckets.some((b) => b.count > 0)
+})
+const hasErrorCodes = computed(() => errorCodeStats.value.some((item) => item.count > 0))
+const hasStorage = computed(() => {
+    const s = storageStats.value
+    return !!s && (Number(s.total_count) > 0 || Number(s.total_size_bytes) > 0)
+})
+const hasAdvancedStats = computed(() => hasResponseTime.value || hasErrorCodes.value || hasStorage.value || !!responseTimeStats.value || !!storageStats.value || errorCodeStats.value.length > 0)
+
+const responseTimeAvgText = computed(() => {
+    const avg = responseTimeStats.value?.avg_ms
+    if (avg === undefined || avg === null) return ''
+    return `${t('home.dashboard.responseTime.avg')}: ${Number(avg).toFixed(0)} ms`
+})
+
+const localizeBucketLabel = (label: string) => {
+    const key = `home.dashboard.responseTime.buckets.${label}`
+    const translated = t(key)
+    return translated === key ? label : translated
+}
+
+const storageTypeLabel = (fileType: string) => {
+    const key = `home.dashboard.storage.typeNames.${fileType}`
+    const translated = t(key)
+    return translated === key ? fileType || t('home.dashboard.storage.typeNames.other') : translated
+}
+
+const storageByType = computed(() => {
+    const s = storageStats.value
+    if (!s) return []
+    const total = Number(s.total_size_bytes) || 0
+    return (s.by_type || []).map((item) => ({
+        ...item,
+        label: storageTypeLabel(item.file_type),
+        percentage: total > 0 ? Math.min(100, Math.round((Number(item.size_bytes) / total) * 100)) : 0,
+    }))
+})
 
 const toDisplayText = (value: unknown, fallback: string) => {
     return typeof value === 'string' && value.trim() ? value : fallback
@@ -147,21 +296,131 @@ const syncUserInfo = () => {
 const refreshDashboard = async () => {
     dashboardLoading.value = true
     try {
-        dashboardOverview.value = await fetchDashboardOverview()
+        const [overviewResult, statisticsResult] = await Promise.allSettled([fetchDashboardOverview(), fetchDashboardStatistics()])
+
+        if (overviewResult.status === 'fulfilled') {
+            dashboardOverview.value = overviewResult.value
+        } else {
+            dashboardOverview.value = null
+            Logger.warn('获取仪表盘概览失败', overviewResult.reason)
+        }
+
+        if (statisticsResult.status === 'fulfilled') {
+            dashboardStatistics.value = statisticsResult.value
+        } else {
+            dashboardStatistics.value = null
+            Logger.warn('获取仪表盘统计失败', statisticsResult.reason)
+        }
     } catch (error) {
         dashboardOverview.value = null
-        Logger.warn('获取仪表盘概览失败', error)
+        dashboardStatistics.value = null
+        Logger.warn('获取仪表盘数据失败', error)
     } finally {
         dashboardLoading.value = false
     }
     syncUserInfo()
+    trendChart?.dispose()
+    trendChart = null
+    responseTimeChart?.dispose()
+    responseTimeChart = null
+    errorCodesChart?.dispose()
+    errorCodesChart = null
+    await nextTick()
+    initTrendChart()
+    initResponseTimeChart()
+    initErrorCodesChart()
 }
 
 const goShortcut = (path: string) => {
     router.push(path)
 }
 
-onMounted(refreshDashboard)
+const initTrendChart = () => {
+    if (!trendChartRef.value || statisticsTrendDays.value.length === 0) return
+    trendChart = echarts.init(trendChartRef.value)
+    const seriesNames = trendSeriesNames.value
+    trendChart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: {
+            data: [seriesNames.requests, seriesNames.errors, seriesNames.logins],
+            top: 0,
+        },
+        grid: { top: 40, left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', boundaryGap: false, data: statisticsTrendDays.value.map((day) => day.date) },
+        yAxis: { type: 'value' },
+        series: [
+            { name: seriesNames.requests, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.request_count) },
+            { name: seriesNames.errors, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.error_count) },
+            { name: seriesNames.logins, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.login_count) },
+        ],
+    })
+}
+
+const initResponseTimeChart = () => {
+    if (!responseTimeChartRef.value || !hasResponseTime.value) return
+    const stats = responseTimeStats.value
+    if (!stats) return
+    responseTimeChart = echarts.init(responseTimeChartRef.value)
+    const labels = stats.buckets.map((b) => localizeBucketLabel(b.label))
+    const counts = stats.buckets.map((b) => b.count)
+    responseTimeChart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: labels, axisLabel: { interval: 0, rotate: labels.length > 4 ? 20 : 0 } },
+        yAxis: { type: 'value', name: t('home.dashboard.responseTime.count') },
+        series: [
+            {
+                name: t('home.dashboard.responseTime.count'),
+                type: 'bar',
+                barMaxWidth: 38,
+                itemStyle: { borderRadius: [4, 4, 0, 0] },
+                data: counts,
+            },
+        ],
+    })
+}
+
+const initErrorCodesChart = () => {
+    if (!errorCodesChartRef.value || !hasErrorCodes.value) return
+    errorCodesChart = echarts.init(errorCodesChartRef.value)
+    const data = errorCodeStats.value.map((item) => ({
+        name: `${item.status_code}`,
+        value: item.count,
+    }))
+    errorCodesChart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        legend: { type: 'scroll', orient: 'horizontal', bottom: 0 },
+        series: [
+            {
+                name: t('home.dashboard.errorCodes.title'),
+                type: 'pie',
+                radius: ['45%', '70%'],
+                center: ['50%', '45%'],
+                avoidLabelOverlap: true,
+                label: { show: true, formatter: '{b}\n{c}' },
+                data,
+            },
+        ],
+    })
+}
+
+const handleResize = () => {
+    trendChart?.resize()
+    responseTimeChart?.resize()
+    errorCodesChart?.resize()
+}
+
+onMounted(async () => {
+    await refreshDashboard()
+    window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
+    trendChart?.dispose()
+    responseTimeChart?.dispose()
+    errorCodesChart?.dispose()
+})
 </script>
 
 <style scoped lang="scss">
@@ -288,6 +547,97 @@ h1 {
     color: var(--el-text-color-secondary);
     font-size: 13px;
     line-height: 1.5;
+}
+
+.stat-card {
+    height: 100%;
+
+    :deep(.el-card__header) {
+        padding: 12px 18px;
+    }
+}
+
+.card-header-extra {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+}
+
+.storage-block {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.storage-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.storage-summary-row {
+    flex: 1;
+    min-width: 130px;
+    padding: 10px 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 8px;
+    background: var(--el-fill-color-lighter);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.storage-summary-label {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+}
+
+.storage-summary-value {
+    color: var(--el-text-color-primary);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.storage-bytype-title {
+    margin-bottom: 8px;
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+}
+
+.storage-bytype-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.storage-bytype-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 110px;
+    min-width: 0;
+}
+
+.storage-bytype-count {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+}
+
+.storage-bytype-bar {
+    flex: 1;
+    min-width: 60px;
+}
+
+.storage-bytype-size {
+    flex: 0 0 auto;
+    color: var(--el-text-color-regular);
+    font-size: 12px;
+    min-width: 64px;
+    text-align: right;
 }
 
 @media (max-width: 768px) {

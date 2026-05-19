@@ -90,7 +90,8 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElMessage, type TableInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { calculateSystemFileSha256, fetchSystemFileFolderTree, fetchSystemFileList, uploadSystemFile } from '@/modules/system/service'
+import { fetchSystemFileFolderTree, fetchSystemFileList } from '@/modules/system/service'
+import { useFileUpload, type UploadTaskStatus } from '@/composables/useFileUpload'
 import { getImageUrl } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import type { StorageDriver, SystemFile, SystemFileFolder } from '@/types/system'
@@ -103,17 +104,6 @@ export interface FilePickerValue {
 }
 
 type FolderTreeNode = SystemFileFolder & { isRoot?: boolean; children?: FolderTreeNode[] }
-type UploadTaskStatus = 'hashing' | 'pending' | 'uploading' | 'reuse' | 'success' | 'error'
-interface UploadTask {
-    id: string
-    file: File
-    name: string
-    progress: number
-    status: UploadTaskStatus
-    hash?: string
-    error?: string
-    result?: SystemFile
-}
 
 const ROOT_FOLDER_KEY = '__root__'
 
@@ -152,9 +142,8 @@ const folderTree = ref<SystemFileFolder[]>([])
 const selectedRows = ref<SystemFile[]>([])
 const selectedItems = ref<FilePickerValue[]>([])
 const selectedFolderId = ref<number | string | null>(props.folderId)
-const uploadTasks = ref<UploadTask[]>([])
+const { uploadTasks, createUploadTask, runUploadQueue, clearTasks } = useFileUpload()
 const isDraggingUpload = ref(false)
-const MAX_PARALLEL_UPLOADS = 5
 const query = reactive({
     origin_name: '',
 })
@@ -325,14 +314,6 @@ const triggerUpload = () => {
     uploadInputRef.value?.click()
 }
 
-const createUploadTask = (file: File): UploadTask => ({
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    file,
-    name: file.name,
-    progress: 0,
-    status: 'pending',
-})
-
 const getUploadTaskStatusLabel = (status: UploadTaskStatus) => {
     const statusMap: Record<UploadTaskStatus, string> = {
         hashing: t('system.file.uploadTaskStatuses.hashing'),
@@ -375,71 +356,27 @@ const validateUploadFile = (file: File) => {
     return true
 }
 
-const getErrorMessage = (error: unknown) => {
-    if (!error || typeof error !== 'object') return ''
-    const record = error as Record<string, unknown>
-    const response = record.response as Record<string, unknown> | undefined
-    const data = response?.data as Record<string, unknown> | undefined
-    return String(data?.msg || data?.message || record.message || '')
-}
-
-const uploadOneTask = async (task: UploadTask) => {
-    task.error = ''
-    try {
-        task.status = 'hashing'
-        task.progress = 0
-        task.hash = await calculateSystemFileSha256(task.file)
-        task.status = 'uploading'
-        let reused = false
-        task.result = await uploadSystemFile(task.file, {
-            folder_id: selectedFolderId.value,
-            driver: props.driver,
-            hash: task.hash,
-            onProgress: (percent) => {
-                task.progress = Math.min(99, Math.max(0, percent))
-            },
-            onReuse: () => {
-                reused = true
-                task.status = 'reuse'
-                task.progress = 100
-            },
-        })
-        task.progress = 100
-        task.status = reused ? 'reuse' : 'success'
-    } catch (error) {
-        task.status = 'error'
-        task.error = getErrorMessage(error) || t('system.file.uploadTaskFailed')
-        Logger.error('文件选择器上传失败:', error)
-    }
-}
-
-const runUploadQueue = async (tasks: UploadTask[]) => {
-    let cursor = 0
-    const workers = Array.from({ length: Math.min(MAX_PARALLEL_UPLOADS, tasks.length) }, async () => {
-        while (cursor < tasks.length) {
-            const task = tasks[cursor]
-            cursor += 1
-            await uploadOneTask(task)
-        }
-    })
-    await Promise.all(workers)
-}
-
 const uploadFilesInQueue = async (files: File[]) => {
     const validFiles = files.filter(validateUploadFile)
     if (validFiles.length === 0) return
-    const currentTasks = validFiles.map(createUploadTask)
+    const currentTasks = validFiles.map((file) => createUploadTask(file))
     uploadTasks.value = currentTasks
-    await runUploadQueue(currentTasks)
-    const uploaded = currentTasks.map((task) => task.result).filter(Boolean) as SystemFile[]
+    const uploaded: SystemFile[] = []
+    await runUploadQueue(currentTasks, {
+        folderId: selectedFolderId.value,
+        driver: props.driver,
+        onResult: (result) => {
+            if (result) uploaded.push(result as SystemFile)
+        },
+    })
     if (uploaded.length > 0) {
         emitSelection(props.multiple ? uploaded.map(toPickerValue) : [toPickerValue(uploaded[uploaded.length - 1])])
         ElMessage.success(t('common.result.uploadSuccess'))
         if (showDialog.value) await loadList()
     }
-    if (currentTasks.every((task) => task.status === 'success')) {
+    if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
         window.setTimeout(() => {
-            if (uploadTasks.value === currentTasks) uploadTasks.value = []
+            if (uploadTasks.value === currentTasks) clearTasks()
         }, 1200)
     }
 }

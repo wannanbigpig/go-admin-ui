@@ -27,10 +27,14 @@ export default defineConfig(({ mode }) => {
     const createProxyConfig = () => ({
         target: proxyTarget,
         changeOrigin: true,
+        ws: true,
         configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq) => {
                 proxyReq.removeHeader('origin')
                 proxyReq.removeHeader('referer')
+            })
+            proxy.on('proxyReqWs', (proxyReq) => {
+                proxyReq.removeHeader('origin')
             })
         },
     })

@@ -1,75 +1,74 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
-                <el-row id="searchForm" :gutter="20">
-                    <el-col :span="5">
-                        <el-form-item :label="t('log.request.operationName')" prop="operation_name">
-                            <el-input name="operation_name" :placeholder="t('log.request.inputOperationName')" v-model.trim="queryWhere.operation_name" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-form-item :label="t('log.request.route')" prop="base_url">
-                            <el-input name="base_url" :placeholder="t('log.request.inputRoute')" v-model.trim="queryWhere.base_url" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-form-item :label="t('log.request.operatorAccount')" prop="operator_account">
-                            <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('log.request.operationStatus')" prop="operation_status">
-                            <el-select name="operation_status" v-model="queryWhere.operation_status" clearable :placeholder="t('log.request.selectStatus')">
-                                <el-option :label="t('common.status.success')" :value="0" />
-                                <el-option :label="t('common.status.failed')" :value="1" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('log.request.highRisk')" prop="is_high_risk">
-                            <el-select name="is_high_risk" v-model="queryWhere.is_high_risk" clearable :placeholder="t('log.request.selectHighRisk')">
-                                <el-option :label="t('common.yes')" :value="1" />
-                                <el-option :label="t('common.no')" :value="0" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="8">
-                        <el-form-item :label="t('log.request.createdAt')" prop="dateRange">
-                            <xl-date-range-picker v-model="dateRange" />
-                        </el-form-item>
-                    </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
-                </el-row>
-            </el-form>
-        </div>
+        <xl-pro-table :loading="loading" :data="logList" :table-title="tableTitle" :pagination="pagination">
+            <template #search>
+                <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
+                    <el-row id="searchForm" :gutter="20">
+                        <el-col :span="5">
+                            <el-form-item :label="t('log.request.operationName')" prop="operation_name">
+                                <el-input name="operation_name" :placeholder="t('log.request.inputOperationName')" v-model.trim="queryWhere.operation_name" clearable></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-form-item :label="t('log.request.route')" prop="base_url">
+                                <el-input name="base_url" :placeholder="t('log.request.inputRoute')" v-model.trim="queryWhere.base_url" clearable></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-form-item :label="t('log.request.operatorAccount')" prop="operator_account">
+                                <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-form-item :label="t('log.request.operationStatus')" prop="operation_status">
+                                <el-select name="operation_status" v-model="queryWhere.operation_status" clearable :placeholder="t('log.request.selectStatus')">
+                                    <el-option :label="t('common.status.success')" :value="0" />
+                                    <el-option :label="t('common.status.failed')" :value="1" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-form-item :label="t('log.request.highRisk')" prop="is_high_risk">
+                                <el-select name="is_high_risk" v-model="queryWhere.is_high_risk" clearable :placeholder="t('log.request.selectHighRisk')">
+                                    <el-option :label="t('common.yes')" :value="1" />
+                                    <el-option :label="t('common.no')" :value="0" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item :label="t('log.request.createdAt')" prop="dateRange">
+                                <xl-date-range-picker v-model="dateRange" />
+                            </el-form-item>
+                        </el-col>
+                        <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    </el-row>
+                </el-form>
+            </template>
 
-        <div class="xl-container">
-            <div class="xl-table-actions">
+            <template #actions>
                 <xl-action-button type="primary" :show-icon="false" :text="t('log.request.export')" :loading="exporting" @click="exportCsv" />
                 <xl-action-button type="primary" :show-icon="false" :text="t('log.request.maskConfig')" @click="openMaskConfigDialog" />
-            </div>
-            <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
-                <template #td="{ item, val }">
-                    <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
-                        {{ item.tag[val as keyof typeof item.tag]?.text || val }}
-                    </el-tag>
-                    <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
-                        <span @click="copyText(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
-                    </el-tooltip>
-                    <span v-else>
-                        {{ val }}
-                    </span>
-                </template>
-                <template #operation>
-                    <el-table-column width="100" :label="t('common.labels.operation')" align="center" fixed="right">
-                        <template #default="scope">
-                            <xl-action-button v-permission="'requestLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
-                        </template>
-                    </el-table-column>
-                </template>
-            </xl-table-list>
-        </div>
+            </template>
+
+            <template #td="{ item, val }">
+                <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
+                    {{ item.tag[val as keyof typeof item.tag]?.text || val }}
+                </el-tag>
+                <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
+                    <span @click="copyText(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
+                </el-tooltip>
+                <span v-else>
+                    {{ val }}
+                </span>
+            </template>
+            <template #operation>
+                <el-table-column width="100" :label="t('common.labels.operation')" align="center" fixed="right">
+                    <template #default="scope">
+                        <xl-action-button v-permission="'requestLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
+                    </template>
+                </el-table-column>
+            </template>
+        </xl-pro-table>
 
         <!-- 详情抽屉 -->
         <el-drawer v-model="showDetailDrawer" :title="t('log.request.detailTitle')" direction="rtl" size="50%">
@@ -120,7 +119,7 @@
 
 <script setup lang="ts">
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlTableList from '@/components/tableList/index.vue'
+import xlProTable from '@/components/proTable/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { computed, onMounted } from 'vue'

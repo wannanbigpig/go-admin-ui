@@ -1,16 +1,20 @@
 import { reactive, ref } from 'vue'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { type FormInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Logger } from '@/utils/logger'
 import { useListPage } from '@/composables/useListPage'
-import { fetchRequestLogList, fetchRequestLogDetail, exportRequestLog } from '@/modules/log/service'
+import { fetchRequestLogList, fetchRequestLogDetail } from '@/modules/log/service'
+import { submitRequestLogExportTask } from '@/modules/exportCenter/service'
+import { useExportTaskSubmitter } from '@/modules/exportCenter/useExportTaskSubmitter'
 import { createRequestLogQuery } from '@/modules/log/model'
 import { applyDateRangeToQuery, formatIpAddress, formatJsonContent } from '@/modules/log/helpers'
 import type { RequestLog } from '@/types/log'
-import { translate } from '@/locales'
 
 export function useRequestLogPage() {
     const router = useRouter()
+    const { t } = useI18n()
+    const { submitExportTask } = useExportTaskSubmitter()
     const queryFormRef = ref<FormInstance>()
     const queryWhere = reactive(createRequestLogQuery())
     const dateRange = ref<[string, string] | []>([])
@@ -71,25 +75,16 @@ export function useRequestLogPage() {
     }
 
     const exportCsv = async () => {
-        if (exporting.value) return
-
-        exporting.value = true
-        try {
-            const params = buildQueryParams(queryWhere)
-            const exportParams = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page' && key !== 'per_page'))
-            const blob = await exportRequestLog({ ...exportParams, limit: 1000 })
-            const url = window.URL.createObjectURL(blob)
-            const link = document.createElement('a')
-            link.href = url
-            link.download = `request-log-${Date.now()}.csv`
-            link.click()
-            window.URL.revokeObjectURL(url)
-            ElMessage.success(translate('common.result.operationSuccess'))
-        } catch (error) {
-            Logger.error('导出请求日志失败:', error)
-        } finally {
-            exporting.value = false
-        }
+        const params = buildQueryParams(queryWhere)
+        const exportParams = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page' && key !== 'per_page'))
+        await submitExportTask({
+            loading: exporting,
+            submitter: () => submitRequestLogExportTask(exportParams),
+            successMessage: t('system.task.exportSubmitSuccess'),
+            onError: (error) => {
+                Logger.error('导出请求日志失败:', error)
+            },
+        })
     }
 
     const getMethodTagType = (method: string) => {

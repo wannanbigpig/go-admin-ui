@@ -8,6 +8,33 @@ export default {
     logout: '退出登录',
     userDetail: '个人中心',
     themeSwitch: '主题切换',
+    exportCenter: '导出中心',
+    notification: {
+        title: '通知中心',
+        empty: '暂无通知',
+        markAllRead: '全部已读',
+        reconnect: '重连',
+        viewExportCenter: '前往导出中心',
+        defaultTitle: '系统通知',
+        connectionError: '通知通道连接异常，已尝试自动重连',
+        connection: {
+            idle: '未连接',
+            disabled: '未登录',
+            connecting: '连接中',
+            connected: '已连接',
+            reconnecting: '重连中',
+            error: '连接异常',
+        },
+        source: {
+            websocket: '实时消息',
+            export: '导出任务',
+        },
+        export: {
+            success: '{scene} 导出已完成',
+            failed: '{scene} 导出失败',
+            canceled: '{scene} 导出已取消',
+        },
+    },
     theme: {
         light: '浅色',
         dark: '深色',

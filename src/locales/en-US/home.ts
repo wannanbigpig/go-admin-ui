@@ -19,6 +19,48 @@ export default {
         activityTitle: 'Recent Activity',
         pendingCount: '{count} pending',
         empty: 'No data',
+        trend: {
+            title: 'Last 7 Days Trend',
+            series: {
+                requests: 'Requests',
+                errors: 'Errors',
+                logins: 'Logins',
+            },
+        },
+        responseTime: {
+            title: 'Response Time Distribution',
+            empty: 'No response time data',
+            avg: 'Average',
+            count: 'Requests',
+            buckets: {
+                lt_100ms: '< 100ms',
+                '100_300ms': '100 - 300ms',
+                '300_1000ms': '300ms - 1s',
+                '1s_3s': '1s - 3s',
+                gt_3s: '> 3s',
+            },
+        },
+        errorCodes: {
+            title: 'Error Status Codes',
+            empty: 'No error code data',
+            statusCode: 'Status Code',
+            count: 'Count',
+        },
+        storage: {
+            title: 'Storage Usage',
+            empty: 'No storage data',
+            totalCount: 'Total Files',
+            totalSize: 'Total Size',
+            byType: 'By Type',
+            typeNames: {
+                image: 'Image',
+                video: 'Video',
+                audio: 'Audio',
+                document: 'Document',
+                archive: 'Archive',
+                other: 'Other',
+            },
+        },
         range: {
             week: 'Week',
             month: 'Month',

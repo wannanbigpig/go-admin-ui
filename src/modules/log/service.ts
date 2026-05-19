@@ -1,5 +1,4 @@
 import * as logApi from '@/api/log'
-import { request } from '@/utils/request'
 import { normalizeListData, normalizeDetailData } from '@/modules/shared/response'
 import type { RequestLog, LoginLog, OnlineSession } from '@/types/log'
 import type { RequestLogMaskConfig } from '@/types/system'
@@ -51,11 +50,4 @@ export async function revokeOnlineSessionById(id: number | string, reason = '') 
         payload.reason = reason.trim()
     }
     return logApi.revokeOnlineSession(payload)
-}
-
-export async function exportRequestLog(params?: Record<string, unknown>) {
-    return request<Blob>('/v1/log/request/export', 'GET', {
-        params,
-        responseType: 'blob',
-    })
 }

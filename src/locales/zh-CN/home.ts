@@ -19,6 +19,48 @@ export default {
         activityTitle: '最近动态',
         pendingCount: '{count} 项待处理',
         empty: '暂无数据',
+        trend: {
+            title: '近 7 日趋势',
+            series: {
+                requests: '请求量',
+                errors: '错误数',
+                logins: '登录数',
+            },
+        },
+        responseTime: {
+            title: '请求耗时分布',
+            empty: '暂无耗时数据',
+            avg: '平均耗时',
+            count: '请求数',
+            buckets: {
+                lt_100ms: '< 100ms',
+                '100_300ms': '100 - 300ms',
+                '300_1000ms': '300ms - 1s',
+                '1s_3s': '1s - 3s',
+                gt_3s: '> 3s',
+            },
+        },
+        errorCodes: {
+            title: '错误状态码分布',
+            empty: '暂无错误码数据',
+            statusCode: '状态码',
+            count: '次数',
+        },
+        storage: {
+            title: '存储占用',
+            empty: '暂无存储数据',
+            totalCount: '文件总数',
+            totalSize: '总占用',
+            byType: '按类型分布',
+            typeNames: {
+                image: '图片',
+                video: '视频',
+                audio: '音频',
+                document: '文档',
+                archive: '压缩包',
+                other: '其他',
+            },
+        },
         range: {
             week: '本周',
             month: '本月',

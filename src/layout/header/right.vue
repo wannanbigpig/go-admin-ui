@@ -1,10 +1,30 @@
 <template>
     <div class="xl-right-content">
-        <el-dropdown v-if="ENABLE_I18N" size="default" type="default" trigger="click" @command="handleLanguageCommand" class="xl-theme-dropdown" teleported persistent>
-            <div class="xl-theme-trigger xl-cursor-pointer" :title="t('layout.language.switch')">
-                <el-icon size="20">
-                    <i-ant-design-global-outlined />
-                </el-icon>
+        <div class="xl-action-item">
+            <notification-center />
+        </div>
+
+        <div class="xl-action-item" @click="openExportCenter">
+            <div class="xl-theme-trigger xl-cursor-pointer">
+                <el-tooltip :content="t('layout.exportCenter')" placement="bottom" :show-after="200">
+                    <div class="tooltip-trigger-area">
+                        <el-icon size="20">
+                            <i-lucide-inbox />
+                        </el-icon>
+                    </div>
+                </el-tooltip>
+            </div>
+        </div>
+
+        <el-dropdown v-if="ENABLE_I18N" size="default" type="default" trigger="click" @command="handleLanguageCommand" class="xl-action-item" teleported persistent>
+            <div class="xl-theme-trigger xl-cursor-pointer">
+                <el-tooltip :content="t('layout.language.switch')" placement="bottom" :show-after="200">
+                    <div class="tooltip-trigger-area">
+                        <el-icon size="20">
+                            <i-lucide-languages />
+                        </el-icon>
+                    </div>
+                </el-tooltip>
             </div>
             <template #dropdown>
                 <el-dropdown-menu>
@@ -15,29 +35,33 @@
             </template>
         </el-dropdown>
 
-        <el-dropdown size="default" type="default" trigger="click" @command="handleThemeCommand" class="xl-theme-dropdown" teleported persistent>
-            <div class="xl-theme-trigger xl-cursor-pointer" :title="t('layout.themeSwitch')">
-                <el-icon size="20">
-                    <i-lucide-sun-moon />
-                </el-icon>
+        <el-dropdown size="default" type="default" trigger="click" @command="handleThemeCommand" class="xl-action-item" teleported persistent>
+            <div class="xl-theme-trigger xl-cursor-pointer">
+                <el-tooltip :content="t('layout.themeSwitch')" placement="bottom" :show-after="200">
+                    <div class="tooltip-trigger-area">
+                        <el-icon size="20">
+                            <i-lucide-sun-moon />
+                        </el-icon>
+                    </div>
+                </el-tooltip>
             </div>
             <template #dropdown>
                 <el-dropdown-menu>
                     <el-dropdown-item :command="THEME_MODE.LIGHT" :disabled="settingStore.theme === THEME_MODE.LIGHT">
                         <el-icon class="el-icon--right">
-                            <i-ep-sunny />
+                            <i-lucide-sun />
                         </el-icon>
                         {{ t('layout.theme.light') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="THEME_MODE.DARK" :disabled="settingStore.theme === THEME_MODE.DARK">
                         <el-icon class="el-icon--right">
-                            <i-ep-moon />
+                            <i-lucide-moon />
                         </el-icon>
                         {{ t('layout.theme.dark') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="THEME_MODE.SYSTEM" :disabled="settingStore.theme === THEME_MODE.SYSTEM">
                         <el-icon class="el-icon--right">
-                            <i-ep-monitor />
+                            <i-lucide-monitor />
                         </el-icon>
                         {{ t('layout.theme.system') }}
                     </el-dropdown-item>
@@ -45,16 +69,17 @@
             </template>
         </el-dropdown>
 
+        <div class="divider"></div>
+
         <el-dropdown size="large" type="default" trigger="click" @command="handleCommand" class="xl-user-dropdown" teleported persistent>
             <div class="xl-user-info xl-cursor-pointer">
                 <div class="user-name">
                     <el-text :truncated="true" size="default">{{ authStore.userInfo.nickname }}</el-text>
-                    <br />
                     <el-text type="info" size="small" :truncated="true">{{ authStore.userInfo.username }}</el-text>
                 </div>
                 <div class="user-avatar">
                     <el-avatar :size="AVATAR_CONFIG.SIZE" :src="getImageUrl(authStore.userInfo.avatar || '')" shape="circle">
-                        <i-ep-avatar :width="AVATAR_CONFIG.ICON_SIZE" :height="AVATAR_CONFIG.ICON_SIZE" />
+                        <i-lucide-user :width="AVATAR_CONFIG.ICON_SIZE" :height="AVATAR_CONFIG.ICON_SIZE" />
                     </el-avatar>
                 </div>
             </div>
@@ -62,19 +87,19 @@
                 <el-dropdown-menu>
                     <el-dropdown-item :command="COMMAND.USER_DETAIL">
                         <el-icon class="el-icon--right">
-                            <i-ep-postcard />
+                            <i-lucide-user-cog />
                         </el-icon>
                         {{ t('layout.userDetail') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="COMMAND.USER_REFRESH">
                         <el-icon class="el-icon--right">
-                            <i-ep-refresh />
+                            <i-lucide-refresh-cw />
                         </el-icon>
                         {{ t('layout.userRefresh') }}
                     </el-dropdown-item>
                     <el-dropdown-item divided :command="COMMAND.LOGOUT">
                         <el-icon class="el-icon--right">
-                            <i-ant-design-logout-outlined />
+                            <i-lucide-log-out />
                         </el-icon>
                         {{ t('layout.logout') }}
                     </el-dropdown-item>
@@ -97,6 +122,7 @@ import { useI18n } from 'vue-i18n'
 import type { LocaleCode } from '@/types/i18n'
 import { LOCALE_OPTIONS, ENABLE_I18N } from '@/locales'
 import { addDynamicRoutes } from '@/router/dynamicRoutes'
+import NotificationCenter from './notificationCenter.vue'
 
 enum COMMAND {
     USER_DETAIL = 'user-detail',
@@ -168,6 +194,10 @@ const handleCommand = (command: COMMAND) => {
     }
 }
 
+const openExportCenter = () => {
+    router.push({ path: '/task/center', query: { tab: 'export' } })
+}
+
 const handleThemeCommand = (mode: ThemeMode) => {
     settingStore.setTheme(mode)
 }
@@ -198,49 +228,80 @@ const handleLanguageCommand = async (locale: LocaleCode) => {
 .xl-right-content {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     height: 100%;
 
-    .xl-theme-dropdown {
+    .xl-action-item {
         display: flex;
         align-items: center;
         height: 100%;
     }
 
-    .xl-theme-trigger {
-        width: 32px;
-        height: 32px;
+    :deep(.xl-theme-trigger) {
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid var(--el-border-color);
-        border-radius: 6px;
-        color: var(--el-text-color-primary);
-        transition: all 0.2s ease;
+        border-radius: 8px;
+        color: var(--el-text-color-regular);
+        transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+        background-color: transparent;
+
+        /* 强制覆盖内部元素的对齐，解决不同图标库基线不一致导致的高低不平 */
+        .el-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .el-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         &:hover {
             color: var(--el-color-primary);
-            border-color: var(--el-color-primary-light-5);
-            background-color: var(--el-fill-color-light);
+            background-color: var(--el-fill-color);
         }
+    }
+
+    .divider {
+        width: 1px;
+        height: 20px;
+        background-color: var(--el-border-color-light);
+        margin: 0 4px;
     }
 
     .xl-user-dropdown {
         height: 100%;
-        padding-left: 20px;
+        margin-left: 4px;
 
         .xl-user-info {
             display: flex;
             align-items: center;
             .user-name {
                 max-width: 100px;
-                margin-right: 10px;
+                margin-right: 12px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: flex-end;
             }
             .user-avatar {
                 width: 40px;
                 height: 40px;
             }
         }
+    }
+
+    .tooltip-trigger-area {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
 </style>

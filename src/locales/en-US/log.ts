@@ -26,6 +26,7 @@ export default {
         highRisk: 'High Risk',
         selectHighRisk: 'Please select risk level',
         export: 'Export Logs',
+        exportSubmitted: 'Export task submitted (Task ID: {runId}). Please check Export Center.',
         maskConfig: 'Mask Config',
         maskConfigTitle: 'Request Log Mask Configuration',
         maskPlaceholder: 'One field per line',

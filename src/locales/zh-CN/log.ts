@@ -26,6 +26,7 @@ export default {
         highRisk: '高危操作',
         selectHighRisk: '请选择是否高危',
         export: '导出日志',
+        exportSubmitted: '导出任务已提交（任务ID: {runId}），请前往导出中心查看',
         maskConfig: '脱敏配置',
         maskConfigTitle: '请求日志脱敏配置',
         maskPlaceholder: '每行一个字段名',

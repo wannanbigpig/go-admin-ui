@@ -1,6 +1,8 @@
 import { get, post, upload } from '@/utils/request'
 import type { AxiosRequestConfig } from 'axios'
 import type { PageData } from '@/types/common'
+import type { ExportRecord, ExportTaskSubmitResult } from '@/types/exportCenter'
+import type { AppNotification, NotificationReadPayload, NotificationUnreadCount } from '@/types/notification'
 import type {
     SystemConfig,
     SystemConfigPayload,
@@ -17,10 +19,13 @@ import type {
     SystemFileReference,
     SystemFileFolder,
     SystemFileFolderPayload,
+    SystemFileBatchDeletePayload,
+    SystemFileBatchDeleteResult,
     SystemFileMovePayload,
     SystemFileUploadCompletePayload,
     SystemFileUploadCredential,
     SystemFileUploadCredentialPayload,
+    SystemFileExportPayload,
     TaskRunEvent,
     TaskTriggerPayload,
     TaskTriggerResult,
@@ -123,8 +128,32 @@ export function getCronTaskStateList(params?: Record<string, unknown>) {
     return get<PageData<CronTaskState>>('/v1/task/cron/state', params)
 }
 
+export function getExportRecordList(params?: Record<string, unknown>) {
+    return get<PageData<ExportRecord>>('/v1/system/export/list', params)
+}
+
+export function getNotificationList(params?: Record<string, unknown>) {
+    return get<PageData<AppNotification>>('/v1/system/notification/list', params)
+}
+
+export function getNotificationUnreadCount() {
+    return get<NotificationUnreadCount>('/v1/system/notification/unread-count')
+}
+
+export function markNotificationRead(data: NotificationReadPayload) {
+    return post<unknown>('/v1/system/notification/read', data)
+}
+
+export function markAllNotificationsRead() {
+    return post<unknown>('/v1/system/notification/read-all')
+}
+
 export function getSystemFileList(params?: Record<string, unknown>) {
     return get<PageData<SystemFile>>('/v1/system/file/list', params)
+}
+
+export function submitSystemFileExport(data: SystemFileExportPayload) {
+    return post<ExportTaskSubmitResult>('/v1/system/file/export', data as unknown as Record<string, unknown>)
 }
 
 export function getSystemFileDetail(params: { id: number | string }) {
@@ -133,6 +162,10 @@ export function getSystemFileDetail(params: { id: number | string }) {
 
 export function deleteSystemFile(data: { id: number | string }) {
     return post<unknown>('/v1/system/file/delete', data)
+}
+
+export function deleteSystemFileBatch(data: SystemFileBatchDeletePayload) {
+    return post<SystemFileBatchDeleteResult>('/v1/system/file/batch-delete', data)
 }
 
 export function getSystemFileTrashList(params?: Record<string, unknown>) {
@@ -201,4 +234,16 @@ export function testStorageConfig(data: StorageConfigPayload) {
 
 export function getTaskRunEvents(params: { run_id: number | string }) {
     return get<TaskRunEvent[]>('/v1/task/run/events', params)
+}
+
+export function multipartInit(data: Record<string, unknown>) {
+    return post<Record<string, unknown>>('/v1/system/file/upload/multipart/init', data)
+}
+
+export function multipartComplete(data: Record<string, unknown>) {
+    return post<SystemFile>('/v1/system/file/upload/multipart/complete', data)
+}
+
+export function multipartAbort(data: Record<string, unknown>) {
+    return post<unknown>('/v1/system/file/upload/multipart/abort', data)
 }

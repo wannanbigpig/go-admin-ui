@@ -26,6 +26,10 @@
                             <el-icon><Document /></el-icon>
                             <span>文档</span>
                         </li>
+                        <li :class="{ active: selectedCategory === 'archive' }" @click="selectCategory('archive')">
+                            <el-icon><Files /></el-icon>
+                            <span>压缩包</span>
+                        </li>
                         <li :class="{ active: selectedCategory === 'other' }" @click="selectCategory('other')">
                             <el-icon><More /></el-icon>
                             <span>其他</span>
@@ -90,6 +94,7 @@
                             <span class="title-text" v-else-if="selectedCategory === 'video'">视频文件</span>
                             <span class="title-text" v-else-if="selectedCategory === 'audio'">音频文件</span>
                             <span class="title-text" v-else-if="selectedCategory === 'document'">文档文件</span>
+                            <span class="title-text" v-else-if="selectedCategory === 'archive'">压缩包文件</span>
                             <span class="title-text" v-else-if="selectedCategory === 'other'">其他文件</span>
                         </div>
                     </div>
@@ -105,8 +110,11 @@
                             </el-button-group>
                         </div>
                         <el-input v-model.trim="queryWhere.origin_name" class="search-input" placeholder="搜索文件..." :prefix-icon="Search" clearable @input="handleSearch" />
+                        <xl-action-button v-permission="'file:list'" :text="t('system.file.exportList')" :loading="exporting" @click="handleExportList" />
+                        <xl-action-button v-permission="'file:create'" :text="t('system.file.selectUploadFolder')" @click="openUploadDirectoryPicker" />
                         <xl-action-button v-permission="'file:create'" type="primary" :text="t('system.file.selectUploadFiles')" @click="openUploadPicker" />
                         <input ref="uploadInputRef" type="file" multiple class="file-upload-input" @change="handleFileInputChange" />
+                        <input ref="uploadDirectoryInputRef" type="file" multiple webkitdirectory directory class="file-upload-input" @change="handleDirectoryInputChange" />
                     </div>
                 </header>
 
@@ -128,17 +136,26 @@
                     </div>
 
                     <!-- Upload Queue (Floating) -->
-                    <div v-if="uploadTasks.length && !uploadFinished" class="floating-upload-queue">
+                    <div v-if="uploadTasks.length && (!uploadFinished || hasErrorTasks)" class="floating-upload-queue">
                         <div class="queue-header">
-                            <span>正在上传 ({{ uploadFinishedCount }}/{{ uploadTasks.length }})</span>
-                            <el-icon class="close-icon" @click="uploadTasks = []"><Close /></el-icon>
+                            <span>{{ uploading ? '正在上传' : '上传任务' }} ({{ uploadFinishedCount }}/{{ uploadTasks.length }})</span>
+                            <div class="queue-actions">
+                                <button v-if="uploadTasks.length > 3" type="button" class="queue-toggle" @click="toggleUploadQueueExpanded">
+                                    {{ uploadQueueExpanded ? '收起' : '展开' }}
+                                </button>
+                                <el-icon class="close-icon" @click="clearTasks"><Close /></el-icon>
+                            </div>
                         </div>
                         <div class="queue-body">
-                            <div v-for="task in uploadTasks.slice(0, 3)" :key="task.id" class="mini-task">
-                                <span class="task-name">{{ task.name }}</span>
-                                <el-progress :percentage="task.progress" :stroke-width="4" />
+                            <div v-for="task in visibleUploadTasks" :key="task.id" class="mini-task" :class="{ 'is-error': task.status === 'error' }">
+                                <span class="task-name" :title="task.name">{{ task.name }}</span>
+                                <div v-if="task.status === 'error'" class="task-error-row">
+                                    <span class="task-error-msg" :title="task.error">{{ task.error || '上传失败' }}</span>
+                                    <button type="button" class="task-retry" @click="retryUploadTask(task)">重试</button>
+                                </div>
+                                <el-progress v-else :percentage="task.progress" :stroke-width="4" />
                             </div>
-                            <div v-if="uploadTasks.length > 3" class="queue-more">还有 {{ uploadTasks.length - 3 }} 个文件...</div>
+                            <button v-if="!uploadQueueExpanded && uploadTasks.length > 3" type="button" class="queue-more" @click="toggleUploadQueueExpanded">还有 {{ uploadTasks.length - 3 }} 个文件，点击展开</button>
                         </div>
                     </div>
                     <!-- Grid View -->
@@ -173,40 +190,49 @@
                     </div>
 
                     <!-- List View (Existing Table) -->
-                    <xl-table-list v-else :loading="loading" :data="fileList" :tableTitle="tableTitle" :pagination="pagination" selectable @selection-change="handleSelectionChange">
-                        <template #td="{ item, val, row }">
-                            <div v-if="item.prop === 'origin_name'" class="file-name-cell">
-                                <el-image v-if="isImageFile(row) && row.url" :src="row.url" fit="cover" class="file-thumbnail" :preview-src-list="[row.url]" preview-teleported hide-on-click-modal />
-                                <div v-else class="file-thumbnail-placeholder">
-                                    <svg viewBox="0 0 24 24" width="24" height="24">
-                                        <path fill="var(--el-text-color-placeholder)" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
-                                    </svg>
-                                    <span class="file-ext" v-if="row.ext">{{ String(row.ext).substring(0, 4).toUpperCase() }}</span>
-                                </div>
-                                <span class="file-name-text">{{ val || '-' }}</span>
+                    <div v-else class="file-list-view">
+                        <div v-if="selectedFiles.length > 0" class="batch-action-bar">
+                            <span class="batch-selection-text">{{ t('system.file.batchSelected', { count: selectedFiles.length }) }}</span>
+                            <div class="batch-actions">
+                                <xl-action-button v-permission="'file:update'" :text="t('system.file.batchMove')" @click="openBatchMoveDialog" />
+                                <xl-action-button v-permission="'file:delete'" type="danger" :loading="batchDeleting" :text="t('system.file.batchDelete')" @click="handleBatchDelete" />
                             </div>
-                            <el-tag v-else-if="item.prop === 'storage_driver'" :type="getStorageDriverTagType(row.storage_driver)">
-                                {{ getStorageDriverLabel(row.storage_driver) }}
-                            </el-tag>
-                            <el-tag v-else-if="item.prop === 'storage_status'" :type="getStorageStatusTagType(row.storage_status)">
-                                {{ getStorageStatusLabel(row.storage_status) }}
-                            </el-tag>
-                            <el-button v-else-if="item.prop === 'reference_count'" type="primary" link :disabled="Number(row.reference_count || 0) <= 0" @click="openReferencesDialog(row)">
-                                {{ row.reference_count || 0 }}
-                            </el-button>
-                            <el-tag v-else-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                                {{ item.tag[val as string | number]?.text || val }}
-                            </el-tag>
-                            <span v-else>{{ val }}</span>
-                        </template>
-                        <template #operation>
-                            <el-table-column width="130" :label="t('common.labels.operation')" align="center" fixed="right">
-                                <template #default="scope">
-                                    <xl-action-buttons :buttons="actionButtons" :scope="scope" />
-                                </template>
-                            </el-table-column>
-                        </template>
-                    </xl-table-list>
+                        </div>
+                        <xl-table-list :loading="loading" :data="fileList" :tableTitle="tableTitle" :pagination="pagination" selectable @selection-change="handleSelectionChange">
+                            <template #td="{ item, val, row }">
+                                <div v-if="item.prop === 'origin_name'" class="file-name-cell">
+                                    <el-image v-if="isImageFile(row) && row.url" :src="row.url" fit="cover" class="file-thumbnail" :preview-src-list="[row.url]" preview-teleported hide-on-click-modal />
+                                    <div v-else class="file-thumbnail-placeholder">
+                                        <svg viewBox="0 0 24 24" width="24" height="24">
+                                            <path fill="var(--el-text-color-placeholder)" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
+                                        </svg>
+                                        <span class="file-ext" v-if="row.ext">{{ String(row.ext).substring(0, 4).toUpperCase() }}</span>
+                                    </div>
+                                    <span class="file-name-text">{{ val || '-' }}</span>
+                                </div>
+                                <el-tag v-else-if="item.prop === 'storage_driver'" :type="getStorageDriverTagType(row.storage_driver)">
+                                    {{ getStorageDriverLabel(row.storage_driver) }}
+                                </el-tag>
+                                <el-tag v-else-if="item.prop === 'storage_status'" :type="getStorageStatusTagType(row.storage_status)">
+                                    {{ getStorageStatusLabel(row.storage_status) }}
+                                </el-tag>
+                                <el-button v-else-if="item.prop === 'reference_count'" type="primary" link :disabled="Number(row.reference_count || 0) <= 0" @click="openReferencesDialog(row)">
+                                    {{ row.reference_count || 0 }}
+                                </el-button>
+                                <el-tag v-else-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
+                                    {{ item.tag[val as string | number]?.text || val }}
+                                </el-tag>
+                                <span v-else>{{ val }}</span>
+                            </template>
+                            <template #operation>
+                                <el-table-column width="130" :label="t('common.labels.operation')" align="center" fixed="right">
+                                    <template #default="scope">
+                                        <xl-action-buttons :buttons="actionButtons" :scope="scope" />
+                                    </template>
+                                </el-table-column>
+                            </template>
+                        </xl-table-list>
+                    </div>
                 </div>
             </main>
         </div>
@@ -402,7 +428,10 @@ import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { useI18n } from 'vue-i18n'
 import { useListPage } from '@/composables/useListPage'
+import { useFileUpload, type UploadTask, type UploadOptions } from '@/composables/useFileUpload'
 import { createSystemFileQuery } from '@/modules/system/model'
+import { submitSystemFileExportTask } from '@/modules/exportCenter/service'
+import { useExportTaskSubmitter } from '@/modules/exportCenter/useExportTaskSubmitter'
 import {
     fetchSystemFileList,
     fetchSystemFileDetail,
@@ -415,18 +444,18 @@ import {
     addSystemFileFolder,
     modifySystemFileFolder,
     removeSystemFileFolder,
+    removeSystemFilesBatch,
     moveSystemFileFolder,
     moveSystemFiles,
-    calculateSystemFileSha256,
-    uploadSystemFile,
 } from '@/modules/system/service'
 import { applyDateRangeToQuery } from '@/modules/log/helpers'
 import { Logger } from '@/utils/logger'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 import type { PageData, TableColumn } from '@/types/common'
-import type { SystemFile, SystemFileFolder, SystemFileReference } from '@/types/system'
+import type { SystemFile, SystemFileFolder, SystemFileReference, SystemFileExportPayload, SystemFileBatchDeleteResult } from '@/types/system'
 
 const { t } = useI18n()
+const { submitExportTask } = useExportTaskSubmitter()
 
 const queryFormRef = ref<FormInstance>()
 const queryWhere = reactive(createSystemFileQuery())
@@ -448,29 +477,24 @@ const folderForm = reactive<{ id?: number | string; parent_id?: number | string 
     name: '',
 })
 const selectedFiles = ref<SystemFile[]>([])
+const batchDeleting = ref(false)
 const showMoveDialog = ref(false)
 const moveSubmitting = ref(false)
 const moveMode = ref<'file' | 'folder'>('file')
 const moveTargetFolderId = ref<number | string | null>(null)
 const movingFolder = ref<SystemFileFolder | null>(null)
 const uploadInputRef = ref<HTMLInputElement>()
-type UploadTaskStatus = 'hashing' | 'pending' | 'uploading' | 'reuse' | 'success' | 'error'
-interface UploadTask {
-    id: string
-    file: File
-    name: string
-    size: number
-    progress: number
-    status: UploadTaskStatus
-    hash?: string
-    error?: string
-}
-const uploadTasks = ref<UploadTask[]>([])
+const uploadDirectoryInputRef = ref<HTMLInputElement>()
+const { uploadTasks, uploading, uploadFinishedCount, uploadFinished, createUploadTask, uploadOneTask, runUploadQueue, clearTasks } = useFileUpload()
 const isDraggingUpload = ref(false)
-const MAX_PARALLEL_UPLOADS = 5
-const uploading = computed(() => uploadTasks.value.some((task) => task.status === 'hashing' || task.status === 'pending' || task.status === 'uploading'))
-const uploadFinishedCount = computed(() => uploadTasks.value.filter((task) => task.status === 'reuse' || task.status === 'success' || task.status === 'error').length)
-const uploadFinished = computed(() => uploadTasks.value.length > 0 && uploadFinishedCount.value === uploadTasks.value.length)
+const uploadQueueExpanded = ref(false)
+const visibleUploadTasks = computed(() => (uploadQueueExpanded.value ? uploadTasks.value : uploadTasks.value.slice(0, 3)))
+const hasErrorTasks = computed(() => uploadTasks.value.some((task) => task.status === 'error'))
+let lastUploadOptions: UploadOptions = {}
+
+const toggleUploadQueueExpanded = () => {
+    uploadQueueExpanded.value = !uploadQueueExpanded.value
+}
 
 const {
     loading,
@@ -572,15 +596,22 @@ const folderPath = computed(() => {
     return path
 })
 
+const CATEGORY_FILE_TYPE_MAP: Record<string, string> = {
+    document: 'pdf,word,excel,ppt,text',
+    other: 'other',
+}
+
 const selectCategory = (category: string) => {
     selectedCategory.value = category
     selectedFolderId.value = null
-    queryWhere.file_type = category === 'all' ? null : category
+    selectedFiles.value = []
+    queryWhere.file_type = category === 'all' ? null : (CATEGORY_FILE_TYPE_MAP[category] ?? category)
     handleSearch()
 }
 
 const handleBreadcrumbClick = (folderId: number | string | null) => {
     selectedFolderId.value = folderId === ROOT_FOLDER_KEY ? null : folderId
+    selectedFiles.value = []
     handleSearch()
 }
 
@@ -613,6 +644,7 @@ const fileTypeOptions = computed(() => [
     { label: t('system.file.fileTypes.text'), value: 'text' },
     { label: t('system.file.fileTypes.audio'), value: 'audio' },
     { label: t('system.file.fileTypes.video'), value: 'video' },
+    { label: t('system.file.fileTypes.other'), value: 'other' },
 ])
 
 const storageDriverOptions = computed(() => [
@@ -718,6 +750,7 @@ const loadFolderTree = async () => {
 
 const handleFolderSelect = (folder: FolderTreeNode) => {
     selectedFolderId.value = normalizeFolderId(folder.id)
+    selectedFiles.value = []
     queryWhere.folder_id = selectedFolderId.value
     pagination.page = 1
     getList()
@@ -800,6 +833,16 @@ const handleSelectionChange = (selection: SystemFile[]) => {
     selectedFiles.value = selection
 }
 
+const openBatchMoveDialog = () => {
+    if (selectedFiles.value.length === 0) {
+        ElMessage.warning(t('system.file.selectFileFirst'))
+        return
+    }
+    moveMode.value = 'file'
+    moveTargetFolderId.value = selectedFolderId.value
+    showMoveDialog.value = true
+}
+
 const submitMoveDialog = async () => {
     moveSubmitting.value = true
     try {
@@ -832,68 +875,178 @@ const openUploadPicker = () => {
     uploadInputRef.value?.click()
 }
 
-const createUploadTask = (file: File): UploadTask => ({
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    file,
-    name: file.name,
-    size: file.size,
-    progress: 0,
-    status: 'pending',
-})
-
-const uploadOneTask = async (task: UploadTask) => {
-    task.error = ''
-    try {
-        task.status = 'hashing'
-        task.progress = 0
-        task.hash = await calculateSystemFileSha256(task.file)
-        task.status = 'uploading'
-        let reused = false
-        await uploadSystemFile(task.file, {
-            folder_id: selectedFolderId.value,
-            hash: task.hash,
-            onProgress: (percent) => {
-                task.progress = Math.min(99, Math.max(0, percent))
-            },
-            onReuse: () => {
-                reused = true
-                task.status = 'reuse'
-                task.progress = 100
-            },
-        })
-        task.progress = 100
-        task.status = reused ? 'reuse' : 'success'
-    } catch (error) {
-        task.status = 'error'
-        task.error = getErrorMessage(error) || t('system.file.uploadTaskFailed')
-        Logger.error('上传文件资源失败:', error)
-    }
+const openUploadDirectoryPicker = () => {
+    uploadDirectoryInputRef.value?.click()
 }
 
-const runUploadQueue = async (tasks: UploadTask[]) => {
-    let cursor = 0
-    const workers = Array.from({ length: Math.min(MAX_PARALLEL_UPLOADS, tasks.length) }, async () => {
-        while (cursor < tasks.length) {
-            const task = tasks[cursor]
-            cursor += 1
-            await uploadOneTask(task)
-        }
+const exporting = ref(false)
+
+const handleExportList = async () => {
+    const params = { ...queryWhere } as Record<string, unknown>
+    if (selectedCategory.value === 'all') {
+        params.folder_id = selectedFolderId.value
+    } else {
+        params.folder_id = undefined
+    }
+    const selectedDateRange = dateRange.value.length === 2 ? dateRange.value : null
+    applyDateRangeToQuery(params, selectedDateRange)
+    const payload = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page' && key !== 'per_page')) as SystemFileExportPayload
+
+    await submitExportTask({
+        loading: exporting,
+        submitter: () => submitSystemFileExportTask(payload),
+        successMessage: t('system.task.exportSubmitSuccess'),
+        onError: (error) => {
+            Logger.error('提交文件资源导出任务失败:', error)
+        },
     })
-    await Promise.all(workers)
 }
 
 const uploadFilesInQueue = async (files: File[]) => {
     if (files.length === 0) return
-    const currentTasks = files.map(createUploadTask)
+    const currentTasks = files.map((file) => createUploadTask(file))
     uploadTasks.value = currentTasks
-    await runUploadQueue(currentTasks)
-    if (currentTasks.some((task) => task.status === 'success')) {
+    uploadQueueExpanded.value = false
+    lastUploadOptions = { folderId: selectedFolderId.value }
+    await runUploadQueue(currentTasks, lastUploadOptions)
+    if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
         ElMessage.success(t('common.result.uploadSuccess'))
         await getList()
     }
-    if (currentTasks.every((task) => task.status === 'success')) {
+    if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
         window.setTimeout(() => {
-            if (uploadTasks.value === currentTasks && !uploading.value) uploadTasks.value = []
+            if (uploadTasks.value === currentTasks && !uploading.value) clearTasks()
+        }, 1200)
+    }
+}
+
+const retryUploadTask = async (task: UploadTask) => {
+    if (task.status !== 'error') return
+    await uploadOneTask(task, lastUploadOptions)
+    await getList()
+    if (uploadTasks.value.length > 0 && uploadTasks.value.every((item) => item.status === 'success' || item.status === 'reuse')) {
+        ElMessage.success(t('common.result.uploadSuccess'))
+        const snapshot = uploadTasks.value
+        window.setTimeout(() => {
+            if (uploadTasks.value === snapshot && !uploading.value) clearTasks()
+        }, 1200)
+    }
+}
+
+const buildFolderIndexKey = (parentId: number | string | null | undefined, name: string) => `${String(parentId ?? ROOT_FOLDER_KEY)}::${name}`
+
+const buildFolderIndex = (folders: FolderTreeNode[]) => {
+    const index = new Map<string, FolderTreeNode>()
+    const walk = (nodes: FolderTreeNode[]) => {
+        for (const node of nodes) {
+            index.set(buildFolderIndexKey(node.parent_id ?? null, node.name), node)
+            if (Array.isArray(node.children) && node.children.length) {
+                walk(node.children as FolderTreeNode[])
+            }
+        }
+    }
+    walk(folders)
+    return index
+}
+
+const extractRelativeFolderPath = (file: File) => {
+    const relativePath = typeof (file as File & { webkitRelativePath?: string }).webkitRelativePath === 'string' ? String((file as File & { webkitRelativePath?: string }).webkitRelativePath) : ''
+    if (!relativePath.includes('/')) return ''
+    return relativePath.split('/').slice(0, -1).join('/')
+}
+
+const extractRelativeDisplayName = (file: File) => {
+    const relativePath = typeof (file as File & { webkitRelativePath?: string }).webkitRelativePath === 'string' ? String((file as File & { webkitRelativePath?: string }).webkitRelativePath) : ''
+    return relativePath || file.name
+}
+
+const ensureFolderPathExists = async (relativeFolderPath: string, baseFolderId: number | string | null, folderIndex: Map<string, FolderTreeNode>, createdPathIds: Map<string, number | string | null>) => {
+    if (!relativeFolderPath) return baseFolderId
+    if (createdPathIds.has(relativeFolderPath)) {
+        return createdPathIds.get(relativeFolderPath) ?? baseFolderId
+    }
+
+    const segments = relativeFolderPath.split('/').filter(Boolean)
+    let currentParentId = baseFolderId
+    let currentPath = ''
+
+    for (const segment of segments) {
+        currentPath = currentPath ? `${currentPath}/${segment}` : segment
+        if (createdPathIds.has(currentPath)) {
+            currentParentId = createdPathIds.get(currentPath) ?? currentParentId
+            continue
+        }
+
+        const folderKey = buildFolderIndexKey(currentParentId, segment)
+        let targetFolder = folderIndex.get(folderKey)
+        if (!targetFolder) {
+            try {
+                const createdFolder = (await addSystemFileFolder({
+                    name: segment,
+                    parent_id: currentParentId,
+                })) as FolderTreeNode
+                targetFolder = {
+                    ...createdFolder,
+                    children: Array.isArray(createdFolder.children) ? createdFolder.children : [],
+                }
+            } catch (error) {
+                await loadFolderTree()
+                folderIndex.clear()
+                for (const [key, value] of buildFolderIndex(folderTree.value as FolderTreeNode[])) {
+                    folderIndex.set(key, value)
+                }
+                targetFolder = folderIndex.get(folderKey)
+                if (!targetFolder) {
+                    throw error
+                }
+            }
+            folderIndex.set(folderKey, targetFolder)
+        }
+
+        currentParentId = targetFolder.id
+        createdPathIds.set(currentPath, currentParentId)
+    }
+
+    return currentParentId
+}
+
+const uploadDirectoryInQueue = async (files: File[]) => {
+    if (files.length === 0) return
+
+    const baseFolderId = selectedCategory.value === 'all' ? selectedFolderId.value : null
+    await loadFolderTree()
+    const folderIndex = buildFolderIndex(folderTree.value as FolderTreeNode[])
+    const createdPathIds = new Map<string, number | string | null>([['', baseFolderId]])
+    const relativeFolderPaths = Array.from(new Set(files.map(extractRelativeFolderPath).filter(Boolean))).sort((left, right) => left.split('/').length - right.split('/').length)
+
+    for (const relativeFolderPath of relativeFolderPaths) {
+        await ensureFolderPathExists(relativeFolderPath, baseFolderId, folderIndex, createdPathIds)
+    }
+
+    const currentTasks = [] as ReturnType<typeof createUploadTask>[]
+    for (const file of files) {
+        const relativeFolderPath = extractRelativeFolderPath(file)
+        const targetFolderId = relativeFolderPath ? (createdPathIds.get(relativeFolderPath) ?? baseFolderId) : baseFolderId
+        currentTasks.push(
+            createUploadTask(file, {
+                name: extractRelativeDisplayName(file),
+                folderId: targetFolderId,
+            })
+        )
+    }
+
+    uploadTasks.value = currentTasks
+    uploadQueueExpanded.value = false
+    lastUploadOptions = {}
+    await runUploadQueue(currentTasks, lastUploadOptions)
+    await loadFolderTree()
+    if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
+        ElMessage.success(t('common.result.uploadSuccess'))
+        await getList()
+    }
+    if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
+        window.setTimeout(() => {
+            if (uploadTasks.value === currentTasks && !uploading.value) clearTasks()
         }, 1200)
     }
 }
@@ -903,6 +1056,13 @@ const handleFileInputChange = async (event: Event) => {
     const files = Array.from(input.files || [])
     input.value = ''
     await uploadFilesInQueue(files)
+}
+
+const handleDirectoryInputChange = async (event: Event) => {
+    const input = event.target as HTMLInputElement
+    const files = Array.from(input.files || [])
+    input.value = ''
+    await uploadDirectoryInQueue(files)
 }
 
 const handleUploadDragEnter = () => {
@@ -1031,6 +1191,48 @@ const handleDelete = async (row: SystemFile) => {
     } finally {
         deletingId.value = null
     }
+}
+
+const handleBatchDelete = async () => {
+    if (selectedFiles.value.length === 0) {
+        ElMessage.warning(t('system.file.selectFileFirst'))
+        return
+    }
+
+    try {
+        await ElMessageBox.confirm(t('system.file.batchDeleteConfirm', { count: selectedFiles.value.length }), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
+        batchDeleting.value = true
+        const result = await removeSystemFilesBatch({
+            ids: selectedFiles.value.map((item) => item.id),
+        })
+
+        const firstFailureWithReferences = (result.failures || []).find((item) => Array.isArray(item.references) && item.references.length > 0)
+        if (firstFailureWithReferences) {
+            activeReferences.value = firstFailureWithReferences.references || []
+            referencesDialogTitle.value = firstFailureWithReferences.message || t('system.file.deleteBlockedTitle')
+            showReferencesDialog.value = true
+        }
+
+        selectedFiles.value = []
+        await getList()
+        showBatchDeleteResult(result)
+    } catch (error) {
+        Logger.error('批量删除文件资源失败:', error)
+    } finally {
+        batchDeleting.value = false
+    }
+}
+
+const showBatchDeleteResult = (result: SystemFileBatchDeleteResult) => {
+    if (result.deleted > 0 && result.failed === 0) {
+        ElMessage.success(t('system.file.batchDeleteSuccess', { count: result.deleted }))
+        return
+    }
+    if (result.deleted > 0) {
+        ElMessage.warning(t('system.file.batchDeletePartial', { success: result.deleted, failed: result.failed }))
+        return
+    }
+    ElMessage.error(t('system.file.batchDeleteFailed'))
 }
 
 const actionButtons = computed(() => [
@@ -1243,6 +1445,7 @@ onMounted(() => {
     flex-direction: column;
     background: #fff;
     min-width: 0;
+    min-height: 0;
 }
 
 .file-header {
@@ -1287,9 +1490,39 @@ onMounted(() => {
 
 .file-content-wrapper {
     flex: 1;
-    overflow-y: auto;
+    overflow: auto;
     padding: 24px;
     position: relative;
+    min-width: 0;
+    min-height: 0;
+}
+
+.file-list-view {
+    min-width: max-content;
+}
+
+.batch-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border: 1px solid rgba(64, 158, 255, 0.2);
+    border-radius: 10px;
+    background: #f8fbff;
+
+    .batch-selection-text {
+        font-size: 13px;
+        color: var(--el-text-color-primary);
+    }
+
+    .batch-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
 }
 
 .upload-drag-overlay {
@@ -1347,6 +1580,21 @@ onMounted(() => {
         align-items: center;
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
+        .queue-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .queue-toggle {
+            border: 0;
+            padding: 0;
+            background: transparent;
+            color: var(--el-color-primary);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
         .close-icon {
             cursor: pointer;
             &:hover {
@@ -1374,13 +1622,50 @@ onMounted(() => {
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        &.is-error .task-name {
+            color: #f56c6c;
+        }
+
+        .task-error-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .task-error-msg {
+            flex: 1;
+            color: #f56c6c;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .task-retry {
+            flex-shrink: 0;
+            border: 0;
+            padding: 2px 8px;
+            background: transparent;
+            color: var(--el-color-primary);
+            font-size: 12px;
+            cursor: pointer;
+            &:hover {
+                text-decoration: underline;
+            }
+        }
     }
 
     .queue-more {
+        width: 100%;
+        border: 0;
+        padding: 0;
+        background: transparent;
         font-size: 10px;
         color: #999;
         text-align: center;
         margin-top: 8px;
+        cursor: pointer;
     }
 }
 
