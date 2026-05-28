@@ -13,7 +13,10 @@
                                 <el-tag type="info" effect="plain">{{ t('home.lastLoginIp') }}: {{ lastLoginIP }}</el-tag>
                             </div>
                         </div>
-                        <el-button type="primary" :icon="RefreshRight" :loading="dashboardLoading" @click="refreshDashboard">
+                        <el-button v-permission:or="['dashboard:overview', 'dashboard:statistics']" type="primary" :loading="dashboardLoading" @click="refreshDashboard">
+                            <template #icon>
+                                <i-ep-refresh-right />
+                            </template>
                             {{ t('home.dashboard.refresh') }}
                         </el-button>
                     </div>
@@ -21,12 +24,15 @@
             </el-col>
         </el-row>
 
-        <el-row :gutter="16" class="dashboard-row">
+        <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
             <el-col v-for="item in metricCards" :key="item.key" :xs="24" :sm="12" :lg="6">
                 <el-card shadow="never" class="metric-card">
                     <div class="metric-main">
                         <div class="metric-icon" :class="item.tone">
-                            <component :is="item.icon" />
+                            <i-ep-user-filled v-if="item.key === 'users'" />
+                            <i-ep-data-analysis v-else-if="item.key === 'requests'" />
+                            <i-ep-warning-filled v-else-if="item.key === 'errors'" />
+                            <i-ep-circle-check-filled v-else-if="item.key === 'tasks'" />
                         </div>
                         <el-statistic :title="item.title" :value="item.value" :suffix="item.suffix" />
                     </div>
@@ -38,7 +44,7 @@
             </el-col>
         </el-row>
 
-        <el-row v-if="dashboardStatistics?.trend.days.length" :gutter="16" class="dashboard-row">
+        <el-row v-if="hasPermission('dashboard:statistics') && dashboardStatistics?.trend.days.length" :gutter="16" class="dashboard-row">
             <el-col :span="24">
                 <el-card shadow="never">
                     <template #header>
@@ -49,7 +55,7 @@
             </el-col>
         </el-row>
 
-        <el-row v-if="hasAdvancedStats" :gutter="16" class="dashboard-row">
+        <el-row v-if="hasPermission('dashboard:statistics') && hasAdvancedStats" :gutter="16" class="dashboard-row">
             <el-col :xs="24" :md="12" :lg="8">
                 <el-card shadow="never" class="stat-card">
                     <template #header>
@@ -131,7 +137,16 @@
                         </div>
                     </template>
                     <div class="shortcut-grid">
-                        <el-button v-for="item in shortcuts" :key="item.key" :icon="item.icon" plain class="shortcut-btn" @click="goShortcut(item.path)">
+                        <el-button v-for="item in shortcuts" :key="item.key" plain class="shortcut-btn" @click="goShortcut(item.path)">
+                            <template #icon>
+                                <i-ep-user v-if="item.key === 'users'" />
+                                <i-ep-lock v-else-if="item.key === 'roles'" />
+                                <i-ep-menu v-else-if="item.key === 'menus'" />
+                                <i-ep-document v-else-if="item.key === 'logs'" />
+                                <i-ep-setting v-else-if="item.key === 'config'" />
+                                <i-ep-tickets v-else-if="item.key === 'tasks'" />
+                                <i-ep-user-filled v-else-if="item.key === 'profile'" />
+                            </template>
                             <span>{{ item.label }}</span>
                         </el-button>
                     </div>
@@ -139,7 +154,7 @@
             </el-col>
         </el-row>
 
-        <el-row :gutter="16" class="dashboard-row">
+        <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
             <el-col :span="24">
                 <el-card shadow="never">
                     <template #header>
@@ -167,16 +182,20 @@
 </template>
 
 <script setup lang="ts">
-import { CircleCheckFilled, DataAnalysis, Document, Lock, Menu as MenuIcon, RefreshRight, Setting, Tickets, User, UserFilled, WarningFilled } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
-import { computed, nextTick, onMounted, onUnmounted, ref, type Component } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
 import { useAuthStore } from '@/stores/auth'
+import { hasPermission } from '@/utils/auth'
 import { formatFileSize } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
+
+// 异步加载的 ECharts 命名空间（在 onMounted 中初始化）
+type EChartsNamespace = typeof import('echarts/core')
+type EChartsInstance = ReturnType<EChartsNamespace['init']>
+let echarts: EChartsNamespace | null = null
 
 const { t } = useI18n()
 const router = useRouter()
@@ -190,37 +209,36 @@ const dashboardStatistics = ref<DashboardStatistics | null>(null)
 const trendChartRef = ref<HTMLDivElement>()
 const responseTimeChartRef = ref<HTMLDivElement>()
 const errorCodesChartRef = ref<HTMLDivElement>()
-let trendChart: echarts.ECharts | null = null
-let responseTimeChart: echarts.ECharts | null = null
-let errorCodesChart: echarts.ECharts | null = null
+let trendChart: EChartsInstance | null = null
+let responseTimeChart: EChartsInstance | null = null
+let errorCodesChart: EChartsInstance | null = null
 
-const metricMeta: Record<string, { icon: Component; tone: string; title: string }> = {
-    users: { icon: UserFilled, tone: 'is-blue', title: t('home.dashboard.metrics.users') },
-    requests: { icon: DataAnalysis, tone: 'is-green', title: t('home.dashboard.metrics.requests') },
-    errors: { icon: WarningFilled, tone: 'is-orange', title: t('home.dashboard.metrics.errors') },
-    tasks: { icon: CircleCheckFilled, tone: 'is-blue', title: t('home.dashboard.metrics.tasks') },
-}
+const metricMeta = computed<Record<string, { tone: string; title: string }>>(() => ({
+    users: { tone: 'is-blue', title: t('home.dashboard.metrics.users') },
+    requests: { tone: 'is-green', title: t('home.dashboard.metrics.requests') },
+    errors: { tone: 'is-orange', title: t('home.dashboard.metrics.errors') },
+    tasks: { tone: 'is-blue', title: t('home.dashboard.metrics.tasks') },
+}))
 
 const metricCards = computed(() => {
     return (dashboardOverview.value?.metrics || [])
-        .filter((item) => metricMeta[item.key])
+        .filter((item) => metricMeta.value[item.key])
         .map((item) => ({
             ...item,
-            title: metricMeta[item.key].title,
-            icon: metricMeta[item.key].icon,
-            tone: metricMeta[item.key].tone,
+            title: metricMeta.value[item.key].title,
+            tone: metricMeta.value[item.key].tone,
             tagType: item.type || 'info',
         }))
 })
 
 const shortcuts = computed(() => [
-    { key: 'users', label: t('home.dashboard.shortcut.users'), icon: User, path: '/permission/admin-user-list' },
-    { key: 'roles', label: t('home.dashboard.shortcut.roles'), icon: Lock, path: '/permission/role-list' },
-    { key: 'menus', label: t('home.dashboard.shortcut.menus'), icon: MenuIcon, path: '/permission/menu-list' },
-    { key: 'logs', label: t('home.dashboard.shortcut.logs'), icon: Document, path: '/log/request-log' },
-    { key: 'config', label: t('home.dashboard.shortcut.config'), icon: Setting, path: '/system/config' },
-    { key: 'tasks', label: t('home.dashboard.shortcut.tasks'), icon: Tickets, path: '/task/center' },
-    { key: 'profile', label: t('home.dashboard.shortcut.profile'), icon: UserFilled, path: '/profile' },
+    { key: 'users', label: t('home.dashboard.shortcut.users'), path: '/permission/admin-user-list' },
+    { key: 'roles', label: t('home.dashboard.shortcut.roles'), path: '/permission/role-list' },
+    { key: 'menus', label: t('home.dashboard.shortcut.menus'), path: '/permission/menu-list' },
+    { key: 'logs', label: t('home.dashboard.shortcut.logs'), path: '/log/request-log' },
+    { key: 'config', label: t('home.dashboard.shortcut.config'), path: '/system/config' },
+    { key: 'tasks', label: t('home.dashboard.shortcut.tasks'), path: '/task/center' },
+    { key: 'profile', label: t('home.dashboard.shortcut.profile'), path: '/profile' },
 ])
 
 const activities = computed(() => dashboardOverview.value?.activities || [])
@@ -232,7 +250,14 @@ const trendSeriesNames = computed(() => ({
 
 const statisticsTrendDays = computed(() => dashboardStatistics.value?.trend.days || [])
 const responseTimeStats = computed(() => dashboardStatistics.value?.response_time)
-const errorCodeStats = computed(() => dashboardStatistics.value?.errors.status_codes || [])
+const errorCodeStats = computed(() => {
+    // 1. 优先从 statistics.errors.status_codes 获取
+    const fromErrors = dashboardStatistics.value?.errors.status_codes
+    if (fromErrors && fromErrors.length > 0) return fromErrors
+
+    // 2. 兜底从 overview.error_codes 获取
+    return dashboardOverview.value?.error_codes || []
+})
 const storageStats = computed(() => dashboardStatistics.value?.storage)
 
 const hasResponseTime = computed(() => {
@@ -296,20 +321,31 @@ const syncUserInfo = () => {
 const refreshDashboard = async () => {
     dashboardLoading.value = true
     try {
-        const [overviewResult, statisticsResult] = await Promise.allSettled([fetchDashboardOverview(), fetchDashboardStatistics()])
+        const canViewOverview = hasPermission('dashboard:overview')
+        const canViewStatistics = hasPermission('dashboard:statistics')
 
-        if (overviewResult.status === 'fulfilled') {
+        const overviewPromise = canViewOverview ? fetchDashboardOverview() : Promise.reject(new Error('No overview permission'))
+
+        const statisticsPromise = canViewStatistics ? fetchDashboardStatistics() : Promise.reject(new Error('No statistics permission'))
+
+        const [overviewResult, statisticsResult] = await Promise.allSettled([overviewPromise, statisticsPromise])
+
+        if (canViewOverview && overviewResult.status === 'fulfilled') {
             dashboardOverview.value = overviewResult.value
         } else {
             dashboardOverview.value = null
-            Logger.warn('获取仪表盘概览失败', overviewResult.reason)
+            if (canViewOverview && overviewResult.status === 'rejected') {
+                Logger.warn('获取仪表盘概览失败', overviewResult.reason)
+            }
         }
 
-        if (statisticsResult.status === 'fulfilled') {
+        if (canViewStatistics && statisticsResult.status === 'fulfilled') {
             dashboardStatistics.value = statisticsResult.value
         } else {
             dashboardStatistics.value = null
-            Logger.warn('获取仪表盘统计失败', statisticsResult.reason)
+            if (canViewStatistics && statisticsResult.status === 'rejected') {
+                Logger.warn('获取仪表盘统计失败', statisticsResult.reason)
+            }
         }
     } catch (error) {
         dashboardOverview.value = null
@@ -335,8 +371,38 @@ const goShortcut = (path: string) => {
     router.push(path)
 }
 
+const gridWithAxisLabelBounds = {
+    outerBoundsMode: 'same' as const,
+    outerBoundsContain: 'axisLabel' as const,
+}
+
+let resizeObserver: ResizeObserver | null = null
+
+const initResizeObserver = () => {
+    if (typeof ResizeObserver === 'undefined') return
+    resizeObserver = new ResizeObserver((entries) => {
+        window.requestAnimationFrame(() => {
+            for (const entry of entries) {
+                if (entry.target === trendChartRef.value) {
+                    trendChart?.resize()
+                } else if (entry.target === responseTimeChartRef.value) {
+                    responseTimeChart?.resize()
+                } else if (entry.target === errorCodesChartRef.value) {
+                    errorCodesChart?.resize()
+                }
+            }
+        })
+    })
+}
+
+const observeElement = (el: HTMLElement | undefined) => {
+    if (el && resizeObserver) {
+        resizeObserver.observe(el)
+    }
+}
+
 const initTrendChart = () => {
-    if (!trendChartRef.value || statisticsTrendDays.value.length === 0) return
+    if (!echarts || !trendChartRef.value || statisticsTrendDays.value.length === 0) return
     trendChart = echarts.init(trendChartRef.value)
     const seriesNames = trendSeriesNames.value
     trendChart.setOption({
@@ -345,7 +411,7 @@ const initTrendChart = () => {
             data: [seriesNames.requests, seriesNames.errors, seriesNames.logins],
             top: 0,
         },
-        grid: { top: 40, left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        grid: { top: 40, left: '3%', right: '4%', bottom: '3%', ...gridWithAxisLabelBounds },
         xAxis: { type: 'category', boundaryGap: false, data: statisticsTrendDays.value.map((day) => day.date) },
         yAxis: { type: 'value' },
         series: [
@@ -354,10 +420,11 @@ const initTrendChart = () => {
             { name: seriesNames.logins, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.login_count) },
         ],
     })
+    observeElement(trendChartRef.value)
 }
 
 const initResponseTimeChart = () => {
-    if (!responseTimeChartRef.value || !hasResponseTime.value) return
+    if (!echarts || !responseTimeChartRef.value || !hasResponseTime.value) return
     const stats = responseTimeStats.value
     if (!stats) return
     responseTimeChart = echarts.init(responseTimeChartRef.value)
@@ -365,7 +432,7 @@ const initResponseTimeChart = () => {
     const counts = stats.buckets.map((b) => b.count)
     responseTimeChart.setOption({
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        grid: { left: '3%', right: '4%', bottom: '3%', ...gridWithAxisLabelBounds },
         xAxis: { type: 'category', data: labels, axisLabel: { interval: 0, rotate: labels.length > 4 ? 20 : 0 } },
         yAxis: { type: 'value', name: t('home.dashboard.responseTime.count') },
         series: [
@@ -378,10 +445,11 @@ const initResponseTimeChart = () => {
             },
         ],
     })
+    observeElement(responseTimeChartRef.value)
 }
 
 const initErrorCodesChart = () => {
-    if (!errorCodesChartRef.value || !hasErrorCodes.value) return
+    if (!echarts || !errorCodesChartRef.value || !hasErrorCodes.value) return
     errorCodesChart = echarts.init(errorCodesChartRef.value)
     const data = errorCodeStats.value.map((item) => ({
         name: `${item.status_code}`,
@@ -402,21 +470,25 @@ const initErrorCodesChart = () => {
             },
         ],
     })
+    observeElement(errorCodesChartRef.value)
 }
 
-const handleResize = () => {
-    trendChart?.resize()
-    responseTimeChart?.resize()
-    errorCodesChart?.resize()
+const ensureEcharts = async () => {
+    if (echarts) return
+    const [core, charts, components, renderers] = await Promise.all([import('echarts/core'), import('echarts/charts'), import('echarts/components'), import('echarts/renderers')])
+    core.use([charts.BarChart, charts.LineChart, charts.PieChart, components.GridComponent, components.LegendComponent, components.TooltipComponent, renderers.CanvasRenderer])
+    echarts = core
 }
 
 onMounted(async () => {
+    initResizeObserver()
+    await ensureEcharts()
     await refreshDashboard()
-    window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
-    window.removeEventListener('resize', handleResize)
+    resizeObserver?.disconnect()
+    resizeObserver = null
     trendChart?.dispose()
     responseTimeChart?.dispose()
     errorCodesChart?.dispose()
@@ -429,7 +501,7 @@ onUnmounted(() => {
 }
 
 .dashboard-row {
-    margin-bottom: 16px;
+    margin-bottom: var(--xl-space-4);
 }
 
 .card-header,
@@ -451,9 +523,9 @@ onUnmounted(() => {
 }
 
 .eyebrow {
-    margin: 0 0 8px;
+    margin: 0 0 var(--xl-space-2);
     color: var(--el-color-primary);
-    font-size: 13px;
+    font-size: var(--xl-font-md);
     font-weight: 600;
 }
 
@@ -467,7 +539,7 @@ h1 {
 }
 
 .welcome-desc {
-    margin: 10px 0 16px;
+    margin: 10px 0 var(--xl-space-4);
     color: var(--el-text-color-secondary);
     font-size: 14px;
     line-height: 1.7;
@@ -476,7 +548,7 @@ h1 {
 .login-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--xl-space-2);
 }
 
 .metric-card {
@@ -508,11 +580,11 @@ h1 {
 }
 
 .metric-footer {
-    margin-top: 16px;
-    padding-top: 12px;
+    margin-top: var(--xl-space-4);
+    padding-top: var(--xl-space-3);
     border-top: 1px solid var(--el-border-color-lighter);
     color: var(--el-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--xl-font-md);
 }
 
 .shortcut-grid {
@@ -533,7 +605,7 @@ h1 {
 
 .activity-timeline {
     min-height: 292px;
-    padding: 4px 4px 0;
+    padding: var(--xl-space-1) var(--xl-space-1) 0;
 }
 
 .activity-title {
@@ -543,9 +615,9 @@ h1 {
 }
 
 .activity-desc {
-    margin-top: 4px;
+    margin-top: var(--xl-space-1);
     color: var(--el-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--xl-font-md);
     line-height: 1.5;
 }
 
@@ -553,61 +625,61 @@ h1 {
     height: 100%;
 
     :deep(.el-card__header) {
-        padding: 12px 18px;
+        padding: var(--xl-space-3) 18px;
     }
 }
 
 .card-header-extra {
     color: var(--el-text-color-secondary);
-    font-size: 12px;
+    font-size: var(--xl-font-sm);
 }
 
 .storage-block {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--xl-space-4);
 }
 
 .storage-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--xl-space-3);
 }
 
 .storage-summary-row {
     flex: 1;
     min-width: 130px;
-    padding: 10px 12px;
+    padding: 10px var(--xl-space-3);
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 8px;
     background: var(--el-fill-color-lighter);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--xl-space-1);
 }
 
 .storage-summary-label {
     color: var(--el-text-color-secondary);
-    font-size: 12px;
+    font-size: var(--xl-font-sm);
 }
 
 .storage-summary-value {
     color: var(--el-text-color-primary);
-    font-size: 18px;
+    font-size: var(--xl-font-xl);
     font-weight: 600;
 }
 
 .storage-bytype-title {
-    margin-bottom: 8px;
+    margin-bottom: var(--xl-space-2);
     color: var(--el-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--xl-font-md);
 }
 
 .storage-bytype-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: var(--xl-space-2);
 
     &:last-child {
         margin-bottom: 0;
@@ -624,7 +696,7 @@ h1 {
 
 .storage-bytype-count {
     color: var(--el-text-color-secondary);
-    font-size: 12px;
+    font-size: var(--xl-font-sm);
 }
 
 .storage-bytype-bar {
@@ -635,7 +707,7 @@ h1 {
 .storage-bytype-size {
     flex: 0 0 auto;
     color: var(--el-text-color-regular);
-    font-size: 12px;
+    font-size: var(--xl-font-sm);
     min-width: 64px;
     text-align: right;
 }

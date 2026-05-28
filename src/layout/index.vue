@@ -1,5 +1,5 @@
 <template>
-    <el-watermark v-if="settingStore.watermarkEnabled" :content="watermarkConfig.content" :font="watermarkConfig.font" class="xl-layout-watermark">
+    <component :is="watermarkWrapper" v-bind="watermarkBindings" :class="watermarkClass">
         <el-container class="common-layout">
             <el-aside id="xl-aside" :class="{ collapse: settingStore.isCollapse }">
                 <xl-aside />
@@ -13,24 +13,12 @@
                 </el-main>
             </el-container>
         </el-container>
-    </el-watermark>
-    <el-container v-else class="common-layout">
-        <el-aside id="xl-aside" :class="{ collapse: settingStore.isCollapse }">
-            <xl-aside />
-        </el-aside>
-        <el-container class="right-container">
-            <el-header class="xl-header">
-                <xl-head />
-            </el-header>
-            <el-main class="xl-main">
-                <xl-main-view />
-            </el-main>
-        </el-container>
-    </el-container>
+    </component>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ElWatermark } from 'element-plus'
 import { useSettingStore } from '@/stores/setting'
 import XlAside from '@/layout/sidebar/index.vue'
 import XlMainView from '@/layout/main/index.vue'
@@ -49,10 +37,14 @@ const watermarkConfig = computed(() => ({
         color: 'rgba(100, 100, 100, 0.1)',
     },
 }))
+
+const watermarkWrapper = computed(() => (settingStore.watermarkEnabled ? ElWatermark : 'div'))
+const watermarkBindings = computed(() => (settingStore.watermarkEnabled ? watermarkConfig.value : {}))
+const watermarkClass = computed(() => (settingStore.watermarkEnabled ? 'xl-layout-watermark' : ''))
 </script>
 
 <style scoped lang="scss">
-@import '@/assets/styles/layout/index.scss';
+@use '@/assets/styles/layout/index.scss' as *;
 
 .xl-layout-watermark {
     display: block;

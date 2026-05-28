@@ -10,7 +10,7 @@ export interface UserPermission {
     type: 'menu' | 'button' | number
     icon?: string
     path?: string
-    component?: string
+    component_key?: string
     redirect?: string
     is_show: number | boolean
     is_auth?: number | boolean
@@ -39,6 +39,8 @@ export interface UserInfo {
  * 登录响应结果
  */
 export interface LoginResult {
+    refresh_token: string
+    refresh_expires_at: number
     access_token: string
     expires_at: number
 }

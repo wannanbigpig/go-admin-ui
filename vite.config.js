@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import { readFileSync } from 'fs'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import ElementPlus from 'unplugin-element-plus/vite'
@@ -10,6 +11,8 @@ import IconsResolver from 'unplugin-icons/resolver'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import eslintPlugin from 'vite-plugin-eslint'
 import viteCompression from 'vite-plugin-compression'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 
 // ==================== 常量定义 ====================
 export default defineConfig(({ mode }) => {
@@ -33,9 +36,8 @@ export default defineConfig(({ mode }) => {
                 proxyReq.removeHeader('origin')
                 proxyReq.removeHeader('referer')
             })
-            proxy.on('proxyReqWs', (proxyReq) => {
-                proxyReq.removeHeader('origin')
-            })
+            // 注意：WS 升级请求保留 Origin，后端 upgrader.CheckOrigin 依赖此头做白名单校验，
+            // 需要后端 config.yaml `cors_origins` 显式放行 http://127.0.0.1:3000 / http://localhost:3000。
         },
     })
 
@@ -99,11 +101,12 @@ export default defineConfig(({ mode }) => {
             // Element Plus 按需导入样式
             ElementPlus(),
 
-            // ESLint 插件
-            eslintPlugin({
-                cache: mode === 'development',
-                cacheLocation: 'node_modules/.cache/.eslintcache',
-            }),
+            // ESLint 插件（仅开发模式运行，生产构建由 CI 独立执行）
+            mode !== 'production' &&
+                eslintPlugin({
+                    cache: true,
+                    cacheLocation: 'node_modules/.cache/.eslintcache',
+                }),
 
             // Gzip 压缩插件
             viteCompression({
@@ -142,22 +145,12 @@ export default defineConfig(({ mode }) => {
                 },
                 output: {
                     manualChunks(id) {
-                        if (id.includes('node_modules')) {
-                            // 将 element-plus 独立打包
-                            if (id.includes('element-plus')) {
-                                return 'element-plus'
-                            }
-                            // 将 vue 核心家桶（vue, pinia, vue-router 等）独立打包
-                            if (id.includes('vue') || id.includes('pinia') || id.includes('@vue')) {
-                                return 'vue-vendor'
-                            }
-                            // 将 axios 独立打包
-                            if (id.includes('axios')) {
-                                return 'axios'
-                            }
-                            // 其他三方库
-                            return 'vendor'
-                        }
+                        if (!id.includes('node_modules')) return
+                        if (id.includes('/node_modules/element-plus/')) return 'element-plus'
+                        if (id.includes('/node_modules/vue/') || id.includes('/node_modules/vue-router/') || id.includes('/node_modules/pinia/') || id.includes('/node_modules/@vue/')) return 'vue-vendor'
+                        if (id.includes('/node_modules/axios/')) return 'axios'
+                        if (id.includes('/node_modules/echarts/') || id.includes('/node_modules/zrender/')) return 'echarts'
+                        return 'vendor'
                     },
                 },
             },
@@ -173,10 +166,16 @@ export default defineConfig(({ mode }) => {
         css: {
             preprocessorOptions: {
                 scss: {
-                    // 全局注入 SCSS 变量和混入
-                    additionalData: `@import "@/assets/styles/global.scss";`,
+                    // 启用 Dart Sass modern compiler API（Vite 5.4+ 推荐），彻底消除 legacy-js-api 警告
+                    api: 'modern-compiler',
+                    // 全局注入 SCSS 变量和混入（仅纯定义，无 CSS 输出）
+                    additionalData: `@use "@/assets/styles/shared.scss" as *;`,
                 },
             },
+        },
+
+        define: {
+            __APP_VERSION__: JSON.stringify(pkg.version),
         },
 
         // ==================== 公共资源目录 ====================

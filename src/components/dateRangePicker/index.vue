@@ -1,6 +1,6 @@
 <template>
     <el-date-picker
-        v-model="modelValue"
+        v-model="dateRange"
         type="datetimerange"
         :name="['start_date', 'end_date']"
         :range-separator="t('common.to')"
@@ -14,36 +14,40 @@
         :shortcuts="showShortcuts ? shortcuts : []"
         @calendar-change="handleCalendarChange"
         @change="handleDateRangeChange"
+        @visible-change="handleVisibleChange"
     />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 
+type DateRangeValue = (string | Date)[] | null
+
 // ==================== Props ====================
-const props = defineProps({
-    modelValue: {
-        type: Array,
-        default: null,
-    },
+interface Props {
+    modelValue?: DateRangeValue
     /** 是否显示快速选择选项 */
-    showShortcuts: {
-        type: Boolean,
-        default: true,
-    },
+    showShortcuts?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    modelValue: null,
+    showShortcuts: true,
 })
 const { t } = useI18n()
 
 // ==================== Emits ====================
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: DateRangeValue): void
+}>()
 
 // ==================== 响应式数据 ====================
-const currentSelectingRange = ref(null) // 当前正在选择的日期范围
+const currentSelectingRange = ref<DateRangeValue>(null) // 当前正在选择的日期范围
 
 // ==================== 计算属性 ====================
-const modelValue = computed({
+const dateRange = computed<DateRangeValue>({
     get: () => props.modelValue,
     set: (val) => emit('update:modelValue', val),
 })
@@ -52,7 +56,7 @@ const modelValue = computed({
 /**
  * 格式化日期为 YYYY-MM-DD HH:mm:ss
  */
-const formatDateTime = (date) => {
+const formatDateTime = (date: Date) => {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -111,14 +115,23 @@ const shortcuts = computed(() => [
 /**
  * 处理日历变化事件，用于获取当前正在选择的日期范围
  */
-const handleCalendarChange = (val) => {
+const handleCalendarChange = (val: DateRangeValue) => {
     currentSelectingRange.value = val
+}
+
+/**
+ * 处理选择器展开/折叠状态，关闭时清除临时选择状态，避免状态悬挂
+ */
+const handleVisibleChange = (visible: boolean) => {
+    if (!visible) {
+        currentSelectingRange.value = null
+    }
 }
 
 /**
  * 处理日期范围变化，验证范围是否超过1个月
  */
-const handleDateRangeChange = (val) => {
+const handleDateRangeChange = (val: DateRangeValue) => {
     if (val && Array.isArray(val) && val.length === 2) {
         const [start, end] = val
         if (start && end) {
@@ -131,7 +144,7 @@ const handleDateRangeChange = (val) => {
             // 允许正好31天，因为"近一个月"是30天，加上边界情况可能正好31天
             if (diffDays > 31) {
                 ElMessage.warning(t('common.date.rangeLimitOneMonth'))
-                modelValue.value = null
+                dateRange.value = null
                 currentSelectingRange.value = null
             }
         }
@@ -141,7 +154,7 @@ const handleDateRangeChange = (val) => {
 /**
  * 限制日期范围选择（最多1个月，且只能选择最近一年内的时间）
  */
-const disabledDate = (time) => {
+const disabledDate = (time: Date) => {
     const now = new Date()
     const oneYearAgo = new Date()
     oneYearAgo.setFullYear(now.getFullYear() - 1)
@@ -152,10 +165,11 @@ const disabledDate = (time) => {
     }
 
     // 使用当前正在选择的日期范围或已选择的日期范围
-    const range = currentSelectingRange.value || modelValue.value
+    const range = currentSelectingRange.value || dateRange.value
 
-    if (range && Array.isArray(range) && range.length === 2) {
-        const [start, end] = range
+    if (range && Array.isArray(range) && range.length > 0) {
+        const start = range[0]
+        const end = range[1]
 
         // 如果已选择开始时间，限制结束时间不能超过开始时间+1个月
         if (start && !end) {

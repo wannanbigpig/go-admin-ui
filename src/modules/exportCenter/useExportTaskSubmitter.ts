@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 import type { ExportTaskSubmitResult } from '@/types/exportCenter'
+import { Logger } from '@/utils/logger'
 
 interface SubmitExportTaskOptions {
     loading: Ref<boolean>
@@ -42,6 +43,7 @@ export function useExportTaskSubmitter() {
 
             return result
         } catch (error) {
+            Logger.error('导出任务提交失败:', error)
             options.onError?.(error)
             return null
         } finally {

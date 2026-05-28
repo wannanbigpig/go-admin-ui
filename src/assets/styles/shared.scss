@@ -1,0 +1,21 @@
+// ============================================================
+// 共享 SCSS 模块：只包含纯定义（变量 + mixin），无 CSS 输出
+// 通过 Vite additionalData 注入到每个编译单元，也可被任意
+// SCSS 文件通过 `@use "@/assets/styles/shared.scss" as *;` 显式加载
+// ============================================================
+
+@forward './vars.scss';
+
+// 创建一个 mixin 用于复用旋转动画逻辑
+@mixin rotate-forever($duration: 2s) {
+    animation: spin $duration linear infinite;
+    transform-origin: center center;
+    @keyframes spin {
+        from {
+            transform: rotate(360deg);
+        }
+        to {
+            transform: rotate(0deg);
+        }
+    }
+}

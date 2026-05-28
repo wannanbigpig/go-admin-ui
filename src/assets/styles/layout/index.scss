@@ -1,6 +1,6 @@
-@import './main.scss';
-@import './sidebar.scss';
-@import './header.scss';
+@use './main.scss';
+@use './sidebar.scss';
+@use './header.scss';
 
 .common-layout {
     background-color: var(--xl-main-bg-color);

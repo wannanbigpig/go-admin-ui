@@ -15,6 +15,7 @@ export default {
         markAllRead: '全部已读',
         reconnect: '重连',
         viewExportCenter: '前往导出中心',
+        viewMore: '查看更多',
         defaultTitle: '系统通知',
         connectionError: '通知通道连接异常，已尝试自动重连',
         connection: {
@@ -48,6 +49,7 @@ export default {
     more: '更多',
     noPermission: '暂无权限',
     footer: {
+        author: '皖南大花猪(wannanbigpig)',
         poweredBy: '基于 Vue 3 + Vite + Element Plus 构建',
     },
 }

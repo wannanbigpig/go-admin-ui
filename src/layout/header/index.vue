@@ -15,5 +15,5 @@ import XlRight from './right.vue'
 </script>
 
 <style scoped lang="scss">
-@import '@/assets/styles/layout/header.scss';
+@use '@/assets/styles/layout/header.scss' as *;
 </style>

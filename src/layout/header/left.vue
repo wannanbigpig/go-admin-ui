@@ -29,7 +29,7 @@ const handleRefresh = () => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/layout/header.scss';
+@use '@/assets/styles/layout/header.scss' as *;
 
 .xl-left-content {
     height: 100%;

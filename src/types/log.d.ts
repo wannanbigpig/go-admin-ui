@@ -1,7 +1,11 @@
 import type { WithId } from './common'
 
+export type RequestKind = 'http' | 'websocket' | 'sse'
+export type ExecutionTimeScope = 'request' | 'connection' | 'stream' | 'none'
+
 export interface RequestLog extends WithId {
     request_id: string
+    request_kind?: RequestKind
     operator_id?: number | string
     operation_name: string
     method: string
@@ -14,7 +18,10 @@ export interface RequestLog extends WithId {
     operator_ip: string
     ip: string
     ip_location: string
+    jwt_id?: string
     execution_time: number
+    execution_time_unit?: string
+    execution_time_scope?: ExecutionTimeScope
     response_status: number
     browser?: string
     os?: string
@@ -45,10 +52,8 @@ export interface LoginLog extends WithId {
     user_agent?: string
     execution_time: number
     jwt_id?: string
-    access_token?: string
     token_hash?: string
     token_expires?: string
-    refresh_token?: string
     refresh_token_hash?: string
     refresh_expires?: string
     is_revoked: number
@@ -76,6 +81,23 @@ export interface LogQuery {
     page: number
     per_page: number
     [key: string]: unknown
+}
+
+export interface RequestLogQuery extends LogQuery {
+    order_by?: string | null
+    request_id?: string | null
+    operator_id?: number | string | null
+    operation_name?: string | null
+    method?: string | null
+    base_url?: string | null
+    operation_status?: number | null
+    is_high_risk?: number | null
+    operator_account?: string | null
+    ip?: string | null
+    request_kind?: RequestKind | null
+    execution_time_scope?: ExecutionTimeScope | null
+    start_time?: string | null
+    end_time?: string | null
 }
 
 export interface OnlineSessionQuery extends LogQuery {

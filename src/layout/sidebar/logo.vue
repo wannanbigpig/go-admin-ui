@@ -18,7 +18,7 @@ const settingStore = useSettingStore()
 .sidebar-logo-container {
     box-sizing: border-box;
     border-bottom: 1px solid var(--el-color-info-light-8);
-    height: calc($--xl-side-logo-height);
+    height: calc($xl-side-logo-height);
     overflow: hidden;
     position: relative;
 
@@ -28,7 +28,7 @@ const settingStore = useSettingStore()
         align-items: center;
         justify-content: flex-start;
         width: 100%;
-        height: $--xl-side-logo-height;
+        height: $xl-side-logo-height;
         padding: 0 18px;
         gap: 12px;
         transition: padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -42,7 +42,7 @@ const settingStore = useSettingStore()
         }
 
         .sidebar-title {
-            line-height: $--xl-side-logo-height;
+            line-height: $xl-side-logo-height;
             font-weight: 600;
             font-size: 20px;
             white-space: nowrap;

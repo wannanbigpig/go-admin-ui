@@ -1,4 +1,4 @@
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onBeforeUnmount, getCurrentInstance } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElLoading, ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
@@ -104,6 +104,12 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         permissionList.value = []
     }
 
+    if (getCurrentInstance()) {
+        onBeforeUnmount(() => {
+            clearPermissionListCache()
+        })
+    }
+
     const appendMissingSelectedPermissions = (selectedIds: number[]) => {
         const existedIds = new Set(permissionList.value.map((item) => String(item.id)))
         const missingItems = selectedIds
@@ -123,13 +129,17 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
 
     const normalizeTitleI18n = (value: unknown): Record<string, string> => {
         const normalized = createEmptyTitleI18n()
-        if (!value || typeof value !== 'object') {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
             return normalized
         }
 
         for (const locale of MENU_TITLE_LOCALES) {
-            const localeValue = (value as Record<string, unknown>)[locale]
-            normalized[locale] = typeof localeValue === 'string' ? localeValue : ''
+            if (Object.prototype.hasOwnProperty.call(value, locale)) {
+                const localeValue = (value as Record<string, unknown>)[locale]
+                normalized[locale] = typeof localeValue === 'string' ? localeValue : ''
+            } else {
+                normalized[locale] = ''
+            }
         }
 
         return normalized
@@ -190,24 +200,26 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         Object.assign(formData, createMenuForm())
     }
 
-    let numericValue: number = 0
-    const handleAnimateDurationChange = (value: string | number, decimal = 2) => {
-        const val = String(value).replace(/^(0+)(?=\d)/, '')
-        formData.animate_duration = Number(val)
+    const handleAnimateDurationChange = (() => {
+        let numericValue: number = 0
+        return (value: string | number, decimal = 2) => {
+            const val = String(value).replace(/^(0+)(?=\d)/, '')
+            formData.animate_duration = Number(val)
 
-        if (value === '') {
-            formData.animate_duration = 0
-            return
+            if (value === '') {
+                formData.animate_duration = 0
+                return
+            }
+
+            if (checkNumber(value, decimal)) {
+                numericValue = Number(val)
+                return true
+            }
+
+            formData.animate_duration = numericValue
+            return false
         }
-
-        if (checkNumber(value, decimal)) {
-            numericValue = Number(val)
-            return true
-        }
-
-        formData.animate_duration = numericValue
-        return false
-    }
+    })()
 
     const handlePathChange = (val: string) => {
         const isExternalLink = val.startsWith('http://') || val.startsWith('https://')
@@ -247,45 +259,48 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         is_auth: [{ required: true, message: translate('permission.menu.form.authRequired'), trigger: 'blur' }],
         is_show: [{ required: true, message: translate('permission.menu.form.showRequired'), trigger: 'blur' }],
         sort: [{ trigger: 'blur', type: 'integer', message: translate('permission.menu.form.sortInteger') }],
-        path: [{ trigger: 'blur', validator: (_rule: unknown, _value: unknown, callback: () => void) => callback() }],
+        path: [{ trigger: 'blur', validator: (_rule: unknown, _value: unknown, callback: (error?: string | Error) => void) => callback() }],
         name: [
             {
                 trigger: 'blur',
-                validator: (_rule: unknown, value: string, callback: (error?: string | Error) => void) => {
-                    if (formData.type === MENU_TYPE.MENU && !value) {
-                        callback(translate('permission.menu.form.routeNameRequired'))
+                validator: (_rule: unknown, value: unknown, callback: (error?: string | Error) => void) => {
+                    const strValue = typeof value === 'string' ? value.trim() : ''
+                    if (formData.type === MENU_TYPE.MENU && !strValue) {
+                        return callback(new Error(translate('permission.menu.form.routeNameRequired')))
                     }
-                    callback()
+                    return callback()
                 },
             },
         ],
-        component: [
+        component_key: [
             {
                 trigger: 'blur',
-                validator: (_rule: unknown, value: string, callback: (error?: string | Error) => void) => {
-                    if (formData.type === MENU_TYPE.MENU && formData.is_external_links !== MENU_SWITCH_VALUE.YES && !value) {
-                        callback(translate('permission.menu.form.componentRequired'))
+                validator: (_rule: unknown, value: unknown, callback: (error?: string | Error) => void) => {
+                    const strValue = typeof value === 'string' ? value.trim() : ''
+                    if (formData.type === MENU_TYPE.MENU && formData.is_external_links !== MENU_SWITCH_VALUE.YES && !strValue) {
+                        return callback(new Error(translate('permission.menu.form.componentRequired')))
                     }
-                    if (value) {
-                        if (value.startsWith('/')) {
-                            callback(translate('permission.menu.form.componentCannotStartWithSlash'))
+                    if (strValue) {
+                        if (strValue.startsWith('/')) {
+                            return callback(new Error(translate('permission.menu.form.componentCannotStartWithSlash')))
                         }
-                        if (!/^[a-zA-Z0-9/._-]+$/.test(value)) {
-                            callback(translate('permission.menu.form.componentInvalid'))
+                        if (!/^[a-zA-Z0-9/:._-]+$/.test(strValue)) {
+                            return callback(new Error(translate('permission.menu.form.componentInvalid')))
                         }
                     }
-                    callback()
+                    return callback()
                 },
             },
         ],
         code: [
             {
                 trigger: 'blur',
-                validator: (_rule: unknown, value: string, callback: (error?: string | Error) => void) => {
-                    if (formData.type === MENU_TYPE.BUTTON && !value) {
-                        callback(translate('permission.menu.form.permissionCodeRequired'))
+                validator: (_rule: unknown, value: unknown, callback: (error?: string | Error) => void) => {
+                    const strValue = typeof value === 'string' ? value.trim() : ''
+                    if (formData.type === MENU_TYPE.BUTTON && !strValue) {
+                        return callback(new Error(translate('permission.menu.form.permissionCodeRequired')))
                     }
-                    callback()
+                    return callback()
                 },
             },
         ],
@@ -330,7 +345,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                 submitData.name = ''
                 submitData.path = ''
                 submitData.redirect = ''
-                submitData.component = ''
+                submitData.component_key = ''
                 submitData.is_auth = MENU_SWITCH_VALUE.YES
                 submitData.animate_duration = 0
                 submitData.animate_enter = ''

@@ -5,100 +5,85 @@
             <el-tab-pane :label="t('system.dict.itemTab')" name="item" />
         </el-tabs>
 
-        <div v-if="activeTab === 'type'" class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="typeQueryFormRef" :model="typeQuery" @submit.prevent="handleTypeSearch" @keydown.enter.prevent="handleTypeSearch">
-                <el-row id="typeSearchForm" :gutter="20">
-                    <el-col :span="5">
-                        <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
-                            <el-input v-model.trim="typeQuery.type_code" :placeholder="t('system.dict.typeCodePlaceholder')" clearable />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-form-item :label="t('system.dict.typeName')" prop="type_name">
-                            <el-input v-model.trim="typeQuery.type_name" :placeholder="t('system.dict.typeNamePlaceholder')" clearable />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('common.labels.status')" prop="status">
-                            <el-select v-model="typeQuery.status" clearable :placeholder="t('common.placeholders.selectStatus')">
-                                <el-option v-for="item in commonStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <xl-collapsible-search-btn :loading="typeLoading" :maxShow="3" :onSearch="handleTypeSearch" :modelRef="typeQueryFormRef" nodeName="#typeSearchForm > .el-col" />
-                </el-row>
-            </el-form>
-        </div>
+        <xl-pro-table
+            v-if="activeTab === 'type'"
+            :search-model="typeQuery"
+            :columns="typeColumns"
+            :loading="typeLoading"
+            :data="typeList"
+            :pagination="typePagination"
+            :search-max-show="3"
+            @search="onTypeSearch"
+            @reset="handleTypeReset"
+        >
+            <template #actions>
+                <xl-action-button v-permission="'sysDict:add'" code="sysDict:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
+            </template>
+            <template #operation>
+                <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
+                    <template #default="scope">
+                        <xl-action-buttons :buttons="typeActionButtons" :scope="scope" />
+                    </template>
+                </el-table-column>
+            </template>
+        </xl-pro-table>
 
-        <div v-else class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="itemQueryFormRef" :model="itemQuery" @submit.prevent="handleItemSearch" @keydown.enter.prevent="handleItemSearch">
-                <el-row id="itemSearchForm" :gutter="20">
-                    <el-col :span="6">
-                        <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
-                            <el-select v-model="selectedTypeCode" filterable clearable :placeholder="t('system.dict.typeCodePlaceholder')">
-                                <el-option v-for="type in typeOptions" :key="type.type_code" :label="`${type.type_name} (${type.type_code})`" :value="type.type_code" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-form-item :label="t('system.dict.itemLabel')" prop="label">
-                            <el-input v-model.trim="itemQuery.label" :placeholder="t('system.dict.itemLabelPlaceholder')" clearable />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-form-item :label="t('system.dict.itemValue')" prop="value">
-                            <el-input v-model.trim="itemQuery.value" :placeholder="t('system.dict.itemValuePlaceholder')" clearable />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="3">
-                        <el-form-item :label="t('common.labels.status')" prop="status">
-                            <el-select v-model="itemQuery.status" clearable :placeholder="t('common.placeholders.selectStatus')">
-                                <el-option v-for="item in commonStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <xl-collapsible-search-btn :loading="itemLoading" :maxShow="4" :onSearch="handleItemSearch" :modelRef="itemQueryFormRef" nodeName="#itemSearchForm > .el-col" />
-                </el-row>
-            </el-form>
-        </div>
-
-        <div class="xl-container">
-            <div class="xl-table-actions">
-                <xl-action-button v-permission="'sysDict:add'" :button-info="addButtonInfo" type="primary" :show-icon="false" @click="openCreateDrawer" />
-            </div>
-
-            <xl-table-list v-if="activeTab === 'type'" :loading="typeLoading" :data="typeList" :tableTitle="typeTableTitle" :pagination="typePagination">
-                <template #td="{ item, val }">
-                    <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                        {{ item.tag[val as string | number]?.text || val }}
-                    </el-tag>
-                    <span v-else>{{ val }}</span>
-                </template>
-                <template #operation>
-                    <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
-                        <template #default="scope">
-                            <xl-action-buttons :buttons="typeActionButtons" :scope="scope" />
-                        </template>
-                    </el-table-column>
-                </template>
-            </xl-table-list>
-
-            <xl-table-list v-else :loading="itemLoading" :data="itemList" :tableTitle="itemTableTitle" :pagination="itemPagination">
-                <template #td="{ item, val }">
-                    <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                        {{ item.tag[val as string | number]?.text || val }}
-                    </el-tag>
-                    <span v-else>{{ val }}</span>
-                </template>
-                <template #operation>
-                    <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
-                        <template #default="scope">
-                            <xl-action-buttons :buttons="itemActionButtons" :scope="scope" />
-                        </template>
-                    </el-table-column>
-                </template>
-            </xl-table-list>
-        </div>
+        <xl-pro-table
+            v-else
+            v-model:search-model="itemQuery"
+            :columns="itemColumns"
+            :loading="itemLoading"
+            :data="itemList"
+            :pagination="itemPagination"
+            :search-max-show="4"
+            @search="handleItemSearch"
+            @reset="handleItemSearch"
+        >
+            <template #search>
+                <el-form class="xl-search-form" :model="itemQuery" @submit.prevent="handleItemSearch" @keydown.enter.prevent="handleItemSearch">
+                    <el-row id="itemSearchForm" :gutter="20">
+                        <el-col :span="6">
+                            <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
+                                <el-select v-model="selectedTypeCode" filterable clearable :placeholder="t('system.dict.typeCodePlaceholder')">
+                                    <el-option v-for="type in typeOptions" :key="type.type_code" :label="`${type.type_name} (${type.type_code})`" :value="type.type_code" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-form-item :label="t('system.dict.itemLabel')" prop="label">
+                                <el-input v-model.trim="itemQuery.label" :placeholder="t('system.dict.itemLabelPlaceholder')" clearable />
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-form-item :label="t('system.dict.itemValue')" prop="value">
+                                <el-input v-model.trim="itemQuery.value" :placeholder="t('system.dict.itemValuePlaceholder')" clearable />
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="3">
+                            <el-form-item :label="t('common.labels.status')" prop="status">
+                                <el-select v-model="itemQuery.status" clearable :placeholder="t('common.placeholders.selectStatus')">
+                                    <el-option v-for="item in commonStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <div class="xl-search-btn">
+                            <el-button type="primary" :disabled="itemLoading" @click="handleItemSearch">{{ t('common.actions.search') }}</el-button>
+                            <el-button :disabled="itemLoading" @click="handleItemReset">{{ t('common.actions.reset') }}</el-button>
+                        </div>
+                    </el-row>
+                </el-form>
+            </template>
+            <template #actions>
+                <xl-action-button v-permission="'sysDict:add'" code="sysDict:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
+            </template>
+            <template #operation>
+                <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
+                    <template #default="scope">
+                        <xl-action-buttons :buttons="itemActionButtons" :scope="scope" />
+                    </template>
+                </el-table-column>
+            </template>
+        </xl-pro-table>
 
         <xl-drawer v-model="showTypeDrawer" :title="typeFormTitle" :formRef="typeFormRef" :onConfirm="submitTypeForm" :isSubmitting="typeSubmitting" size="36%">
             <el-form ref="typeFormRef" :model="typeFormData" :rules="typeFormRules" label-width="auto">
@@ -181,10 +166,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
-import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlTableList from '@/components/tableList/index.vue'
+import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlI18nInput from '@/components/i18nInput/index.vue'
@@ -197,29 +181,35 @@ import { validateFormSafely } from '@/modules/shared/form'
 import { createLocaleTextMap, createDictTypeQuery, createDictItemQuery } from '@/modules/system/model'
 import { SYSTEM_DICT_TYPES, commonStatusFallbackOptions, yesNoFallbackOptions } from '@/modules/system/dictOptions'
 import { fetchDictTypeList, fetchDictTypeDetail, addDictType, modifyDictType, removeDictType, fetchDictItemList, addDictItem, modifyDictItem, removeDictItem } from '@/modules/system/service'
+import { mergeI18nField } from '@/modules/shared/i18n'
 import type { DictType, DictItem } from '@/types/system'
-import type { TableColumn } from '@/types/common'
+import type { ProTableColumns } from '@/components/proTable/types'
 import { Logger } from '@/utils/logger'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 
 const { t } = useI18n()
 const { getButtonInfoFull } = usePermission()
 
-const addButtonInfo = getButtonInfoFull('sysDict:add')
 const updateButtonInfo = getButtonInfoFull('sysDict:update')
 const deleteButtonInfo = getButtonInfoFull('sysDict:delete')
 const { options: commonStatusOptions, tagMap: commonStatusTagMap, load: loadCommonStatusOptions } = useDictOptions(SYSTEM_DICT_TYPES.commonStatus, commonStatusFallbackOptions)
 const { tagMap: yesNoTagMap, load: loadYesNoOptions } = useDictOptions(SYSTEM_DICT_TYPES.yesNo, yesNoFallbackOptions)
 
+const onTypeSearch = (model: Record<string, unknown>) => {
+    Object.assign(typeQuery, model)
+    handleTypeSearch()
+}
+
 const activeTab = ref<'type' | 'item'>('type')
 const selectedTypeCode = ref('')
 
-const typeQueryFormRef = ref<FormInstance>()
-const itemQueryFormRef = ref<FormInstance>()
-const typeQuery = reactive(createDictTypeQuery())
-const itemQuery = reactive(createDictItemQuery(''))
+/* eslint-disable prefer-const */
+let typeQuery = reactive(createDictTypeQuery())
+let itemQuery = reactive(createDictItemQuery(''))
+/* eslint-enable prefer-const */
 
 const {
+    handleReset: handleTypeReset,
     loading: typeLoading,
     items: typeList,
     pagination: typePagination,
@@ -227,20 +217,7 @@ const {
     handleSearch: handleTypeSearch,
 } = useListPage<DictType, typeof typeQuery>({
     query: typeQuery,
-    queryFormRef: typeQueryFormRef,
-    fetcher: async (params) => {
-        try {
-            return await fetchDictTypeList(params)
-        } catch (error) {
-            Logger.error('获取字典类型列表失败:', error)
-            return {
-                list: [],
-                total: 0,
-                page: params.page ?? 1,
-                pageSize: params.per_page ?? 10,
-            }
-        }
-    },
+    fetcher: (params) => fetchDictTypeList(params),
 })
 
 const {
@@ -250,7 +227,6 @@ const {
     handleSearch: handleItemSearch,
 } = useListPage<DictItem, typeof itemQuery>({
     query: itemQuery,
-    queryFormRef: itemQueryFormRef,
     transformParams: (query) => ({
         ...query,
         type_code: selectedTypeCode.value || query.type_code,
@@ -264,17 +240,7 @@ const {
                 pageSize: params.per_page ?? 10,
             }
         }
-        try {
-            return await fetchDictItemList(params)
-        } catch (error) {
-            Logger.error('获取字典项列表失败:', error)
-            return {
-                list: [],
-                total: 0,
-                page: params.page ?? 1,
-                pageSize: params.per_page ?? 10,
-            }
-        }
+        return fetchDictItemList(params)
     },
 })
 
@@ -287,8 +253,7 @@ watch(
             selectedTypeCode.value = list[0].type_code
             itemQuery.type_code = list[0].type_code
         }
-    },
-    { immediate: true }
+    }
 )
 
 watch(selectedTypeCode, async (value) => {
@@ -300,10 +265,24 @@ watch(selectedTypeCode, async (value) => {
 
 watch(activeTab, async (tab) => {
     if (tab === 'item') {
-        await getTypeList()
+        if (typeList.value.length === 0) {
+            await getTypeList()
+        }
+        if (!selectedTypeCode.value && typeList.value.length > 0) {
+            selectedTypeCode.value = typeList.value[0].type_code
+            itemQuery.type_code = typeList.value[0].type_code
+        }
         await handleItemSearch()
     }
 })
+
+const handleItemReset = async () => {
+    // 避免直接赋值 null 破坏响应式属性类型定义，改用 undefined 并且让其安全的重置
+    itemQuery.label = undefined
+    itemQuery.value = undefined
+    itemQuery.status = undefined
+    await handleItemSearch()
+}
 
 const showTypeDrawer = ref(false)
 const typeSubmitting = ref(false)
@@ -381,9 +360,9 @@ const resetTypeForm = () => {
         sort: 0,
         remark: '',
     })
-    setTimeout(() => {
+    nextTick(() => {
         typeFormRef.value?.clearValidate()
-    }, 50)
+    })
 }
 
 const resetItemForm = () => {
@@ -399,9 +378,9 @@ const resetItemForm = () => {
         sort: 0,
         remark: '',
     })
-    setTimeout(() => {
+    nextTick(() => {
         itemFormRef.value?.clearValidate()
-    }, 50)
+    })
 }
 
 const openCreateDrawer = () => {
@@ -421,11 +400,7 @@ const openEditTypeDrawer = async (row: DictType) => {
         const detail = await fetchDictTypeDetail(row.id)
         Object.assign(typeFormData, {
             type_code: detail.type_code || '',
-            type_name_i18n: {
-                ...createLocaleTextMap(),
-                ...(detail.type_name_i18n || {}),
-                ...(detail.type_name && !detail.type_name_i18n?.['zh-CN'] ? { 'zh-CN': detail.type_name } : {}),
-            },
+            type_name_i18n: mergeI18nField(detail as unknown as Record<string, unknown>, 'type_name_i18n'),
             status: Number(detail.status ?? 1),
             sort: Number(detail.sort ?? 0),
             remark: detail.remark || '',
@@ -532,8 +507,10 @@ const handleDeleteType = async (row: DictType) => {
         ElMessage.success(t('common.result.deleteSuccess'))
         await getTypeList()
         await handleItemSearch()
-    } catch {
-        // noop
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            Logger.error('删除字典类型失败:', error)
+        }
     }
 }
 
@@ -544,8 +521,10 @@ const handleDeleteItem = async (row: DictItem) => {
         invalidateDictOptionsCache(row.type_code)
         ElMessage.success(t('common.result.deleteSuccess'))
         await handleItemSearch()
-    } catch {
-        // noop
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            Logger.error('删除字典项失败:', error)
+        }
     }
 }
 
@@ -579,53 +558,63 @@ const itemActionButtons = computed(() => [
     },
 ])
 
-const typeTableTitle = computed(
-    () =>
-        [
-            { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
-            { prop: 'type_code', h_label: t('system.dict.typeCode'), minWidth: 160, overflow: true },
-            { prop: 'type_name', h_label: t('system.dict.typeName'), minWidth: 160, overflow: true },
-            {
-                prop: 'status',
-                h_label: t('common.labels.status'),
-                width: 100,
-                align: 'center',
-                customRow: true,
-                tag: commonStatusTagMap.value,
-            },
-            { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
-            { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
-        ] as TableColumn<DictType>[]
-)
+const typeColumns = computed<ProTableColumns<DictType>>(() => [
+    { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
+    {
+        prop: 'type_code',
+        h_label: t('system.dict.typeCode'),
+        label: t('system.dict.typeCode'),
+        minWidth: 160,
+        overflow: true,
+        search: { type: 'input', placeholder: t('system.dict.typeCodePlaceholder'), span: 5 },
+    },
+    {
+        prop: 'type_name',
+        h_label: t('system.dict.typeName'),
+        label: t('system.dict.typeName'),
+        minWidth: 160,
+        overflow: true,
+        search: { type: 'input', placeholder: t('system.dict.typeNamePlaceholder'), span: 5 },
+    },
+    {
+        prop: 'status',
+        h_label: t('common.labels.status'),
+        label: t('common.labels.status'),
+        width: 100,
+        align: 'center',
+        type: 'tag',
+        tag: commonStatusTagMap.value,
+        search: { type: 'select', placeholder: t('common.placeholders.selectStatus'), options: commonStatusOptions.value, span: 4 },
+    },
+    { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
+    { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+])
 
-const itemTableTitle = computed(
-    () =>
-        [
-            { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
-            { prop: 'label', h_label: t('system.dict.itemLabel'), minWidth: 160, overflow: true },
-            { prop: 'value', h_label: t('system.dict.itemValue'), minWidth: 120, overflow: true },
-            { prop: 'color', h_label: t('system.dict.color'), width: 120 },
-            { prop: 'tag_type', h_label: t('system.dict.tagType'), width: 120 },
-            {
-                prop: 'is_default',
-                h_label: t('system.dict.default'),
-                width: 90,
-                align: 'center',
-                customRow: true,
-                tag: yesNoTagMap.value,
-            },
-            {
-                prop: 'status',
-                h_label: t('common.labels.status'),
-                width: 100,
-                align: 'center',
-                customRow: true,
-                tag: commonStatusTagMap.value,
-            },
-            { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
-            { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
-        ] as TableColumn<DictItem>[]
-)
+const itemColumns = computed<ProTableColumns<DictItem>>(() => [
+    { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
+    { prop: 'label', h_label: t('system.dict.itemLabel'), minWidth: 160, overflow: true },
+    { prop: 'value', h_label: t('system.dict.itemValue'), minWidth: 120, overflow: true },
+    { prop: 'color', h_label: t('system.dict.color'), width: 120 },
+    { prop: 'tag_type', h_label: t('system.dict.tagType'), width: 120 },
+    {
+        prop: 'is_default',
+        h_label: t('system.dict.default'),
+        width: 90,
+        align: 'center',
+        type: 'tag',
+        tag: yesNoTagMap.value,
+    },
+    {
+        prop: 'status',
+        h_label: t('common.labels.status'),
+        width: 100,
+        align: 'center',
+        type: 'tag',
+        tag: commonStatusTagMap.value,
+    },
+    { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
+    { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+])
 
 onMounted(async () => {
     await Promise.all([loadCommonStatusOptions(), loadYesNoOptions(), getTypeList()])
@@ -636,7 +625,7 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.el-form-item {
-    width: 100% !important;
+:deep(.el-form-item) {
+    width: 100%;
 }
 </style>

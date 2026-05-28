@@ -4,6 +4,8 @@ export type NotificationSource = 'websocket' | 'export'
 
 export type NotificationConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disabled' | 'error'
 
+export type NotificationAudienceType = 'all' | 'user_ids'
+
 export interface AppNotification {
     id: string
     title: string
@@ -12,6 +14,11 @@ export interface AppNotification {
     source: NotificationSource
     read: boolean
     created_at: string
+    category?: string
+    topic?: string
+    payload?: Record<string, unknown>
+    read_at?: string | null
+    updated_at?: string
     action_url?: string
     action_label?: string
     meta?: Record<string, unknown>
@@ -29,6 +36,25 @@ export interface NotificationUnreadCount {
 
 export interface NotificationReadPayload {
     id: string | number
+}
+
+export interface NotificationSendPayload {
+    title: string
+    message: string
+    category?: string
+    action_url?: string
+    action_label?: string
+    audience_type: NotificationAudienceType
+    user_ids?: Array<number | string>
+}
+
+export interface NotificationSendResult {
+    task_id?: number | string
+    batch_id?: string
+    total?: number
+    success?: number
+    failed?: number
+    message?: string
 }
 
 export interface NotificationSocketMessage extends Partial<AppNotification> {

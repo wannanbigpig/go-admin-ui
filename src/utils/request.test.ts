@@ -4,9 +4,11 @@ import { MESSAGE_ERROR_DURATION } from '@/modules/shared/constants'
 const hoisted = vi.hoisted(() => {
     const mockAuthStore = {
         token: '',
+        refreshToken: '',
         updateToken: vi.fn(),
         handleTokenExpired: vi.fn(),
     }
+    const mockRefreshTokenApi = vi.fn()
     const mockSettingStore = {
         locale: 'zh-CN',
     }
@@ -48,6 +50,7 @@ const hoisted = vi.hoisted(() => {
         mockSettingStore,
         mockLogger,
         mockService,
+        mockRefreshTokenApi,
         callbacks: {
             get requestOnFulfilled() {
                 return requestOnFulfilled
@@ -87,6 +90,10 @@ vi.mock('@/utils/logger', () => ({
     Logger: hoisted.mockLogger,
 }))
 
+vi.mock('@/api/auth', () => ({
+    refreshTokenApi: hoisted.mockRefreshTokenApi,
+}))
+
 import { ElMessage } from 'element-plus'
 import service, { get, post, request, upload } from '@/utils/request'
 
@@ -100,10 +107,12 @@ const getCallback = <T>(value: T | undefined, name: string): T => {
 describe('utils/request.ts', () => {
     beforeEach(() => {
         hoisted.mockAuthStore.token = ''
+        hoisted.mockAuthStore.refreshToken = ''
         hoisted.mockSettingStore.locale = 'zh-CN'
         hoisted.mockService.request.mockReset()
         hoisted.mockAuthStore.updateToken.mockClear()
         hoisted.mockAuthStore.handleTokenExpired.mockClear()
+        hoisted.mockRefreshTokenApi.mockReset()
         hoisted.mockLogger.error.mockClear()
         hoisted.mockLogger.warn.mockClear()
     })
@@ -230,12 +239,15 @@ describe('utils/request.ts', () => {
     })
 
     it('响应拦截器遇到业务 401 应触发过期处理并拒绝', async () => {
+        hoisted.mockAuthStore.refreshToken = 'valid-refresh-token'
+        hoisted.mockRefreshTokenApi.mockRejectedValueOnce(new Error('refresh failed'))
         const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
         const payload = { code: 401, msg: 'unauthorized' }
         await expect(
             onFulfilled({
                 headers: {},
                 data: payload,
+                config: {},
             })
         ).rejects.toEqual(payload)
         expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
@@ -257,6 +269,8 @@ describe('utils/request.ts', () => {
     })
 
     it('响应拦截器应解析 Blob 中的 JSON 业务错误', async () => {
+        hoisted.mockAuthStore.refreshToken = 'valid-refresh-token'
+        hoisted.mockRefreshTokenApi.mockRejectedValueOnce(new Error('refresh failed'))
         const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
         const payload = { code: 401, msg: 'unauthorized', data: null }
         const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
@@ -271,12 +285,8 @@ describe('utils/request.ts', () => {
         expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
     })
 
-    it('响应错误拦截器应处理 401、网络错误、超时和兜底错误', async () => {
+    it('响应错误拦截器应处理网络错误、超时和兜底错误', async () => {
         const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
-
-        const http401Error = { response: { status: 401 }, message: 'unauthorized' }
-        await expect(onRejected(http401Error)).rejects.toBe(http401Error)
-        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
 
         const networkError = { message: 'Network Error' }
         await expect(onRejected(networkError)).rejects.toBe(networkError)
@@ -301,5 +311,84 @@ describe('utils/request.ts', () => {
             type: 'error',
             duration: MESSAGE_ERROR_DURATION,
         })
+    })
+
+    it('响应拦截器应返回 undefined（HTTP 204 No Content）', async () => {
+        const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
+        const result = await onFulfilled({
+            status: 204,
+            headers: {},
+            data: '',
+            config: {},
+        })
+        expect(result).toBeUndefined()
+    })
+
+    it('HTTP 400 + API payload 应 reject 业务 payload 并弹后端 msg', async () => {
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 10000, msg: '参数错误', data: null }
+        await expect(
+            onRejected({
+                response: { status: 400, data: payload, headers: {} },
+                config: {},
+                message: 'Request failed with status code 400',
+            })
+        ).rejects.toEqual(payload)
+        expect(ElMessage).toHaveBeenCalledWith(expect.objectContaining({ message: '参数错误', type: 'error' }))
+    })
+
+    it('登录接口 HTTP 401 + API payload 应 reject 业务 payload 且不触发 handleTokenExpired', async () => {
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 20001, msg: '账号或密码错误', data: null }
+        await expect(
+            onRejected({
+                response: { status: 401, data: payload, headers: {} },
+                config: { authErrorMode: 'credential' },
+                message: 'Request failed with status code 401',
+            })
+        ).rejects.toEqual(payload)
+        expect(hoisted.mockAuthStore.handleTokenExpired).not.toHaveBeenCalled()
+        expect(ElMessage).toHaveBeenCalledWith(expect.objectContaining({ message: '账号或密码错误', type: 'error' }))
+    })
+
+    it('会话失效 HTTP 401 + API payload 应触发 handleTokenExpired 并 reject 业务 payload', async () => {
+        hoisted.mockAuthStore.refreshToken = 'valid-refresh-token'
+        hoisted.mockRefreshTokenApi.mockRejectedValueOnce(new Error('refresh failed'))
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 401, msg: '登录已过期', data: null }
+        await expect(
+            onRejected({
+                response: { status: 401, data: payload, headers: {} },
+                config: {},
+                message: 'Request failed with status code 401',
+            })
+        ).rejects.toEqual(payload)
+        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
+    })
+
+    it('HTTP 403 + API payload 应 reject 业务 payload 并弹后端 msg', async () => {
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 403, msg: '权限不足', data: null }
+        await expect(
+            onRejected({
+                response: { status: 403, data: payload, headers: {} },
+                config: {},
+                message: 'Request failed with status code 403',
+            })
+        ).rejects.toEqual(payload)
+        expect(ElMessage).toHaveBeenCalledWith(expect.objectContaining({ message: '权限不足', type: 'error' }))
+    })
+
+    it('HTTP 500 + API payload 应 reject 业务 payload 并弹后端 msg', async () => {
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 500, msg: '服务器内部错误', data: null }
+        await expect(
+            onRejected({
+                response: { status: 500, data: payload, headers: {} },
+                config: {},
+                message: 'Request failed with status code 500',
+            })
+        ).rejects.toEqual(payload)
+        expect(ElMessage).toHaveBeenCalledWith(expect.objectContaining({ message: '服务器内部错误', type: 'error' }))
     })
 })

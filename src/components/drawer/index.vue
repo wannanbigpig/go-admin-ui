@@ -1,5 +1,5 @@
 <template>
-    <el-drawer v-model="model" :direction="direction" :size="size" @closed="handleClosed">
+    <el-drawer v-model="model" :direction="direction" :size="resolvedSize" @closed="handleClosed">
         <template #header>
             <h4>{{ title }}</h4>
         </template>
@@ -25,14 +25,17 @@
 import type { FormInstance } from 'element-plus'
 import { Logger } from '@/utils/logger'
 import { useI18n } from 'vue-i18n'
+import { computed } from 'vue'
 
 // ==================== Props 定义 ====================
+type DrawerSizeToken = 'sm' | 'md' | 'lg'
+
 interface Props {
     direction?: 'ltr' | 'rtl' | 'ttb' | 'btt'
     title?: string
     withReset?: boolean
     isSubmitting?: boolean
-    size?: string | number
+    size?: DrawerSizeToken | string | number
     onConfirm?: () => void | Promise<void>
     onReset?: () => void
     onCancel?: () => void
@@ -44,8 +47,23 @@ const props = withDefaults(defineProps<Props>(), {
     title: '',
     withReset: true,
     isSubmitting: false,
-    size: '30%',
+    size: 'md',
     formRef: null,
+})
+
+// 把语义化 size token 映射成 CSS clamp() 表达式；其他字符串/数字原样透传
+const SIZE_TOKEN_MAP: Record<DrawerSizeToken, string> = {
+    sm: 'var(--xl-drawer-sm)',
+    md: 'var(--xl-drawer-md)',
+    lg: 'var(--xl-drawer-lg)',
+}
+
+const resolvedSize = computed<string | number>(() => {
+    const raw = props.size
+    if (typeof raw === 'string' && raw in SIZE_TOKEN_MAP) {
+        return SIZE_TOKEN_MAP[raw as DrawerSizeToken]
+    }
+    return raw
 })
 const { t } = useI18n()
 
@@ -71,9 +89,13 @@ const handleCancel = () => {
     }
 }
 
-const handleConfirm = () => {
+const handleConfirm = async () => {
     if (props.onConfirm) {
-        props.onConfirm()
+        try {
+            await props.onConfirm()
+        } catch (error) {
+            Logger.error('Drawer onConfirm error:', error)
+        }
     } else {
         Logger.error(t('validation.drawer.onConfirmRequired'))
     }

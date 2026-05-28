@@ -55,12 +55,24 @@
                 <el-row :gutter="16">
                     <el-col :span="12">
                         <el-form-item :label="t('system.storage.accessKeyId')" prop="config.aliyun_oss.access_key_id">
-                            <el-input v-model.trim="formData.config.aliyun_oss.access_key_id" :placeholder="t('system.storage.secretPlaceholder')" />
+                            <el-input v-model.trim="formData.config.aliyun_oss.access_key_id" />
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
                         <el-form-item :label="t('system.storage.accessKeySecret')" prop="config.aliyun_oss.access_key_secret">
-                            <el-input v-model.trim="formData.config.aliyun_oss.access_key_secret" type="password" show-password :placeholder="t('system.storage.secretPlaceholder')" />
+                            <el-input
+                                v-model.trim="formData.config.aliyun_oss.access_key_secret"
+                                :type="isSecretFieldRevealed('aliyun_oss.access_key_secret') ? 'text' : 'password'"
+                                :placeholder="t('system.storage.secretPlaceholder')"
+                            >
+                                <template v-if="canViewSensitive && hasSensitiveValue('aliyun_oss.access_key_secret')" #suffix>
+                                    <el-icon size="16" class="xl-cursor-hover" @click="toggleSecretField('aliyun_oss.access_key_secret')">
+                                        <i-ep-loading v-if="isSecretFieldLoading('aliyun_oss.access_key_secret')" />
+                                        <i-ant-design-eye-invisible-outlined v-else-if="isSecretFieldRevealed('aliyun_oss.access_key_secret')" />
+                                        <i-ant-design-eye-outlined v-else />
+                                    </el-icon>
+                                </template>
+                            </el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -81,48 +93,6 @@
                 </el-form-item>
             </template>
 
-            <template v-else>
-                <el-row :gutter="16">
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.endpoint')" prop="config.s3.endpoint">
-                            <el-input v-model.trim="formData.config.s3.endpoint" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.region')" prop="config.s3.region">
-                            <el-input v-model.trim="formData.config.s3.region" />
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <el-form-item :label="t('system.storage.bucket')" prop="config.s3.bucket">
-                    <el-input v-model.trim="formData.config.s3.bucket" />
-                </el-form-item>
-                <el-row :gutter="16">
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.accessKeyId')" prop="config.s3.access_key_id">
-                            <el-input v-model.trim="formData.config.s3.access_key_id" :placeholder="t('system.storage.secretPlaceholder')" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.secretAccessKey')" prop="config.s3.secret_access_key">
-                            <el-input v-model.trim="formData.config.s3.secret_access_key" type="password" show-password :placeholder="t('system.storage.secretPlaceholder')" />
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="16">
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.publicDomain')" prop="config.s3.public_domain">
-                            <el-input v-model.trim="formData.config.s3.public_domain" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.forcePathStyle')" prop="config.s3.force_path_style">
-                            <el-switch v-model="formData.config.s3.force_path_style" />
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-            </template>
-
             <el-divider />
 
             <el-row :gutter="16">
@@ -137,9 +107,21 @@
                     </el-form-item>
                 </el-col>
             </el-row>
-            <el-form-item :label="t('system.storage.allowedMimeTypes')" prop="allowedMimeTypesText">
-                <el-input v-model="allowedMimeTypesText" type="textarea" :rows="4" :placeholder="t('system.storage.allowedMimeTypesPlaceholder')" />
+            <el-form-item :label="t('system.storage.allowedExtensions')" prop="allowedExtensionsText">
+                <el-input v-model="allowedExtensionsText" type="textarea" :rows="4" :placeholder="t('system.storage.allowedExtensionsPlaceholder')" />
             </el-form-item>
+
+            <el-divider>
+                <span class="divider-title">{{ t('system.storage.exportSettingTitle') }}</span>
+            </el-divider>
+
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item :label="t('system.storage.exportTempFileTtl')" prop="config.export_temp_file_ttl_days">
+                        <el-input-number v-model="formData.config.export_temp_file_ttl_days" :min="1" style="width: 100%" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
 
             <div class="storage-actions storage-actions-bottom" :class="{ 'is-embedded': embedded }">
                 <xl-action-button v-permission="'storage:test'" :text="t('system.storage.testConnection')" type="primary" :show-icon="false" :loading="testing" @click="handleTest" />
@@ -154,9 +136,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { useI18n } from 'vue-i18n'
-import { fetchStorageConfig, testStorageConnection, updateStorageConfig } from '@/modules/system/service'
+import { fetchStorageConfig, fetchStorageSecret, testStorageConnection, updateStorageConfig } from '@/modules/system/service'
 import { validateFormSafely } from '@/modules/shared/form'
 import { Logger } from '@/utils/logger'
+import { hasPermission } from '@/utils/auth'
 import type { StorageConfig, StorageConfigPayload } from '@/types/system'
 
 interface Props {
@@ -185,18 +168,11 @@ const createDefaultForm = (): StorageConfig => ({
             internal_endpoint: '',
             force_path_style: false,
         },
-        s3: {
-            endpoint: '',
-            region: '',
-            bucket: '',
-            access_key_id: '',
-            secret_access_key: '',
-            public_domain: '',
-            force_path_style: false,
-        },
         signed_url_ttl_seconds: 600,
         max_file_size_mb: 20,
         allowed_mime_types: [],
+        allowed_extensions: [],
+        export_temp_file_ttl_days: 7,
     },
 })
 
@@ -204,14 +180,33 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
-const allowedMimeTypesText = ref('')
+const allowedExtensionsText = ref('')
 const formData = reactive(createDefaultForm())
+type StorageSecretFieldPath = 'aliyun_oss.access_key_secret'
+
+type StorageSecretFieldState = {
+    maskedValue: string
+    revealedValue: string
+    loading: boolean
+    revealed: boolean
+}
+
+const createSecretState = (): StorageSecretFieldState => ({
+    maskedValue: '',
+    revealedValue: '',
+    loading: false,
+    revealed: false,
+})
+
+const secretFieldState = reactive<Record<StorageSecretFieldPath, StorageSecretFieldState>>({
+    'aliyun_oss.access_key_secret': createSecretState(),
+})
 
 const driverOptions = computed(() => [
     { label: t('system.storage.drivers.local'), value: 'local' },
     { label: t('system.storage.drivers.aliyunOss'), value: 'aliyun_oss' },
-    { label: t('system.storage.drivers.s3'), value: 's3' },
 ])
+const canViewSensitive = computed(() => hasPermission('storage:secret', true))
 
 const formRules = computed(() => ({
     active_driver: [{ required: true, message: t('system.storage.form.driverRequired'), trigger: 'change' }],
@@ -219,16 +214,76 @@ const formRules = computed(() => ({
     'config.aliyun_oss.endpoint': [{ required: formData.active_driver === 'aliyun_oss', message: t('system.storage.form.endpointRequired'), trigger: 'blur' }],
     'config.aliyun_oss.region': [{ required: formData.active_driver === 'aliyun_oss', message: t('system.storage.form.regionRequired'), trigger: 'blur' }],
     'config.aliyun_oss.bucket': [{ required: formData.active_driver === 'aliyun_oss', message: t('system.storage.form.bucketRequired'), trigger: 'blur' }],
-    'config.s3.region': [{ required: formData.active_driver === 's3', message: t('system.storage.form.regionRequired'), trigger: 'blur' }],
-    'config.s3.bucket': [{ required: formData.active_driver === 's3', message: t('system.storage.form.bucketRequired'), trigger: 'blur' }],
 }))
 
-const isMaskedValue = (value?: string) => {
-    const text = String(value || '').trim()
-    return text !== '' && /^[*•]+$/.test(text)
+const getSecretFieldValue = (field: StorageSecretFieldPath) => {
+    switch (field) {
+        case 'aliyun_oss.access_key_secret':
+            return formData.config.aliyun_oss.access_key_secret || ''
+        default:
+            return ''
+    }
 }
 
-const keepEditableSecret = (value?: string) => (isMaskedValue(value) ? '' : value || '')
+const setSecretFieldValue = (field: StorageSecretFieldPath, value: string) => {
+    switch (field) {
+        case 'aliyun_oss.access_key_secret':
+            formData.config.aliyun_oss.access_key_secret = value
+            break
+    }
+}
+
+const resetSecretFieldState = () => {
+    ;(Object.keys(secretFieldState) as StorageSecretFieldPath[]).forEach((field) => {
+        const state = secretFieldState[field]
+        state.maskedValue = getSecretFieldValue(field)
+        state.revealedValue = ''
+        state.loading = false
+        state.revealed = false
+    })
+}
+
+const getSecretQuery = (field: StorageSecretFieldPath) => {
+    switch (field) {
+        case 'aliyun_oss.access_key_secret':
+            return { driver: 'aliyun_oss' as const, field: 'access_key_secret' as const }
+        default:
+            return { driver: 'aliyun_oss' as const, field: 'access_key_secret' as const }
+    }
+}
+
+const hasSensitiveValue = (field: StorageSecretFieldPath) => {
+    const state = secretFieldState[field]
+    return Boolean(String(state.maskedValue || getSecretFieldValue(field) || '').trim())
+}
+
+const isSecretFieldLoading = (field: StorageSecretFieldPath) => secretFieldState[field].loading
+const isSecretFieldRevealed = (field: StorageSecretFieldPath) => secretFieldState[field].revealed
+
+const toggleSecretField = async (field: StorageSecretFieldPath) => {
+    if (!canViewSensitive.value) return
+    const state = secretFieldState[field]
+    if (state.loading || !hasSensitiveValue(field)) return
+    if (state.revealed) {
+        if (getSecretFieldValue(field) === state.revealedValue) {
+            setSecretFieldValue(field, state.maskedValue)
+        }
+        state.revealed = false
+        return
+    }
+    state.loading = true
+    try {
+        const secret = await fetchStorageSecret(getSecretQuery(field).driver, getSecretQuery(field).field)
+        state.maskedValue = state.maskedValue || getSecretFieldValue(field)
+        state.revealedValue = secret
+        setSecretFieldValue(field, secret)
+        state.revealed = true
+    } catch (error) {
+        Logger.error('获取存储敏感信息失败:', error)
+    } finally {
+        state.loading = false
+    }
+}
 
 const applyConfig = (config: StorageConfig) => {
     const defaults = createDefaultForm()
@@ -237,18 +292,16 @@ const applyConfig = (config: StorageConfig) => {
         config: {
             local: { ...defaults.config.local, ...(config.config?.local || {}) },
             aliyun_oss: { ...defaults.config.aliyun_oss, ...(config.config?.aliyun_oss || {}) },
-            s3: { ...defaults.config.s3, ...(config.config?.s3 || {}) },
             signed_url_ttl_seconds: config.config?.signed_url_ttl_seconds ?? defaults.config.signed_url_ttl_seconds,
             max_file_size_mb: config.config?.max_file_size_mb ?? defaults.config.max_file_size_mb,
             allowed_mime_types: config.config?.allowed_mime_types ?? defaults.config.allowed_mime_types,
+            allowed_extensions: config.config?.allowed_extensions ?? defaults.config.allowed_extensions,
+            export_temp_file_ttl_days: config.config?.export_temp_file_ttl_days ?? defaults.config.export_temp_file_ttl_days,
         },
     }
-    merged.config.aliyun_oss.access_key_id = keepEditableSecret(merged.config.aliyun_oss.access_key_id)
-    merged.config.aliyun_oss.access_key_secret = keepEditableSecret(merged.config.aliyun_oss.access_key_secret)
-    merged.config.s3.access_key_id = keepEditableSecret(merged.config.s3.access_key_id)
-    merged.config.s3.secret_access_key = keepEditableSecret(merged.config.s3.secret_access_key)
     Object.assign(formData, merged)
-    allowedMimeTypesText.value = Array.isArray(merged.config.allowed_mime_types) ? merged.config.allowed_mime_types.join('\n') : String(merged.config.allowed_mime_types || '')
+    allowedExtensionsText.value = Array.isArray(merged.config.allowed_extensions) ? merged.config.allowed_extensions.join('\n') : String(merged.config.allowed_extensions || '')
+    resetSecretFieldState()
 }
 
 const buildPayload = (): StorageConfigPayload => ({
@@ -256,13 +309,14 @@ const buildPayload = (): StorageConfigPayload => ({
     config: {
         local: { ...formData.config.local },
         aliyun_oss: { ...formData.config.aliyun_oss },
-        s3: { ...formData.config.s3 },
         signed_url_ttl_seconds: Number(formData.config.signed_url_ttl_seconds || 0),
         max_file_size_mb: Number(formData.config.max_file_size_mb || 0),
-        allowed_mime_types: allowedMimeTypesText.value
+        allowed_mime_types: formData.config.allowed_mime_types || [],
+        allowed_extensions: allowedExtensionsText.value
             .split(/\r?\n|,/)
             .map((item) => item.trim())
             .filter(Boolean),
+        export_temp_file_ttl_days: Number(formData.config.export_temp_file_ttl_days || 0),
     },
 })
 
@@ -331,12 +385,12 @@ onMounted(() => {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--xl-space-4);
     margin-bottom: 18px;
 
     h3 {
         margin: 0 0 6px;
-        font-size: 18px;
+        font-size: var(--xl-font-xl);
         font-weight: 600;
     }
 
@@ -360,6 +414,12 @@ onMounted(() => {
 
 .storage-form {
     max-width: 980px;
+}
+
+.divider-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-regular);
 }
 
 @media (max-width: 768px) {

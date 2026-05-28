@@ -1,5 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const store = new Map<string, string>()
+const mockLocalStorage = {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+        store.set(key, value)
+    }),
+    removeItem: vi.fn((key: string) => {
+        store.delete(key)
+    }),
+    clear: vi.fn(() => {
+        store.clear()
+    }),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+    get length() {
+        return store.size
+    },
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+vi.stubGlobal('localStorage', mockLocalStorage as any)
+
 const hoisted = vi.hoisted(() => {
     const mockSettingStore = {
         locale: 'zh-CN',
@@ -40,6 +60,7 @@ describe('composables/useDictOptions.ts', () => {
         hoisted.mockSettingStore.locale = 'zh-CN'
         hoisted.mockFetchDictOptions.mockReset()
         hoisted.mockLogger.error.mockClear()
+        mockLocalStorage.clear()
         invalidateDictOptionsCache()
     })
 

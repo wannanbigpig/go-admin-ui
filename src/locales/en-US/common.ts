@@ -5,6 +5,7 @@ export default {
     no: 'No',
     all: 'All',
     unknown: 'Unknown',
+    noData: 'No Data',
     actions: {
         search: 'Search',
         reset: 'Reset',
@@ -16,6 +17,7 @@ export default {
         prevStep: 'Previous',
         edit: 'Edit',
         delete: 'Delete',
+        rename: 'Rename',
         detail: 'Detail',
         copySuccess: 'Copied',
         refresh: 'Refresh',
@@ -25,6 +27,7 @@ export default {
         collapseAll: 'Collapse All',
     },
     labels: {
+        basicInfo: 'Basic Info',
         id: 'ID',
         status: 'Status',
         sort: 'Sort',
@@ -83,11 +86,13 @@ export default {
     },
     result: {
         deleteSuccess: 'Deleted successfully',
+        deleteFailed: 'Delete failed',
         logoutSuccess: 'Logged out successfully',
         logoutCancel: 'Operation cancelled',
         refreshSuccess: 'Refreshed successfully',
         refreshFailed: 'Refresh failed, please try again later',
         operationSuccess: 'Operation successful',
+        operationFailed: 'Operation failed',
         addSuccess: 'Created successfully',
         editSuccess: 'Updated successfully',
         bindRoleSuccess: 'Roles bound successfully',

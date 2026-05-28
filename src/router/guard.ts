@@ -27,6 +27,8 @@ const appTitle = import.meta.env.VITE_APP_TITLE as string
  * 路由跳转前逻辑
  */
 export async function beforeEach(to: RouteLocationNormalized) {
+    // 进度条在守卫最开始时无条件启动，以保障在被中断/被重定向等场景下和 afterEach 严格对称配对
+    NProgress.start()
     const authStore = useAuthStore()
 
     // 处理登录页路由
@@ -51,14 +53,18 @@ export async function beforeEach(to: RouteLocationNormalized) {
         return routeRedirect
     }
 
-    // 启动进度条
-    NProgress.start()
+    // 访问根路径时，若当前路径未匹配到具体的子页面组件（仅配到了 Layout 壳），才自动跳转到第一个可用菜单
+    if (to.path === ROUTE_PATH.HOME && to.matched.length <= 1 && authStore.firstPath) {
+        return { path: authStore.firstPath, replace: true }
+    }
 }
 
 // ==================== 工具函数 ====================
 function handleLoginRoute(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {
     if (authStore.token) {
-        return normalizeRedirectPath(to.query.redirect, ROUTE_PATH.HOME)
+        // 如果已登录，且访问登录页，重定向到指定路径或第一个可用菜单
+        const redirect = normalizeRedirectPath(to.query.redirect, authStore.firstPath || ROUTE_PATH.HOME)
+        return { path: redirect }
     }
     return undefined
 }
@@ -81,6 +87,7 @@ async function refreshUserInfoIfNeeded(authStore: ReturnType<typeof useAuthStore
             return false
         }
     }
+
     if (isEmpty(authStore.routerData) && to.path !== ROUTE_PATH.HOME) {
         Logger.warn('用户菜单为空，阻止进入受保护路由')
         return false
@@ -103,7 +110,7 @@ async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, t
         return rebuildToRoute(to)
     } catch (error) {
         Logger.error('添加动态路由失败:', error)
-        return ROUTE_PATH.HOME
+        return { path: ROUTE_PATH.HOME }
     }
 }
 

@@ -19,6 +19,7 @@ export const CONFIRM_MESSAGES = {
 /** 统一操作结果文案 key */
 export const RESULT_MESSAGES = {
     DELETE_SUCCESS: 'common.result.deleteSuccess',
+    DELETE_FAILED: 'common.result.deleteFailed',
     LOGOUT_SUCCESS: 'common.result.logoutSuccess',
     LOGOUT_CANCEL: 'common.result.logoutCancel',
     REFRESH_SUCCESS: 'common.result.refreshSuccess',

@@ -22,6 +22,7 @@ export default tseslint.config(
                 __filename: 'readonly',
                 ElMessageBox: 'readonly',
                 ElMessage: 'readonly',
+                __APP_VERSION__: 'readonly',
             },
         },
     },
@@ -59,8 +60,11 @@ export default tseslint.config(
             'no-unused-vars': 'off',
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 
-            // 允许显式使用 any（在迁移初期可以适当放宽，后续再收紧）
-            '@typescript-eslint/no-explicit-any': 'warn',
+            // 禁止显式使用 any
+            '@typescript-eslint/no-explicit-any': 'error',
+
+            // 强制使用严格相等（smart 模式允许 == null 惯用法）
+            eqeqeq: ['error', 'smart'],
 
             // 允许非空断言（看项目习惯）
             '@typescript-eslint/no-non-null-assertion': 'off',

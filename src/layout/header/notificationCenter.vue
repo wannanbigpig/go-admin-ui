@@ -41,32 +41,43 @@
             <div v-else-if="notificationStore.notifications.length === 0" class="notification-panel__empty">
                 <el-empty :description="t('layout.notification.empty')" :image-size="72" />
             </div>
-            <fixed-size-list v-else class-name="notification-list" :data="notificationStore.notifications" :total="notificationStore.notifications.length" :height="420" :item-size="112" width="100%">
-                <template #default="{ index, style }">
-                    <div class="notification-list__row" :style="style">
-                        <button type="button" class="notification-item" :class="{ 'is-unread': !notificationStore.notifications[index]?.read }" @click="handleNotificationClick(notificationStore.notifications[index])">
-                            <div class="notification-item__header">
-                                <div class="notification-item__title-row">
-                                    <span class="notification-item__title">{{ notificationStore.notifications[index]?.title }}</span>
-                                    <span v-if="!notificationStore.notifications[index]?.read" class="notification-item__dot" />
-                                </div>
-                                <el-tag size="small" effect="plain" :type="notificationTagTypeMap[notificationStore.notifications[index]?.level || 'info']">
-                                    {{ sourceLabelMap[notificationStore.notifications[index]?.source || 'websocket'] }}
-                                </el-tag>
-                            </div>
-                            <div class="notification-item__message">{{ notificationStore.notifications[index]?.message || '-' }}</div>
-                            <div class="notification-item__footer">
-                                <span>{{ formatDateTime(notificationStore.notifications[index]?.created_at) }}</span>
-                                <span v-if="notificationStore.notifications[index]?.action_label">{{ notificationStore.notifications[index]?.action_label }}</span>
-                            </div>
-                        </button>
+            <div v-else class="notification-list">
+                <section v-for="item in previewNotifications" :key="item.id" class="notification-item" :class="{ 'is-unread': !item.read }">
+                    <div class="notification-item__header">
+                        <div class="notification-item__title-row">
+                            <span class="notification-item__title">{{ item.title }}</span>
+                            <span v-if="!item.read" class="notification-item__dot" />
+                        </div>
+                        <el-tag size="small" effect="plain" :type="notificationTagTypeMap[item.level || 'info']">
+                            {{ sourceLabelMap[item.source || 'websocket'] }}
+                        </el-tag>
                     </div>
-                </template>
-            </fixed-size-list>
+                    <div class="notification-item__message" :class="{ 'is-expanded': isExpanded(item.id) }" :data-id="item.id">
+                        {{ item.message || '-' }}
+                    </div>
+                    <div class="notification-item__footer">
+                        <span>{{ formatDateTime(item.created_at) }}</span>
+                        <div class="notification-item__footer-actions">
+                            <el-button v-if="overflowMap[item.id]" link size="small" @click="toggleExpanded(item.id)">
+                                {{ isExpanded(item.id) ? t('common.actions.collapse') : t('common.actions.expand') }}
+                            </el-button>
+                            <el-button v-if="!item.read" link size="small" type="primary" @click="handleMarkRead(item)">
+                                {{ t('system.notification.markRead') }}
+                            </el-button>
+                            <el-button v-if="item.action_url" link size="small" type="primary" @click="handleGoProcess(item)">
+                                {{ t('system.notification.goHandle') }}
+                            </el-button>
+                        </div>
+                    </div>
+                </section>
+            </div>
 
             <div class="notification-panel__footer">
-                <el-button link type="primary" @click="openExportCenter">
-                    {{ t('layout.notification.viewExportCenter') }}
+                <el-button link @click="openNotificationManage">
+                    {{ t('system.notification.manageEntry') }}
+                </el-button>
+                <el-button link type="primary" @click="openNotificationCenter">
+                    {{ t('layout.notification.viewMore') }}
                 </el-button>
             </div>
         </div>
@@ -74,9 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, watch } from 'vue'
-import { FixedSizeList } from 'element-plus'
-import 'element-plus/es/components/virtual-list/style/css'
+import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
@@ -90,6 +99,24 @@ const notificationStore = useNotificationStore()
 const { t, locale } = useI18n()
 
 const badgeValue = computed(() => notificationStore.unreadCount)
+const expandedIds = ref<string[]>([])
+const overflowMap = ref<Record<string, boolean>>({})
+
+const checkOverflow = () => {
+    nextTick(() => {
+        const elements = document.querySelectorAll('.notification-item__message')
+        elements.forEach((el) => {
+            const id = el.getAttribute('data-id')
+            if (id) {
+                if (isExpanded(id)) {
+                    overflowMap.value[id] = true
+                } else {
+                    overflowMap.value[id] = el.scrollHeight > el.clientHeight
+                }
+            }
+        })
+    })
+}
 
 const sourceLabelMap = computed<Record<AppNotification['source'], string>>(() => ({
     websocket: t('layout.notification.source.websocket'),
@@ -120,6 +147,8 @@ const connectionStatusText = computed(() => {
     }
 })
 
+const previewNotifications = computed(() => notificationStore.notifications.slice(0, 5))
+
 const startNotificationCenter = () => {
     if (!authStore.token) {
         notificationStore.stop()
@@ -128,8 +157,14 @@ const startNotificationCenter = () => {
     notificationStore.start(authStore.token, locale.value || settingStore.locale || 'zh-CN')
 }
 
-const openExportCenter = () => {
-    router.push('/task/center?tab=export')
+const isExpanded = (id: string) => expandedIds.value.includes(id)
+
+const toggleExpanded = (id: string) => {
+    if (isExpanded(id)) {
+        expandedIds.value = expandedIds.value.filter((itemId) => itemId !== id)
+        return
+    }
+    expandedIds.value = [...expandedIds.value, id]
 }
 
 const formatDateTime = (value?: string) => {
@@ -139,27 +174,71 @@ const formatDateTime = (value?: string) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-const handleNotificationClick = (item: AppNotification) => {
-    if (!item) return
-    void notificationStore.markRead(item.id)
-    if (item.action_url) {
-        router.push(item.action_url)
-    }
+const handleMarkRead = async (item: AppNotification) => {
+    if (item.read) return
+    await notificationStore.markRead(item.id)
 }
 
-const handlePanelOpen = () => {
-    void Promise.all([notificationStore.loadNotifications(), notificationStore.refreshUnreadCount()])
+const handleGoProcess = async (item: AppNotification) => {
+    if (!item.action_url) return
+    if (!item.read) {
+        await handleMarkRead(item)
+    }
+    await router.push(item.action_url)
 }
+
+const handlePanelOpen = async () => {
+    const previewIds = new Set(previewNotifications.value.map((item) => item.id))
+    expandedIds.value = expandedIds.value.filter((id) => previewIds.has(id))
+    await Promise.all([notificationStore.loadNotifications(), notificationStore.refreshUnreadCount()])
+    checkOverflow()
+}
+
+watch(
+    () => previewNotifications.value,
+    () => {
+        checkOverflow()
+    },
+    { deep: true }
+)
+
+let resizeTimer: number | null = null
+const handleResize = () => {
+    if (resizeTimer) clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(() => {
+        checkOverflow()
+    }, 150)
+}
+
+onMounted(() => {
+    window.addEventListener('resize', handleResize)
+    checkOverflow()
+})
 
 const handleMarkAllRead = async () => {
     await notificationStore.markAllRead()
 }
 
-watch(() => authStore.token, startNotificationCenter, { immediate: true })
-watch(() => settingStore.locale, startNotificationCenter)
+const openNotificationCenter = async () => {
+    await router.push('/system/notification')
+}
+
+const openNotificationManage = async () => {
+    await router.push('/system/notification/manage')
+}
+
+watch(
+    () => [authStore.token, settingStore.locale],
+    () => {
+        startNotificationCenter()
+    },
+    { immediate: true }
+)
 
 onBeforeUnmount(() => {
     notificationStore.stop()
+    window.removeEventListener('resize', handleResize)
+    if (resizeTimer) clearTimeout(resizeTimer)
 })
 </script>
 
@@ -170,10 +249,14 @@ onBeforeUnmount(() => {
     }
 }
 
+:global(.notification-center-popper) {
+    padding: 12px 8px !important;
+}
+
 .notification-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .notification-panel__header,
@@ -181,7 +264,8 @@ onBeforeUnmount(() => {
 .notification-item__header,
 .notification-item__footer,
 .notification-item__title-row,
-.notification-panel__actions {
+.notification-panel__actions,
+.notification-item__footer-actions {
     display: flex;
     align-items: center;
 }
@@ -194,10 +278,13 @@ onBeforeUnmount(() => {
 
 .notification-panel__header {
     gap: 12px;
+    padding: 0 8px 8px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
-.notification-panel__actions {
-    gap: 4px;
+.notification-panel__actions,
+.notification-item__footer-actions {
+    gap: 8px;
 }
 
 .notification-panel__title {
@@ -216,8 +303,8 @@ onBeforeUnmount(() => {
 }
 
 .notification-panel__status-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--el-text-color-disabled);
 }
@@ -241,6 +328,7 @@ onBeforeUnmount(() => {
     background: var(--el-color-danger-light-9);
     color: var(--el-color-danger);
     font-size: 12px;
+    margin: 0 8px;
 }
 
 .notification-panel__empty {
@@ -248,74 +336,97 @@ onBeforeUnmount(() => {
 }
 
 .notification-panel__loading {
-    padding: 12px 4px;
-}
-
-.notification-list__row {
-    padding: 0 2px 8px;
-    box-sizing: border-box;
-}
-
-.notification-list :deep(.el-vl__window) {
-    overflow-x: hidden !important;
+    padding: 12px 8px;
 }
 
 .notification-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
+    max-height: 430px;
+    overflow-y: auto;
+    padding: 0 4px;
 }
 
 .notification-item {
-    width: 100%;
-    border: 1px solid var(--el-border-color-light);
-    border-radius: 12px;
-    background: var(--el-fill-color-blank);
-    padding: 12px;
-    text-align: left;
-    cursor: pointer;
-    transition:
-        border-color 0.2s ease,
-        background-color 0.2s ease;
-}
-
-.notification-item:hover {
-    border-color: var(--el-color-primary-light-5);
-    background: var(--el-fill-color-light);
+    border-radius: 8px;
+    padding: 10px 8px;
+    background: transparent;
 }
 
 .notification-item.is-unread {
-    border-color: var(--el-color-primary-light-7);
-    background: color-mix(in srgb, var(--el-color-primary-light-9) 55%, white);
+    background: color-mix(in srgb, var(--el-color-primary-light-9) 35%, transparent);
 }
 
 .notification-item__title-row {
-    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    gap: 6px;
+    margin-right: 8px;
 }
 
 .notification-item__title {
     font-size: 13px;
     font-weight: 600;
     color: var(--el-text-color-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .notification-item__dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--el-color-primary);
+    flex-shrink: 0;
 }
 
 .notification-item__message {
-    margin-top: 8px;
-    font-size: 13px;
-    line-height: 1.6;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
     color: var(--el-text-color-regular);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-wrap;
+}
+
+.notification-item__message.is-expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
 }
 
 .notification-item__footer {
-    margin-top: 10px;
-    font-size: 12px;
+    margin-top: 6px;
+    font-size: 11px;
     color: var(--el-text-color-secondary);
+    gap: 8px;
+}
+
+.notification-panel__footer {
+    padding-top: 4px;
+    justify-content: space-between;
+    border-top: 1px solid var(--el-border-color-lighter);
+}
+
+@media (max-width: 768px) {
+    .notification-panel__header,
+    .notification-item__footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .notification-panel__actions,
+    .notification-item__footer-actions,
+    .notification-panel__footer {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
 }
 </style>

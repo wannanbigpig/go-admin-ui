@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { checkNumber, isEmpty, pick, filterNullUndefined, formatDate, isExternal } from '@/utils/helper'
+import { checkNumber, isEmpty, pick, filterNullUndefined, formatDate, isExternal, getSystemFileUrl, getImageUrl } from '@/utils/helper'
 
 describe('helper.ts', () => {
     describe('checkNumber', () => {
@@ -115,6 +115,24 @@ describe('helper.ts', () => {
             expect(isExternal('/dashboard')).toBe(false)
             expect(isExternal('dashboard')).toBe(false)
             expect(isExternal('./dashboard')).toBe(false)
+        })
+    })
+
+    describe('getSystemFileUrl & getImageUrl', () => {
+        it('空值或占位符 "-" 应返回空字符串', () => {
+            expect(getSystemFileUrl('')).toBe('')
+            expect(getSystemFileUrl('-')).toBe('')
+            expect(getImageUrl('')).toBe('')
+            expect(getImageUrl('-')).toBe('')
+        })
+
+        it('网络地址应原样返回', () => {
+            expect(getSystemFileUrl('https://example.com/a.png')).toBe('https://example.com/a.png')
+            expect(getSystemFileUrl('http://example.com/b.png')).toBe('http://example.com/b.png')
+        })
+
+        it('本地相对文件名应拼接为完整的 API 地址', () => {
+            expect(getSystemFileUrl('some-file-id')).toContain('/admin/v1/file/some-file-id')
         })
     })
 })

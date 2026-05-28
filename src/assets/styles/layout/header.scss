@@ -1,8 +1,10 @@
+@use '../shared.scss' as *;
+
 .right-container > .xl-header {
     position: sticky;
     top: 0;
     z-index: var(--xl-head-z-index);
-    height: calc($--xl-header-height);
+    height: calc($xl-header-height);
     color: var(--el-text-color-primary);
     border-bottom: 1px solid var(--el-color-info-light-8);
     background-color: var(--xl-bg-color);

@@ -15,6 +15,7 @@ export default {
         markAllRead: 'Mark all read',
         reconnect: 'Reconnect',
         viewExportCenter: 'Open Export Center',
+        viewMore: 'View More',
         defaultTitle: 'System Notification',
         connectionError: 'Notification channel disconnected. Reconnect has been scheduled.',
         connection: {
@@ -48,6 +49,7 @@ export default {
     more: 'More',
     noPermission: 'No permission',
     footer: {
+        author: 'wannanbigpig',
         poweredBy: 'Built with Vue 3 + Vite + Element Plus',
     },
 }

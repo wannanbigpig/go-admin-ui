@@ -8,6 +8,7 @@ import type { DictOption } from '@/types/system'
 interface DictOptionsCacheEntry {
     data?: DictOption[]
     request?: Promise<DictOption[]>
+    timestamp?: number
 }
 
 interface LocalStorageCacheEntry {
@@ -17,6 +18,7 @@ interface LocalStorageCacheEntry {
 
 const DICT_CACHE_PREFIX = 'dict_cache:'
 const DICT_CACHE_TTL = 30 * 60 * 1000 // 30 分钟
+const DICT_MEMORY_CACHE_TTL = 30 * 60 * 1000 // 内存缓存 30 分钟过期
 
 const dictOptionsCache = new Map<string, DictOptionsCacheEntry>()
 
@@ -37,38 +39,44 @@ const getLocalStorageCache = (typeCode: string, locale: string): DictOption[] | 
         }
 
         return entry.data
-    } catch {
+    } catch (error) {
+        Logger.warn('从 localStorage 获取字典缓存失败:', error)
         return null
     }
 }
 
 const setLocalStorageCache = (typeCode: string, locale: string, data: DictOption[]) => {
-    try {
-        const key = buildLocalStorageKey(typeCode, locale)
-        const entry: LocalStorageCacheEntry = {
-            data,
-            expiry: Date.now() + DICT_CACHE_TTL,
-        }
-        localStorage.setItem(key, JSON.stringify(entry))
-    } catch {
-        // LocalStorage 写入失败时静默忽略
+    const key = buildLocalStorageKey(typeCode, locale)
+    const entry: LocalStorageCacheEntry = {
+        data,
+        expiry: Date.now() + DICT_CACHE_TTL,
     }
+    localStorage.setItem(key, JSON.stringify(entry))
 }
 
 const removeLocalStorageCache = (typeCode?: string) => {
     try {
+        const keys: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key) {
+                keys.push(key)
+            }
+        }
+
         if (!typeCode) {
             // 清除所有字典缓存
-            const keys = Object.keys(localStorage).filter((key) => key.startsWith(DICT_CACHE_PREFIX))
-            keys.forEach((key) => localStorage.removeItem(key))
+            const targetKeys = keys.filter((key) => key.startsWith(DICT_CACHE_PREFIX))
+            targetKeys.forEach((key) => localStorage.removeItem(key))
             return
         }
 
         // 清除指定 typeCode 的所有语言缓存
-        const keys = Object.keys(localStorage).filter((key) => key.startsWith(DICT_CACHE_PREFIX) && key.endsWith(`:${typeCode}`))
-        keys.forEach((key) => localStorage.removeItem(key))
-    } catch {
-        // LocalStorage 操作失败时静默忽略
+        const targetKeys = keys.filter((key) => key.startsWith(DICT_CACHE_PREFIX) && key.endsWith(`:${typeCode}`))
+        targetKeys.forEach((key) => localStorage.removeItem(key))
+    } catch (error) {
+        // LocalStorage 操作失败时静默忽略，但记录警告日志
+        Logger.warn('清除 localStorage 字典缓存失败:', error)
     }
 }
 
@@ -78,7 +86,12 @@ const requestCachedDictOptions = async (typeCode: string, locale: string, force 
 
     // 1. 内存缓存（最快）
     if (!force && cached?.data) {
-        return cached.data
+        // 检查内存缓存是否过期
+        if (cached.timestamp && Date.now() - cached.timestamp > DICT_MEMORY_CACHE_TTL) {
+            dictOptionsCache.delete(cacheKey)
+        } else {
+            return cached.data
+        }
     }
 
     if (!force && cached?.request) {
@@ -90,7 +103,7 @@ const requestCachedDictOptions = async (typeCode: string, locale: string, force 
         const localData = getLocalStorageCache(typeCode, locale)
         if (localData) {
             // 同步到内存缓存
-            dictOptionsCache.set(cacheKey, { data: localData })
+            dictOptionsCache.set(cacheKey, { data: localData, timestamp: Date.now() })
             return localData
         }
     }
@@ -99,8 +112,12 @@ const requestCachedDictOptions = async (typeCode: string, locale: string, force 
     const request = fetchDictOptions(typeCode)
         .then((options) => {
             // 同时写入内存缓存和 LocalStorage 缓存
-            dictOptionsCache.set(cacheKey, { data: options })
-            setLocalStorageCache(typeCode, locale, options)
+            dictOptionsCache.set(cacheKey, { data: options, timestamp: Date.now() })
+            try {
+                setLocalStorageCache(typeCode, locale, options)
+            } catch (err) {
+                Logger.error('设置 localStorage 字典缓存失败 (配额溢出或安全禁止):', err)
+            }
             return options
         })
         .catch((error) => {
@@ -123,30 +140,37 @@ export function useDictOptions(typeCode: string, fallback: DictOption[] = []) {
 
     const getCurrentLocale = () => settingStore.locale || DEFAULT_LOCALE
 
+    let loadVersion = 0
+
     const load = async (loadOptions: { force?: boolean } = {}) => {
         const locale = getCurrentLocale()
         const cacheKey = buildDictOptionsCacheKey(typeCode, locale)
+        const version = ++loadVersion
         loading.value = true
         try {
             const nextOptions = await requestCachedDictOptions(typeCode, locale, loadOptions.force)
-            if (cacheKey === buildDictOptionsCacheKey(typeCode, getCurrentLocale())) {
+            if (version === loadVersion && cacheKey === buildDictOptionsCacheKey(typeCode, getCurrentLocale())) {
                 remoteOptions.value = nextOptions
             }
         } catch (error) {
             Logger.error(`获取字典选项失败: ${typeCode}`, error)
-            remoteOptions.value = []
+            if (version === loadVersion) {
+                remoteOptions.value = []
+            }
         } finally {
-            loaded.value = true
-            loading.value = false
+            if (version === loadVersion) {
+                loaded.value = true
+                loading.value = false
+            }
         }
     }
 
     watch(
         () => settingStore.locale,
         () => {
+            // 缓存 key 已经按 locale 隔离，不再全量清空缓存；
+            // 仅切换当前 ref 至对应 locale 的缓存（命中即直接同步，未命中则发起请求）。
             remoteOptions.value = []
-            // 语言切换时清除所有字典缓存
-            invalidateDictOptionsCache()
             if (loaded.value) {
                 void load()
             }

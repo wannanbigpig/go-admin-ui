@@ -4,10 +4,8 @@ import 'element-plus/theme-chalk/dark/css-vars.css'
 import '@/assets/styles/index.scss'
 import App from './App.vue'
 import pinia from '@/stores/index'
-import { useAuthStore } from '@/stores/auth'
 import { useSettingStore, type ThemeMode } from '@/stores/setting'
 import router from './router'
-import { addDynamicRoutes, checkDynamicRouteExists } from '@/router/dynamicRoutes'
 import { Icon } from '@iconify/vue'
 import permissionDirective from '@/directives/permission'
 import { Logger, setupGlobalErrorHandlers } from '@/utils/logger'
@@ -30,12 +28,6 @@ app.component('AppIcons', Icon)
 // 注册权限指令
 app.directive('permission', permissionDirective)
 app.use(pinia).use(i18n)
-
-const authStore = useAuthStore()
-
-if (authStore.token && authStore.routerData.length > 0 && !checkDynamicRouteExists()) {
-    addDynamicRoutes(authStore.routerData)
-}
 
 app.use(router)
 
@@ -75,6 +67,8 @@ watch(
     () => settingStore.locale,
     (locale) => {
         i18n.global.locale.value = locale
+        // locale 切换会重渲整树，顺带 sync 一次主题，避免类名/css var 失效（兜底）
+        applyTheme()
     },
     { immediate: true }
 )

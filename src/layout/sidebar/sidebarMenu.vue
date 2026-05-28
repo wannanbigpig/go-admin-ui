@@ -64,7 +64,7 @@ watch(
 </script>
 
 <style scoped lang="scss">
-@import '@/assets/styles/layout/sidebar.scss';
+@use '@/assets/styles/layout/sidebar.scss' as *;
 
 .loading-text,
 .empty-text {

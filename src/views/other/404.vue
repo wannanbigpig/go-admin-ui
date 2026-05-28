@@ -32,7 +32,7 @@
             </div>
 
             <div class="text-section">
-                <h2 class="error-title">Oops! 页面走失了</h2>
+                <h2 class="error-title">{{ t('other.notFound.title') }}</h2>
                 <p class="error-desc">{{ t('other.notFound.pageNotFound') }}</p>
                 <div class="action-buttons">
                     <el-button type="primary" size="large" round @click="goHome" class="btn-home">
@@ -45,7 +45,7 @@
                         <template #icon>
                             <i-ep-back />
                         </template>
-                        返回上一页
+                        {{ t('other.notFound.goBack') }}
                     </el-button>
                 </div>
             </div>

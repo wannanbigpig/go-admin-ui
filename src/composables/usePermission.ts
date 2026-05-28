@@ -5,11 +5,13 @@ import { hasPermission } from '@/utils/auth'
 /**
  * 权限相关的组合式函数。
  *
- * @returns 提供按钮权限列表与权限判断方法
+ * 设计取向：
+ * - 直接代理 authStore 提供的查询能力，不在 composable 层做缓存。
+ *   authStore.buttonPermissionMap 已经是 Map，O(1) 查找；
+ *   多层缓存会让 `is_show` 变更后的可见态滞后，因此移除原本的 buttonInfoCache。
  */
 export function usePermission() {
     const authStore = useAuthStore()
-    const buttonInfoCache = new Map<string, Record<string, unknown>>()
 
     const buttonPermissions = computed(() => authStore.buttonPermissions || [])
 
@@ -21,29 +23,16 @@ export function usePermission() {
         return authStore.getButtonInfo(code)
     }
 
-    const createLiveButtonInfo = (code: string) => {
-        return {
-            get icon() {
-                return authStore.getButtonInfoFull(code)?.icon || ''
-            },
-            get title() {
-                return authStore.getButtonInfoFull(code)?.title || ''
-            },
-            get is_show() {
-                return authStore.getButtonInfoFull(code)?.is_show === true
-            },
-        }
-    }
-
     const getButtonInfoFull = (code: string) => {
-        if (!buttonInfoCache.has(code)) {
-            buttonInfoCache.set(code, createLiveButtonInfo(code))
-        }
-        return buttonInfoCache.get(code) || null
+        return authStore.getButtonInfoFull(code) || null
     }
 
     const shouldShowButton = (code: string) => {
         return authStore.shouldShowButton(code)
+    }
+
+    const invalidatePermissionCache = async () => {
+        await authStore.refreshUserInfo({ force: true })
     }
 
     return {
@@ -52,5 +41,6 @@ export function usePermission() {
         getButtonInfo,
         getButtonInfoFull,
         shouldShowButton,
+        invalidatePermissionCache,
     }
 }

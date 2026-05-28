@@ -20,6 +20,10 @@ export function checkNumber(value: number | string, decimal: number = 2, negativ
         return false
     }
 
+    if (Math.abs(numValue) >= 1e21 || Math.abs(numValue) < 1e-10) {
+        return decimal === 0 ? Number.isInteger(numValue) : true
+    }
+
     const valueStr = numValue.toString()
 
     if (decimal === 0) {
@@ -147,6 +151,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, delay
  */
 export function formatDate(date: Date | string | number): string {
     const dateObj = date instanceof Date ? date : new Date(date)
+    if (isNaN(dateObj.getTime())) return ''
     const year = dateObj.getFullYear()
     const month = String(dateObj.getMonth() + 1).padStart(2, '0')
     const day = String(dateObj.getDate()).padStart(2, '0')
@@ -195,7 +200,7 @@ export function flattenTree<T extends object>(tree: T[], prefix: string = '', op
  * 获取图片 URL
  */
 export function getSystemFileUrl(value: string): string {
-    if (!value) return ''
+    if (!value || value === '-') return ''
 
     if (typeof value === 'string' && /^https?:\/\//.test(value)) {
         return value
@@ -216,8 +221,39 @@ export function getImageUrl(value: string): string {
  */
 export function formatFileSize(size?: number | null): string {
     const bytes = Number(size || 0)
-    if (!bytes) return '0 B'
+    if (!bytes || bytes < 0) return '0 B'
     const units = ['B', 'KB', 'MB', 'GB', 'TB']
     const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
     return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 2)} ${units[index]}`
+}
+
+/**
+ * 解析用户 ID 字符串。
+ *
+ * 支持以逗号、空格、换行、分号、tab 等任意常见分隔符分隔的 ID 列表，
+ * 自动去重、过滤空值与非数字。
+ *
+ * @param input 待解析字符串，可为 null/undefined
+ * @returns 数字数组（去重并保持原始顺序）
+ *
+ * @example
+ *   parseUserIDs('1, 2,3 4') // [1, 2, 3, 4]
+ *   parseUserIDs('1,,2,abc,3') // [1, 2, 3]
+ */
+export function parseUserIDs(input?: string | null): number[] {
+    if (!input) return []
+    const seen = new Set<number>()
+    const result: number[] = []
+    String(input)
+        .split(/[\s,;]+/)
+        .forEach((token) => {
+            const trimmed = token.trim()
+            if (!trimmed) return
+            const num = Number(trimmed)
+            if (!Number.isFinite(num) || !Number.isInteger(num)) return
+            if (seen.has(num)) return
+            seen.add(num)
+            result.push(num)
+        })
+    return result
 }

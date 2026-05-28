@@ -22,6 +22,8 @@ export interface PageParams {
 export interface PageData<T> {
     list: T[]
     total: number
+    page?: number
+    pageSize?: number
 }
 
 /**
@@ -48,6 +50,7 @@ export interface TableColumn<T = unknown> {
     align?: 'left' | 'center' | 'right'
     width?: string | number
     minWidth?: string | number
+    sortable?: boolean | 'custom'
     overflow?: boolean
     h_tip?: string
     customRow?: boolean
@@ -60,4 +63,8 @@ export interface TableColumn<T = unknown> {
     hidden?: boolean
     getFullInfo?: (row: T, item: TableColumn<T>) => void
     formatter?: (row: T) => unknown
+}
+
+declare global {
+    const __APP_VERSION__: string
 }

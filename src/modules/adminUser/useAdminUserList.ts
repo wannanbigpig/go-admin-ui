@@ -49,6 +49,7 @@ export function useAdminUserList() {
         pagination,
         getList,
         handleSearch,
+        handleReset,
     } = useListPage<AdminUser, typeof queryWhere>({
         query: queryWhere,
         queryFormRef,
@@ -135,6 +136,7 @@ export function useAdminUserList() {
         getList,
         getDepartmentOptions,
         handleSearch,
+        handleReset,
         createToggleFullInfo,
         isFullInfoLoading,
         fetchAdminUserFullPhone,

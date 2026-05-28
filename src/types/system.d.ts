@@ -171,6 +171,7 @@ export interface SystemFile extends WithId, WithTimestamp {
     file_type?: string
     is_public: number
     url?: string
+    thumbnail_url?: string
     storage_driver?: StorageDriver
     storage_base?: string
     bucket?: string
@@ -233,6 +234,23 @@ export interface SystemFileBatchDeleteResult {
     failures?: SystemFileBatchDeleteFailure[]
 }
 
+export interface SystemFileLocalUploadFailure {
+    index?: number
+    code?: number
+    message?: string
+    origin_name?: string
+    name?: string
+    file_name?: string
+}
+
+export interface SystemFileLocalUploadBatchResult {
+    items?: SystemFile[]
+    failures?: SystemFileLocalUploadFailure[]
+    success_count?: number
+    failed_count?: number
+    message?: string
+}
+
 export interface SystemFileUploadCredentialPayload {
     hash: string
     size: number
@@ -240,6 +258,14 @@ export interface SystemFileUploadCredentialPayload {
     is_public?: number
     folder_id?: number | string | null
     driver?: StorageDriver
+    origin_name?: string
+}
+
+export interface SystemFileUploadBatchFailure {
+    client_id?: string
+    index?: number
+    code?: number
+    message?: string
     origin_name?: string
 }
 
@@ -258,6 +284,31 @@ export interface SystemFileUploadCredential {
     uuid?: string
     url?: string
     complete_payload?: Record<string, unknown>
+}
+
+export interface SystemFileUploadCredentialBatchItemPayload extends SystemFileUploadCredentialPayload {
+    client_id?: string
+}
+
+export interface SystemFileUploadCredentialBatchPayload {
+    driver?: StorageDriver
+    is_public?: number
+    upload_scene?: string
+    items: SystemFileUploadCredentialBatchItemPayload[]
+}
+
+export interface SystemFileUploadCredentialBatchItemResult {
+    client_id?: string
+    success?: boolean
+    data?: SystemFileUploadCredential
+    error?: SystemFileUploadBatchFailure
+}
+
+export interface SystemFileUploadCredentialBatchResult {
+    total?: number
+    success?: number
+    failed?: number
+    items?: SystemFileUploadCredentialBatchItemResult[]
 }
 
 export interface SystemFileUploadCompletePayload {
@@ -279,6 +330,31 @@ export interface SystemFileUploadCompletePayload {
     [key: string]: unknown
 }
 
+export interface SystemFileUploadCompleteBatchItemPayload extends SystemFileUploadCompletePayload {
+    client_id?: string
+}
+
+export interface SystemFileUploadCompleteBatchPayload {
+    driver?: StorageDriver
+    is_public?: number
+    upload_scene?: string
+    items: SystemFileUploadCompleteBatchItemPayload[]
+}
+
+export interface SystemFileUploadCompleteBatchItemResult {
+    client_id?: string
+    success?: boolean
+    data?: SystemFile
+    error?: SystemFileUploadBatchFailure
+}
+
+export interface SystemFileUploadCompleteBatchResult {
+    total?: number
+    success?: number
+    failed?: number
+    items?: SystemFileUploadCompleteBatchItemResult[]
+}
+
 export interface SystemFileUploadOptions {
     folder_id?: number | string | null
     driver?: StorageDriver
@@ -290,9 +366,9 @@ export interface SystemFileUploadOptions {
     onReuse?: () => void
 }
 
-export type StorageDriver = 'local' | 'aliyun_oss' | 's3' | string
+export type StorageDriver = 'local' | 'aliyun_oss' | (string & {})
 
-export type FileStorageStatus = 'normal' | 'uploading' | 'delete_failed' | 'missing' | string
+export type FileStorageStatus = 'normal' | 'uploading' | 'delete_failed' | 'missing'
 
 export interface SystemFileReference extends WithId {
     file_id?: number | string
@@ -331,29 +407,31 @@ export interface StorageAliyunOssConfig {
     force_path_style?: boolean
 }
 
-export interface StorageS3Config {
-    endpoint?: string
-    region?: string
-    bucket?: string
-    access_key_id?: string
-    secret_access_key?: string
-    public_domain?: string
-    force_path_style?: boolean
-}
-
 export interface StorageConfig {
     active_driver: StorageDriver
     config: {
         local: StorageLocalConfig
         aliyun_oss: StorageAliyunOssConfig
-        s3: StorageS3Config
         signed_url_ttl_seconds?: number
         max_file_size_mb?: number
         allowed_mime_types?: string[] | string
+        allowed_extensions?: string[] | string
+        export_temp_file_ttl_days?: number
     }
 }
 
 export type StorageConfigPayload = StorageConfig
+
+export type StorageSecretField = 'access_key_secret' | 'secret_access_key'
+
+export interface StorageSecretPayload {
+    driver: Exclude<StorageDriver, 'local'>
+    field: StorageSecretField
+}
+
+export interface StorageSecretResult {
+    value?: string
+}
 
 export interface StorageTestResult {
     success?: boolean

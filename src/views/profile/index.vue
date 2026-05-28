@@ -133,7 +133,7 @@
 
         .xl-profile-name {
             h2 {
-                margin: 0 0 8px 0;
+                margin: 0 0 var(--xl-space-2) 0;
                 font-size: 24px;
                 font-weight: 500;
             }
@@ -189,7 +189,7 @@
 <style>
 .avatar-uploader .el-upload {
     border: 1px dashed var(--el-border-color);
-    border-radius: 6px;
+    border-radius: var(--xl-radius-md);
     cursor: pointer;
     position: relative;
     overflow: hidden;

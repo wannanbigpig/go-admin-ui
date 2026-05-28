@@ -41,8 +41,8 @@ export default {
             },
         },
         errorCodes: {
-            title: 'Error Status Codes',
-            empty: 'No error code data',
+            title: 'Error Response Status Distribution',
+            empty: 'No error response status data',
             statusCode: 'Status Code',
             count: 'Count',
         },
@@ -56,6 +56,7 @@ export default {
                 image: 'Image',
                 video: 'Video',
                 audio: 'Audio',
+                text: 'Text',
                 document: 'Document',
                 archive: 'Archive',
                 other: 'Other',

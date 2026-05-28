@@ -5,7 +5,7 @@
         </div>
 
         <div class="xl-action-item" @click="openExportCenter">
-            <div class="xl-theme-trigger xl-cursor-pointer">
+            <div class="xl-theme-trigger xl-cursor-pointer" role="button" tabindex="0" :aria-label="t('layout.exportCenter')" @keydown.enter="openExportCenter">
                 <el-tooltip :content="t('layout.exportCenter')" placement="bottom" :show-after="200">
                     <div class="tooltip-trigger-area">
                         <el-icon size="20">
@@ -17,7 +17,7 @@
         </div>
 
         <el-dropdown v-if="ENABLE_I18N" size="default" type="default" trigger="click" @command="handleLanguageCommand" class="xl-action-item" teleported persistent>
-            <div class="xl-theme-trigger xl-cursor-pointer">
+            <div class="xl-theme-trigger xl-cursor-pointer" :aria-label="t('layout.language.switch')">
                 <el-tooltip :content="t('layout.language.switch')" placement="bottom" :show-after="200">
                     <div class="tooltip-trigger-area">
                         <el-icon size="20">
@@ -36,7 +36,7 @@
         </el-dropdown>
 
         <el-dropdown size="default" type="default" trigger="click" @command="handleThemeCommand" class="xl-action-item" teleported persistent>
-            <div class="xl-theme-trigger xl-cursor-pointer">
+            <div class="xl-theme-trigger xl-cursor-pointer" :aria-label="t('layout.themeSwitch')">
                 <el-tooltip :content="t('layout.themeSwitch')" placement="bottom" :show-after="200">
                     <div class="tooltip-trigger-area">
                         <el-icon size="20">
@@ -156,7 +156,7 @@ const handleLogout = async () => {
             type: 'warning',
         })
 
-        await logout()
+        await logout(authStore.refreshToken)
         authStore.logout(router.currentRoute.value.fullPath)
         ElMessage({ type: 'success', message: t(RESULT_MESSAGES.LOGOUT_SUCCESS) })
     } catch (error) {
@@ -223,7 +223,7 @@ const handleLanguageCommand = async (locale: LocaleCode) => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/layout/header.scss';
+@use '@/assets/styles/layout/header.scss' as *;
 
 .xl-right-content {
     display: flex;

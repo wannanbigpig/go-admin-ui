@@ -1,53 +1,65 @@
-import type { RouteRecordRaw, RouteLocationRaw } from 'vue-router'
+import { RouterView, type RouteRecordRaw, type RouteLocationRaw } from 'vue-router'
+import { h } from 'vue'
 import router from './index'
 import { isEmpty } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import type { UserPermission } from '@/types/auth'
+import componentMap from './componentMap'
 
 // ==================== 常量定义 ====================
 /** 按钮类型标识 */
 const BUTTON_TYPE = 3
 const BUTTON_TYPE_TEXT = 'button'
 
-/** 动态导入所有视图组件 */
-const views = import.meta.glob('../views/**/*.vue')
-
-/** 降级组件路径（使用相对路径） */
-const NOT_FOUND_COMPONENT = '../views/other/notFound.vue'
+/** 降级组件 key */
+const NOT_FOUND_KEY = 'other:notFound'
 
 // ==================== 工具函数 ====================
 const isButtonRouteNode = (route: UserPermission) => {
-    const routeType = typeof route.type === 'string' ? route.type.toLowerCase() : route.type
-    return routeType === BUTTON_TYPE || routeType === BUTTON_TYPE_TEXT
+    const t = route.type
+    if (typeof t === 'number') return t === BUTTON_TYPE
+    if (typeof t === 'string') return t === BUTTON_TYPE_TEXT || Number(t) === BUTTON_TYPE
+    return false
 }
 
-const getComponentLoader = (componentPath?: string) => {
-    if (!componentPath) return undefined
+/**
+ * 通过组件映射表解析组件懒加载函数
+ * 后端 component_key 字段存储语义化 key（如 'system:config'），前端查表获取真实组件
+ */
+const resolveComponent = (componentKey?: string) => {
+    if (!componentKey) return undefined
 
-    let normalizedPath = componentPath
+    const loader = componentMap[componentKey]
+    if (loader) return loader
 
-    if (normalizedPath.startsWith('@/')) {
-        normalizedPath = normalizedPath.replace('@/', '../')
-    }
+    Logger.warn(`组件映射未找到: ${componentKey}，将降级到 404 页面`)
+    return componentMap[NOT_FOUND_KEY]
+}
 
-    if (!normalizedPath.startsWith('.')) {
-        normalizedPath = `../views/${normalizedPath}`
-    }
-
-    if (!normalizedPath.endsWith('.vue')) {
-        normalizedPath = `${normalizedPath}.vue`
-    }
-
-    const possibleKeys = [normalizedPath, normalizedPath.replace('../views/', './views/')]
-
-    for (const key of possibleKeys) {
-        if (views[key]) {
-            return views[key]
+/**
+ * 开发模式启动期预校验：递归遍历后端菜单，所有 component_key 字段必须能命中映射表，
+ * 否则抛错让开发者立即修复，而不是访问路由时才 warn。
+ */
+export function validateRouteComponents(routesData: UserPermission[]): string[] {
+    const missing: string[] = []
+    const walk = (nodes: UserPermission[]) => {
+        for (const node of nodes) {
+            if (isButtonRouteNode(node)) continue
+            if (node.component_key && !componentMap[node.component_key]) {
+                missing.push(node.component_key)
+            }
+            if (node.children && node.children.length > 0) {
+                walk(node.children)
+            }
         }
     }
+    walk(routesData)
 
-    Logger.warn(`组件路径未找到: ${componentPath}，使用默认未找到页面`)
-    return views[NOT_FOUND_COMPONENT]
+    if (missing.length > 0 && import.meta.env.DEV) {
+        const message = `[dynamicRoutes] 以下组件 key 未在 componentMap 中找到：\n${missing.map((m) => `  - ${m}`).join('\n')}`
+        throw new Error(message)
+    }
+    return missing
 }
 
 /**
@@ -60,11 +72,11 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
             const routeName = route.name || route.code
             const routePath = route.path || ''
             if (routeName && seenNames.has(routeName)) {
-                Logger.warn(`动态路由名称重复，已跳过: ${routeName}`)
+                Logger.warn(`动态路由名称重复，已跳过: ${routeName}，当前菜单为: ${route.title || route.name}`)
                 return []
             }
             if (routePath && seenPaths.has(routePath)) {
-                Logger.warn(`动态路由路径重复，已跳过: ${routePath}`)
+                Logger.warn(`动态路由路径重复，已跳过: ${routePath}，当前菜单为: ${route.title || route.name}`)
                 return []
             }
             if (routeName) seenNames.add(routeName)
@@ -73,7 +85,7 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
             const converted = {
                 path: routePath,
                 name: routeName,
-                redirect: (route.redirect || '') !== '' ? ({ name: route.redirect } as RouteLocationRaw) : undefined,
+                redirect: route.redirect ? ((route.redirect.startsWith('/') ? { path: route.redirect } : { name: route.redirect }) as RouteLocationRaw) : undefined,
                 meta: {
                     title: route.title || '',
                     isDynamic: true,
@@ -85,9 +97,12 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
                 },
             } as RouteRecordRaw & { children?: RouteRecordRaw[]; component?: unknown }
 
-            // 处理组件路径
-            if (route.component) {
-                converted.component = getComponentLoader(route.component)
+            // 处理组件映射
+            const hasOwnComponent = !!route.component_key
+            if (hasOwnComponent) {
+                converted.component = resolveComponent(route.component_key)
+            } else if (route.children && route.children.length > 0) {
+                converted.component = { render: () => h(RouterView) }
             }
 
             // 处理子路由
@@ -98,8 +113,29 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
                 }
             }
 
+            // 过滤无效路由：无自有组件且无有效子路由的目录（子项全是按钮类型）应跳过
+            if (!hasOwnComponent && (!converted.children || converted.children.length === 0)) {
+                return []
+            }
+
             return [converted as RouteRecordRaw]
         })
+}
+
+/**
+ * 提取第一个可访问的叶子路由路径
+ */
+export function findFirstValidRoute(routes: RouteRecordRaw[]): string {
+    for (const route of routes) {
+        if (route.children && route.children.length > 0) {
+            const childPath = findFirstValidRoute(route.children)
+            if (childPath) return childPath
+        }
+        if (route.path && !route.path.startsWith('http') && route.component) {
+            return route.path
+        }
+    }
+    return ''
 }
 
 // ==================== 路由管理 ====================

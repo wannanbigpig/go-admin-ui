@@ -5,6 +5,7 @@ export default {
     no: '否',
     all: '全部',
     unknown: '未知',
+    noData: '暂无数据',
     actions: {
         search: '查询',
         reset: '重置',
@@ -16,6 +17,7 @@ export default {
         prevStep: '上一步',
         edit: '编辑',
         delete: '删除',
+        rename: '重命名',
         detail: '详情',
         copySuccess: '复制成功',
         refresh: '刷新',
@@ -25,6 +27,7 @@ export default {
         collapseAll: '全部折叠',
     },
     labels: {
+        basicInfo: '基础信息',
         id: 'ID',
         status: '状态',
         sort: '排序',
@@ -83,11 +86,13 @@ export default {
     },
     result: {
         deleteSuccess: '删除成功',
+        deleteFailed: '删除失败',
         logoutSuccess: '退出成功',
         logoutCancel: '已取消操作',
         refreshSuccess: '刷新成功',
         refreshFailed: '刷新失败，请稍后重试',
         operationSuccess: '操作成功',
+        operationFailed: '操作失败',
         addSuccess: '新增成功',
         editSuccess: '编辑成功',
         bindRoleSuccess: '绑定角色成功',

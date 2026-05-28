@@ -72,10 +72,9 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import logoSrc from '@/assets/images/logo-frontend.png'
-import appPackage from '../../../package.json'
 
 const { t } = useI18n()
-const version = appPackage.version
+const version = __APP_VERSION__
 const isDark = ref(false)
 
 let themeObserver: MutationObserver | undefined
@@ -219,7 +218,7 @@ const linkCards = computed(() => [
 .meta-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: var(--xl-space-4);
     justify-content: center;
 }
 

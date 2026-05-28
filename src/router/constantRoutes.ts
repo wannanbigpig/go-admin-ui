@@ -37,6 +37,26 @@ const constantRoutes: RouteRecordRaw[] = [
                     show: false,
                 },
             },
+            {
+                path: '/system/notification',
+                name: 'SystemNotification',
+                component: () => import('@/views/system/notification.vue'),
+                meta: {
+                    title: 'Notification',
+                    titleKey: 'system.notification.title',
+                    show: false,
+                },
+            },
+            {
+                path: '/system/notification/manage',
+                name: 'SystemNotificationManage',
+                component: () => import('@/views/system/notificationManage.vue'),
+                meta: {
+                    title: 'Notification Manage',
+                    titleKey: 'system.notification.manageTitle',
+                    show: false,
+                },
+            },
         ],
     },
     {

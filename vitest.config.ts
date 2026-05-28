@@ -11,6 +11,12 @@ export default defineConfig({
         coverage: {
             reporter: ['text', 'json', 'html'],
             exclude: ['node_modules/', 'src/**/*.d.ts'],
+            thresholds: {
+                statements: 60,
+                branches: 50,
+                functions: 60,
+                lines: 60,
+            },
         },
         setupFiles: ['./src/test/setup.ts'],
     },

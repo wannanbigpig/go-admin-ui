@@ -31,7 +31,7 @@
                             <xl-date-range-picker v-model="dateRange" />
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="5" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#sessionSearchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="5" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#sessionSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -93,6 +93,7 @@ const {
     pagination,
     getList,
     handleSearch,
+    handleReset: rawHandleReset,
 } = useListPage<OnlineSession, typeof queryWhere>({
     query: queryWhere,
     queryFormRef,
@@ -116,6 +117,11 @@ const {
         }
     },
 })
+
+const handleReset = async () => {
+    dateRange.value = []
+    await rawHandleReset()
+}
 
 const revokingId = ref<number | string | null>(null)
 
@@ -166,7 +172,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.el-form-item {
-    width: 100% !important;
+:deep(.el-form-item) {
+    width: 100%;
 }
 </style>

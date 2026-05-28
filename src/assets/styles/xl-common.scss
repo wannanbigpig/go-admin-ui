@@ -1,3 +1,5 @@
+@use './shared.scss' as *;
+
 // ==================== 背景工具类 ====================
 .xl-bg-white {
     background-color: var(--xl-bg-color);
@@ -33,7 +35,7 @@
 }
 
 .xl-table-header {
-    height: $--xl-table-height;
+    height: $xl-table-height;
 }
 
 // ==================== 显示/隐藏工具类 ====================
@@ -51,16 +53,18 @@
 }
 
 // ==================== Mixins ====================
+// 实际工程内仅使用 xl-m-bottom-10 / xl-m-right-10，
+// 收敛到设计系统常用集合 + 兼容值，避免生成 200+ 条死类。
+$xl-margin-steps: (0, 4, 8, 10, 12, 16, 20, 24, 32);
+
 /**
  * 生成指定方向的 margin 工具类
  * @param {String} $property - margin 方向 (top, bottom, left, right)
  */
 @mixin generate-margin-classes($property) {
-    @for $i from 0 through 100 {
-        @if ($i % 2==0) {
-            .xl-m-#{$property}-#{$i} {
-                margin-#{$property}: #{$i}px;
-            }
+    @each $i in $xl-margin-steps {
+        .xl-m-#{$property}-#{$i} {
+            margin-#{$property}: #{$i}px;
         }
     }
 }
@@ -69,11 +73,9 @@
  * 生成统一的 margin 工具类
  */
 @mixin generate-margin-all-classes {
-    @for $i from 0 through 100 {
-        @if ($i % 2==0) {
-            .xl-m-#{$i} {
-                margin: #{$i}px;
-            }
+    @each $i in $xl-margin-steps {
+        .xl-m-#{$i} {
+            margin: #{$i}px;
         }
     }
 }
@@ -169,5 +171,50 @@
 
     .el-tabs__content {
         display: none;
+    }
+}
+
+// ==================== 全局通知 Toast 样式优化 ====================
+.xl-notification-toast {
+    width: 280px !important;
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid var(--el-border-color-lighter) !important;
+    background-color: var(--el-bg-color-overlay) !important;
+
+    .el-notification__icon {
+        font-size: 16px !important;
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    .el-notification__group {
+        margin-left: 8px !important;
+        margin-right: 10px !important;
+    }
+
+    .el-notification__title {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: var(--el-text-color-primary) !important;
+        line-height: 1.3 !important;
+    }
+
+    .el-notification__content {
+        margin-top: 2px !important;
+        font-size: 12px !important;
+        color: var(--el-text-color-secondary) !important;
+        line-height: 1.3 !important;
+
+        p {
+            margin: 0 !important;
+        }
+    }
+
+    .el-notification__closeBtn {
+        top: 10px !important;
+        right: 10px !important;
+        font-size: 12px !important;
     }
 }

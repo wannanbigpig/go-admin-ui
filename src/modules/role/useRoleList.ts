@@ -20,6 +20,7 @@ export function useRoleList() {
         pagination,
         getList,
         handleSearch,
+        handleReset,
     } = useListPage<Role, typeof queryWhere>({
         query: queryWhere,
         queryFormRef,
@@ -42,5 +43,6 @@ export function useRoleList() {
         pagination,
         getList,
         handleSearch,
+        handleReset,
     }
 }

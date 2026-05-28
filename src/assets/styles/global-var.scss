@@ -1,14 +1,60 @@
+@use './shared.scss' as *;
+
 // ==================== CSS 变量（用于动态样式） ====================
 :root {
     // 颜色变量
-    --xl-bg-color: var(--el-bg-color, #{$--xl-bg-color});
-    --xl-main-bg-color: var(--el-bg-color-page, #{$--xl-main-bg-color});
+    --xl-bg-color: var(--el-bg-color, #{$xl-bg-color});
+    --xl-main-bg-color: var(--el-bg-color-page, #{$xl-main-bg-color});
 
     // 侧边栏宽度
-    --xl-aside-width: #{$--xl-aside-width};
-    --xl-aside-min-width: #{$--xl-aside-min-width};
+    --xl-aside-width: #{$xl-aside-width};
+    --xl-aside-min-width: #{$xl-aside-min-width};
 
     // 层级
-    --xl-head-z-index: #{$--xl-head-z-index};
-    --xl-collapse-btn-z-index: #{$--xl-collapse-btn-z-index};
+    --xl-head-z-index: #{$xl-head-z-index};
+    --xl-collapse-btn-z-index: #{$xl-collapse-btn-z-index};
+
+    // 圆角
+    --xl-radius-sm: #{$xl-radius-sm};
+    --xl-radius-md: #{$xl-radius-md};
+    --xl-radius-lg: #{$xl-radius-lg};
+    --xl-radius-pill: #{$xl-radius-pill};
+
+    // 字号
+    --xl-font-xs: #{$xl-font-xs};
+    --xl-font-sm: #{$xl-font-sm};
+    --xl-font-md: #{$xl-font-md};
+    --xl-font-lg: #{$xl-font-lg};
+    --xl-font-xl: #{$xl-font-xl};
+
+    // 间距
+    --xl-space-1: #{$xl-space-1};
+    --xl-space-2: #{$xl-space-2};
+    --xl-space-3: #{$xl-space-3};
+    --xl-space-4: #{$xl-space-4};
+    --xl-space-5: #{$xl-space-5};
+    --xl-space-6: #{$xl-space-6};
+
+    // 过渡曲线
+    --xl-ease-standard: #{$xl-ease-standard};
+    --xl-ease-emphasized: #{$xl-ease-emphasized};
+
+    // Drawer 宽度
+    --xl-drawer-sm: #{$xl-drawer-sm};
+    --xl-drawer-md: #{$xl-drawer-md};
+    --xl-drawer-lg: #{$xl-drawer-lg};
+
+    // 阴影颜色（被 $xl-shadow-* 引用）
+    --xl-shadow-color: rgba(0, 0, 0, 0.08);
+
+    // 卡片背景 / 遮罩
+    --xl-card-bg: var(--el-bg-color-overlay);
+    --xl-mask-overlay: rgba(255, 255, 255, 0.85);
+}
+
+// ==================== 暗色模式覆盖 ====================
+html.dark {
+    --xl-shadow-color: rgba(0, 0, 0, 0.4);
+    --xl-mask-overlay: rgba(0, 0, 0, 0.4);
+    --xl-card-bg: var(--el-bg-color-overlay);
 }

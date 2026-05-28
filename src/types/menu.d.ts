@@ -10,7 +10,7 @@ export interface Menu extends WithId, WithTimestamp {
     type: number // 1: 目录，2: 菜单，3: 按钮
     icon?: string
     path?: string
-    component?: string
+    component_key?: string
     redirect?: string
     is_show: number
     is_auth?: number

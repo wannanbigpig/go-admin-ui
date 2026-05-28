@@ -10,20 +10,18 @@
     </el-sub-menu>
 
     <!-- 无子路由：渲染为菜单项 -->
-    <link-item v-else-if="shouldShow" :to="currentRoutePath" :is-new-window="route.meta?.isNewWindow as boolean">
-        <el-menu-item :index="currentRoutePath">
-            <icon-item :icon="route.meta?.icon as string" />
-            <template #title>
-                <span>{{ displayTitle }}</span>
-            </template>
-        </el-menu-item>
-    </link-item>
+    <el-menu-item v-else-if="shouldShow" :index="currentRoutePath" @click="handleMenuClick">
+        <icon-item :icon="route.meta?.icon as string" />
+        <template #title>
+            <span>{{ displayTitle }}</span>
+        </template>
+    </el-menu-item>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
-import LinkItem from './linkItem.vue'
+import router from '@/router'
 import IconItem from './iconItem.vue'
 import { isExternal } from '@/utils/helper'
 import { resolveRouteTitle } from '@/utils/routeTitle'
@@ -95,5 +93,33 @@ const resolvePath = (routePath: string): string => {
     }
 
     return `${props.basePath}/${routePath}`
+}
+
+/**
+ * 处理菜单项点击事件，支持内链、新窗口外链 and iframe 外链
+ */
+const handleMenuClick = () => {
+    const routePath = currentRoutePath.value
+    const meta = props.route.meta || {}
+
+    // 判断是否是外部链接
+    const isExternalLink = Number(meta.isExternalLinks ?? 0) === 1 || isExternal(routePath)
+    // 是否在新窗口打开
+    const isNewWindow = Number(meta.isNewWindow ?? 0) === 1
+
+    if (isExternalLink) {
+        if (isNewWindow) {
+            window.open(routePath, '_blank', 'noopener,noreferrer')
+        } else {
+            router.push({
+                path: '/iframe',
+                query: { to: routePath },
+            })
+        }
+    } else {
+        if (router.currentRoute.value.path !== routePath) {
+            router.push(routePath)
+        }
+    }
 }
 </script>

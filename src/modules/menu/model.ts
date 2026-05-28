@@ -20,7 +20,7 @@ export function createMenuForm(): Menu {
         type: MENU_TYPE.MENU,
         icon: '',
         path: '',
-        component: '',
+        component_key: '',
         redirect: '',
         is_show: 1,
         is_auth: 1,
@@ -71,7 +71,7 @@ export const MENU_STEP = {
 export const MENU_STATUS = {
     DISABLED: 0,
     ENABLED: 1,
-    ALL: 2,
+    ALL: '' as const,
 }
 
 export const MENU_STATUS_OPTIONS = [

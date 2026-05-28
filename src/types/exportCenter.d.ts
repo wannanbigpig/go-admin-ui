@@ -1,8 +1,8 @@
 import type { PageParams, WithId, WithTimestamp } from './common'
 
-export type ExportRecordStatus = 'pending' | 'running' | 'retrying' | 'success' | 'failed' | 'canceled' | string
+export type ExportRecordStatus = 'pending' | 'running' | 'retrying' | 'success' | 'failed' | 'canceled'
 
-export type ExportScene = 'request_log' | 'file_list' | string
+export type ExportScene = 'request_log' | 'file_list'
 
 export interface ExportTaskSubmitResult {
     run_id: number | string

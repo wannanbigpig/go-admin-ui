@@ -17,5 +17,7 @@ export function createEmptyLoginResult(): LoginResult {
     return {
         access_token: '',
         expires_at: 0,
+        refresh_token: '',
+        refresh_expires_at: 0,
     }
 }

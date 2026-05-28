@@ -41,8 +41,8 @@ export default {
             },
         },
         errorCodes: {
-            title: '错误状态码分布',
-            empty: '暂无错误码数据',
+            title: '错误响应状态码分布',
+            empty: '暂无错误响应状态码数据',
             statusCode: '状态码',
             count: '次数',
         },
@@ -56,6 +56,7 @@ export default {
                 image: '图片',
                 video: '视频',
                 audio: '音频',
+                text: '文本',
                 document: '文档',
                 archive: '压缩包',
                 other: '其他',

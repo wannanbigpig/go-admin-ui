@@ -1,42 +1,17 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
-                <el-row id="searchForm" :gutter="20">
-                    <el-col :span="4">
-                        <el-form-item :label="t('permission.role.name')" prop="name">
-                            <el-input :placeholder="t('permission.role.namePlaceholder')" v-model.trim="queryWhere.name" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
-                </el-row>
-            </el-form>
-        </div>
-
-        <div class="xl-container">
-            <div class="xl-table-actions">
-                <xl-action-button v-permission="'role:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1)" />
-            </div>
-            <div>
-                <xl-table-list :loading="loading" :data="roleList" :tableTitle="tableTitle" :pagination="pagination" row-key="id">
-                    <!-- 渲染表格列的内容 -->
-                    <template #td="{ item, val }">
-                        <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                            {{ item.tag[val as string | number]?.text || val }}
-                        </el-tag>
-                        <span v-else>{{ val }}</span>
+        <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="roleList" :pagination="pagination" row-key="id" @search="onSearch" @reset="handleReset">
+            <template #actions>
+                <xl-action-button v-permission="'role:add'" code="role:add" :show-icon="false" type="primary" @click="openEditDrawer(1)" />
+            </template>
+            <template #operation>
+                <el-table-column width="180" :label="t('common.labels.operation')" align="center" fixed="right">
+                    <template #default="scope">
+                        <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="3" />
                     </template>
-                    <!-- 操作列 -->
-                    <template #operation>
-                        <el-table-column width="180" :label="t('common.labels.operation')" align="center" fixed="right">
-                            <template #default="scope">
-                                <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="3" />
-                            </template>
-                        </el-table-column>
-                    </template>
-                </xl-table-list>
-            </div>
-        </div>
+                </el-table-column>
+            </template>
+        </xl-pro-table>
 
         <!-- 编辑抽屉 -->
         <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="40%">
@@ -87,8 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlTableList from '@/components/tableList/index.vue'
+import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
@@ -101,19 +75,26 @@ import { ROLE_STATUS } from '@/modules/role/model'
 import { useRoleList } from '@/modules/role/useRoleList'
 import { useRoleForm } from '@/modules/role/useRoleForm'
 import type { Role } from '@/types/role'
-import type { TableColumn } from '@/types/common'
+import type { ProTableColumns } from '@/components/proTable/types'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
 const addChildButtonInfo = getButtonInfoFull('role:addChild')
-const addButtonInfo = getButtonInfoFull('role:add')
 const updateButtonInfo = getButtonInfoFull('role:update')
 const deleteButtonInfo = getButtonInfoFull('role:delete')
 const { t } = useI18n()
 
 const STATUS = ROLE_STATUS
 
-const { loading, roleList, queryFormRef, queryWhere, pagination, getList, handleSearch } = useRoleList()
+const onSearch = (model: Record<string, unknown>) => {
+    Object.assign(queryWhere, model)
+    handleSearch()
+}
+
+/* eslint-disable prefer-const */
+let { loading, roleList, queryWhere, pagination, getList, handleSearch, handleReset } = useRoleList()
+
+/* eslint-enable prefer-const */
 
 const refreshParentNodeChildren = async (_parentId: number) => {
     await getList()
@@ -189,8 +170,10 @@ const handleDelete = async (row: Role) => {
         await deleteRole({ id: row.id })
         ElMessage.success(t(RESULT_MESSAGES.DELETE_SUCCESS))
         getList()
-    } catch {
-        // 用户取消或报错
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            ElMessage.error(t(RESULT_MESSAGES.DELETE_FAILED))
+        }
     }
 }
 
@@ -198,32 +181,36 @@ onMounted(() => {
     getList()
 })
 
-const tableTitle = computed(
-    () =>
-        [
-            { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80 },
-            { prop: 'name', h_label: t('permission.role.name'), width: 200, overflow: true },
-            { prop: 'code', h_label: t('permission.role.code'), width: 150 },
-            { prop: 'description', h_label: t('permission.role.description'), minWidth: 200, overflow: true },
-            {
-                prop: 'sort',
-                h_label: t('common.labels.sort'),
-                align: 'center',
-                width: 100,
-            },
-            {
-                prop: 'status',
-                h_label: t('common.labels.status'),
-                align: 'center',
-                width: 120,
-                customRow: true,
-                tag: {
-                    [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
-                    [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
-                },
-            },
-            { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
-            { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
-        ] as TableColumn<Role>[]
-)
+const columns = computed<ProTableColumns<Role>>(() => [
+    { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80 },
+    {
+        prop: 'name',
+        h_label: t('permission.role.name'),
+        label: t('permission.role.name'),
+        width: 200,
+        overflow: true,
+        search: { type: 'input', placeholder: t('permission.role.namePlaceholder'), span: 4 },
+    },
+    { prop: 'code', h_label: t('permission.role.code'), width: 150 },
+    { prop: 'description', h_label: t('permission.role.description'), minWidth: 200, overflow: true },
+    {
+        prop: 'sort',
+        h_label: t('common.labels.sort'),
+        align: 'center',
+        width: 100,
+    },
+    {
+        prop: 'status',
+        h_label: t('common.labels.status'),
+        align: 'center',
+        width: 120,
+        type: 'tag',
+        tag: {
+            [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
+            [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
+        },
+    },
+    { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
+    { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
+])
 </script>

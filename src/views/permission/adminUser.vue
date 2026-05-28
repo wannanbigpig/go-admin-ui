@@ -1,70 +1,33 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
-                <el-row id="searchForm" :gutter="20">
-                    <el-col :span="4">
-                        <el-form-item :label="t('common.labels.username')" prop="username">
-                            <el-input :placeholder="t('common.placeholders.inputUsername')" v-model.trim="queryWhere.username" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="3">
-                        <el-form-item :label="t('common.labels.status')" prop="status">
-                            <el-select v-model="queryWhere.status" clearable :placeholder="t('common.placeholders.selectStatus')">
-                                <el-option :label="t('common.status.enabled')" :value="STATUS.ENABLED" />
-                                <el-option :label="t('common.status.disabled')" :value="STATUS.DISABLED" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('common.labels.department')" prop="dept_id">
-                            <el-select v-model="queryWhere.dept_id" clearable :placeholder="t('common.placeholders.selectDepartment')" filterable>
-                                <el-option v-for="dept in departmentOptions" :key="dept.value" :label="dept.label" :value="dept.value" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
-                </el-row>
-            </el-form>
-        </div>
-
-        <div class="xl-container">
-            <div class="xl-table-actions">
-                <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1)" />
-            </div>
-            <div>
-                <xl-table-list :loading="loading" :data="adminUserList" :tableTitle="tableTitle" :pagination="pagination">
-                    <!-- 渲染表格列的内容 -->
-                    <template #td="{ item, val, row }">
-                        <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(String(val))">
-                            <el-icon size="32">
-                                <i-ep-avatar />
-                            </el-icon>
-                        </el-avatar>
-                        <el-tag v-else-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                            {{ item.tag[val as string | number]?.text || val }}
-                        </el-tag>
-                        <div v-else-if="item.eye" style="display: flex; align-items: center; gap: 3px">
-                            <span>{{ val || '-' }}</span>
-                            <el-icon v-show="hasSensitiveValue(row, String(item.prop))" size="small" class="xl-cursor-hover" @click="item.getFullInfo?.(row, item)">
-                                <Loading v-if="isFullInfoLoading(row, String(item.prop))" />
-                                <i-ant-design-eye-invisible-outlined v-else-if="isFieldRevealed(row, String(item.prop))" />
-                                <i-ant-design-eye-outlined v-else />
-                            </el-icon>
-                        </div>
-                        <span v-else>{{ val }}</span>
+        <xl-pro-table :search-model="queryWhere" :columns="columns" :search-schema="searchSchema" :loading="loading" :data="adminUserList" :pagination="pagination" @search="onSearch" @reset="handleReset">
+            <template #actions>
+                <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" code="adminUser:add" @click="openEditDrawer(1)" />
+            </template>
+            <template #td="{ item, val, row }">
+                <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(String(val))">
+                    <el-icon size="32">
+                        <i-ep-avatar />
+                    </el-icon>
+                </el-avatar>
+                <div v-else-if="item.eye" style="display: flex; align-items: center; gap: 3px">
+                    <span>{{ val || '-' }}</span>
+                    <el-icon v-show="hasSensitiveValue(row, String(item.prop))" size="small" class="xl-cursor-hover" @click="item.getFullInfo?.(row, item)">
+                        <i-ep-loading v-if="isFullInfoLoading(row, String(item.prop))" />
+                        <i-ant-design-eye-invisible-outlined v-else-if="isFieldRevealed(row, String(item.prop))" />
+                        <i-ant-design-eye-outlined v-else />
+                    </el-icon>
+                </div>
+                <span v-else>{{ val }}</span>
+            </template>
+            <template #operation>
+                <el-table-column width="200" :label="t('common.labels.operation')" align="center" fixed="right">
+                    <template #default="scope">
+                        <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="2" />
                     </template>
-                    <!-- 操作列 -->
-                    <template #operation>
-                        <el-table-column width="200" :label="t('common.labels.operation')" align="center" fixed="right">
-                            <template #default="scope">
-                                <xl-action-buttons :buttons="actionButtons" :scope="scope" :maxVisibleButtons="2" />
-                            </template>
-                        </el-table-column>
-                    </template>
-                </xl-table-list>
-            </div>
-        </div>
+                </el-table-column>
+            </template>
+        </xl-pro-table>
         <!-- 编辑抽屉 -->
         <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="40%">
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules(formData.id)" :key="currentIndex ?? 0">
@@ -154,8 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlTableList from '@/components/tableList/index.vue'
+import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
@@ -163,7 +125,6 @@ import FilePicker from '@/components/filePicker/index.vue'
 import { getImageUrl } from '@/utils/helper'
 import { onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { ADMIN_USER_AVATAR_CONFIG, ADMIN_USER_STATUS, isRootAdminUser } from '@/modules/adminUser/model'
@@ -172,33 +133,39 @@ import { useAdminUserList } from '@/modules/adminUser/useAdminUserList'
 import { useAdminUserForm } from '@/modules/adminUser/useAdminUserForm'
 import { useAdminUserRoleBinding } from '@/modules/adminUser/useAdminUserRoleBinding'
 import type { AdminUser } from '@/types/adminUser'
-import type { TableColumn } from '@/types/common'
+import type { ProTableColumns } from '@/components/proTable/types'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
 const updateButtonInfo = getButtonInfoFull('adminUser:update')
 const bindRoleButtonInfo = getButtonInfoFull('adminUser:bindRole')
 const deleteButtonInfo = getButtonInfoFull('adminUser:delete')
-const addButtonInfo = getButtonInfoFull('adminUser:add')
 const { t } = useI18n()
 
 const STATUS = ADMIN_USER_STATUS
 
-const {
+const onSearch = (model: Record<string, unknown>) => {
+    Object.assign(queryWhere, model)
+    handleSearch()
+}
+
+/* eslint-disable prefer-const */
+let {
     loading,
     adminUserList,
     departmentOptions,
-    queryFormRef,
     queryWhere,
     pagination,
     getList,
     getDepartmentOptions,
     handleSearch,
+    handleReset,
     createToggleFullInfo,
     isFullInfoLoading,
     fetchAdminUserFullPhone,
     fetchAdminUserFullEmail,
 } = useAdminUserList()
+/* eslint-enable prefer-const */
 
 const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, formData, isEditMode, isRootAdminEditing, getDynamicRules, openEditDrawer, editConfirmSubmit } = useAdminUserForm({ refreshList: getList })
 
@@ -248,8 +215,10 @@ const handleDelete = async (row: AdminUser) => {
         await removeAdminUser(row.id)
         ElMessage.success(t(RESULT_MESSAGES.DELETE_SUCCESS))
         getList()
-    } catch {
-        // 取消或失败
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            ElMessage.error(t(RESULT_MESSAGES.DELETE_FAILED))
+        }
     }
 }
 
@@ -268,72 +237,99 @@ onMounted(() => {
     getDepartmentOptions()
 })
 
-const tableTitle = computed(
-    () =>
-        [
-            { prop: 'id', align: 'center', h_label: t('common.labels.id') },
-            { prop: 'avatar', align: 'center', h_label: t('common.labels.avatar'), width: 100, customRow: true, avatar: true },
-            { prop: 'nickname', h_label: t('common.labels.nickname'), width: 160, overflow: true },
-            {
-                prop: 'username',
-                h_label: t('common.labels.username'),
-                width: 120,
-                overflow: true,
-                h_tip: t('permission.adminUser.usernameTip'),
-                copy: true,
-                customRow: true,
-            },
-            {
-                prop: 'phone_number',
-                h_label: t('common.labels.phone'),
-                minWidth: 160,
-                customRow: true,
-                eye: true,
-                getFullInfo: createToggleFullInfo('phone_number', 'old_phone_number', fetchAdminUserFullPhone),
-                formatter: (row: AdminUser) => {
-                    if (!row.phone_number) return ''
-                    return row.country_code ? `+${row.country_code} ${row.phone_number}` : row.phone_number
-                },
-            },
-            {
-                prop: 'email',
-                h_label: t('common.labels.email'),
-                minWidth: 180,
-                customRow: true,
-                eye: true,
-                getFullInfo: createToggleFullInfo('email', 'old_email', fetchAdminUserFullEmail),
-            },
-            {
-                prop: 'departments',
-                h_label: t('common.labels.department'),
-                minWidth: 200,
-                customRow: true,
-                formatter: (row: AdminUser) => {
-                    // 格式化部门数组，将部门名称用英文逗号连接
-                    if (!row.departments || !Array.isArray(row.departments) || row.departments.length === 0) {
-                        return '-'
-                    }
-                    return row.departments.map((dept) => dept.name).join(', ')
-                },
-            },
-            {
-                prop: 'status',
-                h_label: t('common.labels.status'),
-                align: 'center',
-                width: 120,
-                customRow: true,
-                tag: {
-                    [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
-                    [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
-                },
-                h_tip: t('permission.adminUser.statusTip'),
-            },
-            { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
-            { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
-            { prop: 'last_login_at', align: 'center', h_label: t('permission.adminUser.lastLoginAt'), width: 160 },
-            { prop: 'last_login_ip', align: 'center', h_label: t('permission.adminUser.lastLoginIp'), width: 150 },
-        ] as TableColumn<AdminUser>[]
-)
+const statusOptions = computed(() => [
+    { label: t('common.status.enabled'), value: STATUS.ENABLED },
+    { label: t('common.status.disabled'), value: STATUS.DISABLED },
+])
+
+const searchSchema = computed(() => [
+    {
+        prop: 'username',
+        label: t('common.labels.username'),
+        type: 'input' as const,
+        placeholder: t('common.placeholders.inputUsername'),
+        span: 4,
+    },
+    {
+        prop: 'status',
+        label: t('common.labels.status'),
+        type: 'select' as const,
+        placeholder: t('common.placeholders.selectStatus'),
+        options: statusOptions.value,
+        span: 3,
+    },
+    {
+        prop: 'dept_id',
+        label: t('common.labels.department'),
+        type: 'select' as const,
+        placeholder: t('common.placeholders.selectDepartment'),
+        options: departmentOptions.value,
+        span: 4,
+    },
+])
+
+const columns = computed<ProTableColumns<AdminUser>>(() => [
+    { prop: 'id', align: 'center', h_label: t('common.labels.id') },
+    { prop: 'avatar', align: 'center', h_label: t('common.labels.avatar'), width: 100, customRow: true, avatar: true },
+    { prop: 'nickname', h_label: t('common.labels.nickname'), width: 160, overflow: true },
+    {
+        prop: 'username',
+        h_label: t('common.labels.username'),
+        width: 120,
+        overflow: true,
+        h_tip: t('permission.adminUser.usernameTip'),
+        copy: true,
+        customRow: true,
+    },
+    {
+        prop: 'phone_number',
+        h_label: t('common.labels.phone'),
+        minWidth: 160,
+        customRow: true,
+        eye: true,
+        getFullInfo: createToggleFullInfo('phone_number', 'old_phone_number', fetchAdminUserFullPhone),
+        formatter: (row: AdminUser) => {
+            if (!row.phone_number) return ''
+            return row.country_code ? `+${row.country_code} ${row.phone_number}` : row.phone_number
+        },
+    },
+    {
+        prop: 'email',
+        h_label: t('common.labels.email'),
+        minWidth: 180,
+        customRow: true,
+        eye: true,
+        getFullInfo: createToggleFullInfo('email', 'old_email', fetchAdminUserFullEmail),
+    },
+    {
+        prop: 'departments',
+        h_label: t('common.labels.department'),
+        minWidth: 200,
+        customRow: true,
+        formatter: (row: AdminUser) => {
+            if (!row.departments || !Array.isArray(row.departments) || row.departments.length === 0) {
+                return '-'
+            }
+            return row.departments.map((dept) => dept.name).join(', ')
+        },
+    },
+    {
+        prop: 'status',
+        h_label: t('common.labels.status'),
+        align: 'center',
+        width: 120,
+        type: 'tag',
+        tag: {
+            [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
+            [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
+        },
+        h_tip: t('permission.adminUser.statusTip'),
+    },
+    { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
+    { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
+    { prop: 'last_login_at', align: 'center', h_label: t('permission.adminUser.lastLoginAt'), width: 160 },
+    { prop: 'last_login_ip', align: 'center', h_label: t('permission.adminUser.lastLoginIp'), width: 150 },
+])
 </script>
 
 <style lang="scss" scoped>
@@ -344,7 +340,7 @@ const tableTitle = computed(
 }
 .avatar-uploader :deep(.el-upload) {
     border: 1px dashed var(--el-border-color);
-    border-radius: 6px;
+    border-radius: var(--xl-radius-md);
     cursor: pointer;
     position: relative;
     overflow: hidden;

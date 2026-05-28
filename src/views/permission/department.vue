@@ -8,7 +8,7 @@
                             <el-input :placeholder="t('permission.department.namePlaceholder')" v-model.trim="queryWhere.name" clearable></el-input>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -129,7 +129,7 @@ const deleteButtonInfo = getButtonInfoFull('department:delete')
 const { t } = useI18n()
 
 const tableListRef = ref(null)
-const { loading, departmentList, departmentOptions, queryFormRef, queryWhere, getList, handleSearch, getChildrenIds } = useDepartmentTreeList(tableListRef)
+const { loading, departmentList, departmentOptions, queryFormRef, queryWhere, getList, handleSearch, handleReset, getChildrenIds } = useDepartmentTreeList(tableListRef)
 const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, isProtectedEditingDepartment, formData, getDynamicRules, filteredParentOptions, openEditDrawer, handleAddChild, editConfirmSubmit } =
     useDepartmentForm({ departmentOptions, getChildrenIds, refreshList: getList })
 const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentDeptName, roleOptions, roleOptionsLoading, bindRoleData, filterRole, handleBindRole, bindRoleConfirmSubmit } = useDepartmentRoleBinding({
@@ -202,7 +202,7 @@ const tableTitle = computed(
 </script>
 
 <style lang="scss" scoped>
-.el-form-item {
-    width: 100% !important;
+:deep(.el-form-item) {
+    width: 100%;
 }
 </style>

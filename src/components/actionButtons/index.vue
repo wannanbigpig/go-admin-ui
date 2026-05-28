@@ -3,7 +3,7 @@
         <template v-if="shouldShowAllButtons">
             <xl-action-button
                 v-for="(button, index) in visibleButtons"
-                :key="index"
+                :key="button.permission || (button.buttonInfo?.id as any) || button.text || index"
                 :show-icon="button.showIcon"
                 :show-text="button.showText"
                 :type="button.type || 'primary'"
@@ -18,7 +18,7 @@
         <template v-else>
             <xl-action-button
                 v-for="(button, index) in visibleButtons.slice(0, maxVisibleButtons - 1)"
-                :key="index"
+                :key="button.permission || (button.buttonInfo?.id as any) || button.text || index"
                 :show-icon="button.showIcon"
                 :show-text="button.showText"
                 :type="button.type || 'primary'"
@@ -38,7 +38,7 @@
                     <el-dropdown-menu>
                         <el-dropdown-item
                             v-for="(button, index) in moreButtons"
-                            :key="index"
+                            :key="button.permission || (button.buttonInfo?.id as any) || button.text || index"
                             :divided="button.divided"
                             :disabled="normalizeDisabled(button)"
                             :title="normalizeTooltip(button) || undefined"
@@ -188,10 +188,7 @@ const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, ev
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: 8px;
     width: 100%;
-}
-.xl-action-buttons :deep(.xl-action-button-wrapper) + .el-button {
-    margin-left: 12px;
 }
 </style>

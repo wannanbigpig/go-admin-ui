@@ -111,6 +111,10 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
     }
 
     const bindRoleConfirmSubmit = async () => {
+        if (roleOptionsLoading.value) {
+            ElMessage.warning(translate('common.result.loading'))
+            return
+        }
         await runWithSubmitLock(async () => {
             const roleIds = normalizeRoleIds(bindRoleData.role_ids)
             if (currentUserIsRootAdmin.value && superAdminRoleId.value && !roleIds.includes(superAdminRoleId.value)) {

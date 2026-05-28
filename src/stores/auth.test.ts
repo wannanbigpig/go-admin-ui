@@ -9,6 +9,20 @@ const hoisted = vi.hoisted(() => {
     const mockAddDynamicRoutes = vi.fn()
     const mockRemoveDynamicRoute = vi.fn()
 
+    const localStorageStore: Record<string, string> = {}
+    const mockLocalStorage = {
+        getItem: vi.fn((key: string) => localStorageStore[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+            localStorageStore[key] = value
+        }),
+        removeItem: vi.fn((key: string) => {
+            delete localStorageStore[key]
+        }),
+        clear: vi.fn(() => {
+            Object.keys(localStorageStore).forEach((k) => delete localStorageStore[k])
+        }),
+    }
+
     return {
         mockFetchCurrentUser,
         mockFetchUserMenuTree,
@@ -16,6 +30,7 @@ const hoisted = vi.hoisted(() => {
         mockConvertRoute,
         mockAddDynamicRoutes,
         mockRemoveDynamicRoute,
+        mockLocalStorage,
         mockRouter: {
             push: vi.fn(),
             currentRoute: {
@@ -29,6 +44,8 @@ const hoisted = vi.hoisted(() => {
         },
     }
 })
+
+vi.stubGlobal('localStorage', hoisted.mockLocalStorage)
 
 vi.mock('@/modules/auth/service', () => ({
     fetchCurrentUser: hoisted.mockFetchCurrentUser,
@@ -75,6 +92,10 @@ import type { UserPermission } from '@/types/auth'
 describe('stores/auth.ts', () => {
     beforeEach(() => {
         setActivePinia(createPinia())
+        hoisted.mockLocalStorage.clear()
+        hoisted.mockLocalStorage.getItem.mockClear()
+        hoisted.mockLocalStorage.setItem.mockClear()
+        hoisted.mockLocalStorage.removeItem.mockClear()
         hoisted.mockFetchCurrentUser.mockReset()
         hoisted.mockFetchUserMenuTree.mockReset()
         hoisted.mockSubmitLogin.mockReset()

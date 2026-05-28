@@ -20,6 +20,7 @@
                 :load="load"
                 :tree-props="treeProps"
                 @selection-change="handleSelectionChange"
+                @sort-change="handleSortChange"
             >
                 <el-table-column v-if="selectable" type="selection" width="48" align="center" />
                 <template v-if="hasTableTitle">
@@ -31,6 +32,7 @@
                         :align="item.align || 'left'"
                         :width="item.width"
                         :min-width="item.minWidth"
+                        :sortable="item.sortable"
                         :show-overflow-tooltip="item.overflow"
                     >
                         <template v-if="item.h_tip" #header>
@@ -48,7 +50,7 @@
                             <slot v-if="item.customRow" name="td" :item="item" :val="getCellValue(item, scope.row)" :row="scope.row" />
                             <template v-else-if="item.tag">
                                 <el-tag :type="getTagType(item, scope.row)">
-                                    {{ getCellValue(item, scope.row) }}
+                                    {{ getTagText(item, scope.row) }}
                                 </el-tag>
                             </template>
                             <span v-else>{{ getCellValue(item, scope.row) }}</span>
@@ -68,6 +70,12 @@ import { computed, ref } from 'vue'
 import type { TableInstance } from 'element-plus'
 import xlPagination from '@/components/pagination/index.vue'
 import type { TableColumn } from '@/types/common'
+
+interface SortChangePayload {
+    column: unknown
+    prop: string
+    order: 'ascending' | 'descending' | null
+}
 
 // ==================== Props 定义 ====================
 interface Props {
@@ -102,7 +110,7 @@ const props = withDefaults(defineProps<Props>(), {
     pagination: () => ({}) as NonNullable<Props['pagination']>,
 })
 
-const emit = defineEmits(['size-change', 'current-change', 'selection-change'])
+const emit = defineEmits(['size-change', 'current-change', 'selection-change', 'sort-change'])
 const tableRef = ref<TableInstance>()
 
 const showPagination = computed(() => props.pagination && typeof props.pagination.total === 'number')
@@ -112,7 +120,18 @@ const hasTableTitle = computed(() => props.tableTitle.length > 0)
 
 const getCellValue = (item: TableColumn<T>, row: T) => {
     if (typeof item.formatter === 'function') return item.formatter(row)
-    return (row as Record<string, unknown>)[item.prop as string] ?? '-'
+    const propStr = item.prop as string
+    if (!propStr) return '-'
+    if (propStr.includes('.')) {
+        const val = propStr.split('.').reduce((acc: unknown, part: string) => {
+            if (acc && typeof acc === 'object') {
+                return (acc as Record<string, unknown>)[part]
+            }
+            return undefined
+        }, row)
+        return val ?? '-'
+    }
+    return (row as Record<string, unknown>)[propStr] ?? '-'
 }
 
 const getTagType = (item: TableColumn<T>, row: T) => {
@@ -122,18 +141,30 @@ const getTagType = (item: TableColumn<T>, row: T) => {
     return tagConfig?.type || 'info'
 }
 
+const getTagText = (item: TableColumn<T>, row: T) => {
+    const cellValue = getCellValue(item, row)
+    if (!item.tag) return cellValue
+    const tagValue = item.tagKey ? (row as Record<string, unknown>)[item.tagKey as string] : cellValue
+    const tagConfig = item.tag[tagValue as string | number]
+    return tagConfig?.text ?? cellValue
+}
+
 const handlePageSizeChange = (size: number) => {
     emit('size-change', size)
-    props.pagination.pageSizeChange?.(size)
+    props.pagination?.pageSizeChange?.(size)
 }
 
 const handlePageChange = (page: number) => {
     emit('current-change', page)
-    props.pagination.pageChange?.(page)
+    props.pagination?.pageChange?.(page)
 }
 
 const handleSelectionChange = (selection: T[]) => {
     emit('selection-change', selection)
+}
+
+const handleSortChange = (payload: SortChangePayload) => {
+    emit('sort-change', payload)
 }
 
 const toggleRowExpansion = (row: T, expanded?: boolean) => {

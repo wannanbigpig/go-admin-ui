@@ -23,7 +23,7 @@
                 <div class="xl-main-footer">
                     <p>
                         Copyright © {{ currentYear }}
-                        <a href="https://github.com/wannanbigpig" target="_blank" rel="noopener noreferrer" class="footer-link"> 皖南大花猪(wannanbigpig) </a>
+                        <a href="https://github.com/wannanbigpig" target="_blank" rel="noopener noreferrer" class="footer-link"> {{ t('layout.footer.author') }} </a>
                         . All rights reserved.
                     </p>
                     <p>{{ t('layout.footer.poweredBy') }}</p>
@@ -92,7 +92,7 @@ watch(
 .xl-main-inner {
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - $--xl-header-height - $--xl-main-padding * 2 - $--xl-main-inner-padding * 2);
+    min-height: calc(100vh - $xl-header-height - $xl-main-padding * 2 - $xl-main-inner-padding * 2);
 }
 
 .xl-main-content {

@@ -22,6 +22,9 @@ const permissionDirective: Directive = {
         }
         handlePermission(el, binding, false)
     },
+    unmounted(el: PermissionHTMLElement) {
+        el.removeEventListener('click', showNoPermissionMessage, true)
+    },
 }
 
 /**

@@ -1,30 +1,66 @@
 // ==================== 颜色变量 ====================
-$--xl-bg-color: #ffffff;
-$--xl-main-bg-color: #f7f7f7;
+$xl-bg-color: #ffffff;
+$xl-main-bg-color: #f7f7f7;
 
 // ==================== 布局尺寸变量 ====================
 // 侧边栏
-$--xl-aside-width: 260px;
-$--xl-aside-min-width: 64px;
-$--xl-side-logo-height: 50px;
-$--xl-side-logo-border: 1px;
+$xl-aside-width: 260px;
+$xl-aside-min-width: 64px;
+$xl-side-logo-height: 50px;
+$xl-side-logo-border: 1px;
 
 // 头部
-$--xl-header-height: 50px;
+$xl-header-height: 50px;
 
 // 折叠按钮
-$--xl-collapse-btn-width: 24px;
-$--xl-collapse-btn-height: 24px;
-$--xl-collapse-btn-hover-width: 30px;
-$--xl-collapse-btn-hover-height: 30px;
+$xl-collapse-btn-width: 24px;
+$xl-collapse-btn-height: 24px;
+$xl-collapse-btn-hover-width: 30px;
+$xl-collapse-btn-hover-height: 30px;
 
 // 主内容区
-$--xl-main-padding: 5px;
-$--xl-main-inner-padding: 10px;
+$xl-main-padding: 5px;
+$xl-main-inner-padding: 10px;
 
 // 表格
-$--xl-table-height: 50px;
+$xl-table-height: 50px;
 
 // ==================== 层级变量 ====================
-$--xl-head-z-index: 12;
-$--xl-collapse-btn-z-index: 15;
+$xl-head-z-index: 12;
+$xl-collapse-btn-z-index: 15;
+
+// ==================== 圆角变量 ====================
+$xl-radius-sm: 4px;
+$xl-radius-md: 6px;
+$xl-radius-lg: 12px;
+$xl-radius-pill: 999px;
+
+// ==================== 字号变量 ====================
+$xl-font-xs: 11px;
+$xl-font-sm: 12px;
+$xl-font-md: 13px;
+$xl-font-lg: 15px;
+$xl-font-xl: 18px;
+
+// ==================== 间距变量 ====================
+$xl-space-1: 4px;
+$xl-space-2: 8px;
+$xl-space-3: 12px;
+$xl-space-4: 16px;
+$xl-space-5: 24px;
+$xl-space-6: 32px;
+
+// ==================== 阴影变量 ====================
+// 颜色通过 --xl-shadow-color 暴露，由暗色模式覆盖
+$xl-shadow-card: 0 1px 4px var(--xl-shadow-color, rgba(0, 0, 0, 0.06));
+$xl-shadow-card-hover: 0 4px 12px var(--xl-shadow-color, rgba(0, 0, 0, 0.1));
+$xl-shadow-popover: 0 8px 24px var(--xl-shadow-color, rgba(0, 0, 0, 0.12));
+
+// ==================== 过渡曲线 ====================
+$xl-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+$xl-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+// ==================== Drawer 宽度 ====================
+$xl-drawer-sm: clamp(360px, 38vw, 560px);
+$xl-drawer-md: clamp(480px, 46vw, 720px);
+$xl-drawer-lg: clamp(640px, 60vw, 960px);

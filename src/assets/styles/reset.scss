@@ -33,8 +33,15 @@ a {
 }
 
 // ==================== 工具提示样式 ====================
+// el-tooltip 触发器自带 popover，焦点环会与其重叠，保留去除
 .el-tooltip__trigger:focus-visible {
     outline: none;
+}
+
+// ==================== 全局焦点环（a11y） ====================
+:focus-visible {
+    outline: 2px solid var(--el-color-primary);
+    outline-offset: 2px;
 }
 
 .el-popper.is-customized {

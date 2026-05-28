@@ -12,14 +12,14 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
         <div class="xl-container">
             <div class="xl-table-actions">
                 <el-button @click="handleToggleExpand">{{ isExpanded ? t('common.actions.collapseAll') : t('common.actions.expandAll') }}</el-button>
-                <xl-action-button v-permission="'menu:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="menuDrawerRef?.openEditDrawer(1)" />
+                <xl-action-button v-permission="'menu:add'" :show-icon="false" type="primary" code="menu:add" @click="menuDrawerRef?.openEditDrawer(1)" />
             </div>
             <div>
                 <xl-table-list ref="tableListRef" :loading="loading" :data="menuList" :tableTitle="tableTitle" row-key="id" :default-expand-all="false">
@@ -33,7 +33,7 @@
                             </span>
                         </span>
                         <span v-else-if="item.prop == 'title'" class="xl-label-with-icon-right">
-                            <el-icon> <xl-icon :icon="(row as Menu).icon || ''" /> </el-icon> <span>{{ val }}</span>
+                            <el-icon v-if="(row as Menu).icon"> <xl-icon :icon="(row as Menu).icon || ''" /> </el-icon> <span>{{ val }}</span>
                         </span>
                         <span v-else>{{ val }}</span>
                     </template>
@@ -59,7 +59,7 @@ import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import MenuEditDrawer from './components/MenuEditDrawer.vue'
-import { onMounted, ref, reactive, computed } from 'vue'
+import { onMounted, ref, reactive, computed, markRaw, nextTick } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
 import { MENU_STATUS } from '@/modules/menu/model'
@@ -73,18 +73,20 @@ const { getButtonInfoFull } = usePermission()
 const { copyText } = useClipboard()
 const { t } = useI18n()
 const addChildButtonInfo = getButtonInfoFull('menu:addChild')
-const addButtonInfo = getButtonInfoFull('menu:add')
 const updateButtonInfo = getButtonInfoFull('menu:update')
 const deleteButtonInfo = getButtonInfoFull('menu:delete')
 
 const { loading, menuList, getList } = useMenuList()
+loading.value = true
 const menuDrawerRef = ref<InstanceType<typeof MenuEditDrawer> | null>(null)
 
 const queryFormRef = ref()
 const tableListRef = ref<{
     toggleRowExpansion: (row: Menu, expanded?: boolean) => void
 } | null>(null)
-const queryWhere = reactive({
+const queryWhere = reactive<{
+    status: number | ''
+}>({
     status: MENU_STATUS.ALL,
 })
 
@@ -95,40 +97,54 @@ const { isExpanded, handleToggleExpand, resetExpanded } = useMenuTreeExpand({
 
 const handleSearch = () => {
     resetExpanded()
+    const params: Record<string, unknown> = {}
+    if (queryWhere.status !== '') params.status = queryWhere.status
+    getList(params)
+}
+
+const handleReset = () => {
+    resetExpanded()
+    if (queryFormRef.value) {
+        queryFormRef.value.resetFields()
+    }
+    queryWhere.status = MENU_STATUS.ALL
     getList()
 }
 
-const actionButtons = computed(() => {
-    return [
-        {
-            permission: 'menu:addChild',
-            buttonInfo: addChildButtonInfo || undefined,
-            showIcon: false,
-            click: (row: Menu) => menuDrawerRef.value?.handleAddChild(row),
-        },
-        {
-            permission: 'menu:update',
-            buttonInfo: updateButtonInfo || undefined,
-            showIcon: false,
-            click: (row: Menu, index: number) => menuDrawerRef.value?.openEditDrawer(2, row, index),
-        },
-        {
-            permission: 'menu:delete',
-            buttonInfo: deleteButtonInfo || undefined,
-            showIcon: false,
-            click: (row: Menu) => menuDrawerRef.value?.handleDelete(row),
-            divided: true,
-        },
-    ]
-})
+const actionButtons = markRaw([
+    {
+        permission: 'menu:addChild',
+        buttonInfo: addChildButtonInfo || undefined,
+        showIcon: false,
+        click: (row: Menu) => menuDrawerRef.value?.handleAddChild(row),
+    },
+    {
+        permission: 'menu:update',
+        buttonInfo: updateButtonInfo || undefined,
+        showIcon: false,
+        click: (row: Menu, index: number) => menuDrawerRef.value?.openEditDrawer(2, row, index),
+    },
+    {
+        permission: 'menu:delete',
+        buttonInfo: deleteButtonInfo || undefined,
+        showIcon: false,
+        click: (row: Menu) => menuDrawerRef.value?.handleDelete(row),
+        divided: true,
+    },
+])
 
-onMounted(() => {
-    getList()
+onMounted(async () => {
+    loading.value = true
+    await nextTick()
+    // 等待过渡动画 (300ms) 彻底执行完毕，确保先流畅进入页面并显示骨架屏
+    // 避开由于 apiCache 立即同步 resolved 导致的重度 DOM 同步渲染对动画执行帧率的侵占
+    await new Promise<void>((resolve) => setTimeout(resolve, 350))
+    await getList(queryWhere)
 })
 
 const tableTitle = computed(
     () =>
-        [
+        markRaw([
             {
                 prop: 'title',
                 h_label: t('permission.menu.name'),
@@ -154,7 +170,6 @@ const tableTitle = computed(
                 align: 'center',
                 h_tip: t('permission.menu.tooltips.type'),
                 width: 120,
-                customRow: true,
                 tag: {
                     1: { type: 'primary', text: t('permission.menu.typeDirectory') },
                     2: { type: 'success', text: t('permission.menu.typeMenu') },
@@ -166,7 +181,6 @@ const tableTitle = computed(
                 h_label: t('common.labels.status'),
                 align: 'center',
                 width: 120,
-                customRow: true,
                 tag: {
                     0: { type: 'danger', text: t('common.status.disabled') },
                     1: { type: 'success', text: t('common.status.enabled') },
@@ -177,7 +191,6 @@ const tableTitle = computed(
                 h_label: t('permission.menu.show'),
                 align: 'center',
                 width: 120,
-                customRow: true,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -189,7 +202,6 @@ const tableTitle = computed(
                 h_label: t('permission.menu.auth'),
                 align: 'center',
                 width: 130,
-                customRow: true,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -201,7 +213,6 @@ const tableTitle = computed(
                 h_label: t('permission.menu.external'),
                 align: 'center',
                 width: 130,
-                customRow: true,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -212,7 +223,6 @@ const tableTitle = computed(
                 h_label: t('permission.menu.newWindow'),
                 align: 'center',
                 width: 150,
-                customRow: true,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -233,7 +243,7 @@ const tableTitle = computed(
                 width: 160,
                 h_tip: t('permission.menu.tooltips.updatedAt'),
             },
-        ] as TableColumn<Menu>[]
+        ]) as TableColumn<Menu>[]
 )
 </script>
 

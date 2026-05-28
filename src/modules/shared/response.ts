@@ -51,9 +51,9 @@ export function normalizeDetailData<T>(response: unknown, fallback: T): T {
     const payload = unwrapPayload(response)
     if (payload == null) return fallback
 
-    // 如果是数组，取第一个元素（适用于上传接口返回数组的情况）
+    // 如果是数组，取第一个元素（适用于上传接口返回数组的情况），空数组则返回 fallback
     if (Array.isArray(payload)) {
-        return payload[0] as T
+        return payload.length > 0 ? (payload[0] as T) : fallback
     }
 
     // 处理嵌套一层 data 的情况 (常见于某些 API 设计)
@@ -80,7 +80,7 @@ export function normalizeArrayData<T>(response: unknown): T[] {
  * 归一化分页列表结构
  * 现在 response 已经是 PageData<T> 或直接的业务数据
  */
-export function normalizeListData<T>(response: unknown): PageData<T> & { page: number; pageSize: number } {
+export function normalizeListData<T>(response: unknown): PageData<T> & { page?: number; pageSize?: number } {
     const payload = unwrapPayload(response)
 
     if (Array.isArray(payload)) {
@@ -92,7 +92,7 @@ export function normalizeListData<T>(response: unknown): PageData<T> & { page: n
     }
 
     if (!payload || typeof payload !== 'object') {
-        return { ...EMPTY_LIST_RESULT } as PageData<T> & { page: number; pageSize: number }
+        return { ...EMPTY_LIST_RESULT } as PageData<T> & { page?: number; pageSize?: number }
     }
 
     const data = payload as Record<string, unknown>
@@ -102,8 +102,8 @@ export function normalizeListData<T>(response: unknown): PageData<T> & { page: n
         return {
             list: data.list as T[],
             total: toNumber(data.total, 0),
-            page: toNumber(data.page, 1),
-            pageSize: toNumber(data.pageSize, 10),
+            page: data.page !== undefined ? toNumber(data.page, 1) : undefined,
+            pageSize: data.pageSize !== undefined ? toNumber(data.pageSize, 10) : undefined,
         }
     }
 

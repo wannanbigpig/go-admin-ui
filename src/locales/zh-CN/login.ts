@@ -3,6 +3,7 @@ export default {
     appTitle: 'X-L-Admin 后台管理系统',
     login: '登录',
     loggingIn: '登录中...',
+    authorGithub: '作者 GitHub',
     usernameRequired: '用户名不能为空',
     usernameInvalid: '用户名只能是数字+大小写字母+下划线，长度3-16位',
     passwordRequired: '密码不能为空',
@@ -11,6 +12,7 @@ export default {
     captchaInvalid: '验证码只能是小写字母和数字，长度4位',
     fetchCaptchaFailed: '获取验证码失败',
     loginSuccess: '登录成功',
+    noPermission: '暂无权限',
     placeholders: {
         username: '请输入用户名',
         password: '请输入密码',

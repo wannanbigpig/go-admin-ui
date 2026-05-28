@@ -1,5 +1,5 @@
 <template>
-    <div class="xl-search-btn">
+    <div ref="btnRef" class="xl-search-btn">
         <el-button type="primary" @click="handleSearch" :disabled="loading">{{ t('common.actions.search') }}</el-button>
         <el-button v-if="withReset" @click="handleReset" :disabled="loading">{{ t('common.actions.reset') }}</el-button>
         <el-text v-show="showCollapsible" class="xl-collapsible xl-cursor-pointer" type="primary" @click="toggleCollapse">
@@ -11,55 +11,56 @@
         </el-text>
     </div>
 </template>
-<script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch, nextTick, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formContextKey, type FormInstance } from 'element-plus'
+import { Logger } from '@/utils/logger'
+
+const formContext = inject(formContextKey, undefined)
 
 // ==================== Props 定义 ====================
-const props = defineProps({
+interface Props {
     /** 最大显示的表单项数量，超过此数量将显示折叠/展开按钮 */
-    maxShow: {
-        type: Number,
-        default: 3,
-    },
+    maxShow?: number
     /** 加载状态，控制按钮是否禁用 */
-    loading: {
-        type: Boolean,
-        default: false,
-    },
+    loading?: boolean
     /** 表单项选择器，用于查找需要控制的表单项 */
-    nodeName: {
-        type: String,
-        default: '#searchForm > .el-col',
-    },
+    nodeName?: string
     /** 查询按钮点击回调函数 */
-    onSearch: {
-        type: Function,
-        default: () => {
-            // 默认不执行任何操作
-        },
-    },
+    onSearch?: () => void
     /** 重置按钮点击回调函数，如果不提供则使用 modelRef 的 resetFields 方法 */
-    onReset: {
-        type: Function,
-        default: undefined,
-    },
+    onReset?: () => void
     /** 表单引用对象，用于获取表单元素或调用 resetFields 方法 */
-    modelRef: {
-        type: Object,
-        default: null,
-    },
+    modelRef?: FormInstance | Record<string, unknown> | HTMLElement | null
     /** 是否显示重置按钮 */
-    withReset: {
-        type: Boolean,
-        default: true,
+    withReset?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    maxShow: 3,
+    loading: false,
+    nodeName: '#searchForm > .el-col',
+    onSearch: () => {
+        /* noop */
     },
+    onReset: undefined,
+    modelRef: null,
+    withReset: true,
 })
+
+const emit = defineEmits<{
+    search: []
+    reset: []
+}>()
+
 const { t } = useI18n()
 
 // ==================== 响应式数据 ====================
 const isFolded = ref(false)
-const visibleItems = ref([])
+const visibleItems = ref<HTMLElement[]>([])
+const btnRef = ref<HTMLDivElement | null>(null)
 
 // ==================== 计算属性 ====================
 const showCollapsible = computed(() => props.maxShow > 0 && visibleItems.value.length > props.maxShow)
@@ -69,7 +70,10 @@ const showCollapsible = computed(() => props.maxShow > 0 && visibleItems.value.l
  * 处理查询按钮点击
  */
 const handleSearch = () => {
-    props.onSearch()
+    emit('search')
+    if (props.onSearch) {
+        props.onSearch()
+    }
 }
 
 /**
@@ -84,12 +88,13 @@ const toggleCollapse = () => {
  * 优先使用 onReset 回调，其次使用 modelRef 的 resetFields 方法
  */
 const handleReset = () => {
+    emit('reset')
     if (props.onReset) {
         props.onReset()
-    } else if (props.modelRef?.resetFields) {
+    } else if (props.modelRef && 'resetFields' in props.modelRef && typeof props.modelRef.resetFields === 'function') {
         props.modelRef.resetFields()
     } else {
-        throw new Error(t('validation.drawer.resetOrFormRefRequired'))
+        Logger.warn('collapsibleSearchBtn: onReset 未提供且 modelRef 无 resetFields 方法')
     }
 }
 
@@ -98,13 +103,28 @@ const handleReset = () => {
  */
 const getFormItems = async () => {
     await nextTick()
-    const formItems = props.modelRef ? props.modelRef.$el.querySelectorAll(props.nodeName) : document.querySelectorAll(props.nodeName)
 
+    let container: HTMLElement | Document | null = null
+    if (props.modelRef) {
+        // 如果 modelRef 提供了，使用 modelRef 的 $el 作为容器（如果是 Vue 组件实例则访问 $el，否则直接使用）
+        const anyRef = props.modelRef as Record<string, unknown>
+        container = (anyRef.$el as HTMLElement) || (props.modelRef as HTMLElement)
+    } else if (formContext && (formContext as unknown as Record<string, unknown>).$el) {
+        container = (formContext as unknown as Record<string, unknown>).$el as HTMLElement
+    } else if (btnRef.value) {
+        // 否则限制在当前组件附近的表单或父级容器内，防止全局 querySelectorAll 污染其他区域 of 表单
+        container = btnRef.value.closest('form') || btnRef.value.parentElement
+    }
+
+    if (!container) return
+
+    const formItems = container.querySelectorAll(props.nodeName)
     formItems.forEach((item) => {
-        visibleItems.value.push(item)
+        const htmlItem = item as HTMLElement
+        visibleItems.value.push(htmlItem)
         // 如果超过最大显示数量，默认隐藏
         if (props.maxShow > 0 && visibleItems.value.length > props.maxShow) {
-            item.classList.add('xl-display-none')
+            htmlItem.classList.add('xl-display-none')
         }
     })
 }

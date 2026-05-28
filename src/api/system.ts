@@ -1,8 +1,9 @@
 import { get, post, upload } from '@/utils/request'
+import { postSSE, type SSEHandlers, type UploadBatchProgress } from '@/utils/sse'
 import type { AxiosRequestConfig } from 'axios'
 import type { PageData } from '@/types/common'
 import type { ExportRecord, ExportTaskSubmitResult } from '@/types/exportCenter'
-import type { AppNotification, NotificationReadPayload, NotificationUnreadCount } from '@/types/notification'
+import type { AppNotification, NotificationReadPayload, NotificationSendPayload, NotificationSendResult, NotificationUnreadCount } from '@/types/notification'
 import type {
     SystemConfig,
     SystemConfigPayload,
@@ -15,6 +16,8 @@ import type {
     SystemFile,
     StorageConfig,
     StorageConfigPayload,
+    StorageSecretPayload,
+    StorageSecretResult,
     StorageTestResult,
     SystemFileReference,
     SystemFileFolder,
@@ -22,9 +25,14 @@ import type {
     SystemFileBatchDeletePayload,
     SystemFileBatchDeleteResult,
     SystemFileMovePayload,
+    SystemFileLocalUploadBatchResult,
     SystemFileUploadCompletePayload,
+    SystemFileUploadCompleteBatchPayload,
+    SystemFileUploadCompleteBatchResult,
     SystemFileUploadCredential,
     SystemFileUploadCredentialPayload,
+    SystemFileUploadCredentialBatchPayload,
+    SystemFileUploadCredentialBatchResult,
     SystemFileExportPayload,
     TaskRunEvent,
     TaskTriggerPayload,
@@ -132,6 +140,14 @@ export function getExportRecordList(params?: Record<string, unknown>) {
     return get<PageData<ExportRecord>>('/v1/system/export/list', params)
 }
 
+export interface WsTicketResult {
+    ticket: string
+}
+
+export function getWsTicket() {
+    return post<WsTicketResult>('/v1/common/ws-ticket')
+}
+
 export function getNotificationList(params?: Record<string, unknown>) {
     return get<PageData<AppNotification>>('/v1/system/notification/list', params)
 }
@@ -146,6 +162,10 @@ export function markNotificationRead(data: NotificationReadPayload) {
 
 export function markAllNotificationsRead() {
     return post<unknown>('/v1/system/notification/read-all')
+}
+
+export function sendSystemNotification(data: NotificationSendPayload) {
+    return post<NotificationSendResult>('/v1/system/notification/send', data)
 }
 
 export function getSystemFileList(params?: Record<string, unknown>) {
@@ -176,8 +196,16 @@ export function restoreSystemFile(data: { id: number | string }) {
     return post<unknown>('/v1/system/file/trash/restore', data)
 }
 
+export function restoreSystemFileBatch(data: { ids: (number | string)[] }) {
+    return post<unknown>('/v1/system/file/trash/batch-restore', data)
+}
+
 export function destroySystemFile(data: { id: number | string }) {
     return post<unknown>('/v1/system/file/trash/destroy', data)
+}
+
+export function destroySystemFileBatch(data: { ids: (number | string)[] }) {
+    return post<unknown>('/v1/system/file/trash/batch-destroy', data)
 }
 
 export function getSystemFileReferences(params: { id?: number | string; file_id?: number | string; uuid?: string }) {
@@ -209,15 +237,32 @@ export function moveSystemFile(data: SystemFileMovePayload) {
 }
 
 export function uploadSystemFileLocal(files: File | File[], extra: Record<string, unknown> = {}, options: AxiosRequestConfig = {}) {
-    return upload<SystemFile | SystemFile[]>('/v1/system/file/upload/local', files, extra, options)
+    return upload<SystemFile | SystemFile[] | SystemFileLocalUploadBatchResult>('/v1/system/file/upload/local', files, extra, options)
 }
 
 export function getSystemFileUploadCredential(data: SystemFileUploadCredentialPayload) {
     return post<SystemFileUploadCredential>('/v1/system/file/upload/credential', data)
 }
 
+export function getSystemFileUploadCredentialBatch(data: SystemFileUploadCredentialBatchPayload) {
+    return post<SystemFileUploadCredentialBatchResult>('/v1/system/file/upload/credential/batch', data)
+}
+
+export function getSystemFileUploadCredentialBatchStream(data: SystemFileUploadCredentialBatchPayload, handlers: SSEHandlers<SystemFileUploadCredentialBatchResult, UploadBatchProgress> & { signal?: AbortSignal }) {
+    const { signal, ...sseHandlers } = handlers
+    return postSSE<SystemFileUploadCredentialBatchResult, UploadBatchProgress>('/v1/system/file/upload/credential/batch', data, sseHandlers, { signal })
+}
+
 export function completeSystemFileUpload(data: SystemFileUploadCompletePayload) {
     return post<SystemFile>('/v1/system/file/upload/complete', data)
+}
+
+export function completeSystemFileUploadBatch(data: SystemFileUploadCompleteBatchPayload) {
+    return post<SystemFileUploadCompleteBatchResult>('/v1/system/file/upload/complete/batch', data)
+}
+
+export function completeSystemFileUploadBatchStream(data: SystemFileUploadCompleteBatchPayload, handlers: SSEHandlers<SystemFileUploadCompleteBatchResult, UploadBatchProgress>) {
+    return postSSE<SystemFileUploadCompleteBatchResult, UploadBatchProgress>('/v1/system/file/upload/complete/batch', data, handlers)
 }
 
 export function getStorageConfig() {
@@ -230,6 +275,10 @@ export function saveStorageConfig(data: StorageConfigPayload) {
 
 export function testStorageConfig(data: StorageConfigPayload) {
     return post<StorageTestResult>('/v1/system/storage/test', data)
+}
+
+export function getStorageSecret(params: StorageSecretPayload) {
+    return get<StorageSecretResult>('/v1/system/storage/secret', params as unknown as Record<string, unknown>)
 }
 
 export function getTaskRunEvents(params: { run_id: number | string }) {

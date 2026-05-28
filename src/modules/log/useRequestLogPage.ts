@@ -7,16 +7,18 @@ import { useListPage } from '@/composables/useListPage'
 import { fetchRequestLogList, fetchRequestLogDetail } from '@/modules/log/service'
 import { submitRequestLogExportTask } from '@/modules/exportCenter/service'
 import { useExportTaskSubmitter } from '@/modules/exportCenter/useExportTaskSubmitter'
-import { createRequestLogQuery } from '@/modules/log/model'
+import { createRequestLogQuery, DEFAULT_REQUEST_LOG_ORDER_BY, EXECUTION_TIME_SCOPE_OPTIONS, REQUEST_KIND_OPTIONS } from '@/modules/log/model'
 import { applyDateRangeToQuery, formatIpAddress, formatJsonContent } from '@/modules/log/helpers'
-import type { RequestLog } from '@/types/log'
+import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogQuery } from '@/types/log'
+
+type SortOrder = 'ascending' | 'descending' | null
 
 export function useRequestLogPage() {
     const router = useRouter()
     const { t } = useI18n()
     const { submitExportTask } = useExportTaskSubmitter()
     const queryFormRef = ref<FormInstance>()
-    const queryWhere = reactive(createRequestLogQuery())
+    const queryWhere = reactive<RequestLogQuery>(createRequestLogQuery())
     const dateRange = ref<[string, string] | []>([])
 
     const showDetailDrawer = ref(false)
@@ -33,12 +35,19 @@ export function useRequestLogPage() {
         return params
     }
 
+    const buildOrderBy = (prop: string, order: SortOrder) => {
+        if (!order) return null
+        const direction = order === 'ascending' ? 'asc' : 'desc'
+        return `${prop} ${direction}`
+    }
+
     const {
         loading,
         items: logList,
         pagination,
         getList,
         handleSearch,
+        handleReset: rawHandleReset,
     } = useListPage<RequestLog, typeof queryWhere>({
         query: queryWhere,
         queryFormRef,
@@ -58,6 +67,11 @@ export function useRequestLogPage() {
         },
     })
 
+    const handleReset = async () => {
+        dateRange.value = []
+        await rawHandleReset()
+    }
+
     const openDetailDrawer = async (row: RequestLog) => {
         showDetailDrawer.value = true
         detailLoading.value = true
@@ -72,6 +86,14 @@ export function useRequestLogPage() {
 
     const openMaskConfigDialog = async () => {
         await router.push({ path: '/system/config', query: { tab: 'audit_mask' } })
+    }
+
+    const handleSortChange = async ({ prop, order }: { prop: string; order: SortOrder }) => {
+        queryWhere.order_by = buildOrderBy(prop, order) ?? DEFAULT_REQUEST_LOG_ORDER_BY
+        pagination.page = 1
+        queryWhere.page = 1
+        queryWhere.per_page = pagination.pageSize
+        await getList()
     }
 
     const exportCsv = async () => {
@@ -105,6 +127,13 @@ export function useRequestLogPage() {
         return 'info'
     }
 
+    const getRequestKindTagType = (kind?: RequestKind) => REQUEST_KIND_OPTIONS.find((item) => item.value === kind)?.type || 'info'
+    const getExecutionTimeScopeTagType = (scope?: ExecutionTimeScope) => EXECUTION_TIME_SCOPE_OPTIONS.find((item) => item.value === scope)?.type || 'info'
+    const formatExecutionTimeDisplay = (row?: Pick<RequestLog, 'execution_time' | 'execution_time_unit'> | null) => {
+        if (!row || row.execution_time === null || row.execution_time === undefined) return '-'
+        return `${row.execution_time} ${row.execution_time_unit || 'ms'}`
+    }
+
     return {
         loading,
         logList,
@@ -114,6 +143,7 @@ export function useRequestLogPage() {
         pagination,
         getList,
         handleSearch,
+        handleReset,
         showDetailDrawer,
         currentDetail,
         detailLoading,
@@ -122,7 +152,11 @@ export function useRequestLogPage() {
         formatJson: formatJsonContent,
         formatIpAddress,
         getMethodTagType,
+        getRequestKindTagType,
+        getExecutionTimeScopeTagType,
         getResponseStatusTagType,
+        formatExecutionTimeDisplay,
+        handleSortChange,
         openDetailDrawer,
         openMaskConfigDialog,
         exportCsv,

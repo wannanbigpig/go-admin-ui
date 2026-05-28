@@ -30,12 +30,12 @@ const handleToggleCollapse = () => {
 
 <style lang="scss" scoped>
 .collapse-btn {
-    width: $--xl-collapse-btn-width;
-    height: $--xl-collapse-btn-height;
+    width: $xl-collapse-btn-width;
+    height: $xl-collapse-btn-height;
     border-radius: 40px;
     position: fixed;
     top: 100px;
-    left: calc(var(--xl-aside-width) - $--xl-collapse-btn-width / 2);
+    left: calc(var(--xl-aside-width) - $xl-collapse-btn-width / 2);
     z-index: var(--xl-collapse-btn-z-index);
     background: var(--xl-bg-color);
     inset-inline-end: -13px;

@@ -7,57 +7,19 @@
         </el-tabs>
 
         <div v-if="activeTab === 'normal'">
-            <div class="xl-container xl-m-bottom-10">
-                <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
-                    <el-row id="searchForm" :gutter="20">
-                        <el-col :span="5">
-                            <el-form-item :label="t('system.config.key')" prop="config_key">
-                                <el-input v-model.trim="queryWhere.config_key" :placeholder="t('system.config.keyPlaceholder')" clearable />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="5">
-                            <el-form-item :label="t('system.config.name')" prop="config_name">
-                                <el-input v-model.trim="queryWhere.config_name" :placeholder="t('system.config.namePlaceholder')" clearable />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="5">
-                            <el-form-item :label="t('system.config.groupCode')" prop="group_code">
-                                <el-input v-model.trim="queryWhere.group_code" :placeholder="t('system.config.groupCodePlaceholder')" clearable />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="5">
-                            <el-form-item :label="t('common.labels.status')" prop="status">
-                                <el-select v-model="queryWhere.status" clearable :placeholder="t('common.placeholders.selectStatus')">
-                                    <el-option v-for="item in commonStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                                </el-select>
-                            </el-form-item>
-                        </el-col>
-                        <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
-                    </el-row>
-                </el-form>
-            </div>
-
-            <div class="xl-container">
-                <div class="xl-table-actions">
-                    <xl-action-button v-permission="'sysConfig:add'" :button-info="addButtonInfo" type="primary" :show-icon="false" @click="openCreateDrawer" />
-                    <xl-action-button v-permission="'sysConfig:refresh'" :button-info="refreshButtonInfo" type="primary" :show-icon="false" :loading="refreshing" @click="handleRefreshCache" />
-                </div>
-                <xl-table-list :loading="loading" :data="configList" :tableTitle="tableTitle" :pagination="pagination">
-                    <template #td="{ item, val }">
-                        <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                            {{ item.tag[val as string | number]?.text || val }}
-                        </el-tag>
-                        <span v-else>{{ val }}</span>
-                    </template>
-                    <template #operation>
-                        <el-table-column width="140" :label="t('common.labels.operation')" align="center" fixed="right">
-                            <template #default="scope">
-                                <xl-action-buttons :buttons="actionButtons" :scope="scope" />
-                            </template>
-                        </el-table-column>
-                    </template>
-                </xl-table-list>
-            </div>
+            <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="configList" :pagination="pagination" :search-max-show="4" @search="onSearch" @reset="handleReset">
+                <template #actions>
+                    <xl-action-button v-permission="'sysConfig:add'" code="sysConfig:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
+                    <xl-action-button v-permission="'sysConfig:refresh'" code="sysConfig:refresh" type="primary" :show-icon="false" :loading="refreshing" @click="handleRefreshCache" />
+                </template>
+                <template #operation>
+                    <el-table-column width="140" :label="t('common.labels.operation')" align="center" fixed="right">
+                        <template #default="scope">
+                            <xl-action-buttons :buttons="actionButtons" :scope="scope" />
+                        </template>
+                    </el-table-column>
+                </template>
+            </xl-pro-table>
 
             <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formRef" :onConfirm="submitForm" :isSubmitting="submitting" size="36%">
                 <el-form ref="formRef" :model="formData" :rules="formRules" label-width="auto">
@@ -119,10 +81,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
-import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlTableList from '@/components/tableList/index.vue'
+import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlI18nInput from '@/components/i18nInput/index.vue'
@@ -137,8 +98,9 @@ import { validateFormSafely } from '@/modules/shared/form'
 import { createLocaleTextMap, createSystemConfigQuery } from '@/modules/system/model'
 import { SYSTEM_DICT_TYPES, commonStatusFallbackOptions, yesNoFallbackOptions } from '@/modules/system/dictOptions'
 import { fetchSystemConfigList, fetchSystemConfigDetail, addSystemConfig, modifySystemConfig, removeSystemConfig, refreshSystemConfig } from '@/modules/system/service'
+import { mergeI18nField } from '@/modules/shared/i18n'
 import type { SystemConfig, SystemConfigPayload } from '@/types/system'
-import type { TableColumn } from '@/types/common'
+import type { ProTableColumns } from '@/components/proTable/types'
 import { Logger } from '@/utils/logger'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 import { useRoute, useRouter } from 'vue-router'
@@ -149,8 +111,6 @@ const route = useRoute()
 const router = useRouter()
 
 const activeTab = ref<'normal' | 'storage' | 'audit_mask'>('normal')
-const addButtonInfo = getButtonInfoFull('sysConfig:add')
-const refreshButtonInfo = getButtonInfoFull('sysConfig:refresh')
 const updateButtonInfo = getButtonInfoFull('sysConfig:update')
 const deleteButtonInfo = getButtonInfoFull('sysConfig:delete')
 const { options: commonStatusOptions, tagMap: commonStatusTagMap, load: loadCommonStatusOptions } = useDictOptions(SYSTEM_DICT_TYPES.commonStatus, commonStatusFallbackOptions)
@@ -163,10 +123,12 @@ const valueTypeOptions = [
     { label: 'json', value: 'json' },
 ]
 
-const queryFormRef = ref<FormInstance>()
-const queryWhere = reactive(createSystemConfigQuery())
+/* eslint-disable prefer-const */
+let queryWhere = reactive(createSystemConfigQuery())
+/* eslint-enable prefer-const */
 
 const {
+    handleReset,
     loading,
     items: configList,
     pagination,
@@ -174,20 +136,7 @@ const {
     handleSearch,
 } = useListPage<SystemConfig, typeof queryWhere>({
     query: queryWhere,
-    queryFormRef,
-    fetcher: async (params) => {
-        try {
-            return await fetchSystemConfigList(params)
-        } catch (error) {
-            Logger.error('获取系统参数列表失败:', error)
-            return {
-                list: [],
-                total: 0,
-                page: params.page ?? 1,
-                pageSize: params.per_page ?? 10,
-            }
-        }
-    },
+    fetcher: (params) => fetchSystemConfigList(params),
 })
 
 const showDrawer = ref(false)
@@ -196,6 +145,10 @@ const refreshing = ref(false)
 const formRef = ref<FormInstance>()
 const currentId = ref<number | string | null>(null)
 
+const onSearch = (model: Record<string, unknown>) => {
+    Object.assign(queryWhere, model)
+    handleSearch()
+}
 const formData = reactive({
     config_key: '',
     config_name_i18n: createLocaleTextMap(),
@@ -260,9 +213,9 @@ const resetForm = () => {
         sort: 0,
         remark: '',
     })
-    setTimeout(() => {
+    nextTick(() => {
         formRef.value?.clearValidate()
-    }, 50)
+    })
 }
 
 const openCreateDrawer = () => {
@@ -277,11 +230,7 @@ const openEditDrawer = async (row: SystemConfig) => {
         const detail = await fetchSystemConfigDetail(row.id)
         Object.assign(formData, {
             config_key: detail.config_key || '',
-            config_name_i18n: {
-                ...createLocaleTextMap(),
-                ...(detail.config_name_i18n || {}),
-                ...(detail.config_name && !detail.config_name_i18n?.['zh-CN'] ? { 'zh-CN': detail.config_name } : {}),
-            },
+            config_name_i18n: mergeI18nField(detail as unknown as Record<string, unknown>, 'config_name_i18n'),
             config_value: detail.config_value || '',
             value_type: detail.value_type || 'string',
             group_code: detail.group_code || '',
@@ -295,6 +244,7 @@ const openEditDrawer = async (row: SystemConfig) => {
         showDrawer.value = true
     } catch (error) {
         Logger.error('获取系统参数详情失败:', error)
+        ElMessage.error(t('common.result.operationFailed'))
     }
 }
 
@@ -364,35 +314,60 @@ const actionButtons = computed(() => [
     },
 ])
 
-const tableTitle = computed(
-    () =>
-        [
-            { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
-            { prop: 'config_key', h_label: t('system.config.key'), minWidth: 180, overflow: true },
-            { prop: 'config_name', h_label: t('system.config.name'), minWidth: 140, overflow: true },
-            { prop: 'config_value', h_label: t('system.config.value'), minWidth: 220, overflow: true },
-            { prop: 'value_type', h_label: t('system.config.valueType'), width: 100, align: 'center' },
-            { prop: 'group_code', h_label: t('system.config.groupCode'), minWidth: 120, overflow: true },
-            {
-                prop: 'is_sensitive',
-                h_label: t('system.config.sensitive'),
-                width: 100,
-                align: 'center',
-                customRow: true,
-                tag: yesNoTagMap.value,
-            },
-            {
-                prop: 'status',
-                h_label: t('common.labels.status'),
-                width: 100,
-                align: 'center',
-                customRow: true,
-                tag: commonStatusTagMap.value,
-            },
-            { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
-            { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
-        ] as TableColumn<SystemConfig>[]
-)
+const columns = computed<ProTableColumns<SystemConfig>>(() => [
+    { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
+    {
+        prop: 'config_key',
+        h_label: t('system.config.key'),
+        label: t('system.config.key'),
+        minWidth: 180,
+        overflow: true,
+        search: { type: 'input', placeholder: t('system.config.keyPlaceholder'), span: 5 },
+    },
+    {
+        prop: 'config_name',
+        h_label: t('system.config.name'),
+        label: t('system.config.name'),
+        minWidth: 140,
+        overflow: true,
+        search: { type: 'input', placeholder: t('system.config.namePlaceholder'), span: 5 },
+    },
+    { prop: 'config_value', h_label: t('system.config.value'), minWidth: 220, overflow: true },
+    { prop: 'value_type', h_label: t('system.config.valueType'), width: 100, align: 'center' },
+    {
+        prop: 'group_code',
+        h_label: t('system.config.groupCode'),
+        label: t('system.config.groupCode'),
+        minWidth: 120,
+        overflow: true,
+        search: { type: 'input', placeholder: t('system.config.groupCodePlaceholder'), span: 5 },
+    },
+    {
+        prop: 'is_sensitive',
+        h_label: t('system.config.sensitive'),
+        width: 100,
+        align: 'center',
+        type: 'tag',
+        tag: yesNoTagMap.value,
+    },
+    {
+        prop: 'status',
+        h_label: t('common.labels.status'),
+        label: t('common.labels.status'),
+        width: 100,
+        align: 'center',
+        type: 'tag',
+        tag: commonStatusTagMap.value,
+        search: {
+            type: 'select',
+            placeholder: t('common.placeholders.selectStatus'),
+            options: commonStatusOptions.value,
+            span: 5,
+        },
+    },
+    { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
+    { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+])
 
 onMounted(async () => {
     const queryTab = String(route.query.tab || '')

@@ -39,7 +39,7 @@
                     </div>
                     <div class="section-content textarea-wrapper">
                         <el-input v-model="maskConfigText.common" type="textarea" :rows="8" resize="none" :placeholder="t('system.requestMask.placeholder')" />
-                        <div class="expand-icon" @click="openExpandDialog('common', t('system.requestMask.common'))" title="展开">
+                        <div class="expand-icon" @click="openExpandDialog('common', t('system.requestMask.common'))" :title="t('common.actions.expand')">
                             <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 21v-2H6.41l4.5-4.5-1.41-1.41-4.5 4.5V14H3v7h7zm4.5-10.09L19 6.41V10h2V3h-7v2h3.59l-4.5 4.5 1.41 1.41z" /></svg>
                         </div>
                     </div>
@@ -59,7 +59,7 @@
                         <el-form-item v-for="field in group.fields" :key="field.key" :label="field.label">
                             <div class="textarea-wrapper">
                                 <el-input v-model="maskConfigText[field.key]" type="textarea" :rows="8" resize="none" :placeholder="t('system.requestMask.placeholder')" />
-                                <div class="expand-icon" @click="openExpandDialog(field.key, field.label)" title="展开">
+                                <div class="expand-icon" @click="openExpandDialog(field.key, field.label)" :title="t('common.actions.expand')">
                                     <svg viewBox="0 0 24 24" width="14" height="14">
                                         <path fill="currentColor" d="M10 21v-2H6.41l4.5-4.5-1.41-1.41-4.5 4.5V14H3v7h7zm4.5-10.09L19 6.41V10h2V3h-7v2h3.59l-4.5 4.5 1.41 1.41z" />
                                     </svg>
@@ -189,9 +189,9 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .request-mask-panel {
-    padding: 24px;
+    padding: var(--xl-space-5);
     background-color: var(--xl-bg-color);
-    border-radius: 12px;
+    border-radius: var(--xl-radius-lg);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     transition: all 0.3s ease;
 }
@@ -206,9 +206,9 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+    gap: var(--xl-space-4);
+    margin-bottom: var(--xl-space-5);
+    padding-bottom: var(--xl-space-4);
     border-bottom: 1px dashed var(--el-border-color-lighter);
 
     .header-content {
@@ -218,9 +218,9 @@ onMounted(() => {
     .title {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--xl-space-2);
         margin: 0 0 10px;
-        font-size: 18px;
+        font-size: var(--xl-font-xl);
         font-weight: 600;
         color: var(--el-text-color-primary);
 
@@ -230,7 +230,7 @@ onMounted(() => {
             justify-content: center;
             width: 28px;
             height: 28px;
-            border-radius: 6px;
+            border-radius: var(--xl-radius-md);
             background: var(--el-color-primary-light-9);
             color: var(--el-color-primary);
         }
@@ -240,11 +240,11 @@ onMounted(() => {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 12px;
+        padding: 6px var(--xl-space-3);
         background-color: var(--el-color-info-light-9);
-        border-radius: 6px;
+        border-radius: var(--xl-radius-md);
         color: var(--el-text-color-regular);
-        font-size: 13px;
+        font-size: var(--xl-font-md);
 
         .desc-icon {
             display: flex;
@@ -264,7 +264,7 @@ onMounted(() => {
 .request-mask-actions-bottom {
     display: flex;
     justify-content: flex-end;
-    margin-top: 24px;
+    margin-top: var(--xl-space-5);
     padding-top: 20px;
     border-top: 1px dashed var(--el-border-color-lighter);
 }
@@ -282,11 +282,11 @@ onMounted(() => {
 .request-mask-section {
     position: relative;
     min-width: 0;
-    padding: 24px;
+    padding: var(--xl-space-5);
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 12px;
+    border-radius: var(--xl-radius-lg);
     background-color: var(--el-bg-color);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s var(--xl-ease-standard);
     overflow: hidden;
 
     &::before {
@@ -294,7 +294,7 @@ onMounted(() => {
         position: absolute;
         top: 0;
         left: 0;
-        width: 4px;
+        width: var(--xl-space-1);
         height: 100%;
         background: transparent;
         transition: all 0.3s;
@@ -351,7 +351,7 @@ onMounted(() => {
             justify-content: center;
             width: 28px;
             height: 28px;
-            border-radius: 6px;
+            border-radius: var(--xl-radius-md);
 
             &.primary-icon {
                 background: var(--el-color-success-light-9);
@@ -371,14 +371,14 @@ onMounted(() => {
 
 .request-mask-fields {
     display: grid;
-    gap: 16px;
+    gap: var(--xl-space-4);
 
     :deep(.el-form-item) {
         margin-bottom: 0;
     }
 
     :deep(.el-form-item__label) {
-        padding-bottom: 8px;
+        padding-bottom: var(--xl-space-2);
         line-height: 20px;
         font-weight: 500;
         color: var(--el-text-color-regular);
@@ -398,11 +398,11 @@ onMounted(() => {
         justify-content: center;
         width: 24px;
         height: 24px;
-        border-radius: 6px;
+        border-radius: var(--xl-radius-md);
         background-color: var(--el-fill-color);
         color: var(--el-text-color-secondary);
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s var(--xl-ease-standard);
         z-index: 10;
 
         &:hover {
@@ -417,12 +417,12 @@ onMounted(() => {
     resize: none;
     line-height: 1.6;
     border-radius: 8px;
-    padding: 12px;
+    padding: var(--xl-space-3);
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-    font-size: 13px;
+    font-size: var(--xl-font-md);
     background-color: var(--el-fill-color-light);
     border: 1px solid var(--el-border-color-lighter);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s var(--xl-ease-standard);
     box-shadow: none;
 
     &:hover {

@@ -20,6 +20,27 @@ export const LOG_OPERATION_STATUS_OPTIONS = [
     { label: 'common.status.failed', value: LOG_OPERATION_STATUS.FAILED, type: 'danger' as const },
 ]
 
+export const REQUEST_KIND_ALL_VALUE = ''
+
+export const REQUEST_KIND_OPTIONS = [
+    { label: 'log.request.requestKindHttp', value: 'http' as const, type: 'primary' as const },
+    { label: 'log.request.requestKindWebsocket', value: 'websocket' as const, type: 'warning' as const },
+    { label: 'log.request.requestKindSse', value: 'sse' as const, type: 'success' as const },
+]
+
+export const REQUEST_KIND_FILTER_OPTIONS = [{ label: 'log.request.requestKindAll', value: REQUEST_KIND_ALL_VALUE }, ...REQUEST_KIND_OPTIONS]
+
+export const EXECUTION_TIME_SCOPE_ALL_VALUE = ''
+
+export const EXECUTION_TIME_SCOPE_OPTIONS = [
+    { label: 'log.request.executionTimeScopeRequest', value: 'request' as const, type: 'primary' as const },
+    { label: 'log.request.executionTimeScopeConnection', value: 'connection' as const, type: 'warning' as const },
+    { label: 'log.request.executionTimeScopeStream', value: 'stream' as const, type: 'success' as const },
+    { label: 'log.request.executionTimeScopeNone', value: 'none' as const, type: 'info' as const },
+]
+
+export const EXECUTION_TIME_SCOPE_FILTER_OPTIONS = [{ label: 'log.request.executionTimeScopeAll', value: EXECUTION_TIME_SCOPE_ALL_VALUE }, ...EXECUTION_TIME_SCOPE_OPTIONS]
+
 export function getOperationStatusLabel(status: number) {
     return translate(LOG_OPERATION_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
 }
@@ -46,10 +67,14 @@ export function getLoginStatusType(status: number) {
     return LOGIN_STATUS_OPTIONS.find((opt) => opt.value === status)?.type || 'info'
 }
 
+export const DEFAULT_REQUEST_LOG_ORDER_BY = null as string | null
+
 export function createRequestLogQuery() {
     return {
         page: 1,
         per_page: 10,
+        order_by: DEFAULT_REQUEST_LOG_ORDER_BY,
+        request_id: null,
         operator_id: null,
         operation_name: null,
         method: null,
@@ -58,6 +83,8 @@ export function createRequestLogQuery() {
         is_high_risk: null,
         operator_account: null,
         ip: null,
+        request_kind: null,
+        execution_time_scope: 'request' as const,
         start_time: null,
         end_time: null,
     }

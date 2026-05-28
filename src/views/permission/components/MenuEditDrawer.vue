@@ -160,7 +160,7 @@
                     </el-form-item>
                 </el-col>
                 <el-col :span="14">
-                    <el-form-item :label="t('permission.menu.routeComponentPath')" prop="component" :required="formData.type === MENU_TYPE.MENU && formData.is_external_links !== MENU_SWITCH_VALUE.YES">
+                    <el-form-item :label="t('permission.menu.routeComponentPath')" prop="component_key" :required="formData.type === MENU_TYPE.MENU && formData.is_external_links !== MENU_SWITCH_VALUE.YES">
                         <template #label>
                             <span class="xl-label-with-icon">
                                 {{ t('permission.menu.routeComponentPath') }}
@@ -171,9 +171,7 @@
                                 </el-tooltip>
                             </span>
                         </template>
-                        <el-input v-model.trim="formData.component" :placeholder="t('permission.menu.componentPathPlaceholder')">
-                            <template #prepend>@/views/</template>
-                        </el-input>
+                        <el-input v-model.trim="formData.component_key" :placeholder="t('permission.menu.componentPathPlaceholder')" />
                     </el-form-item>
                 </el-col>
             </el-row>

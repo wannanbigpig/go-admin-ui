@@ -26,7 +26,7 @@
                             <xl-date-range-picker v-model="dateRange" />
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -86,29 +86,17 @@
                         </el-descriptions-item>
                     </el-descriptions>
 
-                    <template v-if="currentDetail.access_token || currentDetail.refresh_token">
+                    <template v-if="currentDetail.token_hash || currentDetail.refresh_token_hash">
                         <el-divider />
 
-                        <el-collapse v-model="activeCollapse">
-                            <el-collapse-item v-if="currentDetail.access_token" name="accessToken">
-                                <template #title>
-                                    <span>{{ t('log.login.accessToken') }}</span>
-                                    <el-button link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('accessToken')">
-                                        {{ accessTokenFormatted ? t('log.login.restore') : t('log.login.format') }}
-                                    </el-button>
-                                </template>
-                                <pre class="json-content">{{ accessTokenFormatted ? formatJwtToken(currentDetail.access_token) : currentDetail.access_token }}</pre>
-                            </el-collapse-item>
-                            <el-collapse-item v-if="currentDetail.refresh_token" name="refreshToken">
-                                <template #title>
-                                    <span>{{ t('log.login.refreshToken') }}</span>
-                                    <el-button link type="primary" size="small" class="format-btn" @click.stop="toggleTokenFormat('refreshToken')">
-                                        {{ refreshTokenFormatted ? t('log.login.restore') : t('log.login.format') }}
-                                    </el-button>
-                                </template>
-                                <pre class="json-content">{{ refreshTokenFormatted ? formatJwtToken(currentDetail.refresh_token) : currentDetail.refresh_token }}</pre>
-                            </el-collapse-item>
-                        </el-collapse>
+                        <el-descriptions :column="2" border>
+                            <el-descriptions-item v-if="currentDetail.token_hash" :label="t('log.login.accessToken')">
+                                <code class="hash-content">{{ currentDetail.token_hash }}</code>
+                            </el-descriptions-item>
+                            <el-descriptions-item v-if="currentDetail.refresh_token_hash" :label="t('log.login.refreshToken')">
+                                <code class="hash-content">{{ currentDetail.refresh_token_hash }}</code>
+                            </el-descriptions-item>
+                        </el-descriptions>
                     </template>
                 </template>
             </div>
@@ -134,26 +122,7 @@ const { copyText } = useClipboard()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
 const { t } = useI18n()
 
-const {
-    loading,
-    logList,
-    pagination,
-    queryFormRef,
-    queryWhere,
-    dateRange,
-    showDetailDrawer,
-    currentDetail,
-    detailLoading,
-    activeCollapse,
-    accessTokenFormatted,
-    refreshTokenFormatted,
-    formatIpAddress,
-    toggleTokenFormat,
-    formatJwtToken,
-    handleSearch,
-    getList,
-    openDetailDrawer,
-} = useAdminLoginLogPage()
+const { loading, logList, pagination, queryFormRef, queryWhere, dateRange, showDetailDrawer, currentDetail, detailLoading, formatIpAddress, handleSearch, handleReset, getList, openDetailDrawer } = useAdminLoginLogPage()
 
 onMounted(() => {
     getList()
@@ -207,22 +176,15 @@ const tableTitle = computed(
 </script>
 
 <style lang="scss" scoped>
-.el-form-item {
-    width: 100% !important;
+:deep(.el-form-item) {
+    width: 100%;
 }
 .detail-content {
-    padding: 20px;
-    .json-content {
-        background-color: var(--el-fill-color-light);
-        padding: 15px;
-        border-radius: 4px;
-        font-size: 12px;
-        line-height: 1.6;
-        overflow-x: auto;
-        white-space: pre-wrap;
-    }
-    .format-btn {
-        margin-left: 10px;
+    padding: var(--xl-space-5);
+    .hash-content {
+        font-family: monospace;
+        font-size: var(--xl-font-sm);
+        word-break: break-all;
     }
 }
 </style>

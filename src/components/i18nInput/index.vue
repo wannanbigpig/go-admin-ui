@@ -1,7 +1,7 @@
 <template>
     <div class="xl-i18n-input-container">
         <template v-if="isSingleLocale && singleLocale">
-            <el-input v-model="internalValue[singleLocale.value]" :placeholder="placeholder || t('common.placeholders.input')" v-bind="$attrs" />
+            <el-input v-model="singleLocaleValue" :placeholder="placeholder || t('common.placeholders.input')" v-bind="$attrs" />
         </template>
         <template v-else>
             <el-input readonly :model-value="previewText" :placeholder="placeholder || t('common.placeholders.input')" @click="openDialog" v-bind="$attrs">
@@ -71,6 +71,23 @@ const singleLocale = computed(() => localeOptions.value[0] ?? null)
 
 const showDialog = ref(false)
 const draftValue = ref<Record<string, string>>({})
+
+const singleLocaleValue = computed({
+    get: () => {
+        const key = singleLocale.value?.value
+        return key ? props.modelValue?.[key] || '' : ''
+    },
+    set: (val) => {
+        const key = singleLocale.value?.value
+        if (!key) return
+        const newValue = {
+            ...(props.modelValue || {}),
+            [key]: val,
+        }
+        emit('update:modelValue', newValue)
+        emit('change', newValue)
+    },
+})
 
 const internalValue = computed({
     get: () => props.modelValue || {},

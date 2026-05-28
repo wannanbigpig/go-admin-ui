@@ -1,20 +1,20 @@
 <template>
-    <span class="xl-action-button-wrapper" :title="tooltipContent || undefined">
+    <span class="xl-action-button-wrapper">
         <el-tooltip v-if="tooltipContent" :content="tooltipContent" placement="top">
-            <span class="xl-action-button-tooltip-trigger">
+            <span class="xl-action-button-tooltip-trigger" :class="{ 'is-disabled': isDisabled }">
                 <el-button v-bind="buttonAttrs" @click="handleClick">
                     <el-icon v-if="shouldShowIcon">
-                        <xl-icon :icon="buttonInfo?.icon || ''" />
+                        <xl-icon :icon="resolvedButtonInfo?.icon || ''" />
                     </el-icon>
-                    <span v-if="shouldShowText">{{ buttonInfo?.title || text }}</span>
+                    <span v-if="shouldShowText">{{ resolvedButtonInfo?.title || text }}</span>
                 </el-button>
             </span>
         </el-tooltip>
         <el-button v-else v-bind="buttonAttrs" @click="handleClick">
             <el-icon v-if="shouldShowIcon">
-                <xl-icon :icon="buttonInfo?.icon || ''" />
+                <xl-icon :icon="resolvedButtonInfo?.icon || ''" />
             </el-icon>
-            <span v-if="shouldShowText">{{ buttonInfo?.title || text }}</span>
+            <span v-if="shouldShowText">{{ resolvedButtonInfo?.title || text }}</span>
         </el-button>
     </span>
 </template>
@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue'
 import { Icon as XlIcon } from '@iconify/vue'
+import { usePermission } from '@/composables/usePermission'
 
 defineOptions({
     inheritAttrs: false,
@@ -36,6 +37,11 @@ interface ButtonInfo {
 
 interface Props {
     buttonInfo?: ButtonInfo | null
+    /**
+     * 权限按钮 code，传入后内部自动解析为 buttonInfo。
+     * 优先级高于 buttonInfo。
+     */
+    code?: string
     text?: string
     showText?: boolean
     showTooltip?: boolean
@@ -48,13 +54,25 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     buttonInfo: null,
+    code: '',
     text: '',
     showText: true,
     showTooltip: false,
     showIcon: true,
 })
 
-const emit = defineEmits(['click'])
+const { getButtonInfoFull } = usePermission()
+
+const resolvedButtonInfo = computed<ButtonInfo | null>(() => {
+    if (props.code) {
+        return getButtonInfoFull(props.code) as ButtonInfo | null
+    }
+    return props.buttonInfo
+})
+
+const emit = defineEmits<{
+    (e: 'click', event: MouseEvent): void
+}>()
 const attrs = useAttrs()
 
 const buttonAttrs = computed(() => {
@@ -69,7 +87,7 @@ const buttonAttrs = computed(() => {
 })
 
 const hasIcon = computed(() => {
-    const icon = props.buttonInfo?.icon
+    const icon = resolvedButtonInfo.value?.icon
     return !!(icon && icon.trim() !== '')
 })
 
@@ -88,12 +106,16 @@ const shouldShowTooltip = computed(() => {
 
 const tooltipContent = computed(() => {
     if (props.tooltipContent) return props.tooltipContent
-    return shouldShowTooltip.value ? props.buttonInfo?.title || props.text : ''
+    return shouldShowTooltip.value ? resolvedButtonInfo.value?.title || props.text : ''
 })
 
 const handleClick = (event: MouseEvent) => {
     emit('click', event)
 }
+
+const isDisabled = computed(() => {
+    return attrs.disabled === true || attrs.disabled === ''
+})
 </script>
 
 <style lang="scss" scoped>
@@ -107,6 +129,9 @@ const handleClick = (event: MouseEvent) => {
     align-items: center;
     justify-content: center;
     width: fit-content;
-    cursor: not-allowed;
+
+    &.is-disabled {
+        cursor: not-allowed;
+    }
 }
 </style>

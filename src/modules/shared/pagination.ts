@@ -38,9 +38,13 @@ export function createPaginationState(fetcher: () => void, initial: Partial<Pagi
 }
 
 export function applyPaginationResult(target: PaginationState, data: PaginationResultData = {}) {
-    target.total = Number(data.total ?? 0)
-    target.page = Number(data.page ?? 1)
-    target.pageSize = Number(data.pageSize ?? 10)
+    target.total = Number(data.total ?? target.total)
+    if (data.page !== undefined && data.page !== null) {
+        target.page = Number(data.page)
+    }
+    if (data.pageSize !== undefined && data.pageSize !== null) {
+        target.pageSize = Number(data.pageSize)
+    }
 }
 
 export function syncQueryPagination<Q extends { page?: number; per_page?: number }>(query: Q, pagination: PaginationState) {
