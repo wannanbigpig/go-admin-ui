@@ -15,6 +15,7 @@ export default {
         nicknameRequired: 'Nickname is required',
         usernameRequired: 'Username is required',
         usernameMin: 'Username must be at least 3 characters',
+        usernameLength: 'Username length must be between 3 and 20',
         usernamePattern: 'Only letters, numbers and underscores are allowed',
         passwordRequired: 'Password is required',
         passwordLength: 'Password length must be between 6 and 20',

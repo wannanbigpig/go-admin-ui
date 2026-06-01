@@ -23,8 +23,8 @@ export interface AdminUser extends WithId, WithTimestamp {
     departments?: DepartmentInfo[]
     password?: string
     confirm_password?: string
-    last_login_at?: string
-    last_login_ip?: string
+    last_login?: string
+    last_ip?: string
     role_ids?: number[]
     [key: string]: unknown
 }

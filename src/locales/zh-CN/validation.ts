@@ -15,6 +15,7 @@ export default {
         nicknameRequired: '昵称不能为空',
         usernameRequired: '用户名不能为空',
         usernameMin: '用户名长度不能少于 3 个字符',
+        usernameLength: '用户名长度 3-20 个字符',
         usernamePattern: '由字母、数字和下划线组成',
         passwordRequired: '密码不能为空',
         passwordLength: '密码长度 6-20 个字符',

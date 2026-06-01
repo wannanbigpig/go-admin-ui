@@ -84,7 +84,7 @@ export function createRequestLogQuery() {
         operator_account: null,
         ip: null,
         request_kind: null,
-        execution_time_scope: 'request' as const,
+        execution_time_scope: null,
         start_time: null,
         end_time: null,
     }

@@ -35,6 +35,8 @@ export const API_PERMISSION_METHODS = [
     { label: 'POST', value: 'POST' },
     { label: 'PUT', value: 'PUT' },
     { label: 'DELETE', value: 'DELETE' },
+    { label: 'OPTIONS', value: 'OPTIONS' },
+    { label: 'HEAD', value: 'HEAD' },
     { label: 'PATCH', value: 'PATCH' },
 ]
 

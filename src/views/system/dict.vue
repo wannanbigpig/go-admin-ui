@@ -416,10 +416,7 @@ const openEditItemDrawer = (row: DictItem) => {
     currentItemId.value = row.id
     Object.assign(itemFormData, {
         type_code: row.type_code,
-        label_i18n: {
-            ...createLocaleTextMap(),
-            'zh-CN': row.label || '',
-        },
+        label_i18n: mergeI18nField(row as unknown as Record<string, unknown>, 'label_i18n', 'label'),
         value: row.value || '',
         color: row.color || '',
         tag_type: row.tag_type || '',

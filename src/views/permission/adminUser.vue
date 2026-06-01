@@ -327,8 +327,8 @@ const columns = computed<ProTableColumns<AdminUser>>(() => [
     },
     { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
     { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
-    { prop: 'last_login_at', align: 'center', h_label: t('permission.adminUser.lastLoginAt'), width: 160 },
-    { prop: 'last_login_ip', align: 'center', h_label: t('permission.adminUser.lastLoginIp'), width: 150 },
+    { prop: 'last_login', align: 'center', h_label: t('permission.adminUser.lastLoginAt'), width: 160 },
+    { prop: 'last_ip', align: 'center', h_label: t('permission.adminUser.lastLoginIp'), width: 150 },
 ])
 </script>
 

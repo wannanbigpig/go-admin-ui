@@ -70,7 +70,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
             nickname: [{ required: true, message: translate('validation.adminUser.nicknameRequired'), trigger }],
             username: [
                 { required: true, message: translate('validation.adminUser.usernameRequired'), trigger },
-                { min: 3, message: translate('validation.adminUser.usernameMin'), trigger },
+                { min: 3, max: 20, message: translate('validation.adminUser.usernameLength'), trigger },
                 { pattern: /^[a-zA-Z0-9_]+$/, message: translate('validation.adminUser.usernamePattern'), trigger },
             ],
             password: [!isEdit && { required: true, message: translate('validation.adminUser.passwordRequired'), trigger }, { min: 6, max: 20, message: translate('validation.adminUser.passwordLength'), trigger }].filter(

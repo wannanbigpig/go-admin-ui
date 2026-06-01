@@ -12,10 +12,8 @@ declare module 'axios' {
     interface AxiosRequestConfig {
         /** 401 处理模式：'credential' 表示登录凭证失败（不触发过期弹窗），'session' 表示会话失效（默认） */
         authErrorMode?: 'credential' | 'session'
-        /** 跳过 Authorization 头注入（用于 refresh-token 请求） */
+        /** 跳过 Authorization 头注入 */
         _skipAuth?: boolean
-        /** 标记为刷新 Token 请求，避免 401 循环 */
-        _isRefreshRequest?: boolean
     }
 }
 
@@ -65,82 +63,6 @@ const getAxiosRequestConfig = (error: AxiosError): (AxiosRequestConfig & { silen
     return error.config as (AxiosRequestConfig & { silent?: boolean; silentCodes?: number[] }) | undefined
 }
 
-// ==================== Refresh Token 并发控制 ====================
-let isRefreshing = false
-let refreshSubscribers: Array<(token: string) => void> = []
-let refreshFailSubscribers: Array<(error: unknown) => void> = []
-
-function subscribeTokenRefresh(onResolved: (token: string) => void, onRejected: (error: unknown) => void) {
-    refreshSubscribers.push(onResolved)
-    refreshFailSubscribers.push(onRejected)
-}
-
-function onTokenRefreshed(newToken: string) {
-    const subscribers = [...refreshSubscribers]
-    refreshSubscribers = []
-    refreshFailSubscribers = []
-    subscribers.forEach((cb) => {
-        try {
-            cb(newToken)
-        } catch (e) {
-            Logger.error('Token 刷新回调异常:', e)
-        }
-    })
-}
-
-function onTokenRefreshFailed(error: unknown) {
-    const subscribers = [...refreshFailSubscribers]
-    refreshSubscribers = []
-    refreshFailSubscribers = []
-    subscribers.forEach((cb) => {
-        try {
-            cb(error)
-        } catch (e) {
-            Logger.error('Token 刷新失败回调异常:', e)
-        }
-    })
-}
-
-/**
- * 尝试使用 refresh_token 静默刷新 access_token
- * 返回新的 access_token 或 null（刷新失败）
- */
-async function tryRefreshToken(config: AxiosRequestConfig): Promise<string | null> {
-    const authStore = useAuthStore()
-    const currentRefreshToken = authStore.refreshToken
-
-    // 如果是刷新请求本身返回 401，或没有可用的 refresh_token，直接失败
-    if (config._isRefreshRequest || !currentRefreshToken) {
-        return null
-    }
-
-    if (!isRefreshing) {
-        isRefreshing = true
-        try {
-            // 动态导入避免循环依赖
-            const { refreshTokenApi } = await import('@/api/auth')
-            const result = await refreshTokenApi(currentRefreshToken)
-            authStore.updateToken(result.access_token, result.expires_at, result.refresh_token, result.refresh_expires_at)
-            onTokenRefreshed(result.access_token)
-            return result.access_token
-        } catch (refreshError) {
-            onTokenRefreshFailed(refreshError)
-            authStore.handleTokenExpired()
-            return null
-        } finally {
-            isRefreshing = false
-        }
-    } else {
-        // 等待正在进行的刷新完成
-        return new Promise<string | null>((resolve) => {
-            subscribeTokenRefresh(
-                (newToken) => resolve(newToken),
-                () => resolve(null)
-            )
-        })
-    }
-}
-
 const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, authErrorMode: 'credential' | 'session' = 'session') => {
     const authStore = useAuthStore()
 
@@ -151,23 +73,16 @@ const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, 
 
     const code = response.data.code
 
-    // 处理 401 未授权 — 先尝试 refresh token 静默刷新
+    // 处理 401 未授权
     if (code === 401) {
-        // credential 模式（登录请求）：不尝试刷新，直接拒绝
+        // credential 模式（登录请求）：不触发过期处理，直接拒绝
         if (authErrorMode === 'credential') {
             return Promise.reject(response.data)
         }
 
-        const config = response.config as AxiosRequestConfig
-        const newToken = await tryRefreshToken(config)
-        if (newToken) {
-            // 刷新成功，重试原请求
-            config.headers = config.headers || {}
-            config.headers['Authorization'] = `Bearer ${newToken}`
-            return service.request(config)
-        }
-
-        // 刷新失败，handleTokenExpired 已在 tryRefreshToken 中调用
+        // 会话失效：后端未提供 refresh-token 接口，access token 续期由响应头
+        // refresh-access-token 滑动刷新完成；命中 401 直接触发过期处理跳登录。
+        authStore.handleTokenExpired()
         return Promise.reject(response.data)
     }
 
