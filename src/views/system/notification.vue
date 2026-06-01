@@ -1,18 +1,19 @@
 <template>
     <div class="notification-center-page">
+        <!-- 顶部搜索表单 -->
         <div class="xl-container xl-m-bottom-10">
             <el-form ref="queryFormRef" class="xl-search-form" :model="queryParams" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="notificationSearchForm" :gutter="20">
                     <el-col :span="5">
                         <el-form-item :label="t('system.notification.category')" prop="category">
-                            <el-select v-model="queryParams.category" clearable>
+                            <el-select v-model="queryParams.category" clearable placeholder="请选择消息分类">
                                 <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="5">
                         <el-form-item :label="t('system.notification.readStatus')" prop="is_read">
-                            <el-select v-model="queryParams.is_read" clearable>
+                            <el-select v-model="queryParams.is_read" clearable placeholder="请选择已读状态">
                                 <el-option v-for="item in readStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
@@ -22,85 +23,161 @@
             </el-form>
         </div>
 
-        <div class="xl-container notification-center-body">
-            <div class="notification-center-body__header">
-                <div>
-                    <div class="notification-center-body__title">{{ t('system.notification.title') }}</div>
-                    <div class="notification-center-body__subtitle">{{ t('system.notification.listHint') }}</div>
+        <!-- 主体区域：双栏布局 -->
+        <div class="xl-container notification-layout">
+            <!-- 头部标题与全局操作 -->
+            <div class="notification-layout__header">
+                <div class="header-left">
+                    <h2 class="page-title">{{ t('system.notification.title') }}</h2>
+                    <p class="page-subtitle">{{ t('system.notification.listHint') }}</p>
                 </div>
-                <div class="notification-center-body__header-actions">
-                    <el-button link type="primary" size="small" @click="handleToggleAllExpanded">
-                        {{ allExpanded ? t('common.actions.collapseAll') : t('common.actions.expandAll') }}
-                    </el-button>
-                    <el-button link type="primary" size="small" :disabled="!hasUnread" @click="handleMarkAllRead">
+                <div class="header-actions">
+                    <el-button type="primary" link size="default" :disabled="!hasUnread" @click="handleMarkAllRead">
+                        <template #icon><i-ep-check /></template>
                         {{ t('layout.notification.markAllRead') }}
                     </el-button>
-                    <el-button link type="primary" size="small" @click="handleOpenManagePage">
+                    <el-button type="primary" link size="default" @click="handleOpenManagePage">
+                        <template #icon><i-ep-setting /></template>
                         {{ t('system.notification.manageEntry') }}
                     </el-button>
                 </div>
             </div>
 
-            <div v-if="loading && list.length === 0" class="notification-center-body__loading">
-                <el-skeleton animated :rows="6" />
-            </div>
-            <div v-else-if="hasError" class="notification-center-body__error">
-                <el-empty :description="t('common.i18n.loadFailed')" :image-size="96">
-                    <el-button type="primary" @click="fetchList">{{ t('common.actions.retry') }}</el-button>
-                </el-empty>
-            </div>
-            <div v-else-if="list.length === 0" class="notification-center-body__empty">
-                <el-empty :description="t('layout.notification.empty')" :image-size="96" />
-            </div>
-            <div v-else class="notification-center-body__list">
-                <section v-for="item in list" :key="item.id" class="notification-card" :class="{ 'is-unread': !item.read }">
-                    <div class="notification-card__header">
-                        <div class="notification-card__title-block">
-                            <div class="notification-card__title-row">
-                                <span class="notification-card__title">{{ item.title }}</span>
-                                <span v-if="!item.read" class="notification-card__dot" />
+            <!-- 主内容体 -->
+            <div class="notification-layout__content">
+                <!-- 左栏：消息列表 -->
+                <div class="notification-list-sidebar">
+                    <div v-if="loading && list.length === 0" class="sidebar-loading">
+                        <el-skeleton animated :rows="5" />
+                    </div>
+                    <div v-else-if="hasError" class="sidebar-error">
+                        <el-empty :description="t('common.i18n.loadFailed')" :image-size="64">
+                            <el-button type="primary" size="small" @click="fetchList">{{ t('common.actions.retry') }}</el-button>
+                        </el-empty>
+                    </div>
+                    <div v-else-if="list.length === 0" class="sidebar-empty">
+                        <el-empty :description="t('layout.notification.empty')" :image-size="64" />
+                    </div>
+                    <el-scrollbar v-else class="sidebar-scroll">
+                        <div
+                            v-for="item in list"
+                            :key="item.id"
+                            class="notification-item"
+                            :class="{
+                                'is-unread': !item.read,
+                                'is-active': selectedNotification?.id === item.id,
+                            }"
+                            @click="selectNotification(item)"
+                        >
+                            <div class="item-badge-dot" v-if="!item.read" />
+                            <div class="item-main">
+                                <div class="item-top">
+                                    <el-tag size="small" class="item-tag" effect="flat" :type="getCategoryTagType(item.category)">
+                                        {{ getCategoryLabel(item.category) }}
+                                    </el-tag>
+                                    <span class="item-time">{{ formatTimeAgo(item.created_at) }}</span>
+                                </div>
+                                <h4 class="item-title" :title="item.title">{{ item.title }}</h4>
+                                <p class="item-summary">{{ getSummaryText(item) }}</p>
                             </div>
-                            <div class="notification-card__meta">
-                                <el-tag size="small" effect="plain" :type="getCategoryTagType(item.category)">
-                                    {{ getCategoryLabel(item.category) }}
+                        </div>
+                    </el-scrollbar>
+
+                    <!-- 分页部分嵌套在左栏底部 -->
+                    <div class="sidebar-pagination" v-if="total > 0">
+                        <el-pagination
+                            v-model:current-page="queryParams.page"
+                            v-model:page-size="queryParams.per_page"
+                            :total="total"
+                            :pager-count="3"
+                            layout="prev, pager, next"
+                            small
+                            @current-change="handlePageChange"
+                        />
+                    </div>
+                </div>
+
+                <!-- 右栏：消息详情 -->
+                <div class="notification-detail-container">
+                    <div v-if="!selectedNotification" class="detail-empty">
+                        <el-empty description="选择左侧消息查看详情">
+                            <template #image>
+                                <el-icon size="64" color="var(--el-text-color-placeholder)">
+                                    <i-lucide-mail-open />
+                                </el-icon>
+                            </template>
+                        </el-empty>
+                    </div>
+                    <div v-else class="detail-content">
+                        <div class="detail-header">
+                            <div class="detail-meta">
+                                <el-tag size="default" effect="plain" :type="getCategoryTagType(selectedNotification.category)">
+                                    {{ getCategoryLabel(selectedNotification.category) }}
                                 </el-tag>
-                                <span class="notification-card__time">{{ formatDateTime(item.created_at) }}</span>
+                                <span class="detail-time">
+                                    <el-icon><i-ep-clock /></el-icon>
+                                    {{ formatDateTime(selectedNotification.created_at) }}
+                                </span>
+                                <el-button v-if="!selectedNotification.read" type="primary" plain size="small" class="mark-read-btn" @click="handleMarkRead(selectedNotification)"> 标为已读 </el-button>
                             </div>
+                            <h2 class="detail-title">{{ selectedNotification.title }}</h2>
                         </div>
-                        <div class="notification-card__actions">
-                            <el-button v-if="overflowMap[item.id]" link size="small" @click="toggleExpanded(item.id)">
-                                {{ isExpanded(item.id) ? t('common.actions.collapse') : t('common.actions.expand') }}
-                            </el-button>
-                            <el-button v-if="!item.read" link size="small" type="primary" @click="handleMarkRead(item)">
-                                {{ t('system.notification.markRead') }}
-                            </el-button>
-                            <el-button v-if="item.action_url" link size="small" type="primary" @click="handleActionClick(item)">
-                                {{ t('system.notification.goHandle') }}
-                            </el-button>
-                        </div>
-                    </div>
 
-                    <div class="notification-card__content" :class="{ 'is-expanded': isExpanded(item.id) }" :data-id="item.id">
-                        {{ item.message || item.title }}
-                    </div>
+                        <el-scrollbar class="detail-body-scroll">
+                            <div class="detail-body">
+                                {{ selectedNotification.message || selectedNotification.title }}
+                            </div>
 
-                    <div v-if="item.action_label && item.action_url" class="notification-card__extra">
-                        {{ t('system.notification.actionLabelPrefix', { label: item.action_label }) }}
+                            <!-- 附加动作按钮 -->
+                            <div v-if="selectedNotification.action_url" class="detail-actions">
+                                <el-button type="primary" size="default" @click="handleActionClick(selectedNotification)">
+                                    {{ selectedNotification.action_label || t('system.notification.goHandle') }}
+                                    <el-icon class="el-icon--right"><i-ep-arrow-right /></el-icon>
+                                </el-button>
+                            </div>
+                        </el-scrollbar>
                     </div>
-                </section>
+                </div>
             </div>
-
-            <xl-pagination v-if="total > 0" :current-page="pagination.page" :page-size="pagination.pageSize" :total="total" @size-change="handlePageSizeChange" @current-change="handlePageChange" />
         </div>
+
+        <!-- 移动端适配：抽屉详情展示 -->
+        <el-drawer v-model="drawerVisible" direction="rtl" size="85%" :with-header="false" class="notification-mobile-drawer">
+            <div v-if="selectedNotification" class="detail-content mobile-detail">
+                <div class="drawer-close-btn" @click="drawerVisible = false">
+                    <el-icon size="20"><i-ep-close /></el-icon>
+                </div>
+
+                <div class="detail-header">
+                    <div class="detail-meta">
+                        <el-tag size="small" effect="plain" :type="getCategoryTagType(selectedNotification.category)">
+                            {{ getCategoryLabel(selectedNotification.category) }}
+                        </el-tag>
+                        <span class="detail-time">{{ formatDateTime(selectedNotification.created_at) }}</span>
+                    </div>
+                    <h3 class="detail-title">{{ selectedNotification.title }}</h3>
+                </div>
+
+                <div class="detail-body">
+                    {{ selectedNotification.message || selectedNotification.title }}
+                </div>
+
+                <div class="detail-footer-actions">
+                    <el-button v-if="!selectedNotification.read" type="primary" plain size="default" @click="handleMarkRead(selectedNotification)"> 标为已读 </el-button>
+                    <el-button v-if="selectedNotification.action_url" type="primary" size="default" @click="handleActionClick(selectedNotification)">
+                        {{ selectedNotification.action_label || t('system.notification.goHandle') }}
+                    </el-button>
+                </div>
+            </div>
+        </el-drawer>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, nextTick } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance } from 'element-plus'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlPagination from '@/components/pagination/index.vue'
 import { useNotificationStore, normalizeNotification } from '@/stores/notification'
 import { getNotificationList } from '@/api/system'
 import { normalizeListData } from '@/modules/shared/response'
@@ -117,24 +194,10 @@ const loading = ref(false)
 const hasError = ref(false)
 const list = ref<AppNotification[]>([])
 const total = ref(0)
-const expandedIds = ref<string[]>([])
-const overflowMap = ref<Record<string, boolean>>({})
 
-const checkOverflow = () => {
-    nextTick(() => {
-        const elements = document.querySelectorAll('.notification-card__content')
-        elements.forEach((el) => {
-            const id = el.getAttribute('data-id')
-            if (id) {
-                if (isExpanded(id)) {
-                    overflowMap.value[id] = true
-                } else {
-                    overflowMap.value[id] = el.scrollHeight > el.clientHeight
-                }
-            }
-        })
-    })
-}
+// 响应式数据
+const selectedNotification = ref<AppNotification | null>(null)
+const drawerVisible = ref(false)
 
 const queryParams = reactive({
     category: '',
@@ -150,7 +213,6 @@ const pagination = reactive({
 })
 
 const hasUnread = computed(() => list.value.some((item) => !item.read))
-const allExpanded = computed(() => list.value.length > 0 && expandedIds.value.length === list.value.length)
 
 const categoryOptions = useNotificationCategoryOptions()
 
@@ -161,6 +223,7 @@ const readStatusOptions = computed(() => [
 
 const getCategoryLabel = (category?: string) => {
     const map: Record<string, string> = {
+        system: t('system.notification.categoryOptions.system'),
         export: t('system.notification.categoryOptions.export'),
     }
     return category ? map[category] || category : '-'
@@ -168,6 +231,7 @@ const getCategoryLabel = (category?: string) => {
 
 const getCategoryTagType = (category?: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' => {
     const map: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'info'> = {
+        system: 'success',
         export: 'primary',
     }
     return category ? map[category] || 'info' : 'info'
@@ -180,27 +244,44 @@ const formatDateTime = (value?: string) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-const syncExpandedIds = () => {
-    const currentIds = new Set(list.value.map((item) => item.id))
-    expandedIds.value = expandedIds.value.filter((id) => currentIds.has(id))
+// 格式化相对时间
+const formatTimeAgo = (value?: string) => {
+    if (!value) return '-'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins}分钟前`
+    if (diffHours < 24) return `${diffHours}小时前`
+    if (diffDays < 7) return `${diffDays}天前`
+
+    return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 
-const isExpanded = (id: string) => expandedIds.value.includes(id)
-
-const toggleExpanded = (id: string) => {
-    if (isExpanded(id)) {
-        expandedIds.value = expandedIds.value.filter((itemId) => itemId !== id)
-        return
+// 精简左侧消息显示
+const getSummaryText = (item: AppNotification) => {
+    const text = item.message || item.title
+    if (text.length > 36) {
+        return text.substring(0, 36) + '...'
     }
-    expandedIds.value = [...expandedIds.value, id]
+    return text
 }
 
-const handleToggleAllExpanded = () => {
-    if (allExpanded.value) {
-        expandedIds.value = []
-        return
+// 选中消息
+const selectNotification = (item: AppNotification) => {
+    selectedNotification.value = item
+    if (!item.read) {
+        void handleMarkRead(item)
     }
-    expandedIds.value = list.value.map((item) => item.id)
+    if (window.innerWidth <= 768) {
+        drawerVisible.value = true
+    }
 }
 
 const fetchList = async () => {
@@ -225,13 +306,25 @@ const fetchList = async () => {
         pagination.pageSize = normalized.pageSize ?? pagination.pageSize
         pagination.total = normalized.total
         hasError.value = false
-        syncExpandedIds()
-        checkOverflow()
+
+        // 保持选中同步或默认选中第一项
+        if (list.value.length > 0) {
+            const found = list.value.find((item) => item.id === selectedNotification.value?.id)
+            if (found) {
+                selectedNotification.value = found
+            } else if (!selectedNotification.value) {
+                if (window.innerWidth > 768) {
+                    selectedNotification.value = list.value[0]
+                }
+            }
+        } else {
+            selectedNotification.value = null
+        }
     } catch {
         list.value = []
         total.value = 0
-        expandedIds.value = []
         hasError.value = true
+        selectedNotification.value = null
     } finally {
         loading.value = false
     }
@@ -254,12 +347,6 @@ const handlePageChange = async (page: number) => {
     await fetchList()
 }
 
-const handlePageSizeChange = async (size: number) => {
-    queryParams.per_page = size
-    queryParams.page = 1
-    await fetchList()
-}
-
 const handleMarkRead = async (item: AppNotification) => {
     if (item.read) return
     await notificationStore.markRead(item.id)
@@ -268,7 +355,6 @@ const handleMarkRead = async (item: AppNotification) => {
 
 const handleActionClick = async (item: AppNotification) => {
     if (!item.action_url) return
-    // 仅允许内部路由（以 / 开头），防止开放重定向和 XSS
     if (!item.action_url.startsWith('/')) return
     if (!item.read) {
         await handleMarkRead(item)
@@ -280,6 +366,9 @@ const handleMarkAllRead = async () => {
     try {
         await notificationStore.markAllRead()
         list.value = list.value.map((item) => ({ ...item, read: true }))
+        if (selectedNotification.value) {
+            selectedNotification.value.read = true
+        }
         ElMessage.success(translate('common.result.operationSuccess'))
     } catch {
         // noop
@@ -290,179 +379,349 @@ const handleOpenManagePage = async () => {
     await router.push('/system/notification/manage')
 }
 
-let resizeTimer: number | null = null
-const handleResize = () => {
-    if (resizeTimer) clearTimeout(resizeTimer)
-    resizeTimer = window.setTimeout(() => {
-        checkOverflow()
-    }, 150)
-}
-
 onMounted(() => {
-    window.addEventListener('resize', handleResize)
     void fetchList()
-})
-
-onUnmounted(() => {
-    window.removeEventListener('resize', handleResize)
-    if (resizeTimer) clearTimeout(resizeTimer)
 })
 </script>
 
 <style scoped lang="scss">
 .notification-center-page {
-    padding-bottom: 20px;
+    padding-bottom: 24px;
 }
 
-.notification-center-body {
-    padding: 20px;
-}
-
-.notification-center-body__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--xl-space-4);
-    margin-bottom: var(--xl-space-4);
-}
-
-.notification-center-body__title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-}
-
-.notification-center-body__subtitle {
-    margin-top: var(--xl-space-1);
-    font-size: var(--xl-font-sm);
-    color: var(--el-text-color-secondary);
-}
-
-.notification-center-body__header-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--xl-space-2);
-    flex-wrap: wrap;
-}
-
-.notification-center-body__loading,
-.notification-center-body__empty {
-    padding: 40px 0;
-}
-
-.notification-center-body__list {
+.notification-layout {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
+    height: calc(100vh - 200px);
+    min-height: 550px;
+    padding: 0 !important; /* 清除通用 container 的 padding，由子组件控制 */
+    overflow: hidden;
 }
 
-.notification-card {
-    border: 1px solid var(--el-border-color-light);
-    border-radius: 10px;
-    background: var(--el-fill-color-blank);
-    padding: var(--xl-space-4);
-    transition:
-        border-color 0.2s ease,
-        background-color 0.2s ease;
-}
-
-.notification-card.is-unread {
-    border-color: var(--el-color-primary-light-7);
-    background: color-mix(in srgb, var(--el-color-primary-light-9) 55%, white);
-}
-
-.notification-card__header {
+.notification-layout__header {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
-    gap: var(--xl-space-4);
-}
-
-.notification-card__title-block {
-    min-width: 0;
-    flex: 1;
-}
-
-.notification-card__title-row {
-    display: flex;
     align-items: center;
-    gap: var(--xl-space-2);
-    min-width: 0;
-}
-
-.notification-card__title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.notification-card__dot {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+    background: var(--el-fill-color-blank);
     flex-shrink: 0;
-    width: var(--xl-space-2);
-    height: var(--xl-space-2);
-    border-radius: 50%;
-    background: var(--el-color-primary);
-}
 
-.notification-card__meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: var(--xl-space-2);
-    flex-wrap: wrap;
-}
+    .header-left {
+        .page-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--el-text-color-primary);
+        }
 
-.notification-card__actions {
-    display: flex;
-    align-items: center;
-    gap: var(--xl-space-1);
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.notification-card__content {
-    margin-top: var(--xl-space-3);
-    font-size: var(--xl-font-md);
-    line-height: 1.7;
-    color: var(--el-text-color-regular);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    white-space: pre-wrap;
-}
-
-.notification-card__content.is-expanded {
-    display: block;
-    -webkit-line-clamp: unset;
-    overflow: visible;
-}
-
-.notification-card__time,
-.notification-card__extra {
-    font-size: var(--xl-font-sm);
-    color: var(--el-text-color-secondary);
-}
-
-.notification-card__extra {
-    margin-top: 10px;
-}
-
-@media (max-width: 768px) {
-    .notification-center-body__header,
-    .notification-card__header {
-        flex-direction: column;
+        .page-subtitle {
+            font-size: 13px;
+            margin: 4px 0 0 0;
+            color: var(--el-text-color-secondary);
+        }
     }
 
-    .notification-center-body__header-actions,
-    .notification-card__actions {
-        width: 100%;
-        justify-content: flex-start;
+    .header-actions {
+        display: flex;
+        gap: 12px;
+    }
+}
+
+.notification-layout__content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* 左侧栏样式 */
+.notification-list-sidebar {
+    width: 360px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--el-border-color-lighter);
+    background: var(--el-fill-color-lightish, rgba(245, 247, 250, 0.4));
+    min-height: 0;
+
+    .sidebar-loading,
+    .sidebar-error,
+    .sidebar-empty {
+        padding: 60px 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar-scroll {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .notification-item {
+        position: relative;
+        padding: 16px 20px 16px 24px;
+        border-bottom: 1px solid var(--el-border-color-lighter);
+        cursor: pointer;
+        background: var(--el-fill-color-blank);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--el-color-primary);
+            transform: scaleY(0);
+            transition: transform 0.2s ease;
+        }
+
+        &:hover {
+            background: var(--el-fill-color-light);
+        }
+
+        &.is-active {
+            background: color-mix(in srgb, var(--el-color-primary-light-9) 40%, var(--el-fill-color-blank));
+
+            &::before {
+                transform: scaleY(1);
+            }
+        }
+
+        &.is-unread {
+            background: color-mix(in srgb, var(--el-color-primary-light-9) 25%, var(--el-fill-color-blank));
+
+            &.is-active {
+                background: color-mix(in srgb, var(--el-color-primary-light-9) 50%, var(--el-fill-color-blank));
+            }
+
+            .item-title {
+                font-weight: 700;
+                color: var(--el-text-color-primary);
+            }
+        }
+
+        .item-badge-dot {
+            position: absolute;
+            left: 10px;
+            top: 22px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--el-color-primary);
+            box-shadow: 0 0 6px var(--el-color-primary);
+        }
+
+        .item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+
+            .item-time {
+                font-size: 12px;
+                color: var(--el-text-color-secondary);
+            }
+        }
+
+        .item-title {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--el-text-color-primary);
+            margin: 0 0 4px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .item-summary {
+            font-size: 12px;
+            color: var(--el-text-color-regular);
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    .sidebar-pagination {
+        padding: 8px 12px;
+        border-top: 1px solid var(--el-border-color-lighter);
+        background: var(--el-fill-color-blank);
+        display: flex;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+}
+
+/* 右侧详情面板 */
+.notification-detail-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--el-fill-color-blank);
+    min-width: 0;
+    min-height: 0;
+
+    .detail-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--el-fill-color-blank);
+    }
+
+    .detail-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    .detail-header {
+        padding: 24px 30px;
+        border-bottom: 1px solid var(--el-border-color-lighter);
+        background: var(--el-fill-color-blank);
+        flex-shrink: 0;
+
+        .detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 10px;
+
+            .detail-time {
+                font-size: 13px;
+                color: var(--el-text-color-secondary);
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .mark-read-btn {
+                margin-left: auto;
+            }
+        }
+
+        .detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--el-text-color-primary);
+            margin: 0;
+            line-height: 1.4;
+        }
+    }
+
+    .detail-body-scroll {
+        flex: 1;
+        min-height: 0;
+        background: var(--el-fill-color-blank);
+    }
+
+    .detail-body {
+        padding: 24px 30px;
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--el-text-color-regular);
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .detail-actions {
+        padding: 0 30px 24px 30px;
+    }
+}
+
+/* 抽屉样式调整 */
+.notification-mobile-drawer {
+    :deep(.el-drawer__body) {
+        padding: 0;
+    }
+
+    .detail-content.mobile-detail {
+        padding: 16px 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        background: var(--el-fill-color-blank);
+
+        .drawer-close-btn {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            cursor: pointer;
+            color: var(--el-text-color-secondary);
+
+            &:hover {
+                color: var(--el-text-color-primary);
+            }
+        }
+
+        .detail-header {
+            padding: 24px 0 16px 0;
+            border-bottom: 1px solid var(--el-border-color-lighter);
+
+            .detail-meta {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 8px;
+                font-size: 12px;
+                color: var(--el-text-color-secondary);
+            }
+
+            .detail-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin: 0;
+                line-height: 1.4;
+            }
+        }
+
+        .detail-body {
+            flex: 1;
+            padding: 16px 0;
+            font-size: 13.5px;
+            line-height: 1.6;
+            overflow-y: auto;
+        }
+
+        .detail-footer-actions {
+            padding: 12px 0 24px 0;
+            border-top: 1px solid var(--el-border-color-lighter);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    }
+}
+
+/* 响应式样式适配 */
+@media (max-width: 768px) {
+    .notification-layout {
+        height: auto;
+        min-height: auto;
+    }
+
+    .notification-layout__content {
+        flex-direction: column;
+        height: calc(100vh - 280px);
+    }
+
+    .notification-list-sidebar {
+        width: 100% !important;
+        border-right: none;
+        height: 100%;
+    }
+
+    .notification-detail-container {
+        display: none !important;
     }
 }
 </style>

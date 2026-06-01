@@ -17,8 +17,8 @@
                 <el-form ref="formRef" class="notification-manage-form" :model="form" :rules="rules" label-width="120px" @submit.prevent="handleSubmit">
                     <el-form-item :label="t('system.notification.audienceType')" prop="audience_type">
                         <el-radio-group v-model="form.audience_type">
-                            <el-radio-button label="all">{{ t('system.notification.audienceOptions.all') }}</el-radio-button>
-                            <el-radio-button label="user_ids">{{ t('system.notification.audienceOptions.userIds') }}</el-radio-button>
+                            <el-radio-button value="all">{{ t('system.notification.audienceOptions.all') }}</el-radio-button>
+                            <el-radio-button value="user_ids">{{ t('system.notification.audienceOptions.userIds') }}</el-radio-button>
                         </el-radio-group>
                     </el-form-item>
 
@@ -119,7 +119,7 @@ const submitting = ref(false)
 const createInitialForm = (): NotificationManageFormState => ({
     audience_type: 'all',
     user_ids_text: '',
-    category: 'export',
+    category: 'system',
     title: '',
     message: '',
     action_url: '',

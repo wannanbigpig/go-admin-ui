@@ -328,7 +328,7 @@ export const useNotificationStore = defineStore(
                         if (!item || typeof item !== 'object' || Array.isArray(item)) return
                         const normalized = normalizeSocketPayload(item as NotificationSocketMessage)
                         if (!normalized) return
-                        upsertNotification(normalized, normalized.source === 'export' && !normalized.read)
+                        upsertNotification(normalized, !normalized.read)
                     })
                     const lastUnreadCount = Number(payload.unread_count ?? 0)
                     if (!Number.isNaN(lastUnreadCount) && lastUnreadCount >= 0) {
@@ -347,7 +347,7 @@ export const useNotificationStore = defineStore(
 
                 const normalized = normalizeSocketPayload(payload)
                 if (!normalized) return
-                upsertNotification(normalized, normalized.source === 'export' && !normalized.read)
+                upsertNotification(normalized, !normalized.read)
                 const unread = Number(payload.unread_count ?? 0)
                 if (!Number.isNaN(unread) && unread >= 0) {
                     unreadCount.value = unread

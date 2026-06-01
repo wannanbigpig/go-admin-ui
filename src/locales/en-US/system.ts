@@ -392,11 +392,11 @@ export default {
         formTitlePlaceholder: 'Please enter the notification title',
         formMessage: 'Notification Message',
         formMessagePlaceholder: 'Please enter the notification message',
-        actionUrl: 'Action URL',
-        actionUrlPlaceholder: 'Optional. When filled, an action button will be shown',
-        actionLabel: 'Action Label',
+        actionUrl: 'Jump Link',
+        actionUrlPlaceholder: 'Optional. When filled, an action button will be shown in notification center',
+        actionLabel: 'Jump Button Text',
         actionLabelPlaceholder: 'Optional, e.g. Open Export Center',
-        actionLabelPrefix: 'Action label: {label}',
+        actionLabelPrefix: 'Jump label: {label}',
         previewTitle: 'Preview',
         previewEmptyMessage: 'Notification content preview appears here',
         noActionLabel: 'No action button configured',
@@ -407,6 +407,7 @@ export default {
             noRichText: 'No rich text or long-form notification system is introduced in this task.',
         },
         categoryOptions: {
+            system: 'System Message',
             export: 'Export',
         },
         readStatusOptions: {

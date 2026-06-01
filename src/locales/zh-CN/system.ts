@@ -392,11 +392,11 @@ export default {
         formTitlePlaceholder: '请输入通知标题',
         formMessage: '通知内容',
         formMessagePlaceholder: '请输入通知内容',
-        actionUrl: '处理链接',
-        actionUrlPlaceholder: '可选，填写后会展示“去处理”按钮',
-        actionLabel: '处理按钮文案',
+        actionUrl: '跳转链接',
+        actionUrlPlaceholder: '可选，填写后通知中心会展示”去处理”按钮',
+        actionLabel: '跳转按钮文案',
         actionLabelPlaceholder: '可选，例如：前往导出中心',
-        actionLabelPrefix: '处理文案：{label}',
+        actionLabelPrefix: '跳转文案：{label}',
         previewTitle: '发送预览',
         previewEmptyMessage: '通知内容会显示在这里',
         noActionLabel: '未配置处理按钮',
@@ -407,6 +407,7 @@ export default {
             noRichText: '本次不引入富文本或长文通知系统。',
         },
         categoryOptions: {
+            system: '系统消息',
             export: '导出通知',
         },
         readStatusOptions: {

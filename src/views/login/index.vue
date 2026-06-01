@@ -315,38 +315,81 @@ const initCanvasBg = () => {
 
         const elapsed = now / 1000
 
+        // ==================== 1. 物理位置与边界碰撞更新 ====================
         for (const blob of blobs) {
-            // 缓动方向变化
-            blob.phase += dt * 0.5
-            blob.vx += Math.sin(blob.phase) * dt * 30
-            blob.vy += Math.cos(blob.phase * 0.7) * dt * 30
-
-            // 摩擦力，防止无限加速
-            blob.vx *= 0.997
-            blob.vy *= 0.997
-
-            // 限速（每个球体独立速度区间）
-            const speed = Math.sqrt(blob.vx * blob.vx + blob.vy * blob.vy)
-            if (speed > blob.maxSpeed) {
-                blob.vx *= blob.maxSpeed / speed
-                blob.vy *= blob.maxSpeed / speed
-            } else if (speed < blob.minSpeed) {
-                const angle = Math.random() * Math.PI * 2
-                const boost = rand(blob.minSpeed, blob.maxSpeed) * 0.6
-                blob.vx = Math.cos(angle) * boost
-                blob.vy = Math.sin(angle) * boost
-            }
-
             blob.cx += blob.vx * dt
             blob.cy += blob.vy * dt
 
-            // 柔性边界：球心超出边界时施加回弹力
+            // 边界碰撞检测（台球反射：入射角等于反射角）
             const margin = blob.radius * 0.3
-            const push = blob.maxSpeed * 2
-            if (blob.cx < -margin) blob.vx += push * dt
-            if (blob.cx > w + margin) blob.vx -= push * dt
-            if (blob.cy < -margin) blob.vy += push * dt
-            if (blob.cy > h + margin) blob.vy -= push * dt
+
+            if (blob.cx < -margin) {
+                blob.cx = -margin
+                blob.vx = -blob.vx
+            } else if (blob.cx > w + margin) {
+                blob.cx = w + margin
+                blob.vx = -blob.vx
+            }
+
+            if (blob.cy < -margin) {
+                blob.cy = -margin
+                blob.vy = -blob.vy
+            } else if (blob.cy > h + margin) {
+                blob.cy = h + margin
+                blob.vy = -blob.vy
+            }
+        }
+
+        // ==================== 2. 球与球之间的碰撞检测与处理 ====================
+        const collisionThreshold = 0.4
+        for (let i = 0; i < blobs.length; i++) {
+            for (let j = i + 1; j < blobs.length; j++) {
+                const b1 = blobs[i]
+                const b2 = blobs[j]
+
+                const dx = b1.cx - b2.cx
+                const dy = b1.cy - b2.cy
+                const dist = Math.sqrt(dx * dx + dy * dy)
+
+                const r1 = b1.radius * collisionThreshold
+                const r2 = b2.radius * collisionThreshold
+
+                if (dist < r1 + r2) {
+                    if (dist === 0) continue
+
+                    // 位置修正以防止粘连
+                    const overlap = r1 + r2 - dist
+                    const nx = dx / dist
+                    const ny = dy / dist
+
+                    b1.cx += nx * overlap * 0.5
+                    b1.cy += ny * overlap * 0.5
+                    b2.cx -= nx * overlap * 0.5
+                    b2.cy -= ny * overlap * 0.5
+
+                    // 重置随机速度（速率）
+                    const speed1 = rand(b1.minSpeed, b1.maxSpeed)
+                    const speed2 = rand(b2.minSpeed, b2.maxSpeed)
+
+                    // 反弹方向：沿着碰撞法线向外，并加上随机微调偏角（-45度 到 +45度）以增添随机感
+                    const angleOffset1 = rand(-Math.PI / 4, Math.PI / 4)
+                    const angleOffset2 = rand(-Math.PI / 4, Math.PI / 4)
+
+                    const angle1 = Math.atan2(dy, dx) + angleOffset1
+                    const angle2 = Math.atan2(-dy, -dx) + angleOffset2
+
+                    b1.vx = Math.cos(angle1) * speed1
+                    b1.vy = Math.sin(angle1) * speed1
+                    b2.vx = Math.cos(angle2) * speed2
+                    b2.vy = Math.sin(angle2) * speed2
+                }
+            }
+        }
+
+        // ==================== 3. 绘制渲染阶段 ====================
+        for (const blob of blobs) {
+            // 更新相位用于半径呼吸
+            blob.phase += dt * 0.5
 
             // 半径呼吸
             const r = blob.radius * (1 + Math.sin(elapsed * 0.4 + blob.phase) * 0.08)
