@@ -35,6 +35,7 @@ export default {
         requestHeaders: 'Request Headers',
         responseHeader: 'Response Header',
         method: 'Method',
+        selectMethod: 'Please select method',
         account: 'Account',
         status: 'Status',
         highRisk: 'High Risk',

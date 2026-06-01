@@ -41,6 +41,13 @@
                             </el-form-item>
                         </el-col>
                         <el-col :span="4">
+                            <el-form-item :label="t('log.request.method')" prop="method">
+                                <el-select name="method" v-model="queryWhere.method" clearable :placeholder="t('log.request.selectMethod')">
+                                    <el-option v-for="item in methodOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="4">
                             <el-form-item :label="t('log.request.requestKind')" prop="request_kind">
                                 <el-select name="request_kind" v-model="requestKindValue" clearable :placeholder="t('log.request.selectRequestKind')">
                                     <el-option v-for="item in requestKindOptions" :key="item.value" :label="t(item.label)" :value="item.value" />
@@ -186,7 +193,7 @@ import { computed, onMounted } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
 import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
-import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
+import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, LOG_METHOD_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
 import type { TableColumn } from '@/types/common'
 import type { ExecutionTimeScope, RequestKind, RequestLog } from '@/types/log'
 import { useI18n } from 'vue-i18n'
@@ -197,6 +204,7 @@ const detailButtonInfo = getButtonInfoFull('requestLog:detail')
 const { t } = useI18n()
 const requestKindOptions = REQUEST_KIND_FILTER_OPTIONS
 const executionTimeScopeOptions = EXECUTION_TIME_SCOPE_FILTER_OPTIONS
+const methodOptions = LOG_METHOD_OPTIONS
 
 const {
     loading,

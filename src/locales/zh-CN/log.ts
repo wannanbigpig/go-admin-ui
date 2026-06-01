@@ -35,6 +35,7 @@ export default {
         requestHeaders: '请求头',
         responseHeader: '响应头',
         method: '方法',
+        selectMethod: '请选择请求方法',
         account: '账号',
         status: '状态',
         highRisk: '高危操作',
