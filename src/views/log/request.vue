@@ -24,6 +24,28 @@
                                 <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
                             </el-form-item>
                         </el-col>
+                        <el-col :span="5">
+                            <el-form-item :label="t('log.request.operatorId')" prop="operator_id">
+                                <el-select
+                                    name="operator_id"
+                                    v-model="queryWhere.operator_id"
+                                    filterable
+                                    remote
+                                    clearable
+                                    reserve-keyword
+                                    :remote-method="remoteSearchOperators"
+                                    :loading="operatorLoading"
+                                    :placeholder="t('log.request.inputOperatorId')"
+                                >
+                                    <el-option v-for="item in operatorOptions" :key="item.id" :label="item.nickname ? `${item.username} (${item.nickname})` : item.username" :value="item.id" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-form-item :label="t('log.request.ip')" prop="ip">
+                                <el-input name="ip" :placeholder="t('log.request.inputIp')" v-model.trim="queryWhere.ip" clearable></el-input>
+                            </el-form-item>
+                        </el-col>
                         <el-col :span="4">
                             <el-form-item :label="t('log.request.operationStatus')" prop="operation_status">
                                 <el-select name="operation_status" v-model="queryWhere.operation_status" clearable :placeholder="t('log.request.selectStatus')">
@@ -189,10 +211,12 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
 import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
+import { getAdminUserOptions, type AdminUserOption } from '@/api/adminUser'
+import { Logger } from '@/utils/logger'
 import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, LOG_METHOD_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
 import type { TableColumn } from '@/types/common'
 import type { ExecutionTimeScope, RequestKind, RequestLog } from '@/types/log'
@@ -236,6 +260,7 @@ const {
 
 onMounted(() => {
     getList()
+    remoteSearchOperators('')
 })
 
 const requestKindValue = computed<string>({
@@ -244,6 +269,21 @@ const requestKindValue = computed<string>({
         queryWhere.request_kind = value ? (value as RequestKind) : null
     },
 })
+
+// 操作人选择器：远程按账号/昵称搜索管理员，选中后以 user id 作为 operator_id 精确筛选。
+const operatorOptions = ref<AdminUserOption[]>([])
+const operatorLoading = ref(false)
+const remoteSearchOperators = async (keyword: string) => {
+    operatorLoading.value = true
+    try {
+        operatorOptions.value = await getAdminUserOptions(keyword)
+    } catch (error) {
+        Logger.error('搜索操作人失败:', error)
+        operatorOptions.value = []
+    } finally {
+        operatorLoading.value = false
+    }
+}
 
 const executionTimeScopeValue = computed<string>({
     get: () => queryWhere.execution_time_scope ?? EXECUTION_TIME_SCOPE_ALL_VALUE,

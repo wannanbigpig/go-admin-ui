@@ -6,6 +6,17 @@ export function getAdminUserList(params: Partial<AdminUserQuery>) {
     return get<PageData<AdminUser>>('/v1/admin-user/list', { ...params })
 }
 
+export interface AdminUserOption {
+    id: number
+    username: string
+    nickname: string
+}
+
+// 管理员选择器：按账号/昵称模糊搜索，供下拉远程搜索（如请求日志按操作人筛选）
+export function getAdminUserOptions(keyword?: string) {
+    return get<AdminUserOption[]>('/v1/admin-user/options', { keyword })
+}
+
 export function getFullPhone(query: Record<string, unknown>) {
     return get<{ phone_number: string }>('/v1/admin-user/get-full-phone', query)
 }
