@@ -376,7 +376,7 @@ const handleMarkAllRead = async () => {
 }
 
 const handleOpenManagePage = async () => {
-    await router.push('/system/notification/manage')
+    await router.push('/system/notification-manage')
 }
 
 onMounted(() => {
@@ -585,9 +585,19 @@ onMounted(() => {
 
     .detail-header {
         padding: 24px 30px;
-        border-bottom: 1px solid var(--el-border-color-lighter);
+        position: relative;
         background: var(--el-fill-color-blank);
         flex-shrink: 0;
+
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 30px;
+            right: 30px;
+            height: 1px;
+            background-color: var(--el-border-color-lighter);
+        }
 
         .detail-meta {
             display: flex;

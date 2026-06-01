@@ -224,7 +224,7 @@ const openNotificationCenter = async () => {
 }
 
 const openNotificationManage = async () => {
-    await router.push('/system/notification/manage')
+    await router.push('/system/notification-manage')
 }
 
 watch(
