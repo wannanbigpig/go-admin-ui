@@ -42,7 +42,10 @@
     </header>
 
     <div v-if="selectedCount > 0" class="batch-action-bar">
-        <span class="batch-selection-text">{{ t('system.file.batchSelected', { count: selectedCount }) }}</span>
+        <div class="batch-left">
+            <el-checkbox v-if="viewMode === 'grid'" :model-value="isAllSelected" :indeterminate="isIndeterminate" @change="(val: any) => emit('toggle-select-all', val as boolean)" style="margin-right: 12px" />
+            <span class="batch-selection-text">{{ t('system.file.batchSelected', { count: selectedCount }) }}</span>
+        </div>
         <div class="batch-actions">
             <xl-action-button v-permission="'file:update'" :text="t('system.file.batchMove')" @click="emit('batch-move')" />
             <xl-action-button v-permission="'file:delete'" type="danger" :loading="batchDeleting" :text="t('system.file.batchDelete')" @click="emit('batch-delete')" />
@@ -66,11 +69,17 @@ interface Props {
     exporting: boolean
     selectedCount?: number
     batchDeleting?: boolean
+    filesLength?: number
+    isAllSelected?: boolean
+    isIndeterminate?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
     selectedCount: 0,
     batchDeleting: false,
+    filesLength: 0,
+    isAllSelected: false,
+    isIndeterminate: false,
 })
 
 const emit = defineEmits<{
@@ -83,6 +92,7 @@ const emit = defineEmits<{
     (e: 'upload-directory'): void
     (e: 'batch-move'): void
     (e: 'batch-delete'): void
+    (e: 'toggle-select-all', val: boolean): void
 }>()
 
 const categoryTitle = computed(() => {
@@ -150,6 +160,11 @@ const categoryTitle = computed(() => {
     padding: var(--xl-space-3) var(--xl-space-5);
     background: var(--el-color-primary-light-9);
     border-bottom: 1px solid var(--el-color-primary-light-7);
+
+    .batch-left {
+        display: flex;
+        align-items: center;
+    }
 
     .batch-selection-text {
         font-size: 14px;

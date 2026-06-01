@@ -10,7 +10,7 @@
         <el-button v-if="selectedItems.length" class="file-picker-clear" size="small" link type="danger" @click="clearSelection">{{ t('common.actions.reset') }}</el-button>
         <input ref="uploadInputRef" class="file-picker-input" type="file" :multiple="multiple" :accept="accept" @change="handleUploadInputChange" />
 
-        <el-dialog v-model="showDialog" :title="t('filePicker.title')" width="960px" append-to-body @open="handleDialogOpen">
+        <el-dialog v-model="showDialog" :title="t('filePicker.title')" width="880px" append-to-body @open="handleDialogOpen">
             <div class="file-picker-dialog">
                 <aside v-loading="folderLoading" class="file-picker-folders">
                     <div class="file-picker-panel-title">{{ t('system.file.folderTitle') }}</div>
@@ -27,6 +27,8 @@
                 <section class="file-picker-files">
                     <div class="file-picker-toolbar">
                         <el-input v-model.trim="query.origin_name" :placeholder="t('system.file.originNamePlaceholder')" clearable @keyup.enter="reloadList" />
+                        <el-button type="primary" :loading="loading" @click="reloadList">{{ t('common.actions.search') }}</el-button>
+                        <el-button @click="triggerUpload">{{ t(uploadButtonTextKey) }}</el-button>
                         <div v-if="showImageViewToggle" class="file-picker-view-toggle">
                             <el-button-group>
                                 <el-button :type="viewMode === 'grid' ? 'primary' : ''" @click="setViewMode('grid')">
@@ -39,8 +41,6 @@
                                 </el-button>
                             </el-button-group>
                         </div>
-                        <el-button type="primary" :loading="loading" @click="reloadList">{{ t('common.actions.search') }}</el-button>
-                        <el-button @click="triggerUpload">{{ t(uploadButtonTextKey) }}</el-button>
                     </div>
                     <div
                         class="file-picker-dropzone"
@@ -94,7 +94,7 @@
                         v-loading="loading"
                         :data="fileList"
                         row-key="id"
-                        height="420"
+                        height="300"
                         highlight-current-row
                         :current-row-key="selectedRowKey"
                         :row-class-name="getTableRowClassName"
@@ -159,8 +159,8 @@ type FilePickerMode = 'single-image' | 'single-file' | 'multi-file'
 type FilePickerViewMode = 'grid' | 'list'
 
 const ROOT_FOLDER_KEY = '__root__'
-const GRID_PAGE_SIZE = 12
-const LIST_PAGE_SIZE = 10
+const GRID_PAGE_SIZE = 15
+const LIST_PAGE_SIZE = 15
 
 const props = withDefaults(
     defineProps<{
@@ -637,13 +637,13 @@ onUnmounted(() => {
 
 .file-picker-dialog {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 180px minmax(0, 1fr);
     gap: 12px;
 }
 
 .file-picker-folders {
-    min-height: 480px;
-    padding: 12px;
+    min-height: 320px;
+    padding: 10px;
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 6px;
     overflow: auto;
@@ -662,9 +662,13 @@ onUnmounted(() => {
 .file-picker-toolbar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 12px;
+
+    :deep(.el-input) {
+        width: 200px;
+    }
 }
 
 .file-picker-view-toggle {
@@ -672,12 +676,13 @@ onUnmounted(() => {
 }
 
 .file-picker-dropzone {
-    margin-bottom: 12px;
-    padding: 14px;
+    margin-bottom: 10px;
+    padding: 6px 12px;
     border: 1px dashed var(--el-border-color);
     border-radius: 6px;
     background: var(--el-fill-color-lighter);
     cursor: pointer;
+    text-align: center;
     transition:
         border-color 0.2s ease,
         background-color 0.2s ease;
@@ -690,15 +695,16 @@ onUnmounted(() => {
 }
 
 .file-picker-drop-title {
+    font-size: 13px;
     font-weight: 600;
-    line-height: 22px;
+    line-height: 18px;
     color: var(--el-text-color-primary);
 }
 
 .file-picker-drop-tip {
-    margin-top: 2px;
-    font-size: 12px;
-    line-height: 18px;
+    margin-top: 1px;
+    font-size: 11px;
+    line-height: 14px;
     color: var(--el-text-color-secondary);
 }
 
@@ -741,10 +747,10 @@ onUnmounted(() => {
 }
 
 .file-picker-grid {
-    min-height: 420px;
+    min-height: 340px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
     align-content: start;
 }
 
@@ -753,7 +759,7 @@ onUnmounted(() => {
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 8px;
     background: var(--el-bg-color);
-    padding: 10px;
+    padding: 8px;
     text-align: left;
     cursor: pointer;
     transition:
@@ -813,8 +819,8 @@ onUnmounted(() => {
 }
 
 .file-picker-grid-name {
-    margin-top: 10px;
-    font-size: 14px;
+    margin-top: 6px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--el-text-color-primary);
     overflow: hidden;
@@ -823,8 +829,8 @@ onUnmounted(() => {
 }
 
 .file-picker-grid-meta {
-    margin-top: 4px;
-    font-size: 12px;
+    margin-top: 2px;
+    font-size: 11px;
     color: var(--el-text-color-secondary);
 }
 
@@ -881,7 +887,7 @@ onUnmounted(() => {
 
 @media (max-width: 1280px) {
     .file-picker-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 </style>

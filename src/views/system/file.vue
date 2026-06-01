@@ -22,6 +22,9 @@
                 :exporting="exporting"
                 :selected-count="selectedFiles.length"
                 :batch-deleting="batchDeleting"
+                :files-length="fileList.length"
+                :is-all-selected="isAllSelected"
+                :is-indeterminate="isIndeterminate"
                 @breadcrumb-click="handleBreadcrumbClick"
                 @search="handleSearch"
                 @export="handleExportList"
@@ -29,11 +32,15 @@
                 @upload-directory="openUploadDirectoryPicker"
                 @batch-move="openBatchMoveDialog"
                 @batch-delete="handleBatchDelete"
+                @toggle-select-all="handleToggleSelectAll"
             />
 
             <div
                 class="file-content-wrapper"
                 v-loading="loading"
+                v-infinite-scroll="loadMore"
+                :infinite-scroll-disabled="scrollDisabled"
+                :infinite-scroll-distance="30"
                 @dragenter.prevent="handleUploadDragEnter"
                 @dragover.prevent="handleUploadDragOver"
                 @dragleave.prevent="handleUploadDragLeave"
@@ -59,7 +66,7 @@
 
                 <FileGrid
                     v-if="viewMode === 'grid'"
-                    :files="fileList"
+                    :files="displayFiles"
                     :folders="currentLevelFolders"
                     :selected-category="selectedCategory"
                     :selected-files="selectedFiles"
@@ -216,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Document, UploadFilled } from '@element-plus/icons-vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
@@ -247,6 +254,7 @@ const { t } = useI18n()
 
 const queryFormRef = ref()
 const queryWhere = reactive(createSystemFileQuery())
+queryWhere.per_page = 40
 const dateRange = ref<[string, string] | []>([])
 const viewMode = ref<'grid' | 'list'>('grid')
 
@@ -284,7 +292,7 @@ const {
     loading,
     items: fileList,
     pagination,
-    getList,
+    getList: rawGetList,
     handleSearch: rawHandleSearch,
 } = useListPage<SystemFile, typeof queryWhere>({
     query: queryWhere,
@@ -308,7 +316,15 @@ const {
     },
     fetcher: async (params) => {
         try {
-            return await fetchSystemFileList(params)
+            const result = await fetchSystemFileList(params)
+            if (viewMode.value === 'grid') {
+                if (params.page === 1 || !params.page) {
+                    allFilesList.value = result.list
+                } else {
+                    allFilesList.value = [...allFilesList.value, ...result.list]
+                }
+            }
+            return result
         } catch (error) {
             Logger.error('获取文件资源列表失败:', error)
             return {
@@ -322,6 +338,14 @@ const {
 })
 
 const handleSearch = debounce(rawHandleSearch, 300)
+
+const getList = async () => {
+    if (viewMode.value === 'grid') {
+        await handleSearch()
+    } else {
+        await rawGetList()
+    }
+}
 
 const { selectedCategory, selectCategory } = useFileCategory({
     onSelect: (category, fileType) => {
@@ -423,6 +447,59 @@ const handleSingleMove = (file: SystemFile) => {
     selectedFiles.value = [file]
     openBatchMoveDialog()
 }
+
+// ==================== 全选/反选计算与逻辑 ====================
+const isAllSelected = computed(() => {
+    return displayFiles.value.length > 0 && selectedFiles.value.length === displayFiles.value.length
+})
+
+const isIndeterminate = computed(() => {
+    return selectedFiles.value.length > 0 && selectedFiles.value.length < displayFiles.value.length
+})
+
+const handleToggleSelectAll = (val: boolean) => {
+    if (val) {
+        selectedFiles.value = [...displayFiles.value]
+    } else {
+        selectedFiles.value = []
+    }
+}
+
+// ==================== 滚动加载与网格展示逻辑 ====================
+const allFilesList = ref<SystemFile[]>([])
+
+const displayFiles = computed(() => {
+    return viewMode.value === 'grid' ? allFilesList.value : fileList.value
+})
+
+const noMore = computed(() => {
+    return fileList.value.length === 0 || allFilesList.value.length >= pagination.total
+})
+
+const scrollDisabled = computed(() => {
+    return viewMode.value !== 'grid' || loading.value || noMore.value
+})
+
+const loadMore = async () => {
+    if (viewMode.value !== 'grid' || loading.value || noMore.value) return
+    const nextPage = (queryWhere.page || 1) + 1
+    queryWhere.page = nextPage
+    pagination.page = nextPage
+    await rawGetList()
+}
+
+// 监听视图模式切换，重置参数并重新加载
+watch(viewMode, (newMode) => {
+    queryWhere.page = 1
+    pagination.page = 1
+    queryWhere.per_page = newMode === 'grid' ? 40 : 10
+    pagination.pageSize = newMode === 'grid' ? 40 : 10
+
+    selectedFiles.value = []
+    allFilesList.value = []
+
+    void handleSearch()
+})
 
 const fileTypeOptions = computed(() => [
     { label: t('system.file.fileTypes.image'), value: 'image' },

@@ -5,7 +5,7 @@
                 <!-- 顶部文件概览 -->
                 <div class="file-detail-header">
                     <div class="header-icon">
-                        <el-image v-if="isImageFile(file) && file.url" :src="file.url" fit="cover" class="detail-thumbnail" :preview-src-list="[file.url]" preview-teleported />
+                        <el-image v-if="isImageFile(file) && file.url" :src="file.thumbnail_url || file.url" fit="cover" class="detail-thumbnail" :preview-src-list="[file.url]" preview-teleported />
                         <div v-else class="detail-icon-placeholder">
                             <el-icon :size="48" color="var(--el-text-color-placeholder)"><Document /></el-icon>
                             <span class="detail-ext" v-if="file.ext">{{ String(file.ext).toUpperCase() }}</span>
