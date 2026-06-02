@@ -408,27 +408,19 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 await createRole(submitData)
             }
 
+            // 写成功后先关抽屉+提示，再刷新树节点，避免刷新把提交按钮卡在"提交中"。
+            showDrawer.value = false
+            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
+
+            // 刷新受影响的父节点子列表：始终刷新当前父；编辑时若父级变更，额外刷新原父。
+            // refreshParentNodeChildren(parentId) 在 parentId===0 时即刷新根，无需再单独刷新 0（去重）。
             if (isEditMode.value) {
                 const originalParentId = originalFormData.value?.pid || 0
                 if (originalParentId !== parentId) {
                     await refreshParentNodeChildren(originalParentId)
-                    await refreshParentNodeChildren(parentId)
-                } else {
-                    await refreshParentNodeChildren(parentId)
-                }
-
-                if (parentId === 0) {
-                    await refreshParentNodeChildren(0)
-                }
-            } else {
-                await refreshParentNodeChildren(parentId)
-                if (parentId === 0) {
-                    await refreshParentNodeChildren(0)
                 }
             }
-
-            showDrawer.value = false
-            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
+            await refreshParentNodeChildren(parentId)
         }).catch((error) => {
             Logger.error('提交失败:', error)
         })

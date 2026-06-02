@@ -361,8 +361,9 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
                 await createMenu(submitData)
             }
             ElMessage.success(translate('permission.menu.form.operationSuccess'))
-            await getList()
+            // 先关抽屉再刷新列表：刷新仍在锁内但抽屉已隐藏，避免成功后按钮还"提交中"卡顿。
             showDrawer.value = false
+            await getList()
         }).catch((error) => {
             Logger.error('提交失败:', error)
         })

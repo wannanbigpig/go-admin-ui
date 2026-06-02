@@ -247,9 +247,10 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
                 await createAdminUserItem(submitData)
             }
 
-            await refreshList()
+            // 写成功后先关抽屉+提示，再刷新列表，避免列表刷新把提交按钮卡在"提交中"。
             showDrawer.value = false
             ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
+            await refreshList()
         }).catch((error) => {
             Logger.error('提交失败:', error)
         })
