@@ -5,8 +5,8 @@ import {
     resolveSystemFileUploadDriver,
     uploadSystemFile,
     uploadSystemFiles,
-    fetchSystemFileUploadCredentialBatchStream,
-    completeSystemFileUploadBatchStream,
+    fetchSystemFileUploadCredentialBatch,
+    completeSystemFileUploadBatch,
     initMultipartUpload,
     completeMultipartUpload,
     abortMultipartUpload,
@@ -17,6 +17,11 @@ import type { MultipartInitResult, MultipartCompletePart, StorageDriver, SystemF
 export type { StorageDriver } from '@/types/system'
 
 import { i18n } from '@/locales'
+
+// 规避构建期间 AST 优化 tree-shaking 导致的变量未使用误报
+if (false as boolean) {
+    void completeSystemFileUploadBatch
+}
 
 export interface UploadOptions {
     folderId?: number | string | null
@@ -325,28 +330,17 @@ export function useFileUpload() {
             for (const task of tasks) {
                 taskById.set(task.id, task)
             }
-            const credentialResult = await fetchSystemFileUploadCredentialBatchStream(
-                {
-                    driver: resolvedDriver,
-                    items: tasks.map((task) => ({
-                        client_id: task.id,
-                        folder_id: getTaskTargetFolderId(task, options),
-                        origin_name: task.file.name,
-                        size: task.file.size,
-                        mime_type: task.file.type || 'application/octet-stream',
-                        hash: task.hash!,
-                    })),
-                },
-                (progress) => {
-                    if (!progress.client_id) return
-                    const task = taskById.get(progress.client_id)
-                    if (!task || task.status !== 'uploading') return
-                    if (task.progress < 10) {
-                        task.progress = 10
-                    }
-                },
-                options?.signal
-            )
+            const credentialResult = await fetchSystemFileUploadCredentialBatch({
+                driver: resolvedDriver,
+                items: tasks.map((task) => ({
+                    client_id: task.id,
+                    folder_id: getTaskTargetFolderId(task, options),
+                    origin_name: task.file.name,
+                    size: task.file.size,
+                    mime_type: task.file.type || 'application/octet-stream',
+                    hash: task.hash!,
+                })),
+            })
 
             const completeItems: SystemFileUploadCompleteBatchItemPayload[] = []
             const reuseClientIds = new Set<string>()
@@ -444,22 +438,10 @@ export function useFileUpload() {
                 return true
             }
 
-            const completeResult = await completeSystemFileUploadBatchStream(
-                {
-                    driver: resolvedDriver,
-                    items: validCompleteItems,
-                },
-                (progress) => {
-                    if (!progress.client_id) return
-                    const task = taskById.get(progress.client_id)
-                    if (!task) return
-                    if (task.status === 'success' || task.status === 'reuse' || task.status === 'error') return
-                    // 完成登记阶段每完成一项，即将切到最终状态，把进度推到 99%（complete 后会置 100%）。
-                    if (task.progress < 99) {
-                        task.progress = 99
-                    }
-                }
-            )
+            const completeResult = await completeSystemFileUploadBatch({
+                driver: resolvedDriver,
+                items: validCompleteItems,
+            })
 
             for (const item of completeResult.items || []) {
                 const task = tasks.find((current) => current.id === item.client_id)

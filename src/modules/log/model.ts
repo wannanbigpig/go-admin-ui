@@ -25,7 +25,6 @@ export const REQUEST_KIND_ALL_VALUE = ''
 export const REQUEST_KIND_OPTIONS = [
     { label: 'log.request.requestKindHttp', value: 'http' as const, type: 'primary' as const },
     { label: 'log.request.requestKindWebsocket', value: 'websocket' as const, type: 'warning' as const },
-    { label: 'log.request.requestKindSse', value: 'sse' as const, type: 'success' as const },
 ]
 
 export const REQUEST_KIND_FILTER_OPTIONS = [{ label: 'log.request.requestKindAll', value: REQUEST_KIND_ALL_VALUE }, ...REQUEST_KIND_OPTIONS]
@@ -35,7 +34,6 @@ export const EXECUTION_TIME_SCOPE_ALL_VALUE = ''
 export const EXECUTION_TIME_SCOPE_OPTIONS = [
     { label: 'log.request.executionTimeScopeRequest', value: 'request' as const, type: 'primary' as const },
     { label: 'log.request.executionTimeScopeConnection', value: 'connection' as const, type: 'warning' as const },
-    { label: 'log.request.executionTimeScopeStream', value: 'stream' as const, type: 'success' as const },
     { label: 'log.request.executionTimeScopeNone', value: 'none' as const, type: 'info' as const },
 ]
 

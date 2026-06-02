@@ -1,7 +1,7 @@
 import type { WithId } from './common'
 
-export type RequestKind = 'http' | 'websocket' | 'sse'
-export type ExecutionTimeScope = 'request' | 'connection' | 'stream' | 'none'
+export type RequestKind = 'http' | 'websocket'
+export type ExecutionTimeScope = 'request' | 'connection' | 'none'
 
 export interface RequestLog extends WithId {
     request_id: string

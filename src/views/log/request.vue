@@ -296,8 +296,6 @@ const getRequestKindText = (kind?: RequestKind) => {
     switch (kind) {
         case 'websocket':
             return t('log.request.requestKindWebsocket')
-        case 'sse':
-            return t('log.request.requestKindSse')
         case 'http':
             return t('log.request.requestKindHttp')
         default:
@@ -311,8 +309,6 @@ const getExecutionTimeScopeText = (scope?: ExecutionTimeScope) => {
             return t('log.request.executionTimeScopeRequest')
         case 'connection':
             return t('log.request.executionTimeScopeConnection')
-        case 'stream':
-            return t('log.request.executionTimeScopeStream')
         case 'none':
             return t('log.request.executionTimeScopeNone')
         default:
@@ -335,7 +331,6 @@ const tableTitle = computed(
                 tag: {
                     http: { type: getRequestKindTagType('http'), text: t('log.request.requestKindHttp') },
                     websocket: { type: getRequestKindTagType('websocket'), text: t('log.request.requestKindWebsocket') },
-                    sse: { type: getRequestKindTagType('sse'), text: t('log.request.requestKindSse') },
                 },
             },
             {

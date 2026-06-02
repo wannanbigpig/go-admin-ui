@@ -1,5 +1,4 @@
 import { get, post, upload } from '@/utils/request'
-import { postSSE, type SSEHandlers, type UploadBatchProgress } from '@/utils/sse'
 import type { AxiosRequestConfig } from 'axios'
 import type { PageData } from '@/types/common'
 import type { ExportRecord, ExportTaskSubmitResult } from '@/types/exportCenter'
@@ -248,21 +247,12 @@ export function getSystemFileUploadCredentialBatch(data: SystemFileUploadCredent
     return post<SystemFileUploadCredentialBatchResult>('/v1/system/file/upload/credential/batch', data)
 }
 
-export function getSystemFileUploadCredentialBatchStream(data: SystemFileUploadCredentialBatchPayload, handlers: SSEHandlers<SystemFileUploadCredentialBatchResult, UploadBatchProgress> & { signal?: AbortSignal }) {
-    const { signal, ...sseHandlers } = handlers
-    return postSSE<SystemFileUploadCredentialBatchResult, UploadBatchProgress>('/v1/system/file/upload/credential/batch', data, sseHandlers, { signal })
-}
-
 export function completeSystemFileUpload(data: SystemFileUploadCompletePayload) {
     return post<SystemFile>('/v1/system/file/upload/complete', data)
 }
 
 export function completeSystemFileUploadBatch(data: SystemFileUploadCompleteBatchPayload) {
     return post<SystemFileUploadCompleteBatchResult>('/v1/system/file/upload/complete/batch', data)
-}
-
-export function completeSystemFileUploadBatchStream(data: SystemFileUploadCompleteBatchPayload, handlers: SSEHandlers<SystemFileUploadCompleteBatchResult, UploadBatchProgress>) {
-    return postSSE<SystemFileUploadCompleteBatchResult, UploadBatchProgress>('/v1/system/file/upload/complete/batch', data, handlers)
 }
 
 export function getStorageConfig() {

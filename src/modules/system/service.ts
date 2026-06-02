@@ -2,7 +2,6 @@ import HashWorker from '@/utils/sha256.worker?worker'
 import { Logger } from '@/utils/logger'
 import axios from 'axios'
 import { request } from '@/utils/request'
-import type { UploadBatchProgress } from '@/utils/sse'
 import { i18n } from '@/locales'
 import * as systemApi from '@/api/system'
 import * as logApi from '@/api/log'
@@ -389,21 +388,6 @@ export async function fetchSystemFileUploadCredentialBatch(data: SystemFileUploa
     return normalizeCredentialBatchResult(response)
 }
 
-export async function fetchSystemFileUploadCredentialBatchStream(data: SystemFileUploadCredentialBatchPayload, onProgress?: (progress: UploadBatchProgress) => void, signal?: AbortSignal) {
-    let final: SystemFileUploadCredentialBatchResult | undefined
-    await systemApi.getSystemFileUploadCredentialBatchStream(data, {
-        onProgress,
-        onComplete: (result) => {
-            final = result
-        },
-        signal,
-    })
-    if (!final) {
-        throw new Error('获取上传凭证流式连接异常中断')
-    }
-    return normalizeCredentialBatchResult(final)
-}
-
 export async function completeSystemFileUpload(data: SystemFileUploadCompletePayload) {
     const response = await systemApi.completeSystemFileUpload(data)
     return normalizeDetailData(response, {} as SystemFile)
@@ -412,20 +396,6 @@ export async function completeSystemFileUpload(data: SystemFileUploadCompletePay
 export async function completeSystemFileUploadBatch(data: SystemFileUploadCompleteBatchPayload) {
     const response = await systemApi.completeSystemFileUploadBatch(data)
     return normalizeCompleteBatchResult(response)
-}
-
-export async function completeSystemFileUploadBatchStream(data: SystemFileUploadCompleteBatchPayload, onProgress?: (progress: UploadBatchProgress) => void) {
-    let final: SystemFileUploadCompleteBatchResult | undefined
-    await systemApi.completeSystemFileUploadBatchStream(data, {
-        onProgress,
-        onComplete: (result) => {
-            final = result
-        },
-    })
-    if (!final) {
-        throw new Error('完成上传登记流式连接异常中断')
-    }
-    return normalizeCompleteBatchResult(final)
 }
 
 export async function calculateSystemFileSha256(file: File, onProgress?: (progress: number) => void) {
