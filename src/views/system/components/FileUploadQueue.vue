@@ -23,9 +23,6 @@
                     <el-icon class="close-icon" :title="t('common.actions.collapse') || '最小化'" @click="minimized = true"><Minus /></el-icon>
                 </div>
             </div>
-            <div v-if="tasks.length > 0" class="queue-overall">
-                <el-progress :percentage="overallProgress" :stroke-width="8" :status="overallStatus" />
-            </div>
             <div class="queue-body">
                 <template v-if="tasks.length > 0">
                     <div v-for="task in visibleTasks" :key="task.id" class="mini-task" :class="{ 'is-error': task.status === 'error' }">
@@ -88,25 +85,6 @@ const visibleTasks = computed(() => (props.expanded ? props.tasks : props.tasks.
 // 计算处于排队中、传输中或错误的活跃任务数
 const activeTasksCount = computed(() => {
     return props.tasks.filter((task) => ['pending', 'hashing', 'uploading', 'error'].includes(task.status)).length
-})
-
-// 整体上传进度：按字节加权聚合各文件的真实进度（onUploadProgress），比"完成数/总数"更平滑。
-const overallProgress = computed(() => {
-    if (props.tasks.length === 0) return 0
-    const taskRatio = (task: UploadTask) => (task.status === 'success' || task.status === 'reuse' ? 100 : Math.max(0, Math.min(100, task.progress)))
-    const totalBytes = props.tasks.reduce((sum, task) => sum + (task.size || 0), 0)
-    if (totalBytes <= 0) {
-        const sum = props.tasks.reduce((acc, task) => acc + taskRatio(task), 0)
-        return Math.round(sum / props.tasks.length)
-    }
-    const uploaded = props.tasks.reduce((sum, task) => sum + (task.size || 0) * taskRatio(task), 0)
-    return Math.round(uploaded / totalBytes)
-})
-
-const overallStatus = computed<'success' | 'exception' | undefined>(() => {
-    if (props.tasks.some((task) => task.status === 'error')) return 'exception'
-    if (props.tasks.every((task) => task.status === 'success' || task.status === 'reuse')) return 'success'
-    return undefined
 })
 
 // 获取每个上传任务的各状态渲染信息
@@ -273,10 +251,6 @@ watch(
             color: var(--el-color-primary);
         }
     }
-}
-
-.queue-overall {
-    padding: var(--xl-space-2) var(--xl-space-4) 0;
 }
 
 .queue-body {
