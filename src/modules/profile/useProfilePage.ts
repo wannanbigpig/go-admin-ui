@@ -5,9 +5,8 @@ import { useSubmitLock } from '@/composables/useSubmitLock'
 import { useAuthStore } from '@/stores/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import { fetchProfile, modifyProfile, uploadProfileAvatar } from '@/modules/profile/service'
-import { PROFILE_AVATAR_CONFIG, PROFILE_SUBMIT_DELAY, createProfileForm } from '@/modules/profile/model'
+import { PROFILE_AVATAR_CONFIG, createProfileForm } from '@/modules/profile/model'
 import { validateFormSafely } from '@/modules/shared/form'
-import { pauseSync } from '@/utils/helper'
 import type { UploadAvatarResult } from '@/modules/adminUser/service'
 import type { UserInfo } from '@/types/auth'
 import { translate } from '@/locales'
@@ -122,8 +121,8 @@ export function useProfilePage() {
         try {
             const data = await fetchProfile()
             userInfo.value = data
-            // 刷新 Store 中的用户信息
-            await authStore.refreshUserInfo()
+            // 直接用本次结果同步 Store，避免重复请求 admin-user/get 与无谓的菜单刷新（资料修改不影响菜单/权限）。
+            authStore.userInfo = data
         } catch (error) {
             Logger.error('获取个人信息失败:', error)
         } finally {
@@ -151,25 +150,31 @@ export function useProfilePage() {
         const valid = await validateFormSafely(formDataRef.value, translate('validation.profileForm.formName'))
         if (!valid) return
 
-        await runWithSubmitLock(async () => {
-            const submitData: Record<string, unknown> = {
-                id: formData.id,
-                nickname: formData.nickname,
-            }
+        const submitData: Record<string, unknown> = {
+            id: formData.id,
+            nickname: formData.nickname,
+        }
 
-            if (formData.phone_number) submitData.phone_number = formData.phone_number
-            if (formData.email) submitData.email = formData.email
-            if (formData.avatar) submitData.avatar = formData.avatar
-            if (formData.password) submitData.password = formData.password
+        if (formData.phone_number) submitData.phone_number = formData.phone_number
+        if (formData.email) submitData.email = formData.email
+        if (formData.avatar) submitData.avatar = formData.avatar
+        if (formData.password) submitData.password = formData.password
 
+        // 提交锁只包裹真正的写请求，避免成功后还把刷新/延时算进"提交中"，导致按钮卡几秒。
+        const succeeded = await runWithSubmitLock(async () => {
             await modifyProfile(submitData)
-            ElMessage.success(translate('common.result.updateSuccess'))
-            await pauseSync(PROFILE_SUBMIT_DELAY)
-            await getProfile()
-            showDrawer.value = false
+            return true
         }, 0).catch((error) => {
             Logger.error('修改失败:', error)
+            return false
         })
+
+        if (!succeeded) return
+
+        ElMessage.success(translate('common.result.updateSuccess'))
+        showDrawer.value = false
+        // 写成功后刷新展示信息（单次 admin-user/get），不阻塞提交按钮。
+        await getProfile()
     }
 
     onMounted(() => {
