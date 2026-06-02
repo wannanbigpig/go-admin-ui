@@ -24,7 +24,7 @@
                 </div>
             </div>
             <div v-if="tasks.length > 0" class="queue-overall">
-                <el-progress :percentage="overallProgress" :stroke-width="6" :text-inside="true" :status="overallStatus" />
+                <el-progress :percentage="overallProgress" :stroke-width="8" :status="overallStatus" />
             </div>
             <div class="queue-body">
                 <template v-if="tasks.length > 0">
