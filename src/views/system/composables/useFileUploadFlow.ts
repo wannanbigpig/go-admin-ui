@@ -26,6 +26,20 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         uploadQueueExpanded.value = !uploadQueueExpanded.value
     }
 
+    const showUploadSummary = (tasks: UploadTask[]) => {
+        const success = tasks.filter((t) => t.status === 'success' || t.status === 'reuse').length
+        const failed = tasks.filter((t) => t.status === 'error').length
+        const total = tasks.length
+
+        if (failed === 0) {
+            ElMessage.success(t('system.file.uploadSummaryAllSuccess', { total }))
+        } else if (success === 0) {
+            ElMessage.error(t('system.file.uploadSummaryAllFailed', { total }))
+        } else {
+            ElMessage.warning(t('system.file.uploadSummary', { success, failed }))
+        }
+    }
+
     const openUploadPicker = () => uploadInputRef.value?.click()
     const openUploadDirectoryPicker = () => uploadDirectoryInputRef.value?.click()
 
@@ -36,8 +50,8 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         uploadQueueExpanded.value = false
         lastUploadOptions = { folderId: options.selectedFolderId.value, enableMultipart: true }
         await runUploadQueue(uploadTasks.value, lastUploadOptions)
+        showUploadSummary(uploadTasks.value)
         if (uploadTasks.value.some((task) => task.status === 'success' || task.status === 'reuse')) {
-            ElMessage.success(t('common.result.uploadSuccess'))
             await options.getList()
         }
         if (uploadTasks.value.every((task) => task.status === 'success' || task.status === 'reuse')) {
@@ -52,7 +66,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         await uploadOneTask(task, lastUploadOptions)
         await options.getList()
         if (uploadTasks.value.length > 0 && uploadTasks.value.every((item) => item.status === 'success' || item.status === 'reuse')) {
-            ElMessage.success(t('common.result.uploadSuccess'))
+            showUploadSummary(uploadTasks.value)
             const snapshot = uploadTasks.value
             window.setTimeout(() => {
                 if (uploadTasks.value === snapshot && !uploading.value) clearTasks()
@@ -173,8 +187,8 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         lastUploadOptions = { enableMultipart: true }
         await runUploadQueue(currentTasks, lastUploadOptions)
         await options.loadFolderTree()
+        showUploadSummary(currentTasks)
         if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
-            ElMessage.success(t('common.result.uploadSuccess'))
             await options.getList()
         }
         if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
