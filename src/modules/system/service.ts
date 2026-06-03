@@ -316,8 +316,8 @@ export async function fetchSystemFileDetail(id: number | string) {
     return normalizeDetailData(response, {} as SystemFile)
 }
 
-export async function removeSystemFile(id: number | string) {
-    return systemApi.deleteSystemFile({ id })
+export async function removeSystemFile(id: number | string, force?: boolean) {
+    return systemApi.deleteSystemFile({ id, force: force ? 1 : 0 })
 }
 
 export async function removeSystemFilesBatch(data: SystemFileBatchDeletePayload) {
@@ -368,6 +368,10 @@ export async function modifySystemFileFolder(data: SystemFileFolderPayload) {
 
 export async function removeSystemFileFolder(id: number | string) {
     return systemApi.deleteSystemFileFolder({ id })
+}
+
+export async function fetchSystemFileFolderStats(id: number | string) {
+    return systemApi.getSystemFileFolderStats({ id })
 }
 
 export async function moveSystemFileFolder(id: number | string, targetParentId?: number | string | null) {

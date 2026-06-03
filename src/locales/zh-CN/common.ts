@@ -25,6 +25,7 @@ export default {
         collapse: '收起',
         expandAll: '全部展开',
         collapseAll: '全部折叠',
+        clear: '清空',
     },
     labels: {
         basicInfo: '基础信息',

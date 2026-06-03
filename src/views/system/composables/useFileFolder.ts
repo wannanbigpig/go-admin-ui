@@ -1,10 +1,9 @@
 import { ref, computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Logger } from '@/utils/logger'
-import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 import type { SystemFileFolder } from '@/types/system'
-import { fetchSystemFileFolderTree, addSystemFileFolder, modifySystemFileFolder, removeSystemFileFolder } from '@/modules/system/service'
+import { fetchSystemFileFolderTree, addSystemFileFolder, modifySystemFileFolder, removeSystemFileFolder, fetchSystemFileFolderStats } from '@/modules/system/service'
 
 export const ROOT_FOLDER_KEY = '__root__'
 export type FolderTreeNode = SystemFileFolder & { isRoot?: boolean; children?: FolderTreeNode[] }
@@ -17,6 +16,13 @@ export function useFileFolder(options?: { onSelectFolder?: (folderId: number | s
     const folderSubmitting = ref(false)
     const folderDialogMode = ref<'create' | 'rename'>('create')
     const activeFolder = ref<SystemFileFolder | null>(null)
+
+    // 文件夹删除确认弹窗状态
+    const showFolderDeleteDialog = ref(false)
+    const folderDeleteLoading = ref(false)
+    const folderDeleteName = ref('')
+    const folderDeleteWarning = ref('')
+    const pendingDeleteFolder = ref<SystemFileFolder | null>(null)
 
     const folderForm = reactive<{ id?: number | string; parent_id?: number | string | null; name: string }>({
         id: undefined,
@@ -80,6 +86,26 @@ export function useFileFolder(options?: { onSelectFolder?: (folderId: number | s
         findPath(folderTree.value, selectedFolderId.value)
         return path
     })
+
+    const confirmDeleteFolder = async () => {
+        const folder = pendingDeleteFolder.value
+        if (!folder) return
+        folderDeleteLoading.value = true
+        try {
+            await removeSystemFileFolder(folder.id)
+            ElMessage.success(t('common.result.deleteSuccess'))
+            showFolderDeleteDialog.value = false
+            if (selectedFolderId.value === folder.id) {
+                selectedFolderId.value = null
+            }
+            options?.onFolderDeleted?.(folder.id)
+            await loadFolderTree()
+        } catch (error) {
+            Logger.error('删除文件目录失败:', error)
+        } finally {
+            folderDeleteLoading.value = false
+        }
+    }
 
     const loadFolderTree = async () => {
         try {
@@ -150,17 +176,20 @@ export function useFileFolder(options?: { onSelectFolder?: (folderId: number | s
         }
         if (command === 'delete') {
             try {
-                await ElMessageBox.confirm(t('system.file.deleteFolderConfirm'), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
-                await removeSystemFileFolder(folder.id)
-                ElMessage.success(t('common.result.deleteSuccess'))
-                if (selectedFolderId.value === folder.id) {
-                    selectedFolderId.value = null
+                const stats = await fetchSystemFileFolderStats(folder.id)
+                if (stats.file_count > 0 || stats.child_folder_count > 0) {
+                    folderDeleteWarning.value = t('system.file.deleteFolderCascadeConfirm', {
+                        fileCount: stats.file_count,
+                        folderCount: stats.child_folder_count,
+                    })
+                } else {
+                    folderDeleteWarning.value = t('system.file.deleteFolderConfirm')
                 }
-                options?.onFolderDeleted?.(folder.id)
-                await loadFolderTree()
+                folderDeleteName.value = folder.name
+                pendingDeleteFolder.value = folder
+                showFolderDeleteDialog.value = true
             } catch (error) {
-                if (error === 'cancel' || error === 'close') return
-                Logger.error('删除文件目录失败:', error)
+                Logger.error('获取目录统计信息失败:', error)
             }
         }
     }
@@ -183,5 +212,10 @@ export function useFileFolder(options?: { onSelectFolder?: (folderId: number | s
         submitFolderDialog,
         handleFolderCommand,
         normalizeFolderId,
+        showFolderDeleteDialog,
+        folderDeleteLoading,
+        folderDeleteName,
+        folderDeleteWarning,
+        confirmDeleteFolder,
     }
 }

@@ -127,15 +127,15 @@
                             <div class="detail-body">
                                 {{ selectedNotification.message || selectedNotification.title }}
                             </div>
-
-                            <!-- 附加动作按钮 -->
-                            <div v-if="selectedNotification.action_url" class="detail-actions">
-                                <el-button type="primary" size="default" @click="handleActionClick(selectedNotification)">
-                                    {{ selectedNotification.action_label || t('system.notification.goHandle') }}
-                                    <el-icon class="el-icon--right"><i-ep-arrow-right /></el-icon>
-                                </el-button>
-                            </div>
                         </el-scrollbar>
+
+                        <!-- 附加动作按钮 -->
+                        <div v-if="selectedNotification.action_url" class="detail-footer">
+                            <el-button type="primary" size="default" class="action-btn" @click="handleActionClick(selectedNotification)">
+                                {{ selectedNotification.action_label || t('system.notification.goHandle') }}
+                                <el-icon class="el-icon--right"><i-ep-arrow-right /></el-icon>
+                            </el-button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -642,8 +642,21 @@ onMounted(() => {
         word-break: break-all;
     }
 
-    .detail-actions {
-        padding: 0 30px 24px 30px;
+    .detail-footer {
+        padding: 16px 30px;
+        background-color: var(--el-bg-color);
+        border-top: 1px solid var(--el-border-color-lighter);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-shrink: 0;
+
+        .action-btn {
+            min-width: 100px;
+            height: 36px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
     }
 }
 

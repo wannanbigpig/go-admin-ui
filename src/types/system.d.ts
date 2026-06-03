@@ -157,6 +157,8 @@ export interface CronTaskState extends WithId {
 
 export interface SystemFile extends WithId, WithTimestamp {
     uid: number | string
+    uploader_name?: string
+    uploader_username?: string
     folder_id?: number | string | null
     logical_path?: string
     display_name?: string

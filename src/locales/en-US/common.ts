@@ -25,6 +25,7 @@ export default {
         collapse: 'Collapse',
         expandAll: 'Expand All',
         collapseAll: 'Collapse All',
+        clear: 'Clear',
     },
     labels: {
         basicInfo: 'Basic Info',

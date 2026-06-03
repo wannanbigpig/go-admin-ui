@@ -179,7 +179,7 @@ export function getSystemFileDetail(params: { id: number | string }) {
     return get<SystemFile>('/v1/system/file/detail', params)
 }
 
-export function deleteSystemFile(data: { id: number | string }) {
+export function deleteSystemFile(data: { id: number | string; force?: number }) {
     return post<unknown>('/v1/system/file/delete', data)
 }
 
@@ -213,6 +213,10 @@ export function getSystemFileReferences(params: { id?: number | string; file_id?
 
 export function getSystemFileFolderTree() {
     return get<SystemFileFolder[]>('/v1/system/file/folder/tree')
+}
+
+export function getSystemFileFolderStats(data: { id: number | string }) {
+    return get<{ file_count: number; child_folder_count: number }>('/v1/system/file/folder/stats', data)
 }
 
 export function createSystemFileFolder(data: SystemFileFolderPayload) {

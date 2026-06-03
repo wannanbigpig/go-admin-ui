@@ -63,6 +63,7 @@
                 :load="load"
                 :tree-props="treeProps"
                 :selectable="selectable"
+                :height="height"
                 :pagination="pagination"
                 @size-change="(size) => emit('size-change', size)"
                 @current-change="(page) => emit('current-change', page)"
@@ -124,6 +125,7 @@ interface Props {
     load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
     selectable?: boolean
+    height?: string | number
     pagination?: {
         total: number
         page?: number

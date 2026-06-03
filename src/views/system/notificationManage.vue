@@ -71,9 +71,11 @@
                             <span>{{ audienceSummary }}</span>
                         </div>
                         <div class="notification-preview-card__message">{{ form.message || t('system.notification.previewEmptyMessage') }}</div>
-                        <div class="notification-preview-card__footer">
-                            <span>{{ form.action_label || t('system.notification.noActionLabel') }}</span>
-                            <span>{{ form.action_url || '-' }}</span>
+                        <div v-if="form.action_url" class="notification-preview-card__footer">
+                            <el-button type="primary" size="small" class="preview-action-btn">
+                                {{ form.action_label || t('system.notification.goHandle') }}
+                                <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+                            </el-button>
                         </div>
                     </div>
                 </el-card>
@@ -94,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import { ArrowRight } from '@element-plus/icons-vue'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -285,8 +288,7 @@ const openNotificationCenter = async () => {
     color: var(--el-text-color-primary);
 }
 
-.notification-preview-card__meta,
-.notification-preview-card__footer {
+.notification-preview-card__meta {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -295,6 +297,15 @@ const openNotificationCenter = async () => {
     margin-top: 10px;
     font-size: var(--xl-font-sm);
     color: var(--el-text-color-secondary);
+}
+
+.notification-preview-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: var(--xl-space-3);
+    border-top: 1px dashed var(--el-border-color-lighter);
+    padding-top: var(--xl-space-3);
 }
 
 .notification-preview-card__message {
@@ -307,9 +318,28 @@ const openNotificationCenter = async () => {
 
 .notification-manage-page__scope-list {
     margin: 0;
-    padding-left: 18px;
-    color: var(--el-text-color-regular);
-    line-height: 1.8;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    li {
+        position: relative;
+        padding: 12px 14px;
+        background-color: var(--el-fill-color-light);
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--el-text-color-regular);
+        border-left: 3px solid var(--el-color-primary-light-3);
+        transition: all 0.2s ease;
+
+        &:hover {
+            background-color: var(--el-fill-color-lighter);
+            transform: translateX(2px);
+        }
+    }
 }
 
 @media (max-width: 960px) {

@@ -60,7 +60,6 @@
                     :upload-finished="uploadFinished"
                     :expanded="uploadQueueExpanded"
                     @toggle-expand="toggleUploadQueueExpanded"
-                    @clear="clearTasks"
                     @retry="retryUploadTask"
                 />
 
@@ -157,6 +156,27 @@
 
             <FileDetailDrawer v-model="showDetailDrawer" :file="currentDetail" :references="detailReferences" :loading="detailLoading" />
 
+            <!-- 文件夹删除确认弹窗 -->
+            <ConfirmDeleteByNameDialog
+                v-model="showFolderDeleteDialog"
+                :title="t('common.actions.delete')"
+                :warning-message="folderDeleteWarning"
+                :confirm-name="folderDeleteName"
+                :loading="folderDeleteLoading"
+                @confirm="confirmDeleteFolder"
+            />
+
+            <!-- 引用文件删除确认弹窗 -->
+            <ConfirmDeleteByNameDialog
+                v-model="showDeleteConfirmDialog"
+                :title="t('common.actions.delete')"
+                :warning-message="deleteConfirmWarning"
+                :confirm-name="deleteConfirmName"
+                :references="deleteConfirmReferences"
+                :loading="deleteConfirmLoading"
+                @confirm="confirmForceDelete"
+            />
+
             <el-dialog v-model="showReferencesDialog" :title="referencesDialogTitle" width="780px" append-to-body>
                 <el-table v-loading="referencesLoading" :data="activeReferences" border size="small" empty-text="-" class="reference-dialog-table">
                     <el-table-column prop="owner_type" :label="t('system.file.referenceOwnerType')" width="120" show-overflow-tooltip />
@@ -183,7 +203,7 @@
                         {{ t('system.file.batchDestroy') }}
                     </el-button>
                 </div>
-                <xl-pro-table :loading="trashLoading" :data="trashList" :columns="trashColumns" :pagination="trashPagination" selectable @selection-change="handleTrashSelectionChange">
+                <xl-pro-table :loading="trashLoading" :data="trashList" :columns="trashColumns" :pagination="trashPagination" selectable height="450" @selection-change="handleTrashSelectionChange">
                     <template #td="{ item, val, row }">
                         <div v-if="item.prop === 'origin_name'" class="file-name-cell">
                             <el-image
@@ -232,7 +252,7 @@ import { useListPage } from '@/composables/useListPage'
 import { createSystemFileQuery } from '@/modules/system/model'
 import { fetchSystemFileList } from '@/modules/system/service'
 import { applyDateRangeToQuery } from '@/modules/log/helpers'
-import { debounce, formatFileSize } from '@/utils/helper'
+import { debounce, formatFileSize, getImageUrl } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import type { ProTableColumns } from '@/components/proTable/types'
 import type { SystemFile } from '@/types/system'
@@ -249,6 +269,7 @@ import FileGrid from './components/FileGrid.vue'
 import FileDetailDrawer from './components/FileDetailDrawer.vue'
 import FileUploadQueue from './components/FileUploadQueue.vue'
 import FileExplorerLayout from './components/FileExplorerLayout.vue'
+import ConfirmDeleteByNameDialog from './components/ConfirmDeleteByNameDialog.vue'
 
 const { t } = useI18n()
 
@@ -273,6 +294,11 @@ const {
     openFolderDialog,
     submitFolderDialog,
     handleFolderCommand,
+    showFolderDeleteDialog,
+    folderDeleteLoading,
+    folderDeleteName,
+    folderDeleteWarning,
+    confirmDeleteFolder,
 } = useFileFolder({
     onSelectFolder: () => {
         selectedFiles.value = []
@@ -376,7 +402,6 @@ const {
     toggleUploadQueueExpanded,
     openUploadPicker,
     openUploadDirectoryPicker,
-    clearTasks,
     retryUploadTask,
     handleFileInputChange,
     handleDirectoryInputChange,
@@ -430,6 +455,12 @@ const {
     handleBatchDelete,
     handleBatchRestore,
     handleBatchDestroy,
+    showDeleteConfirmDialog,
+    deleteConfirmLoading,
+    deleteConfirmName,
+    deleteConfirmWarning,
+    deleteConfirmReferences,
+    confirmForceDelete,
 } = useFileOperations({
     selectedFolderId,
     getList,
@@ -537,12 +568,13 @@ const isImageFile = (row?: SystemFile) => {
 
 const getFileThumbnailUrl = (row?: SystemFile) => {
     if (!row) return ''
-    return row.thumbnail_url || row.url || ''
+    return row.thumbnail_url || row.url || (row.uuid ? getImageUrl(row.uuid) : '')
 }
 
 const getFilePreviewList = (row?: SystemFile) => {
-    if (!row?.url) return []
-    return [row.url]
+    if (!row) return []
+    const url = row.url || (row.uuid ? getImageUrl(row.uuid) : '')
+    return url ? [url] : []
 }
 
 const getStorageDriverLabel = (value?: string) => storageDriverOptions.value.find((item) => item.value === value)?.label || value || '-'
@@ -624,6 +656,7 @@ const columns = computed(
             { prop: 'storage_driver', label: t('system.file.storageDriver'), h_label: t('system.file.storageDriver'), width: 130, align: 'center', type: 'custom' },
             { prop: 'storage_status', label: t('system.file.storageStatus'), h_label: t('system.file.storageStatus'), width: 130, align: 'center', type: 'custom' },
             { prop: 'reference_count', label: t('system.file.referenceCount'), h_label: t('system.file.referenceCount'), width: 110, align: 'center', type: 'custom' },
+            { prop: 'uploader_name', label: t('system.file.uploaderName'), h_label: t('system.file.uploaderName'), width: 120, align: 'center', formatter: (row) => row.uploader_name || row.uploader_username || '-' },
             { prop: 'uuid', label: t('system.file.uuid'), h_label: t('system.file.uuid'), minWidth: 260, overflow: true },
             { prop: 'created_at', label: t('common.labels.createdAt'), h_label: t('common.labels.createdAt'), width: 180, align: 'center' },
         ] as ProTableColumns<SystemFile>

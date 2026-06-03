@@ -45,17 +45,20 @@
                         <el-descriptions-item :label="t('system.file.storageDriver')">{{ getStorageDriverLabel(file.storage_driver) }}</el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.storageStatus')">{{ file.storage_status_name || file.storage_status || '-' }}</el-descriptions-item>
                         <el-descriptions-item v-if="isLocalStorageFile(file)" :label="t('system.file.actualPath')" :span="2">
-                            <code class="detail-code">{{ buildActualLocalPath(file) || '-' }}</code>
+                            <span class="detail-text-mono">{{ buildActualLocalPath(file) || '-' }}</span>
                         </el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.bucket')">{{ file.bucket || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.objectKey')">{{ file.object_key || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isLocalStorageFile(file)" :label="t('system.file.bucket')" :span="2">{{ file.bucket || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isLocalStorageFile(file)" :label="t('system.file.objectKey')" :span="2">
+                            <span class="detail-text-mono">{{ file.object_key || '-' }}</span>
+                        </el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.uploadSource')">{{ file.upload_source_name || file.upload_source || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.file.uploaderName')">{{ file.uploader_name || file.uploader_username || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.uploadStatus')">{{ file.upload_status_name || file.upload_status || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.uuid')" :span="2">
-                            <code class="detail-code">{{ file.uuid || '-' }}</code>
+                            <span class="detail-text-mono">{{ file.uuid || '-' }}</span>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.hash')" :span="2">
-                            <code class="detail-code">{{ file.hash || '-' }}</code>
+                            <span class="detail-text-mono">{{ file.hash || '-' }}</span>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('common.labels.createdAt')">{{ file.created_at || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('common.labels.updatedAt')">{{ file.updated_at || '-' }}</el-descriptions-item>
@@ -270,10 +273,22 @@ const getStorageStatusTagType = (value?: string) => {
 
 .modern-descriptions {
     :deep(.el-descriptions__label) {
-        width: 120px;
+        width: 100px;
         // !important 用于覆盖 EP el-descriptions 自身高优先级样式
         background-color: var(--el-fill-color-light) !important;
         font-weight: 600;
+    }
+
+    :deep(.el-descriptions__content) {
+        word-break: break-all;
+        min-width: 160px;
+    }
+
+    // 限制第一列非跨列内容单元格的宽度，将第一列的宽度收窄，使第二列有足够空间展示 UUID
+    :deep(td.el-descriptions__content:nth-child(2)) {
+        &:not([colspan='2']):not([colspan='3']):not([colspan='4']) {
+            width: 165px;
+        }
     }
 }
 
@@ -281,6 +296,11 @@ const getStorageStatusTagType = (value?: string) => {
     background: var(--el-fill-color-light);
     padding: 2px 6px;
     border-radius: var(--xl-radius-sm);
+    font-family: monospace;
+    font-size: var(--xl-font-sm);
+}
+
+.detail-text-mono {
     font-family: monospace;
     font-size: var(--xl-font-sm);
 }

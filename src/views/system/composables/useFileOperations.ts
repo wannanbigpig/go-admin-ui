@@ -46,6 +46,14 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
     const activeReferences = ref<SystemFileReference[]>([])
     const referencesDialogTitle = ref('')
 
+    // 引用文件删除确认弹窗状态
+    const showDeleteConfirmDialog = ref(false)
+    const deleteConfirmLoading = ref(false)
+    const deleteConfirmName = ref('')
+    const deleteConfirmWarning = ref('')
+    const deleteConfirmReferences = ref<SystemFileReference[]>([])
+    const pendingDeleteFile = ref<SystemFile | null>(null)
+
     const showTrashDialog = ref(false)
     const trashList = ref<SystemFile[]>([])
     const trashLoading = ref(false)
@@ -149,23 +157,6 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         return []
     }
 
-    const getErrorMessage = (error: unknown) => {
-        if (!error || typeof error !== 'object') return ''
-        const record = error as Record<string, unknown>
-        const response = record.response as Record<string, unknown> | undefined
-        const data = response?.data as Record<string, unknown> | undefined
-        return String(data?.msg || data?.message || record.message || '')
-    }
-
-    const showReferenceBlockInfo = (error: unknown) => {
-        const references = findReferencesInError(error)
-        if (references.length === 0) return false
-        activeReferences.value = references
-        referencesDialogTitle.value = getErrorMessage(error) || t('system.file.deleteBlockedTitle')
-        showReferencesDialog.value = true
-        return true
-    }
-
     const openReferencesDialog = async (row: SystemFile) => {
         referencesDialogTitle.value = t('system.file.referencesTitle', { name: row.origin_name || row.uuid || row.id })
         activeReferences.value = []
@@ -243,11 +234,35 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
             await getList()
         } catch (error) {
             if (error === 'cancel' || error === 'close') return
-            if (!showReferenceBlockInfo(error)) {
-                Logger.error('删除文件资源失败:', error)
+            // 有引用：弹出输入名称确认弹窗
+            const references = findReferencesInError(error)
+            if (references.length > 0) {
+                deleteConfirmReferences.value = references
+                deleteConfirmWarning.value = t('system.file.deleteReferencedConfirm', { count: references.length })
+                deleteConfirmName.value = row.origin_name
+                pendingDeleteFile.value = row
+                showDeleteConfirmDialog.value = true
+                return
             }
+            Logger.error('删除文件资源失败:', error)
         } finally {
             deletingId.value = null
+        }
+    }
+
+    const confirmForceDelete = async () => {
+        const file = pendingDeleteFile.value
+        if (!file) return
+        deleteConfirmLoading.value = true
+        try {
+            await removeSystemFile(file.id, true)
+            ElMessage.success(t('common.result.deleteSuccess'))
+            showDeleteConfirmDialog.value = false
+            await getList()
+        } catch (error) {
+            Logger.error('强制删除文件资源失败:', error)
+        } finally {
+            deleteConfirmLoading.value = false
         }
     }
 
@@ -364,6 +379,12 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         trashPagination,
         selectedTrashFiles,
         batchTrashOperating,
+        showDeleteConfirmDialog,
+        deleteConfirmLoading,
+        deleteConfirmName,
+        deleteConfirmWarning,
+        deleteConfirmReferences,
+        confirmForceDelete,
         handleSelectionChange,
         handleTrashSelectionChange,
         openBatchMoveDialog,

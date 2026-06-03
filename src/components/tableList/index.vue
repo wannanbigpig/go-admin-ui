@@ -19,6 +19,7 @@
                 :lazy="lazy"
                 :load="load"
                 :tree-props="treeProps"
+                :height="height"
                 @selection-change="handleSelectionChange"
                 @sort-change="handleSortChange"
             >
@@ -88,6 +89,7 @@ interface Props {
     load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
     selectable?: boolean
+    height?: string | number
     pagination?: {
         total: number
         page?: number
