@@ -129,9 +129,20 @@ export function useRequestLogPage() {
 
     const getRequestKindTagType = (kind?: RequestKind) => REQUEST_KIND_OPTIONS.find((item) => item.value === kind)?.type || 'info'
     const getExecutionTimeScopeTagType = (scope?: ExecutionTimeScope) => EXECUTION_TIME_SCOPE_OPTIONS.find((item) => item.value === scope)?.type || 'info'
-    const formatExecutionTimeDisplay = (row?: Pick<RequestLog, 'execution_time' | 'execution_time_unit'> | null) => {
-        if (!row || row.execution_time === null || row.execution_time === undefined) return '-'
-        return `${row.execution_time} ${row.execution_time_unit || 'ms'}`
+    const formatExecutionTimeDisplay = (row?: Pick<RequestLog, 'execution_time_us'> | null) => {
+        if (!row || row.execution_time_us === null || row.execution_time_us === undefined) return '-'
+        const us = Number(row.execution_time_us)
+        if (Number.isNaN(us)) return '-'
+        // < 1ms 显示微秒，< 1s 显示毫秒，< 60s 显示秒（保留两位小数）
+        if (us < 1_000) return `${us} μs`
+        if (us < 1_000_000) return `${(us / 1_000).toFixed(2)} ms`
+        if (us < 60_000_000) return `${(us / 1_000_000).toFixed(2)} s`
+        // ≥ 60s 按时分秒展示：不足 1 小时显示 Xm Ys，超过 1 小时显示 Xh Ym Zs
+        const totalSeconds = Math.floor(us / 1_000_000)
+        const h = Math.floor(totalSeconds / 3600)
+        const m = Math.floor((totalSeconds % 3600) / 60)
+        const s = totalSeconds % 60
+        return h > 0 ? `${h}h${m}m${s}s` : `${m}m${s}s`
     }
 
     return {

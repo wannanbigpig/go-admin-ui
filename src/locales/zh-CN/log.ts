@@ -22,7 +22,6 @@ export default {
         operationApi: '操作接口',
         duration: '耗时',
         durationMs: '耗时(ms)',
-        executionTimeUnit: '耗时单位',
         executionTimeScope: '耗时语义',
         selectExecutionTimeScope: '请选择耗时语义',
         executionTimeScopeAll: '全部',

@@ -19,8 +19,7 @@ export interface RequestLog extends WithId {
     ip: string
     ip_location: string
     jwt_id?: string
-    execution_time: number
-    execution_time_unit?: string
+    execution_time_us: number
     execution_time_scope?: ExecutionTimeScope
     response_status: number
     browser?: string

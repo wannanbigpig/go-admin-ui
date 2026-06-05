@@ -22,7 +22,6 @@ export default {
         operationApi: 'Operation API',
         duration: 'Duration',
         durationMs: 'Duration (ms)',
-        executionTimeUnit: 'Duration Unit',
         executionTimeScope: 'Duration Scope',
         selectExecutionTimeScope: 'Please select duration scope',
         executionTimeScopeAll: 'All',

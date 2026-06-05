@@ -111,7 +111,7 @@
                     <el-tag v-if="val !== null && val !== undefined && val !== ''" :type="getResponseStatusTagType(Number(val))">{{ val }}</el-tag>
                     <span v-else>-</span>
                 </template>
-                <template v-else-if="item.prop === 'execution_time'">
+                <template v-else-if="item.prop === 'execution_time_us'">
                     <div class="request-log-duration">
                         <span>{{ formatExecutionTimeDisplay(row) }}</span>
                         <el-tag size="small" effect="plain" :type="getExecutionTimeScopeTagType(row.execution_time_scope)">
@@ -158,7 +158,6 @@
                             </el-tag>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('log.request.duration')">{{ formatExecutionTimeDisplay(currentDetail) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.executionTimeUnit')">{{ currentDetail.execution_time_unit || 'ms' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('log.request.executionTimeScope')">
                             <el-tag v-if="currentDetail.execution_time_scope" size="small" effect="plain" :type="getExecutionTimeScopeTagType(currentDetail.execution_time_scope)">
                                 {{ getExecutionTimeScopeText(currentDetail.execution_time_scope) }}
@@ -216,6 +215,7 @@ import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
 import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
 import { getAdminUserOptions, type AdminUserOption } from '@/api/adminUser'
+import { normalizeArrayData } from '@/modules/shared/response'
 import { Logger } from '@/utils/logger'
 import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, LOG_METHOD_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
 import type { TableColumn } from '@/types/common'
@@ -276,7 +276,7 @@ const operatorLoading = ref(false)
 const remoteSearchOperators = async (keyword: string) => {
     operatorLoading.value = true
     try {
-        operatorOptions.value = await getAdminUserOptions(keyword)
+        operatorOptions.value = normalizeArrayData<AdminUserOption>(await getAdminUserOptions(keyword))
     } catch (error) {
         Logger.error('搜索操作人失败:', error)
         operatorOptions.value = []
@@ -372,7 +372,7 @@ const tableTitle = computed(
                 width: 120,
                 customRow: true,
             },
-            { prop: 'execution_time', h_label: t('log.request.duration'), align: 'center', width: 220, sortable: 'custom', customRow: true },
+            { prop: 'execution_time_us', h_label: t('log.request.duration'), align: 'center', width: 220, sortable: 'custom', customRow: true },
             { prop: 'created_at', h_label: t('log.request.createdAt'), align: 'center', width: 160, sortable: 'custom' },
         ] as TableColumn<RequestLog>[]
 )
