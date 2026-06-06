@@ -247,7 +247,11 @@ const handleExportDownload = async (row: ExportRecord) => {
         }
 
         if (row.download_url) {
-            globalThis.open(row.download_url, '_blank', 'noopener')
+            if (!/^https?:\/\//.test(row.download_url)) {
+                ElMessage.error(t('common.result.operationFailed'))
+                return
+            }
+            globalThis.open(row.download_url, '_blank', 'noopener,noreferrer')
         }
     } catch (error) {
         Logger.error('打开导出文件失败:', error)

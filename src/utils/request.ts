@@ -166,6 +166,20 @@ service.interceptors.response.use(
         return handleApiResponse(response, authErrorMode)
     },
     async (error: AxiosError<ApiResponse<unknown>>) => {
+        // 401 优先处理：无论响应体格式（JSON/HTML/空），都触发过期处理。
+        // 反向代理、网关可能返回非 JSON 的 401，必须在 isApiPayload 之前拦截。
+        if (error.response?.status === 401) {
+            const config = getAxiosRequestConfig(error)
+            const authErrorMode = config?.authErrorMode ?? 'session'
+            if (authErrorMode === 'credential') {
+                // 登录凭证失败：不触发过期弹窗，直接拒绝
+                return Promise.reject(error.response?.data ?? error)
+            }
+            const authStore = useAuthStore()
+            authStore.handleTokenExpired()
+            return Promise.reject(error.response?.data ?? error)
+        }
+
         // 如果响应体是 API payload（{ code, msg, data }），走 handleApiResponse 统一处理
         if (error.response?.data && isApiPayload(error.response.data)) {
             const config = getAxiosRequestConfig(error)

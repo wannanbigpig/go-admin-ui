@@ -30,6 +30,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
             { type: 'enum', enum: [API_PERMISSION_AUTH_MODE.NONE, API_PERMISSION_AUTH_MODE.LOGIN, API_PERMISSION_AUTH_MODE.AUTHZ], message: translate('permission.api.form.authModeInvalid'), trigger: 'change' },
         ],
         sort: [{ trigger: 'blur', type: 'number', message: translate('permission.api.form.sortInvalid') }],
+        is_effective: [{ required: true, message: translate('permission.api.form.effectiveRequired'), trigger: 'change' }],
     }))
 
     const resetFormData = () => {

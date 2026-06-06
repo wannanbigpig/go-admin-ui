@@ -177,18 +177,19 @@ export const useAuthStore = defineStore(
          */
         const updateToken = (token: string, exp: number, newRefreshToken?: string, newRefreshExpiresAt?: number) => {
             // 单调递增校验，防止并发响应旧的刷新 token 覆盖了更新的版本
+            // access_token + refresh_token 作为原子对一起更新，避免内存与 localStorage 不同步
             if (exp > expires_at.value) {
                 access_token.value = token
                 expires_at.value = exp
                 authStateVersion.value++
-            }
-            if (newRefreshToken !== undefined) {
-                refresh_token.value = newRefreshToken
-                localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
-            }
-            if (newRefreshExpiresAt !== undefined) {
-                refresh_expires_at.value = newRefreshExpiresAt
-                localStorage.setItem(REFRESH_EXPIRES_KEY, String(newRefreshExpiresAt))
+                if (newRefreshToken !== undefined) {
+                    refresh_token.value = newRefreshToken
+                    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
+                }
+                if (newRefreshExpiresAt !== undefined) {
+                    refresh_expires_at.value = newRefreshExpiresAt
+                    localStorage.setItem(REFRESH_EXPIRES_KEY, String(newRefreshExpiresAt))
+                }
             }
         }
 

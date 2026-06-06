@@ -4,10 +4,8 @@ import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { bindDepartmentRoles, fetchDepartmentDetail } from '@/modules/department/service'
 import { DEPARTMENT_SUBMIT_DELAY } from '@/modules/department/model'
-import { getRoleList } from '@/api/permission'
-import { extractListData } from '@/modules/shared/response'
+import { getRoleOptions, type RoleOption } from '@/api/permission'
 import type { Department } from '@/types/department'
-import type { Role } from '@/types/role'
 import { translate } from '@/locales'
 
 interface UseDepartmentRoleBindingOptions {
@@ -19,7 +17,7 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
     const bindRoleFormRef = ref<FormInstance>()
     const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock(DEPARTMENT_SUBMIT_DELAY)
     const currentDeptName = ref('')
-    const roleOptions = ref<Role[]>([])
+    const roleOptions = ref<RoleOption[]>([])
     const roleOptionsLoading = ref(false)
     const roleOptionsLoaded = ref(false)
     const bindRoleData = reactive({
@@ -27,7 +25,7 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
         role_ids: [] as number[],
     })
 
-    const filterRole = (query: string, item: Role) => item.name.toLowerCase().includes(query.toLowerCase())
+    const filterRole = (query: string, item: RoleOption) => item.name.toLowerCase().includes(query.toLowerCase())
 
     const normalizeRoleId = (value: unknown): number | null => {
         if (value === null || value === undefined || value === '') return null
@@ -48,10 +46,9 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
             .filter((item): item is number => item !== null)
     }
 
-    const getRoleOptions = async () => {
-        const response = await getRoleList({ page: 1, per_page: 999 })
-        const list = extractListData<Role>(response)
-        roleOptions.value = list.reduce<Role[]>((result, role) => {
+    const fetchRoleOptions = async () => {
+        const list = await getRoleOptions()
+        roleOptions.value = list.reduce<RoleOption[]>((result, role) => {
             const roleId = normalizeRoleId(role.id)
             if (roleId === null) return result
             result.push({
@@ -76,7 +73,7 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
 
         if (!roleOptionsLoaded.value || roleOptions.value.length === 0) {
             roleOptionsLoading.value = true
-            getRoleOptions()
+            fetchRoleOptions()
                 .then(() => {
                     roleOptionsLoaded.value = true
                 })
@@ -99,13 +96,21 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
         }
     }
 
+    const bindRoleRules = {
+        role_ids: [{ type: 'array', required: true, message: translate('common.placeholders.selectRole'), trigger: 'change' }],
+    }
+
     const bindRoleConfirmSubmit = async () => {
+        await bindRoleFormRef.value?.validate().catch(() => {
+            /* 校验不通过时静默中断 */
+        })
         await runWithSubmitLock(async () => {
             await bindDepartmentRoles(bindRoleData.id, normalizeRoleIds(bindRoleData.role_ids))
             ElMessage.success(translate('common.result.bindRoleSuccess'))
             showBindRoleDrawer.value = false
             await refreshList()
         }).catch((error) => {
+            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('绑定角色失败:', error)
         })
     }
@@ -118,6 +123,7 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
         roleOptions,
         roleOptionsLoading,
         bindRoleData,
+        bindRoleRules,
         filterRole,
         handleBindRole,
         bindRoleConfirmSubmit,

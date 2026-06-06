@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FormInstance } from 'element-plus'
+import { ElMessage, type FormInstance } from 'element-plus'
 import { Logger } from '@/utils/logger'
 import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
@@ -94,6 +94,7 @@ const handleConfirm = async () => {
         try {
             await props.onConfirm()
         } catch (error) {
+            ElMessage.error(t('common.result.operationFailed'))
             Logger.error('Drawer onConfirm error:', error)
         }
     } else {

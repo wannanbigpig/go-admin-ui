@@ -4,14 +4,6 @@ import type { LocaleCode } from '@/types/i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-export interface SettingState {
-    isCollapse: boolean
-    watermarkEnabled: boolean
-    watermarkContent: string
-    theme: ThemeMode
-    locale: LocaleCode
-}
-
 export const useSettingStore = defineStore(
     'setting',
     () => {

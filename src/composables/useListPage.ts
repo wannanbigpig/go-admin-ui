@@ -141,14 +141,16 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
     const handleReset = async (options: ResetOptions = {}) => {
         const { refetch = true } = options
 
+        // 先重置表单字段到挂载时的初始值（Element Plus resetFields 语义），
+        // 再用 initialQuery/defaultQuery 覆盖，确保最终状态正确。
+        if (queryFormRef?.value) {
+            queryFormRef.value.resetFields()
+        }
+
         Object.assign(query, JSON.parse(JSON.stringify(initialQuery)))
 
         if (defaultQuery) {
             Object.assign(query, JSON.parse(JSON.stringify(defaultQuery)))
-        }
-
-        if (queryFormRef?.value) {
-            queryFormRef.value.resetFields()
         }
 
         if (refetch) {

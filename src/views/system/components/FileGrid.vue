@@ -55,7 +55,7 @@
             </div>
 
             <div class="item-icon-box">
-                <el-image v-if="isImageFile(file) && getFileThumbnailUrl(file)" :src="getFileThumbnailUrl(file)" fit="cover" class="grid-thumbnail" lazy>
+                <el-image v-if="isImageFile(file) && getFileThumbnailUrl(file)" :src="getFileThumbnailUrl(file)" fit="cover" class="grid-thumbnail" lazy :alt="file.origin_name || ''">
                     <template #placeholder>
                         <div class="image-slot">
                             <el-icon><Picture /></el-icon>

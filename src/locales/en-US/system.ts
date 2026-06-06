@@ -72,6 +72,7 @@ export default {
     },
     file: {
         title: 'File Resources',
+        sidebarToggle: 'Toggle Sidebar',
         searchFile: 'Search files...',
         detailTitle: 'File Resource Detail',
         loadingText: 'Loading...',
@@ -379,6 +380,9 @@ export default {
         listHint: 'Items stay collapsed by default and can only be expanded, marked read, or opened via explicit buttons.',
         category: 'Category',
         readStatus: 'Read Status',
+        selectCategory: 'Select category',
+        selectReadStatus: 'Select read status',
+        selectToView: 'Select a message to view details',
         manageTitle: 'Notification Manage',
         manageSubtitle: 'Send system or business notifications to administrators with real-time push and quick actions.',
         manageEntry: 'Manage Notifications',

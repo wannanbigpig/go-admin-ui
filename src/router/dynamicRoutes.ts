@@ -131,8 +131,9 @@ export function findFirstValidRoute(routes: RouteRecordRaw[]): string {
             const childPath = findFirstValidRoute(route.children)
             if (childPath) return childPath
         }
-        if (route.path && !route.path.startsWith('http') && route.component) {
-            return route.path
+        // 允许 path 为空但有 component 的路由（如首页）
+        if (!route.path?.startsWith('http') && route.component) {
+            return route.path || ''
         }
     }
     return ''

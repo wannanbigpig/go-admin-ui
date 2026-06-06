@@ -1,4 +1,4 @@
-export default {
+module.exports = {
     appName: 'X-L-Admin',
     to: '至',
     yes: '是',
@@ -26,8 +26,6 @@ export default {
         expandAll: '全部展开',
         collapseAll: '全部折叠',
         clear: '清空',
-        retry: '重试',
-        toggleVisibility: '切换显示/隐藏',
     },
     labels: {
         basicInfo: '基础信息',
@@ -88,7 +86,6 @@ export default {
         drawerExit: '已填写数据将会重置，确认退出{formTitle}吗？',
     },
     result: {
-        loading: '数据加载中，请稍候...',
         deleteSuccess: '删除成功',
         deleteFailed: '删除失败',
         logoutSuccess: '退出成功',
@@ -103,14 +100,10 @@ export default {
         updateSuccess: '修改成功',
         uploadSuccess: '上传成功',
         uploadFailed: '上传失败',
-        renderError: '页面渲染出错',
-        renderErrorMessage: '抱歉，页面发生了未知错误，请尝试刷新或返回首页。',
-        goHome: '返回首页',
     },
     i18n: {
         dialogTitle: '编辑多语言内容',
         filledStatus: '已填写 {filled}/{total} 种语言',
         localePlaceholder: '请输入 {lang} 内容',
-        loadFailed: '多语言数据加载失败',
     },
 }

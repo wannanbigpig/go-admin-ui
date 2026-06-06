@@ -9,7 +9,7 @@
                         <div class="profile-sidebar-bg"></div>
                         <div class="profile-sidebar-content">
                             <div class="profile-avatar-wrapper">
-                                <el-avatar :size="110" :src="getImageUrl(String(userInfo.avatar ?? ''))" shape="circle" class="profile-avatar">
+                                <el-avatar :size="110" :src="getImageUrl(String(userInfo.avatar ?? ''))" shape="circle" class="profile-avatar" :alt="userInfo.nickname || ''">
                                     <el-icon size="70">
                                         <i-ep-avatar />
                                     </el-icon>

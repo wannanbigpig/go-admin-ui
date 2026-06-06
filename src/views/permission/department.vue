@@ -1,20 +1,21 @@
 <template>
     <div>
         <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
+            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearchWrapper" @keydown.enter.prevent="handleSearchWrapper">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
                         <el-form-item :label="t('permission.department.name')" prop="name">
                             <el-input :placeholder="t('permission.department.namePlaceholder')" v-model.trim="queryWhere.name" clearable></el-input>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearchWrapper" :onReset="handleResetWrapper" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
 
         <div class="xl-container">
             <div class="xl-table-actions">
+                <el-button @click="handleToggleExpand">{{ isExpanded ? t('common.actions.collapseAll') : t('common.actions.expandAll') }}</el-button>
                 <xl-action-button v-permission="'department:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1, null, null)" />
             </div>
             <div>
@@ -80,7 +81,7 @@
         <!-- 绑定角色抽屉 -->
         <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.department.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
             <el-skeleton v-if="roleOptionsLoading" animated />
-            <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto">
+            <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto" :rules="bindRoleRules">
                 <el-form-item :label="t('permission.department.name')">
                     <el-input :value="currentDeptName" disabled></el-input>
                 </el-form-item>
@@ -114,6 +115,7 @@ import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/const
 import { isProtectedDepartment } from '@/modules/department/model'
 import { removeDepartment } from '@/modules/department/service'
 import { useDepartmentTreeList } from '@/modules/department/useDepartmentTreeList'
+import { useDepartmentTreeExpand } from '@/modules/department/useDepartmentTreeExpand'
 import { useDepartmentForm } from '@/modules/department/useDepartmentForm'
 import { useDepartmentRoleBinding } from '@/modules/department/useDepartmentRoleBinding'
 import type { Department } from '@/types/department'
@@ -128,11 +130,29 @@ const bindRoleButtonInfo = getButtonInfoFull('department:bindRole')
 const deleteButtonInfo = getButtonInfoFull('department:delete')
 const { t } = useI18n()
 
-const tableListRef = ref(null)
+const tableListRef = ref<{
+    toggleRowExpansion: (row: Department, expanded?: boolean) => void
+} | null>(null)
 const { loading, departmentList, departmentOptions, queryFormRef, queryWhere, getList, handleSearch, handleReset, getChildrenIds } = useDepartmentTreeList(tableListRef)
+
+const { isExpanded, handleToggleExpand, resetExpanded } = useDepartmentTreeExpand({
+    departmentList,
+    tableListRef,
+})
+
+const handleSearchWrapper = () => {
+    resetExpanded()
+    handleSearch()
+}
+
+const handleResetWrapper = () => {
+    resetExpanded()
+    handleReset()
+}
+
 const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, isProtectedEditingDepartment, formData, getDynamicRules, filteredParentOptions, openEditDrawer, handleAddChild, editConfirmSubmit } =
     useDepartmentForm({ departmentOptions, getChildrenIds, refreshList: getList })
-const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentDeptName, roleOptions, roleOptionsLoading, bindRoleData, filterRole, handleBindRole, bindRoleConfirmSubmit } = useDepartmentRoleBinding({
+const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentDeptName, roleOptions, roleOptionsLoading, bindRoleData, bindRoleRules, filterRole, handleBindRole, bindRoleConfirmSubmit } = useDepartmentRoleBinding({
     refreshList: getList,
 })
 

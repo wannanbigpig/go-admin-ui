@@ -330,17 +330,21 @@ export const useNotificationStore = defineStore(
                         if (!normalized) return
                         upsertNotification(normalized, !normalized.read)
                     })
-                    const lastUnreadCount = Number(payload.unread_count ?? 0)
-                    if (!Number.isNaN(lastUnreadCount) && lastUnreadCount >= 0) {
-                        unreadCount.value = lastUnreadCount
+                    if (payload.unread_count != null) {
+                        const lastUnreadCount = Number(payload.unread_count)
+                        if (!Number.isNaN(lastUnreadCount) && lastUnreadCount >= 0) {
+                            unreadCount.value = lastUnreadCount
+                        }
                     }
                     return
                 }
 
                 if (applyRealtimeReadState(payload, notifications.value)) {
-                    const unread = Number(payload.unread_count ?? 0)
-                    if (!Number.isNaN(unread) && unread >= 0) {
-                        unreadCount.value = unread
+                    if (payload.unread_count != null) {
+                        const unread = Number(payload.unread_count)
+                        if (!Number.isNaN(unread) && unread >= 0) {
+                            unreadCount.value = unread
+                        }
                     }
                     return
                 }
@@ -348,9 +352,11 @@ export const useNotificationStore = defineStore(
                 const normalized = normalizeSocketPayload(payload)
                 if (!normalized) return
                 upsertNotification(normalized, !normalized.read)
-                const unread = Number(payload.unread_count ?? 0)
-                if (!Number.isNaN(unread) && unread >= 0) {
-                    unreadCount.value = unread
+                if (payload.unread_count != null) {
+                    const unread = Number(payload.unread_count)
+                    if (!Number.isNaN(unread) && unread >= 0) {
+                        unreadCount.value = unread
+                    }
                 }
             } catch (error) {
                 Logger.error('解析通知 WebSocket 消息失败:', error)

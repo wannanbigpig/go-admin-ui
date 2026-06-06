@@ -135,8 +135,10 @@ const handleRevoke = async (row: OnlineSession) => {
         await revokeOnlineSessionById(row.id, value || '')
         ElMessage.success(t('common.result.operationSuccess'))
         await getList()
-    } catch {
-        // noop
+    } catch (error) {
+        if (error === 'cancel' || error === 'close') return
+        ElMessage.error(t('common.result.operationFailed'))
+        Logger.error('撤销会话失败:', error)
     } finally {
         revokingId.value = null
     }

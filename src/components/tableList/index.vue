@@ -19,6 +19,7 @@
                 :lazy="lazy"
                 :load="load"
                 :tree-props="treeProps"
+                :default-expand-all="defaultExpandAll"
                 :height="height"
                 @selection-change="handleSelectionChange"
                 @sort-change="handleSortChange"
@@ -88,6 +89,7 @@ interface Props {
     lazy?: boolean
     load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
+    defaultExpandAll?: boolean
     selectable?: boolean
     height?: string | number
     pagination?: {
@@ -108,6 +110,7 @@ const props = withDefaults(defineProps<Props>(), {
     rowKey: 'id',
     lazy: false,
     treeProps: () => ({ children: 'children', hasChildren: 'hasChildren' }),
+    defaultExpandAll: false,
     selectable: false,
     pagination: () => ({}) as NonNullable<Props['pagination']>,
 })

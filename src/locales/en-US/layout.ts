@@ -46,6 +46,7 @@ export default {
         zhCN: 'Simplified Chinese',
         enUS: 'English',
     },
+    toggleSidebar: 'Toggle Sidebar',
     more: 'More',
     noPermission: 'No permission',
     footer: {

@@ -78,12 +78,19 @@
                         </el-tag>
                     </template>
                     <template v-else-if="getCellType(scope.item) === 'avatar'">
-                        <el-avatar :src="String(scope.val ?? '')" :size="28" />
+                        <el-avatar :src="String(scope.val ?? '')" :size="28" :alt="String(scope.val ?? '')" />
                     </template>
                     <template v-else-if="getCellType(scope.item) === 'eye'">
                         <span class="xl-pro-table__eye">
                             <span>{{ revealMap[String(scope.row?.id ?? scope.item.prop)] ? scope.val : '••••••' }}</span>
-                            <el-icon class="xl-cursor-pointer xl-m-left-10" @click="toggleReveal(scope.row, scope.item)">
+                            <el-icon
+                                class="xl-cursor-pointer xl-m-left-10"
+                                role="button"
+                                tabindex="0"
+                                :aria-label="t('common.actions.toggleVisibility')"
+                                @click="toggleReveal(scope.row, scope.item)"
+                                @keydown.enter="toggleReveal(scope.row, scope.item)"
+                            >
                                 <i-ep-view />
                             </el-icon>
                         </span>

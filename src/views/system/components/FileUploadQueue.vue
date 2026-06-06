@@ -2,7 +2,7 @@
     <div>
         <!-- 最小化悬浮球：页面常驻，默认最小化 -->
         <div v-if="minimized" class="floating-upload-badge" @click="minimized = false">
-            <el-tooltip :content="t('system.file.uploadTasks') || '上传队列'" placement="top">
+            <el-tooltip :content="t('system.file.uploadTasks')" placement="top">
                 <el-badge :value="activeTasksCount" :hidden="activeTasksCount === 0" type="primary">
                     <div class="badge-icon-wrapper" :class="{ 'is-uploading': uploading }">
                         <el-icon :size="24"><Upload /></el-icon>
@@ -48,7 +48,7 @@
                 </template>
                 <!-- 无任务时常驻显示空状态 -->
                 <div v-else class="queue-empty">
-                    <el-empty :description="t('common.noData') || '暂无上传任务'" :image-size="48" />
+                    <el-empty :description="t('common.noData')" :image-size="48" />
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 <template>
-    <iframe :src="iframeSrc" frameborder="0" width="100%" height="100%" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <iframe :src="iframeSrc" frameborder="0" width="100%" height="100%" allowfullscreen sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer-when-downgrade"></iframe>
 </template>
 
 <script setup lang="ts">

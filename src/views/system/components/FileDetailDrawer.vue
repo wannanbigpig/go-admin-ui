@@ -5,7 +5,15 @@
                 <!-- 顶部文件概览 -->
                 <div class="file-detail-header">
                     <div class="header-icon">
-                        <el-image v-if="isImageFile(file) && file.url" :src="file.thumbnail_url || file.url" fit="cover" class="detail-thumbnail" :preview-src-list="[file.url]" preview-teleported />
+                        <el-image
+                            v-if="isImageFile(file) && file.url"
+                            :src="file.thumbnail_url || file.url"
+                            fit="cover"
+                            class="detail-thumbnail"
+                            :preview-src-list="[file.url]"
+                            preview-teleported
+                            :alt="file.origin_name || ''"
+                        />
                         <div v-else class="detail-icon-placeholder">
                             <el-icon :size="48" color="var(--el-text-color-placeholder)"><Document /></el-icon>
                             <span class="detail-ext" v-if="file.ext">{{ String(file.ext).toUpperCase() }}</span>
@@ -35,7 +43,16 @@
                     </div>
                     <el-descriptions :column="2" border size="small" class="modern-descriptions">
                         <el-descriptions-item :label="t('system.file.url')" :span="2">
-                            <el-link v-if="file.url" :href="file.url" target="_blank" type="primary" class="detail-link">{{ file.url }}</el-link>
+                            <el-link
+                                v-if="file.url"
+                                :href="isSafeUrl(file.url) ? file.url : undefined"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                type="primary"
+                                class="detail-link"
+                                @click.prevent="handleOpenFileUrl(file.url)"
+                                >{{ file.url }}</el-link
+                            >
                             <span v-else>-</span>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.size')">{{ formatFileSize(file.size) }}</el-descriptions-item>
@@ -100,6 +117,7 @@
 import { Document, InfoFilled, Link } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import type { SystemFile, SystemFileReference } from '@/types/system'
 
 const { t } = useI18n()
@@ -137,6 +155,16 @@ const isLocalStorageFile = (file: SystemFile) => {
 
 const buildActualLocalPath = (file: SystemFile) => {
     return String(file.storage_path || file.path || '').replace(/^\/+/, '')
+}
+
+const isSafeUrl = (url?: string) => /^https?:\/\//.test(url || '')
+
+const handleOpenFileUrl = (url?: string) => {
+    if (!isSafeUrl(url)) {
+        ElMessage.error(t('common.result.operationFailed'))
+        return
+    }
+    window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 const formatFileSize = (size?: number) => {

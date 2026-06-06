@@ -422,6 +422,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             }
             await refreshParentNodeChildren(parentId)
         }).catch((error) => {
+            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
         })
     }

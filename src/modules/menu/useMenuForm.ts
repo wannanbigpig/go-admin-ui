@@ -365,6 +365,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             showDrawer.value = false
             await getList()
         }).catch((error) => {
+            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
         })
     }

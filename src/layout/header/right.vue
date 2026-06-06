@@ -78,7 +78,7 @@
                     <el-text type="info" size="small" :truncated="true">{{ authStore.userInfo.username }}</el-text>
                 </div>
                 <div class="user-avatar">
-                    <el-avatar :size="AVATAR_CONFIG.SIZE" :src="getImageUrl(authStore.userInfo.avatar || '')" shape="circle">
+                    <el-avatar :size="AVATAR_CONFIG.SIZE" :src="getImageUrl(authStore.userInfo.avatar || '')" shape="circle" :alt="authStore.userInfo.nickname || ''">
                         <i-lucide-user :width="AVATAR_CONFIG.ICON_SIZE" :height="AVATAR_CONFIG.ICON_SIZE" />
                     </el-avatar>
                 </div>

@@ -26,6 +26,8 @@ export default {
         expandAll: 'Expand All',
         collapseAll: 'Collapse All',
         clear: 'Clear',
+        retry: 'Retry',
+        toggleVisibility: 'Toggle visibility',
     },
     labels: {
         basicInfo: 'Basic Info',
@@ -86,6 +88,7 @@ export default {
         drawerExit: 'Unsaved data will be reset. Exit {formTitle}?',
     },
     result: {
+        loading: 'Loading data, please wait...',
         deleteSuccess: 'Deleted successfully',
         deleteFailed: 'Delete failed',
         logoutSuccess: 'Logged out successfully',
@@ -100,10 +103,14 @@ export default {
         updateSuccess: 'Updated successfully',
         uploadSuccess: 'Upload successful',
         uploadFailed: 'Upload failed',
+        renderError: 'Page Render Error',
+        renderErrorMessage: 'Sorry, an unexpected error occurred. Please try refreshing or go back to the home page.',
+        goHome: 'Go Home',
     },
     i18n: {
         dialogTitle: 'Edit multi-language content',
         filledStatus: '{filled}/{total} languages filled',
         localePlaceholder: 'Please enter {lang} content',
+        loadFailed: 'Failed to load language data',
     },
 }

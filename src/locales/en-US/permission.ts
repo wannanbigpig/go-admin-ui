@@ -41,6 +41,7 @@ export default {
             authModeRequired: 'Auth mode is required',
             authModeInvalid: 'Please select a valid auth mode',
             sortInvalid: 'Please enter an integer',
+            effectiveRequired: 'Effective status is required',
         },
     },
     adminUser: {
@@ -82,7 +83,7 @@ export default {
         menuPermission: 'Menu Permissions',
         superAdminDeleteForbidden: 'Super admin role cannot be deleted',
         namePlaceholder: 'Please enter role name',
-        codePlaceholder: 'Please enter role code',
+        codePlaceholder: 'Please enter role code (auto-generated if empty)',
         statusPlaceholder: 'Please select status',
         descriptionPlaceholder: 'Please enter role description',
     },

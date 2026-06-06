@@ -111,6 +111,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
             ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
             await refreshList()
         }).catch((error) => {
+            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
         })
     }

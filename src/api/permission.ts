@@ -4,6 +4,13 @@ import type { PageData } from '@/types/common'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
 
+// 角色选项类型（仅包含下拉所需的最小字段）
+export interface RoleOption {
+    id: number
+    name: string
+    code: string
+}
+
 // 获取权限列表
 export function getPermissionList(params?: Record<string, unknown>) {
     return get<PageData<unknown>>('/v1/permission/list', params)
@@ -118,4 +125,28 @@ export function deleteRole(data: { id: number | string }) {
         apiCache.deleteByPrefix('role:list:')
         return res
     })
+}
+
+// 获取角色选项（供下拉选择器使用）
+export function getRoleOptions(params?: { keyword?: string }) {
+    const key = `role:options:${JSON.stringify(params || {})}`
+    const cached = apiCache.get<RoleOption[]>(key)
+    if (cached) return Promise.resolve(cached)
+
+    const pending = apiCache.getPending<RoleOption[]>(key)
+    if (pending) return pending
+
+    const promise = get<RoleOption[]>('/v1/role/options', params)
+        .then((res) => {
+            apiCache.set(key, res)
+            apiCache.deletePending(key)
+            return res
+        })
+        .catch((err) => {
+            apiCache.deletePending(key)
+            throw err
+        })
+
+    apiCache.setPending(key, promise)
+    return promise
 }

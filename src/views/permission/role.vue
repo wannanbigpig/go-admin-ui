@@ -23,7 +23,7 @@
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item :label="t('permission.role.code')" prop="code" :rules="[{ required: true, message: t('validation.role.codeInputRequired'), trigger: 'blur' }]">
+                        <el-form-item :label="t('permission.role.code')" prop="code">
                             <el-input v-model.trim="formData.code" :placeholder="t('permission.role.codePlaceholder')" :disabled="isEditMode || isSuperAdminEditing"></el-input>
                         </el-form-item>
                     </el-col>

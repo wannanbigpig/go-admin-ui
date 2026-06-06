@@ -46,6 +46,7 @@ export default {
         zhCN: '简体中文',
         enUS: 'English',
     },
+    toggleSidebar: '切换侧边栏',
     more: '更多',
     noPermission: '暂无权限',
     footer: {

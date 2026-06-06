@@ -4,9 +4,7 @@ import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { updateAdminUserRoles, fetchAdminUserDetail } from '@/modules/adminUser/service'
 import { ADMIN_USER_SUBMIT_DELAY } from '@/modules/adminUser/model'
-import { getRoleList } from '@/api/permission'
-import { extractListData } from '@/modules/shared/response'
-import type { Role } from '@/types/role'
+import { getRoleOptions, type RoleOption } from '@/api/permission'
 import type { AdminUser } from '@/types/adminUser'
 import { translate } from '@/locales'
 
@@ -19,7 +17,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
     const bindRoleFormRef = ref<FormInstance>()
     const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock(ADMIN_USER_SUBMIT_DELAY)
     const currentAdminUserName = ref('')
-    const roleOptions = ref<Role[]>([])
+    const roleOptions = ref<RoleOption[]>([])
     const roleOptionsLoading = ref(false)
     const roleOptionsLoaded = ref(false)
     const bindRoleData = reactive({
@@ -29,7 +27,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
     const currentUserIsRootAdmin = ref(false)
     const superAdminRoleId = ref<number | null>(null)
 
-    const filterRole = (query: string, item: Role) => item.name.toLowerCase().includes(query.toLowerCase())
+    const filterRole = (query: string, item: RoleOption) => item.name.toLowerCase().includes(query.toLowerCase())
 
     const normalizeRoleId = (value: unknown): number | null => {
         if (value === null || value === undefined || value === '') return null
@@ -50,10 +48,9 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
             .filter((item): item is number => item !== null)
     }
 
-    const getRoleOptions = async () => {
-        const response = await getRoleList({ page: 1, per_page: 999 })
-        const list = extractListData<Role>(response)
-        roleOptions.value = list.reduce<Role[]>((result, role) => {
+    const fetchRoleOptions = async () => {
+        const list = await getRoleOptions()
+        roleOptions.value = list.reduce<RoleOption[]>((result, role) => {
             const roleId = normalizeRoleId(role.id)
             if (roleId === null) return result
             result.push({
@@ -81,7 +78,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
 
         if (!roleOptionsLoaded.value || roleOptions.value.length === 0) {
             roleOptionsLoading.value = true
-            getRoleOptions()
+            fetchRoleOptions()
                 .then(() => {
                     roleOptionsLoaded.value = true
                 })
@@ -110,11 +107,18 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
         }
     }
 
+    const bindRoleRules = {
+        role_ids: [{ type: 'array', required: true, message: translate('common.placeholders.selectRole'), trigger: 'change' }],
+    }
+
     const bindRoleConfirmSubmit = async () => {
         if (roleOptionsLoading.value) {
             ElMessage.warning(translate('common.result.loading'))
             return
         }
+        await bindRoleFormRef.value?.validate().catch(() => {
+            /* 校验不通过时静默中断 */
+        })
         await runWithSubmitLock(async () => {
             const roleIds = normalizeRoleIds(bindRoleData.role_ids)
             if (currentUserIsRootAdmin.value && superAdminRoleId.value && !roleIds.includes(superAdminRoleId.value)) {
@@ -140,6 +144,7 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
         roleOptions,
         roleOptionsLoading,
         bindRoleData,
+        bindRoleRules,
         filterRole,
         handleBindRole,
         bindRoleConfirmSubmit,

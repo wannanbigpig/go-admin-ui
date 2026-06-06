@@ -268,6 +268,7 @@ const submitForm = async () => {
         showDrawer.value = false
         await getList()
     } catch (error) {
+        ElMessage.error(t('common.result.operationFailed'))
         Logger.error('提交系统参数失败:', error)
     } finally {
         submitting.value = false
@@ -280,8 +281,10 @@ const handleDelete = async (row: SystemConfig) => {
         await removeSystemConfig(row.id)
         ElMessage.success(t('common.result.deleteSuccess'))
         await getList()
-    } catch {
-        // noop
+    } catch (error) {
+        if (error === 'cancel' || error === 'close') return
+        ElMessage.error(t('common.result.operationFailed'))
+        Logger.error('删除系统参数失败:', error)
     }
 }
 

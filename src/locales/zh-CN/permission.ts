@@ -41,6 +41,7 @@ export default {
             authModeRequired: '鉴权模式必填',
             authModeInvalid: '请选择正确的鉴权模式',
             sortInvalid: '请输入整数类型',
+            effectiveRequired: '是否有效必填',
         },
     },
     adminUser: {
@@ -82,7 +83,7 @@ export default {
         menuPermission: '菜单权限',
         superAdminDeleteForbidden: '超级管理员角色不允许删除',
         namePlaceholder: '请输入角色名称',
-        codePlaceholder: '请输入角色标识',
+        codePlaceholder: '请输入角色标识（可留空自动生成）',
         statusPlaceholder: '请选择状态',
         descriptionPlaceholder: '请输入角色描述',
     },

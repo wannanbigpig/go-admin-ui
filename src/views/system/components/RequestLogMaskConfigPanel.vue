@@ -26,7 +26,7 @@
 
         <el-skeleton v-if="loading" animated :rows="8" />
 
-        <el-form v-else ref="formRef" label-position="top" class="request-mask-form">
+        <el-form v-else ref="formRef" :model="maskConfigText" label-position="top" class="request-mask-form">
             <div class="request-mask-layout">
                 <section class="request-mask-section is-full fade-in-up" style="animation-delay: 0.1s">
                     <div class="request-mask-section-header">
@@ -83,7 +83,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, type FormInstance } from 'element-plus'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { useI18n } from 'vue-i18n'
 import { fetchRequestLogMaskConfig, updateRequestLogMaskConfig } from '@/modules/system/service'
@@ -97,6 +97,7 @@ interface Props {
 const { embedded = false } = defineProps<Props>()
 
 const { t } = useI18n()
+const formRef = ref<FormInstance>()
 const loading = ref(false)
 const saving = ref(false)
 const maskConfigText = reactive<Record<keyof RequestLogMaskConfig, string>>({
@@ -163,6 +164,9 @@ const loadConfig = async () => {
 
 const handleSave = async () => {
     if (saving.value) return
+    await formRef.value?.validate().catch(() => {
+        /* 校验不通过时静默中断 */
+    })
 
     saving.value = true
     try {

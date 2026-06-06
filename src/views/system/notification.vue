@@ -6,14 +6,14 @@
                 <el-row id="notificationSearchForm" :gutter="20">
                     <el-col :span="5">
                         <el-form-item :label="t('system.notification.category')" prop="category">
-                            <el-select v-model="queryParams.category" clearable placeholder="请选择消息分类">
+                            <el-select v-model="queryParams.category" clearable :placeholder="t('system.notification.selectCategory')">
                                 <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="5">
                         <el-form-item :label="t('system.notification.readStatus')" prop="is_read">
-                            <el-select v-model="queryParams.is_read" clearable placeholder="请选择已读状态">
+                            <el-select v-model="queryParams.is_read" clearable :placeholder="t('system.notification.selectReadStatus')">
                                 <el-option v-for="item in readStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
@@ -100,7 +100,7 @@
                 <!-- 右栏：消息详情 -->
                 <div class="notification-detail-container">
                     <div v-if="!selectedNotification" class="detail-empty">
-                        <el-empty description="选择左侧消息查看详情">
+                        <el-empty :description="t('system.notification.selectToView')">
                             <template #image>
                                 <el-icon size="64" color="var(--el-text-color-placeholder)">
                                     <i-lucide-mail-open />
@@ -118,7 +118,9 @@
                                     <el-icon><i-ep-clock /></el-icon>
                                     {{ formatDateTime(selectedNotification.created_at) }}
                                 </span>
-                                <el-button v-if="!selectedNotification.read" type="primary" plain size="small" class="mark-read-btn" @click="handleMarkRead(selectedNotification)"> 标为已读 </el-button>
+                                <el-button v-if="!selectedNotification.read" type="primary" plain size="small" class="mark-read-btn" @click="handleMarkRead(selectedNotification)">{{
+                                    t('system.notification.markRead')
+                                }}</el-button>
                             </div>
                             <h2 class="detail-title">{{ selectedNotification.title }}</h2>
                         </div>
@@ -144,7 +146,7 @@
         <!-- 移动端适配：抽屉详情展示 -->
         <el-drawer v-model="drawerVisible" direction="rtl" size="85%" :with-header="false" class="notification-mobile-drawer">
             <div v-if="selectedNotification" class="detail-content mobile-detail">
-                <div class="drawer-close-btn" @click="drawerVisible = false">
+                <div class="drawer-close-btn" role="button" tabindex="0" aria-label="Close" @click="drawerVisible = false" @keydown.enter="drawerVisible = false">
                     <el-icon size="20"><i-ep-close /></el-icon>
                 </div>
 
@@ -163,7 +165,7 @@
                 </div>
 
                 <div class="detail-footer-actions">
-                    <el-button v-if="!selectedNotification.read" type="primary" plain size="default" @click="handleMarkRead(selectedNotification)"> 标为已读 </el-button>
+                    <el-button v-if="!selectedNotification.read" type="primary" plain size="default" @click="handleMarkRead(selectedNotification)">{{ t('system.notification.markRead') }}</el-button>
                     <el-button v-if="selectedNotification.action_url" type="primary" size="default" @click="handleActionClick(selectedNotification)">
                         {{ selectedNotification.action_label || t('system.notification.goHandle') }}
                     </el-button>
@@ -182,6 +184,7 @@ import { useNotificationStore, normalizeNotification } from '@/stores/notificati
 import { getNotificationList } from '@/api/system'
 import { normalizeListData } from '@/modules/shared/response'
 import { translate } from '@/locales'
+import { Logger } from '@/utils/logger'
 import router from '@/router'
 import type { AppNotification } from '@/types/notification'
 import { useNotificationCategoryOptions } from './notificationConstants'
@@ -370,8 +373,9 @@ const handleMarkAllRead = async () => {
             selectedNotification.value.read = true
         }
         ElMessage.success(translate('common.result.operationSuccess'))
-    } catch {
-        // noop
+    } catch (error) {
+        ElMessage.error(translate('common.result.operationFailed'))
+        Logger.error('标记全部已读失败:', error)
     }
 }
 

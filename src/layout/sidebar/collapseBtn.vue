@@ -1,5 +1,13 @@
 <template>
-    <div class="collapse-btn xl-cursor-pointer" :class="{ collapse: settingStore.isCollapse }" @click="handleToggleCollapse">
+    <div
+        class="collapse-btn xl-cursor-pointer"
+        :class="{ collapse: settingStore.isCollapse }"
+        role="button"
+        tabindex="0"
+        :aria-label="t('layout.toggleSidebar')"
+        @click="handleToggleCollapse"
+        @keydown.enter="handleToggleCollapse"
+    >
         <el-icon v-if="settingStore.isCollapse">
             <i-ant-design-right-outlined class="collapse-btn-icon" />
         </el-icon>
@@ -11,9 +19,11 @@
 
 <script setup>
 import { useSettingStore } from '@/stores/setting'
+import { useI18n } from 'vue-i18n'
 
 // ==================== Store ====================
 const settingStore = useSettingStore()
+const { t } = useI18n()
 
 // ==================== 方法 ====================
 /**

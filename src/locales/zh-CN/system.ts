@@ -72,6 +72,7 @@ export default {
     },
     file: {
         title: '文件资源',
+        sidebarToggle: '展开/收起侧栏',
         searchFile: '搜索文件...',
         detailTitle: '文件资源详情',
         loadingText: '加载中...',
@@ -379,6 +380,9 @@ export default {
         listHint: '列表默认收起，仅通过显式按钮进行展开、标记和跳转。',
         category: '消息分类',
         readStatus: '已读状态',
+        selectCategory: '请选择消息分类',
+        selectReadStatus: '请选择已读状态',
+        selectToView: '选择左侧消息查看详情',
         manageTitle: '通知管理',
         manageSubtitle: '发送系统或业务通知给管理员，支持实时推送与快速处理。',
         manageEntry: '通知管理',

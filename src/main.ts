@@ -19,6 +19,8 @@ app.config.errorHandler = (err: unknown, vm: ComponentPublicInstance | null, inf
     Logger.error('[全局错误拦截]:', err)
     Logger.error('[错误组件]:', vm)
     Logger.error('[错误信息]:', info)
+    // 存储最近一次错误，供 ErrorBoundary 或调试使用
+    ;(window as unknown as Record<string, unknown>).__LAST_APP_ERROR__ = { err, vm, info, timestamp: Date.now() }
 }
 
 // 设置全局错误处理器

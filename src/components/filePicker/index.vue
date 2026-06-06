@@ -2,7 +2,7 @@
     <div class="file-picker">
         <button class="file-picker-trigger" type="button" @click="openDialog">
             <template v-if="selectedItems.length">
-                <el-image v-if="isImage(selectedItems[0])" :src="getThumbnailUrl(selectedItems[0])" fit="cover" class="file-picker-avatar" />
+                <el-image v-if="isImage(selectedItems[0])" :src="getThumbnailUrl(selectedItems[0])" fit="cover" class="file-picker-avatar" :alt="selectedItems[0].origin_name || ''" />
                 <span v-else class="file-picker-file">{{ selectedItems[0].origin_name || selectedItems[0].uuid || selectedItems[0].id }}</span>
             </template>
             <el-icon v-else class="file-picker-empty"><i-ep-plus /></el-icon>
@@ -75,7 +75,7 @@
                             @dblclick="handleGridItemDblClick(row)"
                         >
                             <div class="file-picker-grid-media">
-                                <el-image v-if="isImage(row)" :src="getThumbnailUrl(row)" fit="cover" class="file-picker-grid-thumb" lazy />
+                                <el-image v-if="isImage(row)" :src="getThumbnailUrl(row)" fit="cover" class="file-picker-grid-thumb" lazy :alt="row.display_name || row.origin_name || ''" />
                                 <div v-else class="file-picker-grid-file">{{ getFileExt(row) }}</div>
                                 <div v-if="isFileSelected(row)" class="file-picker-grid-selected">
                                     <el-icon><Check /></el-icon>
@@ -106,7 +106,7 @@
                         <el-table-column :label="t('system.file.originName')" min-width="240" show-overflow-tooltip>
                             <template #default="{ row }">
                                 <div class="file-picker-name">
-                                    <el-image v-if="isImage(row)" :src="getThumbnailUrl(row)" fit="cover" class="file-picker-list-thumb" lazy />
+                                    <el-image v-if="isImage(row)" :src="getThumbnailUrl(row)" fit="cover" class="file-picker-list-thumb" lazy :alt="row.display_name || row.origin_name || ''" />
                                     <div v-else class="file-picker-list-file">{{ getFileExt(row) }}</div>
                                     <span>{{ row.display_name || row.origin_name || row.uuid || '-' }}</span>
                                 </div>

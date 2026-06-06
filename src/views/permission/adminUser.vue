@@ -5,7 +5,7 @@
                 <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" code="adminUser:add" @click="openEditDrawer(1)" />
             </template>
             <template #td="{ item, val, row }">
-                <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(String(val))">
+                <el-avatar v-if="item.avatar" :size="50" :src="getImageUrl(String(val))" :alt="row.nickname || row.username || ''">
                     <el-icon size="32">
                         <i-ep-avatar />
                     </el-icon>
@@ -97,7 +97,7 @@
         <!-- 绑定角色抽屉 -->
         <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.adminUser.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
             <el-skeleton v-if="roleOptionsLoading" animated />
-            <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto">
+            <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto" :rules="bindRoleRules">
                 <el-form-item :label="t('permission.adminUser.title')">
                     <el-input :value="currentAdminUserName" disabled></el-input>
                 </el-form-item>
@@ -169,9 +169,10 @@ let {
 
 const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, formData, isEditMode, isRootAdminEditing, getDynamicRules, openEditDrawer, editConfirmSubmit } = useAdminUserForm({ refreshList: getList })
 
-const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentAdminUserName, roleOptions, roleOptionsLoading, bindRoleData, filterRole, handleBindRole, bindRoleConfirmSubmit } = useAdminUserRoleBinding({
-    refreshList: getList,
-})
+const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentAdminUserName, roleOptions, roleOptionsLoading, bindRoleData, bindRoleRules, filterRole, handleBindRole, bindRoleConfirmSubmit } =
+    useAdminUserRoleBinding({
+        refreshList: getList,
+    })
 
 const actionButtons = computed(() => {
     return [

@@ -89,6 +89,7 @@
                                     :preview-src-list="getFilePreviewList(row)"
                                     preview-teleported
                                     hide-on-click-modal
+                                    :alt="row.origin_name || ''"
                                     @click.stop
                                 />
                                 <div v-else class="file-thumbnail-placeholder">
@@ -128,9 +129,9 @@
             <input ref="uploadDirectoryInputRef" type="file" multiple webkitdirectory directory class="file-upload-input" @change="handleDirectoryInputChange" />
 
             <el-dialog v-model="showFolderDialog" :title="folderDialogTitle" width="420px" append-to-body>
-                <el-form label-width="90px">
-                    <el-form-item :label="t('system.file.folderName')">
-                        <el-input v-model.trim="folderForm.name" :placeholder="t('system.file.folderNamePlaceholder')" @keyup.enter="submitFolderDialog" />
+                <el-form ref="folderFormRef" :model="folderForm" :rules="folderRules" label-width="90px">
+                    <el-form-item :label="t('system.file.folderName')" prop="name">
+                        <el-input v-model.trim="folderForm.name" :placeholder="t('system.file.folderNamePlaceholder')" @keyup.enter="handleSubmitFolderDialog" />
                     </el-form-item>
                     <el-form-item :label="t('system.file.parentFolder')">
                         <el-tree-select v-model="folderForm.parent_id" :data="folderSelectOptions" :props="{ label: 'name', children: 'children', value: 'id' }" check-strictly clearable />
@@ -138,19 +139,19 @@
                 </el-form>
                 <template #footer>
                     <el-button @click="showFolderDialog = false">{{ t('common.actions.cancel') }}</el-button>
-                    <el-button type="primary" :loading="folderSubmitting" @click="submitFolderDialog">{{ t('common.actions.confirm') }}</el-button>
+                    <el-button type="primary" :loading="folderSubmitting" @click="handleSubmitFolderDialog">{{ t('common.actions.confirm') }}</el-button>
                 </template>
             </el-dialog>
 
             <el-dialog v-model="showMoveDialog" :title="moveDialogTitle" width="420px" append-to-body>
-                <el-form label-width="90px">
-                    <el-form-item :label="t('system.file.targetFolder')">
+                <el-form ref="moveFormRef" :model="moveFormData" :rules="moveRules" label-width="90px">
+                    <el-form-item :label="t('system.file.targetFolder')" prop="target_folder_id">
                         <el-tree-select v-model="moveTargetFolderId" :data="folderSelectOptions" :props="{ label: 'name', children: 'children', value: 'id' }" check-strictly clearable />
                     </el-form-item>
                 </el-form>
                 <template #footer>
                     <el-button @click="showMoveDialog = false">{{ t('common.actions.cancel') }}</el-button>
-                    <el-button type="primary" :loading="moveSubmitting" @click="submitMoveDialog">{{ t('common.actions.confirm') }}</el-button>
+                    <el-button type="primary" :loading="moveSubmitting" @click="handleSubmitMoveDialog">{{ t('common.actions.confirm') }}</el-button>
                 </template>
             </el-dialog>
 
@@ -214,6 +215,7 @@
                                 :preview-src-list="getFilePreviewList(row)"
                                 preview-teleported
                                 hide-on-click-modal
+                                :alt="row.origin_name || ''"
                             />
                             <div v-else class="file-thumbnail-placeholder">
                                 <el-icon color="var(--el-text-color-placeholder)"><Document /></el-icon>
@@ -245,6 +247,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Document, UploadFilled } from '@element-plus/icons-vue'
+import type { FormInstance } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import { useI18n } from 'vue-i18n'
@@ -466,6 +469,31 @@ const {
     getList,
     loadFolderTree,
 })
+
+// ==================== 表单校验 ====================
+const folderFormRef = ref<FormInstance>()
+const moveFormRef = ref<FormInstance>()
+
+const folderRules = {
+    name: [{ required: true, min: 1, message: t('system.file.folderNameRequired'), trigger: 'blur' }],
+}
+
+const moveFormData = computed(() => ({ target_folder_id: moveTargetFolderId.value }))
+const moveRules = {
+    target_folder_id: [{ required: true, message: t('system.file.folderNameRequired'), trigger: 'change' }],
+}
+
+const handleSubmitFolderDialog = async () => {
+    const valid = await folderFormRef.value?.validate().catch(() => false)
+    if (!valid) return
+    await submitFolderDialog()
+}
+
+const handleSubmitMoveDialog = async () => {
+    const valid = await moveFormRef.value?.validate().catch(() => false)
+    if (!valid) return
+    await submitMoveDialog()
+}
 
 const handleBreadcrumbClick = (folderId: number | string | null) => {
     selectedFolderId.value = folderId === ROOT_FOLDER_KEY ? null : folderId
