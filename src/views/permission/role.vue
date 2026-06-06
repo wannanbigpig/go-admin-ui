@@ -79,7 +79,7 @@ import type { ProTableColumns } from '@/components/proTable/types'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
-const addChildButtonInfo = getButtonInfoFull('role:addChild')
+const addButtonInfo = getButtonInfoFull('role:add')
 const updateButtonInfo = getButtonInfoFull('role:update')
 const deleteButtonInfo = getButtonInfoFull('role:delete')
 const { t } = useI18n()
@@ -96,7 +96,7 @@ let { loading, roleList, queryWhere, pagination, getList, handleSearch, handleRe
 
 /* eslint-enable prefer-const */
 
-const refreshParentNodeChildren = async (_parentId: number) => {
+const refreshRoleList = async () => {
     await getList()
 }
 
@@ -114,28 +114,24 @@ const {
     menuTreeLoading,
     handleMenuCheck,
     openEditDrawer,
-    handleAddChild,
+    handleCopyRole,
     editConfirmSubmit,
 } = useRoleForm({
-    roleList,
-    refreshParentNodeChildren,
+    refreshRoleList,
 })
 
 type RoleActionScope = { row?: Role } | Role
 
-const actionButtons = (scope: RoleActionScope): ActionButtonConfig<Role>[] => {
+const actionButtons = (_scope: RoleActionScope): ActionButtonConfig<Role>[] => {
     const buttons: ActionButtonConfig<Role>[] = []
-    const row: Role = (typeof scope === 'object' && scope !== null && 'row' in scope ? scope.row : scope) as Role
 
-    // 只有顶级角色（pid === 0 或 null）才显示"新增子角色"按钮
-    if (!row || row.pid === 0 || row.pid === null) {
-        buttons.push({
-            permission: 'role:addChild',
-            buttonInfo: addChildButtonInfo || undefined,
-            showIcon: false,
-            click: (row: Role) => handleAddChild(row),
-        })
-    }
+    buttons.push({
+        permission: 'role:add',
+        buttonInfo: addButtonInfo || undefined,
+        text: t('permission.role.copyTitle'),
+        showIcon: false,
+        click: (row: Role, index: number) => handleCopyRole(row, index),
+    })
 
     buttons.push(
         {

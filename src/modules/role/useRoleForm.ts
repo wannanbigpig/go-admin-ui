@@ -1,22 +1,26 @@
-import { computed, nextTick, reactive, ref, type Ref } from 'vue'
+import { nextTick, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
-import { createRole, updateRole, getRoleDetail } from '@/api/permission'
+import { createRole, getRoleDetail, updateRole } from '@/api/permission'
 import { fetchMenuTree } from '@/modules/permission/service'
 import { createRoleForm, createRoleRules, isSuperAdminRole, ROLE_EDIT_TYPE, ROLE_STATUS, ROLE_SUBMIT_DELAY } from '@/modules/role/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import { normalizeDetailData } from '@/modules/shared/response'
-import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
+import type { Role } from '@/types/role'
 import { translate } from '@/locales'
 
+const MENU_AUTH_REQUIRED = 1
+const MENU_TYPE_DIRECTORY = 1
+const MENU_TYPE_PAGE = 2
+const MENU_TYPE_BUTTON = 3
+
 interface UseRoleFormOptions {
-    roleList: Ref<Role[]>
-    refreshParentNodeChildren: (parentId: number) => Promise<void>
+    refreshRoleList: () => Promise<void>
 }
 
-export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleFormOptions) {
+export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     const showDrawer = ref(false)
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
@@ -26,27 +30,72 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
     const menuTreeData = ref<Menu[]>([])
     const menuTreeDataLoaded = ref(false)
     const menuTreeLoading = ref(false)
-    const parentRoleMenuList = ref<number[]>([])
 
     const initialFormData = createRoleForm()
     const formData = reactive({ ...initialFormData })
-    const originalFormData = ref<Partial<Role> | null>(null)
 
-    const isEditMode = computed(() => !!originalFormData.value)
-    const isSuperAdminEditing = computed(() => isEditMode.value && isSuperAdminRole(originalFormData.value))
+    const isEditMode = ref(false)
+    const isSuperAdminEditing = ref(false)
     const getDynamicRules = createRoleRules
 
-    const flattenRoleTree = (roles: Role[], prefix = ''): Array<Role & { label: string }> => {
-        if (!Array.isArray(roles)) return []
+    const getMenuId = (menu: Pick<Menu, 'id'>) => {
+        return typeof menu.id === 'number' ? menu.id : Number(menu.id)
+    }
 
-        return roles.flatMap((role) => {
-            const label = prefix ? `${prefix} / ${role.name}` : role.name
-            const current = [{ ...role, label }]
-            if (Array.isArray(role.children) && role.children.length > 0) {
-                return current.concat(flattenRoleTree(role.children, label))
+    const isAuthRequiredMenu = (menu: Menu) => Number(menu.is_auth ?? MENU_AUTH_REQUIRED) === MENU_AUTH_REQUIRED
+
+    const hasPermissionDescendant = (menu: Menu): boolean => {
+        if (!Array.isArray(menu.children) || menu.children.length === 0) {
+            return false
+        }
+        return menu.children.some((child) => {
+            const childType = Number(child.type)
+            if (isAuthRequiredMenu(child) && childType !== MENU_TYPE_DIRECTORY) {
+                return true
             }
-            return current
+            return hasPermissionDescendant(child)
         })
+    }
+
+    const isRealPermissionMenu = (menu: Menu) => {
+        if (Number(menu.status ?? ROLE_STATUS.NORMAL) !== ROLE_STATUS.NORMAL || !isAuthRequiredMenu(menu)) {
+            return false
+        }
+        const menuType = Number(menu.type)
+        if (menuType === MENU_TYPE_BUTTON) return true
+        if (menuType === MENU_TYPE_PAGE) return !hasPermissionDescendant(menu)
+        return false
+    }
+
+    const collectMenuIds = (menus: Menu[], predicate: (menu: Menu) => boolean) => {
+        const ids: number[] = []
+        const walk = (items: Menu[]) => {
+            items.forEach((item) => {
+                const itemId = getMenuId(item)
+                if (!Number.isNaN(itemId) && predicate(item)) {
+                    ids.push(itemId)
+                }
+                if (Array.isArray(item.children) && item.children.length > 0) {
+                    walk(item.children)
+                }
+            })
+        }
+        walk(menus)
+        return ids
+    }
+
+    const findMenuPath = (menus: Menu[], targetId: number, path: Menu[] = []): Menu[] | null => {
+        for (const menu of menus) {
+            const currentPath = [...path, menu]
+            if (getMenuId(menu) === targetId) {
+                return currentPath
+            }
+            if (Array.isArray(menu.children) && menu.children.length > 0) {
+                const childPath = findMenuPath(menu.children, targetId, currentPath)
+                if (childPath) return childPath
+            }
+        }
+        return null
     }
 
     const normalizeMenuList = (value: unknown): number[] => {
@@ -63,12 +112,36 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             .filter((item) => !Number.isNaN(item))
     }
 
+    const normalizeSubmittedMenuList = (keys: unknown[]) => {
+        const seen = new Set<number>()
+        return normalizeMenuList(keys).filter((id) => {
+            if (seen.has(id)) return false
+            const path = findMenuPath(menuTreeData.value, id)
+            const menu = path?.[path.length - 1]
+            if (!menu || !isRealPermissionMenu(menu)) {
+                return false
+            }
+            seen.add(id)
+            return true
+        })
+    }
+
+    const collectDefaultSuperAdminCheckedKeys = () => {
+        return collectMenuIds(menuTreeData.value, (menu) => isRealPermissionMenu(menu))
+    }
+
+    const syncFormMenuListFromTree = () => {
+        if (!menuTreeRef.value) return
+        const checkedKeys = menuTreeRef.value.getCheckedKeys()
+        const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
+        formData.menu_list = normalizeSubmittedMenuList([...checkedKeys, ...halfCheckedKeys])
+    }
+
     const getSubmitData = () => {
         const data: Record<string, unknown> = {
             name: formData.name,
             code: formData.code,
             sort: formData.sort,
-            pid: formData.pid ?? 0,
             description: formData.description || '',
             menu_list: Array.isArray(formData.menu_list) ? formData.menu_list : [],
             status: formData.status ?? ROLE_STATUS.NORMAL,
@@ -81,20 +154,8 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
 
     const resetFormData = () => {
         Object.assign(formData, { ...initialFormData })
-        parentRoleMenuList.value = []
-    }
-
-    const saveOriginalData = () => {
-        originalFormData.value = {
-            id: formData.id,
-            name: formData.name,
-            code: formData.code,
-            sort: formData.sort,
-            pid: formData.pid,
-            description: formData.description,
-            menu_list: [...(formData.menu_list || [])],
-            status: formData.status,
-        }
+        isEditMode.value = false
+        isSuperAdminEditing.value = false
     }
 
     const cloneMenuTree = (menus: Menu[]): Menu[] => {
@@ -104,88 +165,28 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
         }))
     }
 
-    const getRoleChildrenIds = (targetId: number) => {
-        const result: number[] = [targetId]
-
-        const walk = (roles: Role[]) => {
-            roles.forEach((role) => {
-                const roleId = typeof role.id === 'number' ? role.id : Number(role.id)
-                const rolePid = role.pid ? Number(role.pid) : 0
-
-                if (rolePid === targetId || result.includes(rolePid)) {
-                    if (!result.includes(roleId)) {
-                        result.push(roleId)
-                    }
-                }
-                if (Array.isArray(role.children) && role.children.length > 0) {
-                    walk(role.children)
-                }
-            })
-        }
-
-        walk(roleList.value || [])
-        return result
-    }
-
-    const filteredRoleOptions = computed(() => {
-        const roleOptions = flattenRoleTree(roleList.value || [])
-        if (!isEditMode.value || !formData.id) {
-            return roleOptions
-        }
-
-        const excludedIds = getRoleChildrenIds(Number(formData.id))
-        return roleOptions.filter((role) => !excludedIds.includes(typeof role.id === 'number' ? role.id : Number(role.id)))
-    })
-
     const updateMenuTreeDisabled = (menuData: Menu[]) => {
         if (!Array.isArray(menuData)) return
 
-        if (isSuperAdminEditing.value) {
-            const disableAll = (items: Menu[]) => {
-                items.forEach((item) => {
-                    item.disabled = true
-                    if (item.children && item.children.length > 0) {
-                        disableAll(item.children)
-                    }
-                })
-            }
-            disableAll(menuData)
-            return
-        }
-
-        if (formData.pid === 0 || formData.pid === null) {
-            const clearDisabled = (items: Menu[]) => {
-                items.forEach((item) => {
-                    item.disabled = false
-                    if (item.children && item.children.length > 0) {
-                        clearDisabled(item.children)
-                    }
-                })
-            }
-            clearDisabled(menuData)
-            return
-        }
-
-        const setDisabled = (items: Menu[]) => {
+        const walk = (items: Menu[]) => {
             items.forEach((item) => {
-                const itemId = typeof item.id === 'number' ? item.id : Number(item.id)
-                item.disabled = parentRoleMenuList.value.includes(itemId)
+                item.disabled = isSuperAdminEditing.value
                 if (item.children && item.children.length > 0) {
-                    setDisabled(item.children)
+                    walk(item.children)
                 }
             })
         }
-        setDisabled(menuData)
+        walk(menuData)
     }
 
-    const handleMenuCheck = (_data: unknown, checked: { checkedKeys: number[]; halfCheckedKeys: number[] }) => {
+    const handleMenuCheck = (_data: unknown, _checked: { checkedKeys: number[]; halfCheckedKeys: number[] }) => {
         if (isSuperAdminEditing.value) {
             nextTick(() => {
                 menuTreeRef.value?.setCheckedKeys(formData.menu_list, false)
             })
             return
         }
-        formData.menu_list = normalizeMenuList(checked.checkedKeys || [])
+        syncFormMenuListFromTree()
     }
 
     const setMenuTreeChecked = async () => {
@@ -194,7 +195,6 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 requestAnimationFrame(() => resolve())
             })
 
-        // 增加重试机制，确保 el-tree 已挂载
         for (let i = 0; i < 10; i++) {
             await nextTick()
             if (menuTreeRef.value) break
@@ -205,65 +205,16 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             const menuIds = normalizeMenuList(formData.menu_list)
 
             if (isSuperAdminEditing.value) {
-                const allMenuIds: number[] = []
-                const collectMenuIds = (items: Menu[]) => {
-                    items.forEach((item) => {
-                        allMenuIds.push(typeof item.id === 'number' ? item.id : Number(item.id))
-                        if (Array.isArray(item.children) && item.children.length > 0) {
-                            collectMenuIds(item.children)
-                        }
-                    })
-                }
-                collectMenuIds(menuTreeData.value)
-                formData.menu_list = allMenuIds
+                const allMenuIds = collectDefaultSuperAdminCheckedKeys()
+                formData.menu_list = normalizeSubmittedMenuList(allMenuIds)
                 menuTreeRef.value.setCheckedKeys(allMenuIds, false)
-            } else if (isEditMode.value && menuIds.length > 0) {
-                menuTreeRef.value.setCheckedKeys([], false)
-                menuTreeRef.value.setCheckedKeys(menuIds, false)
-            } else if (!isEditMode.value) {
-                menuTreeRef.value.setCheckedKeys([], false)
+                return
             }
+
+            menuTreeRef.value.setCheckedKeys([], false)
+            menuTreeRef.value.setCheckedKeys(menuIds, false)
+            formData.menu_list = normalizeSubmittedMenuList(menuIds)
         }
-    }
-
-    const getParentRoleName = (pid: number) => {
-        if (pid === 0 || pid === null) {
-            return translate('permission.common.topRole')
-        }
-        const parentRole = roleList.value.find((role) => role.id === pid)
-        return parentRole ? parentRole.name : translate('common.unknown')
-    }
-
-    const getParentRoleMenuList = async (parentId: number) => {
-        if (!parentId || parentId === 0) {
-            parentRoleMenuList.value = []
-            if (menuTreeDataLoaded.value && menuTreeData.value.length > 0) {
-                updateMenuTreeDisabled(menuTreeData.value)
-            }
-            return
-        }
-
-        try {
-            const response = await getRoleDetail({ id: parentId })
-            const roleData = normalizeDetailData<Role>(response, {} as Role)
-            const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
-            parentRoleMenuList.value = normalizeMenuList(rawMenuList)
-
-            if (menuTreeDataLoaded.value && menuTreeData.value.length > 0) {
-                updateMenuTreeDisabled(menuTreeData.value)
-            }
-        } catch (error) {
-            Logger.error('获取父角色权限失败:', error)
-            parentRoleMenuList.value = []
-            if (menuTreeDataLoaded.value && menuTreeData.value.length > 0) {
-                updateMenuTreeDisabled(menuTreeData.value)
-            }
-        }
-    }
-
-    const handleParentRoleChange = async (parentId: number) => {
-        if (isSuperAdminEditing.value) return
-        await getParentRoleMenuList(parentId)
     }
 
     const getMenuTreeData = async () => {
@@ -280,12 +231,35 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
         }
     }
 
-    const openEditDrawer = async (type: number, row?: Partial<Role>, index?: number, parentId: number | null = null) => {
+    const loadRoleIntoForm = async (roleId: number, mode: 'edit' | 'copy') => {
+        const response = await getRoleDetail({ id: roleId })
+        const roleData = normalizeDetailData<Role>(response, {} as Role)
+        const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
+        const menuIds = normalizeMenuList(rawMenuList)
+
+        Object.assign(formData, {
+            id: mode === 'edit' ? roleData.id : 0,
+            name: mode === 'copy' ? `${roleData.name}-copy` : roleData.name || '',
+            code: '',
+            sort: roleData.sort ?? 100,
+            description: roleData.description || '',
+            menu_list: menuIds,
+            status: roleData.status ?? ROLE_STATUS.NORMAL,
+        })
+
+        if (mode === 'edit') {
+            formData.code = roleData.code || ''
+        }
+
+        isSuperAdminEditing.value = mode === 'edit' && isSuperAdminRole(roleData)
+    }
+
+    const openEditDrawer = async (type: number, row?: Partial<Role>, index?: number) => {
         if (typeof type !== 'number') return
 
-        // 核心改动 1：先展示抽屉，让组件开始挂载
         showDrawer.value = true
         currentIndex.value = index ?? null
+        resetFormData()
 
         if (type === ROLE_EDIT_TYPE.EDIT) {
             if (!row || typeof row.id !== 'number') {
@@ -295,34 +269,10 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
             }
 
             formTitle.value = translate('permission.role.editTitle')
-            resetFormData()
+            isEditMode.value = true
 
             try {
-                const response = await getRoleDetail({ id: row.id })
-                const roleData = normalizeDetailData<Role>(response, {} as Role)
-                const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
-                const menuIds = normalizeMenuList(rawMenuList)
-
-                Object.assign(formData, {
-                    id: roleData.id,
-                    name: roleData.name || '',
-                    code: roleData.code || '',
-                    sort: roleData.sort ?? 100,
-                    pid: roleData.pid ?? 0,
-                    description: roleData.description || '',
-                    menu_list: menuIds,
-                    status: roleData.status ?? ROLE_STATUS.NORMAL,
-                })
-
-                saveOriginalData()
-
-                if (formData.pid && formData.pid !== 0) {
-                    await getParentRoleMenuList(formData.pid)
-                } else {
-                    parentRoleMenuList.value = []
-                }
-
-                // 核心改动 2：等待树加载完后回显
+                await loadRoleIntoForm(row.id, 'edit')
                 if (menuTreeDataLoaded.value) {
                     await setMenuTreeChecked()
                 }
@@ -332,21 +282,7 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 return
             }
         } else {
-            formTitle.value = parentId ? translate('permission.role.addChildTitle') : translate('permission.role.addTitle')
-            resetFormData()
-            originalFormData.value = null
-            formData.pid = parentId !== null ? parentId : 0
-
-            if (parentId !== null && parentId !== 0) {
-                const parentRoleName = getParentRoleName(parentId)
-                if (parentRoleName && parentRoleName !== translate('common.unknown')) {
-                    formData.name = `${parentRoleName}-`
-                }
-                await getParentRoleMenuList(parentId)
-            } else {
-                parentRoleMenuList.value = []
-            }
-
+            formTitle.value = translate('permission.role.addTitle')
             if (menuTreeDataLoaded.value) {
                 await setMenuTreeChecked()
             }
@@ -371,15 +307,51 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
         }
 
         setTimeout(() => {
-            if (formDataRef.value) {
-                formDataRef.value.clearValidate()
-            }
+            formDataRef.value?.clearValidate()
         }, 50)
     }
 
-    const handleAddChild = (row: Role) => {
-        const parentId = typeof row.id === 'number' ? row.id : Number(row.id)
-        openEditDrawer(ROLE_EDIT_TYPE.ADD, undefined, undefined, parentId)
+    const handleCopyRole = async (row: Role, index?: number) => {
+        const roleId = typeof row.id === 'number' ? row.id : Number(row.id)
+        if (!roleId) return
+
+        showDrawer.value = true
+        currentIndex.value = index ?? null
+        resetFormData()
+        formTitle.value = translate('permission.role.copyTitle')
+
+        try {
+            await loadRoleIntoForm(roleId, 'copy')
+            if (menuTreeDataLoaded.value) {
+                await setMenuTreeChecked()
+            }
+        } catch (error) {
+            Logger.error('获取复制角色详情失败:', error)
+            showDrawer.value = false
+            return
+        }
+
+        if (!menuTreeDataLoaded.value) {
+            menuTreeLoading.value = true
+            getMenuTreeData()
+                .then(() => {
+                    menuTreeDataLoaded.value = true
+                    setMenuTreeChecked()
+                })
+                .catch((error) => {
+                    Logger.error('获取菜单列表失败:', error)
+                    ElMessage.error(translate('validation.role.fetchMenuFailed'))
+                })
+                .finally(() => {
+                    menuTreeLoading.value = false
+                })
+        } else {
+            updateMenuTreeDisabled(menuTreeData.value)
+        }
+
+        setTimeout(() => {
+            formDataRef.value?.clearValidate()
+        }, 50)
     }
 
     const editConfirmSubmit = async () => {
@@ -392,35 +364,20 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
                 return
             }
 
-            // 提交前同步当前树的全选和半选节点，确保权限树完整性
             if (menuTreeRef.value && !isSuperAdminEditing.value) {
-                const checkedKeys = menuTreeRef.value.getCheckedKeys()
-                const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
-                formData.menu_list = normalizeMenuList([...checkedKeys, ...halfCheckedKeys])
+                syncFormMenuListFromTree()
             }
 
             const submitData = getSubmitData()
-            const parentId = Number(submitData.pid ?? 0)
-
             if (isEditMode.value) {
                 await updateRole(submitData)
             } else {
                 await createRole(submitData)
             }
 
-            // 写成功后先关抽屉+提示，再刷新树节点，避免刷新把提交按钮卡在"提交中"。
             showDrawer.value = false
             ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
-
-            // 刷新受影响的父节点子列表：始终刷新当前父；编辑时若父级变更，额外刷新原父。
-            // refreshParentNodeChildren(parentId) 在 parentId===0 时即刷新根，无需再单独刷新 0（去重）。
-            if (isEditMode.value) {
-                const originalParentId = originalFormData.value?.pid || 0
-                if (originalParentId !== parentId) {
-                    await refreshParentNodeChildren(originalParentId)
-                }
-            }
-            await refreshParentNodeChildren(parentId)
+            await refreshRoleList()
         }).catch((error) => {
             ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
@@ -438,14 +395,11 @@ export function useRoleForm({ roleList, refreshParentNodeChildren }: UseRoleForm
         isEditMode,
         isSuperAdminEditing,
         getDynamicRules,
-        filteredRoleOptions,
         menuTreeData,
         menuTreeLoading,
         handleMenuCheck,
-        handleParentRoleChange,
-        getParentRoleName,
         openEditDrawer,
-        handleAddChild,
+        handleCopyRole,
         editConfirmSubmit,
     }
 }

@@ -3,10 +3,9 @@ import { Logger } from '@/utils/logger'
 import { ElLoading, ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, DRAWER_EXIT_CONFIRM_MESSAGE_KEY, RESULT_MESSAGES } from '@/constants/messages'
-import { createMenu, updateMenu, getMenuDetail, deleteMenu, getPermissionList, getMenuList } from '@/api/permission'
-import { createEmptyTitleI18n, createMenuForm, MENU_OPERATION_TYPE, MENU_PERMISSION_QUERY_PARAMS, MENU_STEP, MENU_SUBMIT_DEBOUNCE_TIME, MENU_SWITCH_VALUE, MENU_TITLE_LOCALES, MENU_TYPE } from '@/modules/menu/model'
+import { createMenu, updateMenu, getMenuDetail, deleteMenu, getMenuList, getApiOptions, type ApiOption } from '@/api/permission'
+import { createEmptyTitleI18n, createMenuForm, MENU_OPERATION_TYPE, MENU_STEP, MENU_SUBMIT_DEBOUNCE_TIME, MENU_SWITCH_VALUE, MENU_TITLE_LOCALES, MENU_TYPE } from '@/modules/menu/model'
 import { normalizeDetailData, normalizeListData } from '@/modules/shared/response'
-import type { ApiPermission } from '@/modules/apiPermission'
 import { checkNumber, pick } from '@/utils/helper'
 import type { Menu } from '@/types/menu'
 import { translate } from '@/locales'
@@ -63,7 +62,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             .filter((item): item is number | string => item !== null)
     }
 
-    const buildPermissionDisplayName = (item: ApiPermission, fallbackId: number | string) => {
+    const buildPermissionDisplayName = (item: ApiOption, fallbackId: number | string) => {
         const name = item.name || item.code || translate('permission.menu.historicalApi', { id: fallbackId })
         const method = item.method ? `[${item.method}]` : ''
         const route = item.route || ''
@@ -74,8 +73,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         if (permissionListLoaded.value) return
         permissionListLoading.value = true
         try {
-            const response = await getPermissionList(MENU_PERMISSION_QUERY_PARAMS)
-            const { list } = normalizeListData<ApiPermission>(response)
+            const list = await getApiOptions({ is_auth: 2 })
             permissionList.value = list
                 .map((item) => {
                     const normalizedId = normalizePermissionId(item.id)

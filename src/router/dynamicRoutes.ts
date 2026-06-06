@@ -125,18 +125,22 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
 /**
  * 提取第一个可访问的叶子路由路径
  */
-export function findFirstValidRoute(routes: RouteRecordRaw[]): string {
+function findFirstValidRoutePath(routes: RouteRecordRaw[]): string | null {
     for (const route of routes) {
         if (route.children && route.children.length > 0) {
-            const childPath = findFirstValidRoute(route.children)
-            if (childPath) return childPath
+            const childPath = findFirstValidRoutePath(route.children)
+            if (childPath !== null) return childPath
         }
         // 允许 path 为空但有 component 的路由（如首页）
         if (!route.path?.startsWith('http') && route.component) {
             return route.path || ''
         }
     }
-    return ''
+    return null
+}
+
+export function findFirstValidRoute(routes: RouteRecordRaw[]): string {
+    return findFirstValidRoutePath(routes) ?? ''
 }
 
 // ==================== 路由管理 ====================

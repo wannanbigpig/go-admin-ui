@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
-import { convertRoute } from './dynamicRoutes'
+import { convertRoute, findFirstValidRoute } from './dynamicRoutes'
 import type { UserPermission } from '@/types/auth'
 
 describe('dynamicRoutes', () => {
@@ -81,5 +81,30 @@ describe('dynamicRoutes', () => {
         expect(router.currentRoute.value.name).not.toBe('NotFound')
         expect(router.currentRoute.value.name).toBe('TaskCenter')
         expect(router.currentRoute.value.query.tab).toBe('export')
+    })
+
+    it('findFirstValidRoute 应该支持空 path 首页路由', () => {
+        const routes = convertRoute([
+            {
+                id: 1,
+                pid: 0,
+                title: '首页',
+                code: '',
+                name: 'Home',
+                type: 2,
+                icon: 'ep:menu',
+                path: '',
+                redirect: '',
+                component_key: 'home:index',
+                is_show: 1,
+                is_auth: 0,
+                is_new_window: 0,
+                is_external_links: 0,
+                sort: 100,
+                children: [],
+            },
+        ])
+
+        expect(findFirstValidRoute(routes)).toBe('')
     })
 })

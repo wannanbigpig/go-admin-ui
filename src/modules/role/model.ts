@@ -6,7 +6,6 @@ export function createRoleForm(): Role {
         id: 0,
         name: '',
         code: '',
-        pid: 0,
         sort: 100,
         description: '',
         menu_list: [],
@@ -22,7 +21,6 @@ export function createRoleQuery() {
         per_page: 10,
         name: null,
         status: null,
-        pid: 0,
     }
 }
 
@@ -74,8 +72,5 @@ export function isSuperAdminRole(role: Partial<Role> | null) {
 
 export function processRoleTreeData(data: Role[]) {
     if (!Array.isArray(data)) return []
-    return data.map((item) => ({
-        ...item,
-        hasChildren: (item.children_num || 0) > 0,
-    }))
+    return data.map((item) => ({ ...item }))
 }

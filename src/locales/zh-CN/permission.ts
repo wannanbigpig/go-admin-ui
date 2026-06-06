@@ -75,7 +75,7 @@ export default {
     role: {
         title: '角色',
         addTitle: '新增角色',
-        addChildTitle: '创建下级角色',
+        copyTitle: '复制角色',
         editTitle: '编辑角色',
         name: '角色名称',
         code: '标识',
