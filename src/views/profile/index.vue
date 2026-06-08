@@ -147,7 +147,7 @@
                 <el-row>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.avatar')" prop="avatar">
-                            <FilePicker v-model="formData.avatar" accept="image/*" :max-size="PROFILE_AVATAR_CONFIG.MAX_SIZE" />
+                            <AvatarUpload v-model="formData.avatar" :max-size="PROFILE_AVATAR_CONFIG.MAX_SIZE" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -196,7 +196,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import xlDrawer from '@/components/drawer/index.vue'
-import FilePicker from '@/components/filePicker/index.vue'
+import AvatarUpload from '@/components/avatarUpload/index.vue'
 import { getImageUrl } from '@/utils/helper'
 import { PROFILE_AVATAR_CONFIG, PROFILE_STATUS } from '@/modules/profile/model'
 import { useProfilePage } from '@/modules/profile/useProfilePage'

@@ -34,7 +34,7 @@
                 <el-row>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.avatar')" prop="avatar">
-                            <FilePicker v-model="formData.avatar" accept="image/*" :max-size="ADMIN_USER_AVATAR_CONFIG.MAX_SIZE" />
+                            <AvatarUpload v-model="formData.avatar" :max-size="ADMIN_USER_AVATAR_CONFIG.MAX_SIZE" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -121,7 +121,7 @@ import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
-import FilePicker from '@/components/filePicker/index.vue'
+import AvatarUpload from '@/components/avatarUpload/index.vue'
 import { getImageUrl } from '@/utils/helper'
 import { onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

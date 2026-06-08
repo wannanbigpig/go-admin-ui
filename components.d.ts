@@ -9,6 +9,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     ActionButton: typeof import('./src/components/actionButton/index.vue')['default']
     ActionButtons: typeof import('./src/components/actionButtons/index.vue')['default']
+    AvatarUpload: typeof import('./src/components/avatarUpload/index.vue')['default']
     Breadcrumb: typeof import('./src/components/breadcrumb/index.vue')['default']
     CollapsibleSearchBtn: typeof import('./src/components/collapsibleSearchBtn/index.vue')['default']
     DateRangePicker: typeof import('./src/components/dateRangePicker/index.vue')['default']
@@ -79,6 +80,7 @@ declare module 'vue' {
     ElTransfer: typeof import('element-plus/es')['ElTransfer']
     ElTree: typeof import('element-plus/es')['ElTree']
     ElTreeSelect: typeof import('element-plus/es')['ElTreeSelect']
+    ElUpload: typeof import('element-plus/es')['ElUpload']
     ErrorBoundary: typeof import('./src/components/errorBoundary/index.vue')['default']
     FilePicker: typeof import('./src/components/filePicker/index.vue')['default']
     I18nInput: typeof import('./src/components/i18nInput/index.vue')['default']

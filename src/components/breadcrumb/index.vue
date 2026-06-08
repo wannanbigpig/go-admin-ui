@@ -34,7 +34,7 @@ const breadcrumbs = computed(() => {
     const breadcrumbItems = matchedRoutes.map((matchedRoute) => {
         let name = resolveRouteTitle({
             titleKey: matchedRoute.meta?.titleKey as string,
-            title: matchedRoute.meta?.title,
+            title: matchedRoute.meta?.title as string,
         })
 
         if (matchedRoute.path === IFRAME_PATH && typeof query.to === 'string') {
