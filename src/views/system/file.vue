@@ -478,10 +478,9 @@ const folderRules = {
     name: [{ required: true, min: 1, message: t('system.file.folderNameRequired'), trigger: 'blur' }],
 }
 
-const moveFormData = computed(() => ({ target_folder_id: moveTargetFolderId.value }))
-const moveRules = {
-    target_folder_id: [{ required: true, message: t('system.file.folderNameRequired'), trigger: 'change' }],
-}
+const normalizeMoveTargetFolderId = (value?: number | string | null) => (value === '' || value === ROOT_FOLDER_KEY || value === undefined ? null : value)
+const moveFormData = computed(() => ({ target_folder_id: normalizeMoveTargetFolderId(moveTargetFolderId.value) }))
+const moveRules = {}
 
 const handleSubmitFolderDialog = async () => {
     const valid = await folderFormRef.value?.validate().catch(() => false)
@@ -490,6 +489,7 @@ const handleSubmitFolderDialog = async () => {
 }
 
 const handleSubmitMoveDialog = async () => {
+    moveTargetFolderId.value = normalizeMoveTargetFolderId(moveTargetFolderId.value)
     const valid = await moveFormRef.value?.validate().catch(() => false)
     if (!valid) return
     await submitMoveDialog()

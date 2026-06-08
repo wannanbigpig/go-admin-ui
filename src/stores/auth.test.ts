@@ -8,6 +8,7 @@ const hoisted = vi.hoisted(() => {
     const mockConvertRoute = vi.fn()
     const mockAddDynamicRoutes = vi.fn()
     const mockRemoveDynamicRoute = vi.fn()
+    const mockFindFirstValidRoute = vi.fn()
 
     const localStorageStore: Record<string, string> = {}
     const mockLocalStorage = {
@@ -30,6 +31,7 @@ const hoisted = vi.hoisted(() => {
         mockConvertRoute,
         mockAddDynamicRoutes,
         mockRemoveDynamicRoute,
+        mockFindFirstValidRoute,
         mockLocalStorage,
         mockRouter: {
             push: vi.fn(),
@@ -70,6 +72,7 @@ vi.mock('@/router/dynamicRoutes', () => ({
     convertRoute: hoisted.mockConvertRoute,
     addDynamicRoutes: hoisted.mockAddDynamicRoutes,
     removeDynamicRoute: hoisted.mockRemoveDynamicRoute,
+    findFirstValidRoute: hoisted.mockFindFirstValidRoute,
 }))
 
 vi.mock('element-plus', () => ({
@@ -102,6 +105,7 @@ describe('stores/auth.ts', () => {
         hoisted.mockConvertRoute.mockReset()
         hoisted.mockAddDynamicRoutes.mockReset()
         hoisted.mockRemoveDynamicRoute.mockReset()
+        hoisted.mockFindFirstValidRoute.mockReset()
         hoisted.mockRouter.push.mockReset()
     })
 
@@ -145,5 +149,42 @@ describe('stores/auth.ts', () => {
 
         expect(hoisted.mockAddDynamicRoutes).not.toHaveBeenCalled()
         expect(hoisted.mockRemoveDynamicRoute).toHaveBeenCalledTimes(1)
+    })
+
+    it('refreshUserInfo 不应因滑动刷新 token 更新版本而丢弃用户和菜单响应', async () => {
+        const store = useAuthStore()
+        const menuList = [{ id: 1, title: '用户管理', path: '/permission/adminUser' }] as UserPermission[]
+        const convertedRoutes = [{ path: '/permission/adminUser', name: 'adminUser' }]
+        let resolveUserInfo!: (value: { id: number; username: string; nickname: string; avatar: string }) => void
+        let resolveMenuList!: (value: UserPermission[]) => void
+
+        hoisted.mockFetchCurrentUser.mockReturnValue(
+            new Promise((resolve) => {
+                resolveUserInfo = resolve
+            })
+        )
+        hoisted.mockFetchUserMenuTree.mockReturnValue(
+            new Promise((resolve) => {
+                resolveMenuList = resolve
+            })
+        )
+        hoisted.mockConvertRoute.mockReturnValue(convertedRoutes)
+
+        const refreshPromise = store.refreshUserInfo()
+        store.updateToken('sliding-token', Math.floor(Date.now() / 1000) + 3600)
+
+        resolveUserInfo({
+            id: 1,
+            username: 'admin',
+            nickname: '管理员',
+            avatar: '',
+        })
+        resolveMenuList(menuList)
+        await refreshPromise
+
+        expect(store.access_token).toBe('sliding-token')
+        expect(store.userInfo.username).toBe('admin')
+        expect(store.menu).toEqual(menuList)
+        expect(hoisted.mockAddDynamicRoutes).toHaveBeenCalledWith(convertedRoutes)
     })
 })

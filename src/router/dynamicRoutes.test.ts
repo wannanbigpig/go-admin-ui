@@ -51,6 +51,7 @@ describe('dynamicRoutes', () => {
         // 验证转换后的父路由组件已被成功定义为占位组件
         expect(routes[0].component).toBeDefined()
         expect(typeof (routes[0].component as { render?: unknown })?.render).toBe('function')
+        expect(findFirstValidRoute(routes)).toBe('/task/center')
 
         // 创建一个真实的路由实例进行测试
         const router = createRouter({

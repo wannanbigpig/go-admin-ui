@@ -452,6 +452,10 @@ const buildUploadMeta = (file: File, options: SystemFileUploadOptions, hash: str
 
 let cachedSystemFileUploadDriver: SystemFileUploadOptions['driver']
 
+export function invalidateSystemFileUploadDriverCache() {
+    cachedSystemFileUploadDriver = undefined
+}
+
 export async function resolveSystemFileUploadDriver(options: SystemFileUploadOptions = {}) {
     if (options.driver) return options.driver
     if (cachedSystemFileUploadDriver) return cachedSystemFileUploadDriver
@@ -635,7 +639,9 @@ export async function fetchStorageConfig() {
 }
 
 export async function updateStorageConfig(data: StorageConfigPayload) {
-    return systemApi.saveStorageConfig(data)
+    const response = await systemApi.saveStorageConfig(data)
+    invalidateSystemFileUploadDriverCache()
+    return response
 }
 
 export async function testStorageConnection(data: StorageConfigPayload) {

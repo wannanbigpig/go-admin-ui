@@ -29,6 +29,7 @@ export const useAuthStore = defineStore(
         const menu = ref<UserPermission[]>([])
         const isTokenExpiredModalShown = ref<boolean>(false)
         const authStateVersion = ref(0)
+        const authSessionVersion = ref(0)
 
         // ==================== Getters ====================
         /**
@@ -145,10 +146,10 @@ export const useAuthStore = defineStore(
 
             let refreshPromise: Promise<void> | null = null
             refreshPromise = (async () => {
-                const requestVersion = authStateVersion.value
+                const requestSessionVersion = authSessionVersion.value
                 try {
                     const [userInfoRes, menuListRes] = await Promise.all([fetchCurrentUser(), fetchUserMenuTree()])
-                    if (requestVersion !== authStateVersion.value) {
+                    if (requestSessionVersion !== authSessionVersion.value) {
                         return
                     }
                     userInfo.value = userInfoRes
@@ -214,6 +215,7 @@ export const useAuthStore = defineStore(
          * 重置认证状态
          */
         const resetAuthStore = () => {
+            authSessionVersion.value++
             authStateVersion.value++
             access_token.value = ''
             expires_at.value = 0

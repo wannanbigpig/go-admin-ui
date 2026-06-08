@@ -153,7 +153,12 @@ const rules: FormRules<NotificationManageFormState> = {
                     callback()
                     return
                 }
-                if (parseUserIDs(value).length > 0) {
+                const tokens = splitUserIDTokens(value)
+                if (tokens.length === 0) {
+                    callback(new Error(t('system.notification.userIdsRequired')))
+                    return
+                }
+                if (tokens.every(isValidUserIDToken)) {
                     callback()
                     return
                 }
@@ -164,11 +169,23 @@ const rules: FormRules<NotificationManageFormState> = {
     ],
 }
 
-function parseUserIDs(value: string) {
+function splitUserIDTokens(value: string) {
     return value
         .split(/[\s,，]+/)
         .map((item) => item.trim())
         .filter(Boolean)
+}
+
+function isValidUserIDToken(value: string) {
+    if (!/^\d+$/.test(value)) return false
+    const userId = Number(value)
+    return Number.isSafeInteger(userId) && userId > 0
+}
+
+function parseUserIDs(value: string) {
+    return splitUserIDTokens(value)
+        .filter(isValidUserIDToken)
+        .map((item) => Number(item))
 }
 
 function buildPayload(): NotificationSendPayload {

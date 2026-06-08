@@ -24,12 +24,13 @@
 <script setup lang="ts">
 import { ref, onErrorCaptured } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Logger } from '@/utils/logger'
 
 const { t } = useI18n()
 const hasError = ref(false)
 
 onErrorCaptured((err: Error) => {
-    console.error('[ErrorBoundary] captured error:', err)
+    Logger.error('[ErrorBoundary] captured error:', err)
     hasError.value = true
     // 阻止错误继续向上传播
     return false

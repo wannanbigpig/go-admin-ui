@@ -45,7 +45,7 @@ export interface NotificationSendPayload {
     action_url?: string
     action_label?: string
     audience_type: NotificationAudienceType
-    user_ids?: Array<number | string>
+    user_ids?: number[]
 }
 
 export interface NotificationSendResult {

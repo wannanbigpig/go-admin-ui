@@ -125,15 +125,30 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
 /**
  * 提取第一个可访问的叶子路由路径
  */
-function findFirstValidRoutePath(routes: RouteRecordRaw[]): string | null {
+function normalizeInternalPath(path: string) {
+    if (!path) return ''
+    return path.startsWith('/') ? path : `/${path}`
+}
+
+function resolveInternalPath(parentPath: string, routePath: string) {
+    if (!routePath) return normalizeInternalPath(parentPath)
+    if (routePath.startsWith('/')) return routePath
+
+    const normalizedParent = normalizeInternalPath(parentPath).replace(/\/$/, '')
+    return `${normalizedParent}/${routePath}`
+}
+
+function findFirstValidRoutePath(routes: RouteRecordRaw[], parentPath = ''): string | null {
     for (const route of routes) {
+        const routePath = typeof route.path === 'string' ? route.path : ''
+        const fullPath = resolveInternalPath(parentPath, routePath)
         if (route.children && route.children.length > 0) {
-            const childPath = findFirstValidRoutePath(route.children)
+            const childPath = findFirstValidRoutePath(route.children, fullPath)
             if (childPath !== null) return childPath
         }
         // 允许 path 为空但有 component 的路由（如首页）
-        if (!route.path?.startsWith('http') && route.component) {
-            return route.path || ''
+        if (!routePath.startsWith('http') && route.component) {
+            return fullPath
         }
     }
     return null

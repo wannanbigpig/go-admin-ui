@@ -14,6 +14,7 @@ NProgress.configure({ showSpinner: false })
 // ==================== 常量 ====================
 const ROUTE_NAME = {
     LOGIN: 'Login',
+    NOT_FOUND: 'NotFound',
 }
 
 const ROUTE_PATH = {
@@ -42,13 +43,13 @@ export async function beforeEach(to: RouteLocationNormalized) {
     }
 
     // 刷新用户信息（如果需要）
-    const userInfoReady = await refreshUserInfoIfNeeded(authStore, to)
-    if (!userInfoReady) {
+    const userInfoState = await refreshUserInfoIfNeeded(authStore, to)
+    if (!userInfoState.ready) {
         return redirectToLogin(to)
     }
 
     // 动态添加路由（如果需要）
-    const routeRedirect = await handleDynamicRoutes(authStore, to)
+    const routeRedirect = await handleDynamicRoutes(authStore, to, userInfoState.refreshed)
     if (routeRedirect) {
         return routeRedirect
     }
@@ -84,19 +85,22 @@ async function refreshUserInfoIfNeeded(authStore: ReturnType<typeof useAuthStore
         } catch (error) {
             Logger.error('刷新用户信息失败:', error)
             authStore.resetAuthStore()
-            return false
+            return { ready: false, refreshed: false }
         }
     }
 
     if (isEmpty(authStore.routerData) && to.path !== ROUTE_PATH.HOME) {
         Logger.warn('用户菜单为空，阻止进入受保护路由')
-        return false
+        return { ready: false, refreshed: needRefresh }
     }
-    return true
+    return { ready: true, refreshed: needRefresh }
 }
 
-async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized) {
+async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, to: RouteLocationNormalized, refreshedUserInfo: boolean) {
     if (checkDynamicRouteExists()) {
+        if (refreshedUserInfo && isNotFoundRoute(to)) {
+            return rebuildToRoute(to)
+        }
         return undefined
     }
 
@@ -112,6 +116,10 @@ async function handleDynamicRoutes(authStore: ReturnType<typeof useAuthStore>, t
         Logger.error('添加动态路由失败:', error)
         return { path: ROUTE_PATH.HOME }
     }
+}
+
+function isNotFoundRoute(to: RouteLocationNormalized) {
+    return to.name === ROUTE_NAME.NOT_FOUND || to.matched.some((route) => route.name === ROUTE_NAME.NOT_FOUND)
 }
 
 function rebuildToRoute(to: RouteLocationNormalized) {

@@ -63,6 +63,18 @@ const getAxiosRequestConfig = (error: AxiosError): (AxiosRequestConfig & { silen
     return error.config as (AxiosRequestConfig & { silent?: boolean; silentCodes?: number[] }) | undefined
 }
 
+const shouldSuppressApiErrorMessage = (config: (AxiosRequestConfig & { silent?: boolean; silentCodes?: number[] }) | undefined, code: number) => {
+    return Boolean(config?.silent || (Array.isArray(config?.silentCodes) && config.silentCodes.includes(code)) || (SILENT_BUSINESS_CODES as readonly number[]).includes(code))
+}
+
+const showApiErrorMessage = (payload: ApiResponse, config?: AxiosRequestConfig & { silent?: boolean; silentCodes?: number[] }) => {
+    if (shouldSuppressApiErrorMessage(config, payload.code)) return
+    ElMessage({
+        message: payload.msg || translate('request.failed'),
+        type: 'error',
+    })
+}
+
 const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, authErrorMode: 'credential' | 'session' = 'session') => {
     const authStore = useAuthStore()
 
@@ -77,6 +89,7 @@ const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, 
     if (code === 401) {
         // credential 模式（登录请求）：不触发过期处理，直接拒绝
         if (authErrorMode === 'credential') {
+            showApiErrorMessage(response.data, response.config as AxiosRequestConfig & { silent?: boolean; silentCodes?: number[] })
             return Promise.reject(response.data)
         }
 
@@ -89,13 +102,7 @@ const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, 
     // 处理业务错误（code !== 0）
     if (code !== 0) {
         const config = response.config as AxiosRequestConfig & { silent?: boolean; silentCodes?: number[]; authErrorMode?: 'credential' | 'session' }
-        const isSilent = config?.silent || (Array.isArray(config?.silentCodes) && config.silentCodes.includes(code)) || (SILENT_BUSINESS_CODES as readonly number[]).includes(code)
-        if (!isSilent) {
-            ElMessage({
-                message: response.data.msg || translate('request.failed'),
-                type: 'error',
-            })
-        }
+        showApiErrorMessage(response.data, config)
         return Promise.reject(response.data)
     }
 
@@ -171,6 +178,15 @@ service.interceptors.response.use(
         if (error.response?.status === 401) {
             const config = getAxiosRequestConfig(error)
             const authErrorMode = config?.authErrorMode ?? 'session'
+            if (error.response.data && isApiPayload(error.response.data)) {
+                const syntheticResponse = {
+                    ...error.response,
+                    data: error.response.data,
+                    config: error.config || {},
+                    headers: error.response.headers || {},
+                } as AxiosResponse<ApiResponse<unknown>>
+                return handleApiResponse(syntheticResponse, authErrorMode) as Promise<never>
+            }
             if (authErrorMode === 'credential') {
                 // 登录凭证失败：不触发过期弹窗，直接拒绝
                 return Promise.reject(error.response?.data ?? error)
