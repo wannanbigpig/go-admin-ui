@@ -276,20 +276,20 @@ const handleCancel = async (row: TaskRun) => {
 
 const runActionButtons = computed(() => [
     {
-        permission: '',
+        permission: 'task:detail',
         text: t('common.actions.detail'),
         showIcon: false,
         click: (row: TaskRun) => handleRunDetail(row),
     },
     {
-        permission: '',
+        permission: 'task:retry',
         text: t('system.task.retry'),
         showIcon: false,
         disabled: (row: TaskRun) => row.status !== 'failed' || operatingRunId.value === row.id,
         click: (row: TaskRun) => handleRetry(row),
     },
     {
-        permission: '',
+        permission: 'task:cancel',
         text: t('system.task.cancel'),
         showIcon: false,
         disabled: (row: TaskRun) => !['pending', 'running', 'retrying'].includes(row.status) || operatingRunId.value === row.id,

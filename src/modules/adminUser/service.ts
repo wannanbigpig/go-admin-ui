@@ -2,13 +2,6 @@ import * as adminUserApi from '@/api/adminUser'
 import { normalizeListData, normalizeDetailData } from '@/modules/shared/response'
 import type { AdminUser, AdminUserQuery } from '@/types/adminUser'
 
-export interface UploadAvatarResult {
-    url?: string
-    uuid?: string
-    status?: string
-    failure_reason?: string
-}
-
 export async function fetchAdminUserList(params: Partial<AdminUserQuery>) {
     const response = await adminUserApi.getAdminUserList(params)
     return normalizeListData<AdminUser>(response)
@@ -49,16 +42,7 @@ export async function fetchAdminUserFullEmail(id: number | string) {
     return normalizeDetailData(response, { email: '' })
 }
 
-export async function uploadUserAvatar(file: File) {
-    const response = await adminUserApi.uploadAvatar(file, { category: 'avatar' })
-    return normalizeDetailData<UploadAvatarResult>(response, { url: '' })
-}
-
 // 原有 JS 版本的别名（保持兼容性）
 export const createAdminUserItem = addAdminUser
 export const updateAdminUserItem = modifyAdminUser
 export const deleteAdminUserItem = removeAdminUser
-export async function uploadAvatarFile(file: File, extra: Record<string, unknown>) {
-    const response = await adminUserApi.uploadAvatar(file, extra)
-    return normalizeDetailData<UploadAvatarResult>(response, { url: '' })
-}

@@ -422,10 +422,9 @@ onBeforeMount(refreshCaptcha)
 onMounted(() => {
     initCanvasBg()
 
-    // 预热/预加载 ECharts 与 Home 路由组件
+    // 预加载首页路由组件，图表库由首页按需加载，避免登录页提前拉取大包。
     const prefetch = () => {
-        // 并行预加载 ECharts 各子包（core / charts(bar+pie+line) / components / renderers），并预取首页路由组件
-        Promise.all([import('echarts/core'), import('echarts/charts'), import('echarts/components'), import('echarts/renderers'), import('@/views/home/index.vue')]).catch(() => undefined)
+        import('@/views/home/index.vue').catch(() => undefined)
     }
 
     if (window.requestIdleCallback) {
@@ -446,7 +445,8 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
     background: #f4f7fb;
-    background-image: radial-gradient(at 0% 0%, hsla(210, 100%, 95%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(200, 100%, 90%, 1) 0, transparent 50%),
+    background-image:
+        radial-gradient(at 0% 0%, hsla(210, 100%, 95%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(200, 100%, 90%, 1) 0, transparent 50%),
         radial-gradient(at 50% 100%, hsla(220, 100%, 95%, 1) 0, transparent 50%);
 }
 
@@ -699,7 +699,8 @@ onMounted(() => {
 html.dark {
     .login-container {
         background: #0f172a;
-        background-image: radial-gradient(at 0% 0%, hsla(220, 100%, 15%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(250, 100%, 15%, 1) 0, transparent 50%),
+        background-image:
+            radial-gradient(at 0% 0%, hsla(220, 100%, 15%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(250, 100%, 15%, 1) 0, transparent 50%),
             radial-gradient(at 50% 100%, hsla(200, 100%, 10%, 1) 0, transparent 50%);
     }
 

@@ -12,8 +12,8 @@ export function useClipboard() {
         }
 
         // Fallback: 传统 execCommand 兜底
+        const textarea = document.createElement('textarea')
         try {
-            const textarea = document.createElement('textarea')
             textarea.value = text
             textarea.style.position = 'fixed'
             textarea.style.top = '0'
@@ -29,7 +29,6 @@ export function useClipboard() {
             textarea.focus()
             textarea.select()
             const success = document.execCommand('copy')
-            document.body.removeChild(textarea)
             if (success) {
                 return true
             }
@@ -38,6 +37,8 @@ export function useClipboard() {
         } catch (fallbackError) {
             Logger.error('Fallback 复制失败:', fallbackError)
             return false
+        } finally {
+            textarea.remove()
         }
     }
 

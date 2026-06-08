@@ -57,6 +57,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     return value as Record<string, unknown>
 }
 
+function resolveCompleteToken(value: { complete_token?: string; complete_payload?: Record<string, unknown> }) {
+    const payloadToken = value.complete_payload?.complete_token
+    return String(value.complete_token || (typeof payloadToken === 'string' ? payloadToken : '')).trim()
+}
+
 function getTaskTargetFolderId(task: UploadTask, options?: UploadOptions) {
     return task.folderId ?? options?.folderId
 }
@@ -95,6 +100,10 @@ async function uploadCredentialTarget(file: File, credential: SystemFileUploadCr
         signal,
         onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
     })
+}
+
+function hasDirectCompletePayload(item: SystemFileUploadCompleteBatchItemPayload) {
+    return Boolean(item.complete_token)
 }
 
 export function useFileUpload() {
@@ -364,43 +373,45 @@ export function useFileUpload() {
                     mime_type: task.file.type || 'application/octet-stream',
                     folder_id: getTaskTargetFolderId(task, options),
                 }
+                const completeToken = resolveCompleteToken(credential)
+                if (!completeToken) {
+                    task.status = 'error'
+                    task.progress = 0
+                    task.error = i18n.global.t('system.file.getUploadTokenFailed')
+                    continue
+                }
 
                 if (credential.reuse) {
                     reuseClientIds.add(task.id)
                     options?.onReuse?.()
                     completeItems.push({
                         client_id: task.id,
-                        ...(credential.complete_payload || {}),
+                        complete_token: completeToken,
                         reuse: true,
-                        file_object_id: credential.file_object_id,
-                        upload_id: credential.upload_id,
-                        file_id: credential.file_id,
-                        uuid: credential.uuid,
-                        bucket: credential.bucket,
-                        object_key: credential.object_key,
                         driver: credential.driver || resolvedDriver,
                         ...uploadMeta,
                     })
                     continue
                 }
 
-                if (credential.upload_url) {
-                    pendingUploads.push({ task, file: task.file, credential })
-                }
-
-                completeItems.push({
+                const completeItem: SystemFileUploadCompleteBatchItemPayload = {
                     client_id: task.id,
-                    ...(credential.complete_payload || {}),
+                    complete_token: completeToken,
                     reuse: false,
-                    file_object_id: credential.file_object_id,
-                    upload_id: credential.upload_id,
-                    file_id: credential.file_id,
-                    uuid: credential.uuid,
-                    bucket: credential.bucket,
-                    object_key: credential.object_key,
                     driver: credential.driver || resolvedDriver,
                     ...uploadMeta,
-                })
+                }
+
+                if (credential.upload_url) {
+                    pendingUploads.push({ task, file: task.file, credential })
+                } else if (!hasDirectCompletePayload(completeItem)) {
+                    task.status = 'error'
+                    task.progress = 0
+                    task.error = i18n.global.t('system.file.getUploadTokenFailed')
+                    continue
+                }
+
+                completeItems.push(completeItem)
             }
 
             if (pendingUploads.length > 0) {
@@ -443,9 +454,13 @@ export function useFileUpload() {
                 items: validCompleteItems,
             })
 
+            const handledClientIds = new Set<string>()
             for (const item of completeResult.items || []) {
                 const task = tasks.find((current) => current.id === item.client_id)
                 if (!task) continue
+                if (item.client_id) {
+                    handledClientIds.add(item.client_id)
+                }
                 if (!item.success || !item.data) {
                     task.status = 'error'
                     task.progress = 0
@@ -456,6 +471,15 @@ export function useFileUpload() {
                 task.status = reuseClientIds.has(task.id) ? 'reuse' : 'success'
                 task.result = item.data
                 options?.onResult?.(item.data)
+            }
+            for (const item of validCompleteItems) {
+                const clientId = item.client_id
+                if (!clientId || handledClientIds.has(clientId)) continue
+                const task = taskById.get(clientId)
+                if (!task) continue
+                task.status = 'error'
+                task.progress = 0
+                task.error = i18n.global.t('system.file.completeUploadRegistrationFailed')
             }
 
             return true
@@ -549,14 +573,18 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         part_count: partCount,
     })
 
+    const completeToken = resolveCompleteToken(initResult)
+    if (!completeToken) {
+        throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
+    }
+
     if (!initResult.upload_id) {
         task.status = 'reuse'
         task.progress = 100
         options?.onReuse?.()
         return await completeMultipartUpload({
-            upload_id: '',
-            bucket: initResult.bucket,
-            object_key: initResult.object_key,
+            complete_token: completeToken,
+            reuse: true,
             origin_name: task.file.name,
             size: task.file.size,
             hash: task.hash,
@@ -567,7 +595,10 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         })
     }
 
-    const { upload_id, bucket, object_key, parts: presignedParts } = initResult
+    const { upload_id, bucket, object_key, parts: presignedParts = [] } = initResult
+    if (!upload_id || !bucket || !object_key || presignedParts.length === 0) {
+        throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
+    }
     const completedParts: MultipartCompletePart[] = []
     const totalSize = Math.max(task.file.size, 1)
     let completedBytes = 0
@@ -634,9 +665,7 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         completedParts.sort((a, b) => a.part_number - b.part_number)
 
         const result = await completeMultipartUpload({
-            upload_id,
-            bucket,
-            object_key,
+            complete_token: completeToken,
             origin_name: task.file.name,
             size: task.file.size,
             hash: task.hash,

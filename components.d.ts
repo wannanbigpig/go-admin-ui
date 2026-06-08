@@ -107,7 +107,6 @@ declare module 'vue' {
     IEpLoading: typeof import('~icons/ep/loading')['default']
     IEpLock: typeof import('~icons/ep/lock')['default']
     IEpMenu: typeof import('~icons/ep/menu')['default']
-    IEpPlus: typeof import('~icons/ep/plus')['default']
     IEpRefresh: typeof import('~icons/ep/refresh')['default']
     IEpRefreshRight: typeof import('~icons/ep/refresh-right')['default']
     IEpSetting: typeof import('~icons/ep/setting')['default']

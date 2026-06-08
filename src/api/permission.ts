@@ -1,5 +1,7 @@
 import { get, post } from '@/utils/request'
 import { apiCache } from '@/utils/apiCache'
+import { useSettingStore } from '@/stores/setting'
+import { DEFAULT_LOCALE } from '@/locales'
 import type { PageData } from '@/types/common'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
@@ -32,7 +34,9 @@ export function editPermission(data: Record<string, unknown>) {
 
 // 获取菜单列表
 export function getMenuList(params?: Record<string, unknown>) {
-    const key = `menu:list:${JSON.stringify(params || {})}`
+    const settingStore = useSettingStore()
+    const locale = settingStore.locale || DEFAULT_LOCALE
+    const key = `menu:list:${locale}:${JSON.stringify(params || {})}`
     const cached = apiCache.get<Menu[]>(key)
     if (cached) return Promise.resolve(cached)
 

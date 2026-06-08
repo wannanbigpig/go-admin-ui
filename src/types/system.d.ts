@@ -256,11 +256,11 @@ export interface SystemFileLocalUploadBatchResult {
 export interface SystemFileUploadCredentialPayload {
     hash: string
     size: number
-    mime_type?: string
+    mime_type: string
     is_public?: number
     folder_id?: number | string | null
     driver?: StorageDriver
-    origin_name?: string
+    origin_name: string
 }
 
 export interface SystemFileUploadBatchFailure {
@@ -273,7 +273,6 @@ export interface SystemFileUploadBatchFailure {
 
 export interface SystemFileUploadCredential {
     reuse?: boolean
-    file_object_id?: number | string
     driver?: StorageDriver
     bucket?: string
     upload_url?: string
@@ -282,9 +281,8 @@ export interface SystemFileUploadCredential {
     form_data?: Record<string, string>
     object_key?: string
     upload_id?: string
-    file_id?: number | string
-    uuid?: string
     url?: string
+    complete_token?: string
     complete_payload?: Record<string, unknown>
 }
 
@@ -314,22 +312,22 @@ export interface SystemFileUploadCredentialBatchResult {
 }
 
 export interface SystemFileUploadCompletePayload {
+    complete_token: string
     reuse?: boolean
-    file_object_id?: number | string
     hash?: string
-    upload_id?: string
-    file_id?: number | string
-    uuid?: string
-    bucket?: string
-    object_key?: string
     origin_name?: string
+    display_name?: string
+    name?: string
     size?: number
+    ext?: string
     mime_type?: string
+    file_type?: string
     folder_id?: number | string | null
     is_public?: number
     etag?: string
     driver?: StorageDriver
-    [key: string]: unknown
+    storage_driver?: StorageDriver
+    upload_scene?: string
 }
 
 export interface SystemFileUploadCompleteBatchItemPayload extends SystemFileUploadCompletePayload {
@@ -370,7 +368,7 @@ export interface SystemFileUploadOptions {
 
 export type StorageDriver = 'local' | 'aliyun_oss' | (string & {})
 
-export type FileStorageStatus = 'normal' | 'uploading' | 'delete_failed' | 'missing'
+export type FileStorageStatus = 'stored' | 'delete_failed' | (string & {})
 
 export interface SystemFileReference extends WithId {
     file_id?: number | string
@@ -552,10 +550,13 @@ export interface MultipartPartInfo {
 }
 
 export interface MultipartInitResult {
-    upload_id: string
-    bucket: string
-    object_key: string
-    parts: MultipartPartInfo[]
+    upload_id?: string
+    bucket?: string
+    object_key?: string
+    parts?: MultipartPartInfo[]
+    reuse?: boolean
+    complete_token: string
+    complete_payload?: Record<string, unknown>
 }
 
 export interface MultipartCompletePart {
@@ -564,9 +565,11 @@ export interface MultipartCompletePart {
 }
 
 export interface MultipartCompletePayload {
-    upload_id: string
-    bucket: string
-    object_key: string
+    complete_token: string
+    upload_id?: string
+    bucket?: string
+    object_key?: string
+    reuse?: boolean
     origin_name: string
     size?: number
     hash?: string
@@ -575,7 +578,7 @@ export interface MultipartCompletePayload {
     folder_id?: number | string | null
     is_public?: number
     driver?: StorageDriver
-    parts: MultipartCompletePart[]
+    parts?: MultipartCompletePart[]
 }
 
 export interface MultipartAbortPayload {

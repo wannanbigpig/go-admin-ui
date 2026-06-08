@@ -191,11 +191,10 @@ import { useAuthStore } from '@/stores/auth'
 import { hasPermission } from '@/utils/auth'
 import { formatFileSize } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
+import type { DashboardChart } from '@/modules/dashboard/echarts'
 
-// 异步加载的 ECharts 命名空间（在 onMounted 中初始化）
-type EChartsNamespace = typeof import('echarts/core')
-type EChartsInstance = ReturnType<EChartsNamespace['init']>
-let echarts: EChartsNamespace | null = null
+type InitDashboardChart = (el: HTMLElement) => DashboardChart
+let initChart: InitDashboardChart | null = null
 
 const { t } = useI18n()
 const router = useRouter()
@@ -209,9 +208,9 @@ const dashboardStatistics = ref<DashboardStatistics | null>(null)
 const trendChartRef = ref<HTMLDivElement>()
 const responseTimeChartRef = ref<HTMLDivElement>()
 const errorCodesChartRef = ref<HTMLDivElement>()
-let trendChart: EChartsInstance | null = null
-let responseTimeChart: EChartsInstance | null = null
-let errorCodesChart: EChartsInstance | null = null
+let trendChart: DashboardChart | null = null
+let responseTimeChart: DashboardChart | null = null
+let errorCodesChart: DashboardChart | null = null
 
 const metricMeta = computed<Record<string, { tone: string; title: string }>>(() => ({
     users: { tone: 'is-blue', title: t('home.dashboard.metrics.users') },
@@ -402,8 +401,8 @@ const observeElement = (el: HTMLElement | undefined) => {
 }
 
 const initTrendChart = () => {
-    if (!echarts || !trendChartRef.value || statisticsTrendDays.value.length === 0) return
-    trendChart = echarts.init(trendChartRef.value)
+    if (!initChart || !trendChartRef.value || statisticsTrendDays.value.length === 0) return
+    trendChart = initChart(trendChartRef.value)
     const seriesNames = trendSeriesNames.value
     trendChart.setOption({
         tooltip: { trigger: 'axis' },
@@ -424,10 +423,10 @@ const initTrendChart = () => {
 }
 
 const initResponseTimeChart = () => {
-    if (!echarts || !responseTimeChartRef.value || !hasResponseTime.value) return
+    if (!initChart || !responseTimeChartRef.value || !hasResponseTime.value) return
     const stats = responseTimeStats.value
     if (!stats) return
-    responseTimeChart = echarts.init(responseTimeChartRef.value)
+    responseTimeChart = initChart(responseTimeChartRef.value)
     const labels = stats.buckets.map((b) => localizeBucketLabel(b.label))
     const counts = stats.buckets.map((b) => b.count)
     responseTimeChart.setOption({
@@ -449,8 +448,8 @@ const initResponseTimeChart = () => {
 }
 
 const initErrorCodesChart = () => {
-    if (!echarts || !errorCodesChartRef.value || !hasErrorCodes.value) return
-    errorCodesChart = echarts.init(errorCodesChartRef.value)
+    if (!initChart || !errorCodesChartRef.value || !hasErrorCodes.value) return
+    errorCodesChart = initChart(errorCodesChartRef.value)
     const data = errorCodeStats.value.map((item) => ({
         name: `${item.status_code}`,
         value: item.count,
@@ -474,10 +473,9 @@ const initErrorCodesChart = () => {
 }
 
 const ensureEcharts = async () => {
-    if (echarts) return
-    const [core, charts, components, renderers] = await Promise.all([import('echarts/core'), import('echarts/charts'), import('echarts/components'), import('echarts/renderers')])
-    core.use([charts.BarChart, charts.LineChart, charts.PieChart, components.GridComponent, components.LegendComponent, components.TooltipComponent, renderers.CanvasRenderer])
-    echarts = core
+    if (initChart) return
+    const module = await import('@/modules/dashboard/echarts')
+    initChart = module.initDashboardChart
 }
 
 onMounted(async () => {

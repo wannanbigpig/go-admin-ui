@@ -42,9 +42,20 @@
                 <template #operation>
                     <el-table-column width="220" :label="t('common.labels.operation')" align="center" fixed="right">
                         <template #default="scope">
-                            <xl-action-button type="primary" link :show-icon="false" :text="t('system.task.download')" :disabled="!canDownloadExportRecord(scope.row)" @click="handleExportDownload(scope.row)" />
+                            <xl-action-button
+                                v-permission="'task:list'"
+                                code="task:list"
+                                type="primary"
+                                link
+                                :show-icon="false"
+                                :text="t('system.task.download')"
+                                :disabled="!canDownloadExportRecord(scope.row)"
+                                @click="handleExportDownload(scope.row)"
+                            />
                             <xl-action-button
                                 v-if="canRetryExportRecord(scope.row)"
+                                v-permission="'task:retry'"
+                                code="task:retry"
                                 type="primary"
                                 link
                                 :show-icon="false"
@@ -54,6 +65,8 @@
                             />
                             <xl-action-button
                                 v-if="canCancelExportRecord(scope.row)"
+                                v-permission="'task:cancel'"
+                                code="task:cancel"
                                 type="danger"
                                 link
                                 :show-icon="false"

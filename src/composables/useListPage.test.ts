@@ -231,4 +231,35 @@ describe('composables/useListPage.ts', () => {
         expect(pagination.page).toBe(1)
         expect(pagination.pageSize).toBe(20)
     })
+
+    it('旧请求晚于新请求返回时不应覆盖最新列表结果', async () => {
+        const query = reactive({ page: 1, per_page: 10 })
+        let resolveFirst: (value: { list: TestItem[]; total: number; page: number; pageSize: number }) => void = () => undefined
+        let resolveSecond: (value: { list: TestItem[]; total: number; page: number; pageSize: number }) => void = () => undefined
+        const firstPromise = new Promise<{ list: TestItem[]; total: number; page: number; pageSize: number }>((resolve) => {
+            resolveFirst = resolve
+        })
+        const secondPromise = new Promise<{ list: TestItem[]; total: number; page: number; pageSize: number }>((resolve) => {
+            resolveSecond = resolve
+        })
+        const fetcher = vi.fn().mockReturnValueOnce(firstPromise).mockReturnValueOnce(secondPromise)
+
+        const { items, getList } = useListPage<TestItem, typeof query>({
+            query,
+            fetcher,
+            delayFirstFetch: false,
+        })
+
+        const firstFetch = getList()
+        const secondFetch = getList()
+        resolveSecond({ list: [{ id: 2, name: 'new' }], total: 1, page: 1, pageSize: 10 })
+        await secondFetch
+
+        expect(items.value).toEqual([{ id: 2, name: 'new' }])
+
+        resolveFirst({ list: [{ id: 1, name: 'old' }], total: 1, page: 1, pageSize: 10 })
+        await firstFetch
+
+        expect(items.value).toEqual([{ id: 2, name: 'new' }])
+    })
 })

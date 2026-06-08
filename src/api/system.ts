@@ -156,7 +156,7 @@ export function getNotificationUnreadCount() {
 }
 
 export function markNotificationRead(data: NotificationReadPayload) {
-    return post<unknown>('/v1/system/notification/read', data)
+    return post<NotificationUnreadCount & { updated?: boolean }>('/v1/system/notification/read', data)
 }
 
 export function markAllNotificationsRead() {

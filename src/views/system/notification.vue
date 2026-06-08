@@ -352,8 +352,12 @@ const handlePageChange = async (page: number) => {
 
 const handleMarkRead = async (item: AppNotification) => {
     if (item.read) return
-    await notificationStore.markRead(item.id)
+    const previousRead = item.read
     item.read = true
+    const success = await notificationStore.markRead(item.id)
+    if (!success) {
+        item.read = previousRead
+    }
 }
 
 const handleActionClick = async (item: AppNotification) => {

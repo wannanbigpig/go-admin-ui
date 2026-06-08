@@ -8,7 +8,7 @@ export const PROFILE_STATUS = {
 export const PROFILE_SUBMIT_DELAY = DEFAULT_SUBMIT_DELAY
 
 export const PROFILE_AVATAR_CONFIG = {
-    ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
+    ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
     MAX_SIZE: 2 * 1024 * 1024,
     UPLOAD_PATH: 'avatar',
 }

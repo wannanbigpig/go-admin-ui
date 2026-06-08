@@ -170,7 +170,7 @@ const handleLogout = async () => {
 
 const handleRefresh = async () => {
     try {
-        await authStore.refreshUserInfo()
+        await authStore.refreshUserInfo({ force: true })
         ElMessage({ type: 'success', message: t(RESULT_MESSAGES.REFRESH_SUCCESS) })
     } catch (error) {
         Logger.error('刷新缓存失败:', error)

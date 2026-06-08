@@ -15,8 +15,8 @@ export function usePermission() {
 
     const buttonPermissions = computed(() => authStore.buttonPermissions || [])
 
-    const checkPermission = (permission: string | string[]) => {
-        return hasPermission(permission)
+    const checkPermission = (permission: string | string[], checkShow = false) => {
+        return hasPermission(permission, checkShow)
     }
 
     const getButtonInfo = (code: string) => {

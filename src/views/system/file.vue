@@ -581,9 +581,13 @@ const storageDriverOptions = computed(() => [
 
 const storageStatusOptions = computed(() => [
     { label: t('system.file.storageStatuses.stored'), value: 'stored' },
+    { label: t('system.file.storageStatuses.deleteFailed'), value: 'delete_failed' },
+])
+
+const storageStatusLabelOptions = computed(() => [
+    ...storageStatusOptions.value,
     { label: t('system.file.storageStatuses.normal'), value: 'normal' },
     { label: t('system.file.storageStatuses.uploading'), value: 'uploading' },
-    { label: t('system.file.storageStatuses.deleteFailed'), value: 'delete_failed' },
     { label: t('system.file.storageStatuses.missing'), value: 'missing' },
 ])
 
@@ -612,7 +616,7 @@ const getStorageDriverTagType = (value?: string) => {
     return typeMap[value || ''] || 'info'
 }
 
-const getStorageStatusLabel = (value?: string) => storageStatusOptions.value.find((item) => item.value === value)?.label || value || '-'
+const getStorageStatusLabel = (value?: string) => storageStatusLabelOptions.value.find((item) => item.value === value)?.label || value || '-'
 
 const getStorageStatusTagType = (value?: string) => {
     const typeMap: Record<string, string> = {

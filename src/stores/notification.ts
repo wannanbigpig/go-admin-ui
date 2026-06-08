@@ -289,19 +289,32 @@ export const useNotificationStore = defineStore(
 
         const markRead = async (id: string) => {
             const target = notifications.value.find((item) => item.id === id)
-            if (!target || target.read) return
-            target.read = true
-            unreadCount.value = Math.max(0, unreadCount.value - 1)
+            if (target?.read) return true
             const persistedID = toPositiveInteger(id)
             if (!persistedID) {
-                return
+                if (!target) return false
+                target.read = true
+                unreadCount.value = Math.max(0, unreadCount.value - 1)
+                return true
+            }
+            if (target) {
+                target.read = true
+                unreadCount.value = Math.max(0, unreadCount.value - 1)
             }
             try {
-                await systemApi.markNotificationRead({ id: persistedID })
+                const result = await systemApi.markNotificationRead({ id: persistedID })
+                const nextUnreadCount = Number(result?.unread_count ?? result?.count)
+                if (Number.isFinite(nextUnreadCount)) {
+                    unreadCount.value = Math.max(0, nextUnreadCount)
+                }
+                return true
             } catch (error) {
                 Logger.error('标记通知已读失败:', error)
-                target.read = false
-                unreadCount.value += 1
+                if (target) {
+                    target.read = false
+                    unreadCount.value += 1
+                }
+                return false
             }
         }
 

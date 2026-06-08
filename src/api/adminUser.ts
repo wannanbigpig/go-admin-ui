@@ -1,4 +1,4 @@
-import { get, post, upload } from '@/utils/request'
+import { get, post } from '@/utils/request'
 import type { PageData } from '@/types/common'
 import type { AdminUser, AdminUserQuery } from '@/types/adminUser'
 
@@ -27,10 +27,6 @@ export function getFullEmail(query: Record<string, unknown>) {
 
 export function getAdminUserDetail(params: { id: number | string }) {
     return get<AdminUser>('/v1/admin-user/detail', params)
-}
-
-export function uploadAvatar(files: File | File[], extra: Record<string, unknown> = {}) {
-    return upload<{ url: string }>('/v1/common/upload', files, extra)
 }
 
 export function createAdminUser(data: Record<string, unknown>) {

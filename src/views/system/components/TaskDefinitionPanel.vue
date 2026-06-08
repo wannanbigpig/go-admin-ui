@@ -44,6 +44,8 @@
                     <el-table-column width="120" :label="t('common.labels.operation')" align="center" fixed="right">
                         <template #default="scope">
                             <xl-action-button
+                                v-permission="'task:trigger'"
+                                code="task:trigger"
                                 type="primary"
                                 link
                                 :show-icon="false"

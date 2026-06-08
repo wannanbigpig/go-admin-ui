@@ -445,10 +445,28 @@ const buildUploadMeta = (file: File, options: SystemFileUploadOptions, hash: str
     hash,
     origin_name: options.origin_name || file.name,
     size: file.size,
-    mime_type: options.mime_type || file.type,
+    mime_type: options.mime_type || file.type || 'application/octet-stream',
     folder_id: options.folder_id ?? null,
     is_public: options.is_public ?? 1,
 })
+
+function resolveCredentialCompleteToken(credential: SystemFileUploadCredential) {
+    const payloadToken = credential.complete_payload?.complete_token
+    return String(credential.complete_token || (typeof payloadToken === 'string' ? payloadToken : '')).trim()
+}
+
+function buildDirectCompletePayload(credential: SystemFileUploadCredential, uploadMeta: ReturnType<typeof buildUploadMeta>, driver: SystemFileUploadOptions['driver'], reuse: boolean): SystemFileUploadCompletePayload {
+    const completeToken = resolveCredentialCompleteToken(credential)
+    if (!completeToken) {
+        throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
+    }
+    return {
+        complete_token: completeToken,
+        reuse,
+        driver: credential.driver || driver,
+        ...uploadMeta,
+    }
+}
 
 let cachedSystemFileUploadDriver: SystemFileUploadOptions['driver']
 
@@ -497,33 +515,11 @@ async function uploadSystemFileDirect(file: File, options: SystemFileUploadOptio
 
     if (credential.reuse) {
         options.onReuse?.()
-        return completeSystemFileUpload({
-            ...(credential.complete_payload || {}),
-            reuse: true,
-            file_object_id: credential.file_object_id,
-            upload_id: credential.upload_id,
-            file_id: credential.file_id,
-            uuid: credential.uuid,
-            bucket: credential.bucket,
-            object_key: credential.object_key,
-            driver: credential.driver || options.driver,
-            ...uploadMeta,
-        })
+        return completeSystemFileUpload(buildDirectCompletePayload(credential, uploadMeta, options.driver, true))
     }
 
     if (!credential.upload_url) {
-        return completeSystemFileUpload({
-            ...(credential.complete_payload || {}),
-            reuse: false,
-            file_object_id: credential.file_object_id,
-            upload_id: credential.upload_id,
-            file_id: credential.file_id,
-            uuid: credential.uuid,
-            bucket: credential.bucket,
-            object_key: credential.object_key,
-            driver: credential.driver || options.driver,
-            ...uploadMeta,
-        })
+        return completeSystemFileUpload(buildDirectCompletePayload(credential, uploadMeta, options.driver, false))
     }
 
     const method = String(credential.method || 'PUT').toUpperCase()
@@ -545,18 +541,7 @@ async function uploadSystemFileDirect(file: File, options: SystemFileUploadOptio
         })
     }
 
-    return completeSystemFileUpload({
-        ...(credential.complete_payload || {}),
-        reuse: false,
-        file_object_id: credential.file_object_id,
-        upload_id: credential.upload_id,
-        file_id: credential.file_id,
-        uuid: credential.uuid,
-        bucket: credential.bucket,
-        object_key: credential.object_key,
-        driver: credential.driver || options.driver,
-        ...uploadMeta,
-    })
+    return completeSystemFileUpload(buildDirectCompletePayload(credential, uploadMeta, options.driver, false))
 }
 
 export async function uploadSystemFile(file: File, options: SystemFileUploadOptions = {}) {
@@ -693,13 +678,6 @@ export async function fetchRequestLogMaskConfig() {
 export async function updateRequestLogMaskConfig(data: RequestLogMaskConfig) {
     const response = await logApi.updateRequestLogMaskConfig(data)
     return normalizeDetailData(response, data)
-}
-
-export async function exportRequestLogCsv(params?: Record<string, unknown>) {
-    return request<Blob>('/v1/log/request/export', 'GET', {
-        params,
-        responseType: 'blob',
-    })
 }
 
 export async function downloadSystemFileBlob(uuid: string, fileName?: string) {

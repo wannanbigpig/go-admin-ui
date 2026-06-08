@@ -2,8 +2,8 @@ import { computed, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
-import { createAdminUserItem, updateAdminUserItem, uploadAvatarFile, fetchAdminUserDetail } from '@/modules/adminUser/service'
-import { ADMIN_USER_AVATAR_CONFIG, ADMIN_USER_STATUS, ADMIN_USER_SUBMIT_DELAY, createAdminUserForm, isRootAdminUser } from '@/modules/adminUser/model'
+import { createAdminUserItem, updateAdminUserItem, fetchAdminUserDetail } from '@/modules/adminUser/service'
+import { ADMIN_USER_STATUS, ADMIN_USER_SUBMIT_DELAY, createAdminUserForm, isRootAdminUser } from '@/modules/adminUser/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { AdminUser } from '@/types/adminUser'
 import { translate } from '@/locales'
@@ -23,44 +23,6 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     const originalFormData = ref<Partial<AdminUser> | null>(null)
     const isEditMode = computed(() => !!originalFormData.value)
     const isRootAdminEditing = computed(() => isEditMode.value && isRootAdminUser(originalFormData.value))
-
-    const handleAvatarSuccess = (response: { url?: string; uuid?: string }) => {
-        if (response?.url) {
-            formData.avatar = response.url
-        } else if (response?.uuid) {
-            formData.avatar = response.uuid
-        }
-    }
-
-    const beforeAvatarUpload = (rawFile: File) => {
-        if (!ADMIN_USER_AVATAR_CONFIG.ALLOWED_TYPES.includes(rawFile.type)) {
-            ElMessage.error(translate('validation.adminUser.avatarTypeInvalid'))
-            return false
-        }
-        if (rawFile.size > ADMIN_USER_AVATAR_CONFIG.MAX_SIZE) {
-            ElMessage.error(translate('validation.adminUser.avatarSizeInvalid'))
-            return false
-        }
-        return true
-    }
-
-    const customUpload = async ({ file, onError }: { file: File; onError?: (err: unknown) => void }) => {
-        try {
-            const result = await uploadAvatarFile(file, { path: ADMIN_USER_AVATAR_CONFIG.UPLOAD_PATH })
-            const res = result as { url?: string; status?: string; failure_reason?: string }
-            if (res && res.status === 'SUCCESS' && res.url) {
-                ElMessage.success(translate('common.result.uploadSuccess'))
-                handleAvatarSuccess(res)
-                return res
-            }
-            ElMessage.error(res?.failure_reason || translate('common.result.uploadFailed'))
-            return null
-        } catch (err) {
-            Logger.error('上传失败:', err)
-            onError?.(err as Error)
-            return null
-        }
-    }
 
     const getDynamicRules = (id: number | string) => {
         const isEdit = !!id && id !== 0
@@ -266,9 +228,6 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
         isEditMode,
         isRootAdminEditing,
         getDynamicRules,
-        beforeAvatarUpload,
-        handleAvatarSuccess,
-        customUpload,
         openEditDrawer,
         editConfirmSubmit,
     }

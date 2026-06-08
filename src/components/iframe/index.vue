@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { normalizeIframeURL } from '@/utils/iframe'
 
 // ==================== Props 定义 ====================
 interface Props {
@@ -20,5 +21,5 @@ const props = withDefaults(defineProps<Props>(), {
 
 // ==================== 计算属性 ====================
 /** 获取 iframe 源地址，优先使用 src，其次使用 to（向后兼容） */
-const iframeSrc = computed(() => props.src || props.to)
+const iframeSrc = computed(() => normalizeIframeURL(props.src || props.to))
 </script>

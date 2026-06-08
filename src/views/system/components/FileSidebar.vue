@@ -60,6 +60,7 @@
                                 <el-dropdown-menu>
                                     <el-dropdown-item command="create">{{ t('system.file.createSubFolder') }}</el-dropdown-item>
                                     <el-dropdown-item command="rename">{{ t('system.file.rename') }}</el-dropdown-item>
+                                    <el-dropdown-item v-permission="'file:update'" command="move">{{ t('system.file.move') }}</el-dropdown-item>
                                     <el-dropdown-item command="delete" divided>{{ t('common.actions.delete') }}</el-dropdown-item>
                                 </el-dropdown-menu>
                             </template>

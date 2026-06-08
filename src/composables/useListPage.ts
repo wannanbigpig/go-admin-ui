@@ -74,6 +74,7 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
     const loading = ref(false)
     const items = shallowRef<T[]>([])
     const isFirstFetch = ref(true)
+    let requestVersion = 0
 
     const buildParams = (): Q => {
         let base = query
@@ -87,10 +88,11 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
     }
 
     const runFetch = async (): Promise<ListPageResult<T>> => {
+        const currentVersion = ++requestVersion
         loading.value = true
         try {
             syncQueryPagination(query, pagination)
-            const params = buildParams()
+            const params = { ...buildParams() } as Q
 
             // 首次请求且启用了动画避让，则通过 setTimeout 等待过渡动画 (300ms) 彻底执行完毕，确保流畅展示骨架屏
             if (delayFirstFetch && isFirstFetch.value) {
@@ -100,11 +102,21 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
                 isFirstFetch.value = false
             }
 
+            if (currentVersion !== requestVersion) {
+                return EMPTY_RESULT<T>(params)
+            }
+
             const result = await fetcher(params)
+            if (currentVersion !== requestVersion) {
+                return result
+            }
             items.value = result.list
             applyPaginationResult(pagination, result)
             return result
         } catch (error) {
+            if (currentVersion !== requestVersion) {
+                return EMPTY_RESULT<T>(query)
+            }
             Logger.error('useListPage fetcher 失败:', error)
             if (typeof onError === 'function') {
                 try {
@@ -118,7 +130,9 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
             applyPaginationResult(pagination, fallback)
             return fallback
         } finally {
-            loading.value = false
+            if (currentVersion === requestVersion) {
+                loading.value = false
+            }
         }
     }
 

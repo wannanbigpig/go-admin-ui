@@ -1,5 +1,5 @@
 <template>
-    <el-upload class="avatar-uploader" action="" :show-file-list="false" :http-request="handleUpload" accept="image/*" :before-upload="beforeUpload">
+    <el-upload class="avatar-uploader" action="" :show-file-list="false" :http-request="handleUpload" accept="image/jpeg,image/png,image/webp" :before-upload="beforeUpload">
         <el-image v-if="modelValue" :src="getImageUrl(String(modelValue))" class="avatar" fit="cover" :alt="alt" />
         <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
     </el-upload>
@@ -16,12 +16,12 @@ import { useI18n } from 'vue-i18n'
 const props = withDefaults(
     defineProps<{
         modelValue?: string | null
-        maxSize?: number // 最大体积 (MB)
+        maxSize?: number // 最大体积（字节）
         alt?: string
     }>(),
     {
         modelValue: '',
-        maxSize: 2,
+        maxSize: 2 * 1024 * 1024,
         alt: '',
     }
 )
@@ -33,15 +33,18 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const loading = ref(false)
+const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
+const formatSizeMB = (size: number) => Number((size / 1024 / 1024).toFixed(2))
 
 const beforeUpload = (file: UploadRawFile) => {
-    if (!file.type.startsWith('image/')) {
+    if (!allowedMimeTypes.has(file.type)) {
         ElMessage.error(t('common.messages.invalidImageType') || 'Invalid image type')
         return false
     }
     const maxSize = props.maxSize
     if (file.size > maxSize) {
-        ElMessage.error(t('common.messages.imageTooLarge', { size: props.maxSize / 1024 / 1024 }) || `Image must be smaller than ${props.maxSize / 1024 / 1024}MB`)
+        ElMessage.error(t('common.messages.imageTooLarge', { size: formatSizeMB(maxSize) }) || `Image must be smaller than ${formatSizeMB(maxSize)}MB`)
         return false
     }
     return true

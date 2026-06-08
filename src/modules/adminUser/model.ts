@@ -64,7 +64,7 @@ export const ADMIN_USER_SUBMIT_DELAY = 3000
 export const ROOT_ADMIN_USER_ID = 1
 
 export const ADMIN_USER_AVATAR_CONFIG = {
-    ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
+    ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
     MAX_SIZE: 2 * 1024 * 1024,
     UPLOAD_PATH: 'avatar',
 }

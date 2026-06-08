@@ -4,10 +4,9 @@ import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { useAuthStore } from '@/stores/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
-import { fetchProfile, modifyProfile, uploadProfileAvatar } from '@/modules/profile/service'
-import { PROFILE_AVATAR_CONFIG, createProfileForm } from '@/modules/profile/model'
+import { fetchProfile, modifyProfile } from '@/modules/profile/service'
+import { createProfileForm } from '@/modules/profile/model'
 import { validateFormSafely } from '@/modules/shared/form'
-import type { UploadAvatarResult } from '@/modules/adminUser/service'
 import type { UserInfo } from '@/types/auth'
 import { translate } from '@/locales'
 
@@ -67,53 +66,6 @@ export function useProfilePage() {
             return String(dateTime)
         }
         return '-'
-    }
-
-    const isUploadResult = (value: unknown): value is UploadAvatarResult => {
-        return typeof value === 'object' && value !== null
-    }
-
-    const handleAvatarSuccess = (response: UploadAvatarResult) => {
-        if (response.uuid) {
-            formData.avatar = response.uuid
-            return
-        }
-        if (response.url) {
-            formData.avatar = response.url
-        }
-    }
-
-    const beforeAvatarUpload = (rawFile: File) => {
-        if (!PROFILE_AVATAR_CONFIG.ALLOWED_TYPES.includes(rawFile.type)) {
-            ElMessage.error(translate('validation.profile.avatarTypeInvalid'))
-            return false
-        }
-        if (rawFile.size > PROFILE_AVATAR_CONFIG.MAX_SIZE) {
-            ElMessage.error(translate('validation.profile.avatarSizeInvalid'))
-            return false
-        }
-        return true
-    }
-
-    const customUpload = async ({ file, onError }: { file: File; onError?: (err?: Error) => void }) => {
-        try {
-            const result = await uploadProfileAvatar(file, { path: PROFILE_AVATAR_CONFIG.UPLOAD_PATH })
-            if (!isUploadResult(result)) {
-                ElMessage.error(translate('common.result.uploadFailed'))
-                return null
-            }
-            const res = result
-            if (res.status === 'SUCCESS') {
-                ElMessage.success(translate('common.result.uploadSuccess'))
-                handleAvatarSuccess(res)
-                return res
-            }
-            ElMessage.error(res.failure_reason || translate('common.result.uploadFailed'))
-            return null
-        } catch (err) {
-            onError?.(err as Error)
-            return null
-        }
     }
 
     const getProfile = async () => {
@@ -194,9 +146,6 @@ export function useProfilePage() {
         formRules,
         formatDepartments,
         formatDateTime,
-        handleAvatarSuccess,
-        beforeAvatarUpload,
-        customUpload,
         openEditDrawer,
         editConfirmSubmit,
     }

@@ -4,12 +4,14 @@ import { createPinia, setActivePinia } from 'pinia'
 const hoisted = vi.hoisted(() => {
     const mockGetNotificationList = vi.fn()
     const mockGetNotificationUnreadCount = vi.fn()
+    const mockMarkNotificationRead = vi.fn()
     const mockRouter = {
         push: vi.fn(),
     }
     return {
         mockGetNotificationList,
         mockGetNotificationUnreadCount,
+        mockMarkNotificationRead,
         mockRouter,
     }
 })
@@ -17,7 +19,7 @@ const hoisted = vi.hoisted(() => {
 vi.mock('@/api/system', () => ({
     getNotificationList: hoisted.mockGetNotificationList,
     getNotificationUnreadCount: hoisted.mockGetNotificationUnreadCount,
-    markNotificationRead: vi.fn(),
+    markNotificationRead: hoisted.mockMarkNotificationRead,
     markAllNotificationsRead: vi.fn(),
     getWsTicket: vi.fn().mockResolvedValue({ ticket: 'mock-ticket' }),
 }))
@@ -30,6 +32,14 @@ vi.mock('@/locales', () => ({
     translate: (key: string) => key,
 }))
 
+vi.mock('@/utils/logger', () => ({
+    Logger: {
+        error: vi.fn(),
+        warn: vi.fn(),
+        info: vi.fn(),
+    },
+}))
+
 import { useNotificationStore } from '@/stores/notification'
 
 describe('stores/notification.ts', () => {
@@ -37,6 +47,7 @@ describe('stores/notification.ts', () => {
         setActivePinia(createPinia())
         hoisted.mockGetNotificationList.mockReset()
         hoisted.mockGetNotificationUnreadCount.mockReset()
+        hoisted.mockMarkNotificationRead.mockReset()
         hoisted.mockRouter.push.mockReset()
     })
 
@@ -70,5 +81,37 @@ describe('stores/notification.ts', () => {
         expect(store.notifications.length).toBe(1)
         // 关键断言：action_url 必须已被清洗为前端路由
         expect(store.notifications[0].action_url).toBe('/task/center?tab=export')
+    })
+
+    it('markRead 在本地缓存未命中时仍应调用后端并同步未读数', async () => {
+        const store = useNotificationStore()
+        hoisted.mockMarkNotificationRead.mockResolvedValue({ updated: true, unread_count: 3 })
+
+        const success = await store.markRead('123')
+
+        expect(success).toBe(true)
+        expect(hoisted.mockMarkNotificationRead).toHaveBeenCalledWith({ id: 123 })
+        expect(store.unreadCount).toBe(3)
+    })
+
+    it('markRead 调用后端失败时应回滚本地缓存状态', async () => {
+        const store = useNotificationStore()
+        store.notifications.push({
+            id: '123',
+            title: 'title',
+            message: 'message',
+            level: 'info',
+            source: 'websocket',
+            read: false,
+            created_at: new Date().toISOString(),
+        })
+        store.unreadCount = 1
+        hoisted.mockMarkNotificationRead.mockRejectedValue(new Error('boom'))
+
+        const success = await store.markRead('123')
+
+        expect(success).toBe(false)
+        expect(store.notifications[0].read).toBe(false)
+        expect(store.unreadCount).toBe(1)
     })
 })

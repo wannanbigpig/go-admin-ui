@@ -140,7 +140,6 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     const getSubmitData = () => {
         const data: Record<string, unknown> = {
             name: formData.name,
-            code: formData.code,
             sort: formData.sort,
             description: formData.description || '',
             menu_list: Array.isArray(formData.menu_list) ? formData.menu_list : [],
@@ -148,6 +147,8 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         }
         if (isEditMode.value && formData.id) {
             data.id = formData.id
+        } else {
+            data.code = formData.code
         }
         return data
     }

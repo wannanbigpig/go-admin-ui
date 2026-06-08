@@ -246,13 +246,21 @@ const {
 
 const typeOptions = computed(() => typeList.value)
 
+const syncSelectedTypeCode = () => {
+    const list = typeList.value
+    if (selectedTypeCode.value && list.some((item) => item.type_code === selectedTypeCode.value)) {
+        itemQuery.type_code = selectedTypeCode.value
+        return
+    }
+    const nextTypeCode = list[0]?.type_code || ''
+    selectedTypeCode.value = nextTypeCode
+    itemQuery.type_code = nextTypeCode
+}
+
 watch(
     () => typeList.value,
-    (list) => {
-        if (!selectedTypeCode.value && list.length > 0) {
-            selectedTypeCode.value = list[0].type_code
-            itemQuery.type_code = list[0].type_code
-        }
+    () => {
+        syncSelectedTypeCode()
     }
 )
 
@@ -268,10 +276,7 @@ watch(activeTab, async (tab) => {
         if (typeList.value.length === 0) {
             await getTypeList()
         }
-        if (!selectedTypeCode.value && typeList.value.length > 0) {
-            selectedTypeCode.value = typeList.value[0].type_code
-            itemQuery.type_code = typeList.value[0].type_code
-        }
+        syncSelectedTypeCode()
         await handleItemSearch()
     }
 })
@@ -434,7 +439,6 @@ const submitTypeForm = async () => {
     if (!valid) return
 
     const payload = {
-        type_code: typeFormData.type_code,
         type_name_i18n: typeFormData.type_name_i18n,
         status: typeFormData.status,
         sort: typeFormData.sort,
@@ -447,7 +451,7 @@ const submitTypeForm = async () => {
             await modifyDictType({ id: currentTypeId.value, ...payload })
             ElMessage.success(t('common.result.editSuccess'))
         } else {
-            await addDictType(payload)
+            await addDictType({ type_code: typeFormData.type_code, ...payload })
             ElMessage.success(t('common.result.addSuccess'))
         }
         invalidateDictOptionsCache()
@@ -503,6 +507,7 @@ const handleDeleteType = async (row: DictType) => {
         invalidateDictOptionsCache()
         ElMessage.success(t('common.result.deleteSuccess'))
         await getTypeList()
+        syncSelectedTypeCode()
         await handleItemSearch()
     } catch (error) {
         if (error !== 'cancel' && error !== 'close') {

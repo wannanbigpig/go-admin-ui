@@ -110,7 +110,7 @@ export default defineConfig(({ mode }) => {
 
             // Gzip 压缩插件
             viteCompression({
-                verbose: true,
+                verbose: false,
                 disable: false,
                 threshold: 10240, // 超过 10KB 的文件进行压缩
                 algorithm: 'gzip',

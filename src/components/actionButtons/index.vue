@@ -3,30 +3,30 @@
         <template v-if="shouldShowAllButtons">
             <xl-action-button
                 v-for="(button, index) in visibleButtons"
-                :key="button.permission || (button.buttonInfo?.id as any) || button.text || index"
+                :key="button.permission || (resolveButtonInfo(button)?.id as any) || button.text || index"
                 :show-icon="button.showIcon"
                 :show-text="button.showText"
                 :type="button.type || 'primary'"
                 :link="button.link !== false"
                 :disabled="normalizeDisabled(button)"
                 :tooltip-content="normalizeTooltip(button)"
-                :button-info="button.buttonInfo"
-                :text="button.text || String(button.buttonInfo?.title || button.permission || '')"
+                :button-info="resolveButtonInfo(button)"
+                :text="button.text || String(resolveButtonInfo(button)?.title || button.permission || '')"
                 @click="handleClick(button, scope)"
             />
         </template>
         <template v-else>
             <xl-action-button
                 v-for="(button, index) in visibleButtons.slice(0, maxVisibleButtons - 1)"
-                :key="button.permission || (button.buttonInfo?.id as any) || button.text || index"
+                :key="button.permission || (resolveButtonInfo(button)?.id as any) || button.text || index"
                 :show-icon="button.showIcon"
                 :show-text="button.showText"
                 :type="button.type || 'primary'"
                 :link="button.link !== false"
                 :disabled="normalizeDisabled(button)"
                 :tooltip-content="normalizeTooltip(button)"
-                :button-info="button.buttonInfo"
-                :text="button.text || String(button.buttonInfo?.title || button.permission || '')"
+                :button-info="resolveButtonInfo(button)"
+                :text="button.text || String(resolveButtonInfo(button)?.title || button.permission || '')"
                 @click="handleClick(button, scope)"
             />
             <el-dropdown v-if="hasMoreButtons" trigger="click" size="small" teleported persistent>
@@ -38,16 +38,16 @@
                     <el-dropdown-menu>
                         <el-dropdown-item
                             v-for="(button, index) in moreButtons"
-                            :key="button.permission || (button.buttonInfo?.id as any) || button.text || index"
+                            :key="button.permission || (resolveButtonInfo(button)?.id as any) || button.text || index"
                             :divided="button.divided"
                             :disabled="normalizeDisabled(button)"
                             :title="normalizeTooltip(button) || undefined"
                             @click="handleClick(button, scope, $event)"
                         >
-                            <el-icon v-if="button.buttonInfo?.icon && button.showIcon !== false" class="el-icon--left">
-                                <xl-icon :icon="String(button.buttonInfo.icon)" />
+                            <el-icon v-if="resolveButtonInfo(button)?.icon && button.showIcon !== false" class="el-icon--left">
+                                <xl-icon :icon="String(resolveButtonInfo(button)?.icon)" />
                             </el-icon>
-                            {{ String(button.buttonInfo?.title || button.text || t('common.labels.operation')) }}
+                            {{ String(resolveButtonInfo(button)?.title || button.text || t('common.labels.operation')) }}
                         </el-dropdown-item>
                     </el-dropdown-menu>
                 </template>
@@ -87,7 +87,7 @@ import xlActionButton from '@/components/actionButton/index.vue'
 import { usePermission } from '@/composables/usePermission'
 import { useI18n } from 'vue-i18n'
 
-const { checkPermission } = usePermission()
+const { checkPermission, getButtonInfoFull } = usePermission()
 const { t } = useI18n()
 
 interface Props<U> {
@@ -122,6 +122,10 @@ const getIndex = (s: TableScope<T> | T): number => {
     return 0
 }
 
+const resolveButtonInfo = (button: ActionButtonConfig<T>) => {
+    return getButtonInfoFull(button.permission) || button.buttonInfo || null
+}
+
 const visibleButtons = computed(() => {
     return buttonsArray.value.filter((btn) => {
         const row = getRowData(props.scope)
@@ -129,8 +133,7 @@ const visibleButtons = computed(() => {
         if (typeof btn.visible === 'function' && !btn.visible(row, index)) {
             return false
         }
-        const hasPermission = btn.buttonInfo?.is_show === false ? false : checkPermission(btn.permission)
-        return hasPermission
+        return checkPermission(btn.permission, true)
     })
 })
 
