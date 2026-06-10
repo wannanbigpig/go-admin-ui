@@ -23,10 +23,14 @@
         <div class="xl-container">
             <el-alert class="xl-m-bottom-10" :title="t('system.task.cronScheduleNotice')" type="info" show-icon />
             <xl-table-list :loading="cronLoading" :data="cronList" :tableTitle="cronTableTitle" :pagination="cronPagination">
-                <template #td="{ item, val }">
+                <template #td="{ item, val, row }">
                     <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
                         {{ item.tag[val as string | number]?.text || val }}
                     </el-tag>
+                    <div v-else-if="item.prop === 'cron_spec'" class="cron-spec-cell">
+                        <span class="cron-spec-value">{{ row.cron_spec || '-' }}</span>
+                        <span v-if="row.cron_spec_description" class="cron-spec-description">{{ row.cron_spec_description }}</span>
+                    </div>
                     <span v-else>{{ val }}</span>
                 </template>
             </xl-table-list>
@@ -35,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onActivated, reactive, ref } from 'vue'
 import { type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
@@ -85,7 +89,7 @@ const cronTableTitle = computed(
         [
             { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
             { prop: 'task_code', h_label: t('system.task.code'), minWidth: 160, overflow: true },
-            { prop: 'cron_spec', h_label: t('system.task.cronSpec'), minWidth: 180, overflow: true },
+            { prop: 'cron_spec', h_label: t('system.task.cronSpec'), minWidth: 190, customRow: true },
             {
                 prop: 'last_status',
                 h_label: t('system.task.lastStatus'),
@@ -109,10 +113,30 @@ onMounted(async () => {
     await loadTaskRunStatusOptions()
     await getCronList()
 })
+
+onActivated(() => {
+    void getCronList()
+})
 </script>
 
 <style scoped lang="scss">
 :deep(.el-form-item) {
     width: 100%;
+}
+
+.cron-spec-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.35;
+}
+
+.cron-spec-value {
+    font-family: var(--xl-font-family-mono, monospace);
+}
+
+.cron-spec-description {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
 }
 </style>

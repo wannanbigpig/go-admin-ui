@@ -152,6 +152,18 @@ function formatDateTime(date: Date) {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
+function formatTrendWindowStart(row: TaskRunTrendPoint) {
+    if (!row.window_start) return '-'
+    if (row.window_size === 'day') return row.window_start.slice(0, 10)
+    return row.window_start
+}
+
+function formatTrendWindowSize(row: TaskRunTrendPoint) {
+    if (row.window_size === 'day') return t('system.task.windowSizeDay')
+    if (row.window_size === 'hour') return t('system.task.windowSizeHour')
+    return row.window_size || '-'
+}
+
 function createDefaultStatsDateRange(): [string, string] {
     const end = new Date()
     const start = new Date(end)
@@ -195,8 +207,8 @@ const summaryCardsBottom = computed(() => [
 const trendTableTitle = computed(
     () =>
         [
-            { prop: 'window_start', h_label: t('system.task.windowStart'), minWidth: 170, align: 'center' },
-            { prop: 'window_size', h_label: t('system.task.windowSize'), minWidth: 100, align: 'center' },
+            { prop: 'window_start', h_label: t('system.task.windowStart'), minWidth: 170, align: 'center', formatter: formatTrendWindowStart },
+            { prop: 'window_size', h_label: t('system.task.windowSize'), minWidth: 100, align: 'center', formatter: formatTrendWindowSize },
             { prop: 'total_count', h_label: t('system.task.totalCount'), minWidth: 120, align: 'center' },
             { prop: 'success_count', h_label: t('system.task.successCount'), minWidth: 120, align: 'center' },
             { prop: 'failed_count', h_label: t('system.task.failedCount'), minWidth: 120, align: 'center' },
@@ -214,7 +226,7 @@ const renderTrendChart = async () => {
     if (!trendChart) {
         trendChart = initDashboardChart(trendChartRef.value)
     }
-    const labels = trendRows.value.map((item) => item.window_start)
+    const labels = trendRows.value.map(formatTrendWindowStart)
     trendChart.setOption({
         tooltip: {
             trigger: 'axis',

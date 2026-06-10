@@ -117,6 +117,7 @@ export interface TaskDefinition extends WithId, WithTimestamp {
     kind: string
     queue: string
     cron_spec?: string
+    cron_spec_description?: string
     handler?: string
     status: number
     allow_manual: number
@@ -146,6 +147,9 @@ export interface TaskRun extends WithId, WithTimestamp {
     retry_of_run_id?: number | string
     retry_root_run_id?: number | string
     retry_seq?: number
+    retry_count?: number
+    latest_retry_run_id?: number | string
+    latest_retry_status?: TaskRunStatus | string
     can_retry?: boolean
     retry_block_reason?: string
     error_message?: string
@@ -161,6 +165,7 @@ export interface TaskRun extends WithId, WithTimestamp {
 export interface CronTaskState extends WithId {
     task_code: string
     cron_spec: string
+    cron_spec_description?: string
     last_run_id?: number | string
     last_status?: string
     last_started_at?: string
@@ -541,6 +546,7 @@ export interface TaskOperationConfigPayload {
     status: number
     allow_manual: number
     allow_retry: number
+    cron_spec?: string
 }
 
 export interface CronTaskStateQuery extends PageParams {

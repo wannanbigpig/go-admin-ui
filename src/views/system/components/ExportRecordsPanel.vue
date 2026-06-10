@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
@@ -355,6 +355,10 @@ watch(
 
 onMounted(async () => {
     await getExportList()
+})
+
+onActivated(() => {
+    void getExportList()
 })
 </script>
 

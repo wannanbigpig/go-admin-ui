@@ -111,6 +111,7 @@ export function createTaskOperationConfigPayload(row?: Partial<TaskDefinition>):
         status: Number(row?.status ?? 1),
         allow_manual: Number(row?.allow_manual ?? 0),
         allow_retry: Number(row?.allow_retry ?? 1),
+        cron_spec: row?.cron_spec || '',
     }
 }
 

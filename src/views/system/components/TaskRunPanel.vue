@@ -132,11 +132,17 @@
             <el-descriptions v-if="currentRunDetail" :column="2" border class="custom-descriptions xl-m-bottom-20">
                 <el-descriptions-item :label="t('system.task.maxRetry')">{{ currentRunDetail.max_retry ?? '-' }}</el-descriptions-item>
                 <el-descriptions-item :label="t('system.task.attempt')">{{ currentRunDetail.attempt ?? '-' }}</el-descriptions-item>
-                <template v-if="currentRunDetail.attempt && currentRunDetail.attempt > 0">
-                    <el-descriptions-item :label="t('system.task.retryOfRunId')">{{ currentRunDetail.retry_of_run_id || '-' }}</el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.retryRootRunId')">{{ currentRunDetail.retry_root_run_id || '-' }}</el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.retrySeq')" :span="2">{{ currentRunDetail.retry_seq || '-' }}</el-descriptions-item>
-                </template>
+                <el-descriptions-item :label="t('system.task.retryCount')">{{ currentRunDetail.retry_count ?? 0 }}</el-descriptions-item>
+                <el-descriptions-item :label="t('system.task.latestRetryRunId')">{{ currentRunDetail.latest_retry_run_id || '-' }}</el-descriptions-item>
+                <el-descriptions-item :label="t('system.task.latestRetryStatus')">
+                    <el-tag v-if="currentRunDetail.latest_retry_status" size="small" :type="taskRunStatusTagMap[currentRunDetail.latest_retry_status]?.type || 'info'" effect="light">
+                        {{ taskRunStatusTagMap[currentRunDetail.latest_retry_status]?.text || currentRunDetail.latest_retry_status }}
+                    </el-tag>
+                    <span v-else>-</span>
+                </el-descriptions-item>
+                <el-descriptions-item :label="t('system.task.retryOfRunId')">{{ currentRunDetail.retry_of_run_id || '-' }}</el-descriptions-item>
+                <el-descriptions-item :label="t('system.task.retryRootRunId')">{{ currentRunDetail.retry_root_run_id || '-' }}</el-descriptions-item>
+                <el-descriptions-item :label="t('system.task.retrySeq')" :span="2">{{ currentRunDetail.retry_seq || '-' }}</el-descriptions-item>
                 <el-descriptions-item :label="t('system.task.canRetry')" :span="2">
                     <el-tag size="small" :type="currentRunDetail.can_retry ? 'success' : 'info'" effect="light">
                         {{ currentRunDetail.can_retry ? t('common.yes') : t('common.no') }}
@@ -195,7 +201,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
@@ -490,6 +496,10 @@ onMounted(async () => {
     await Promise.all([loadTaskKindOptions(), loadTaskSourceOptions(), loadTaskRunStatusOptions(), loadDetailRecordModeOptions()])
     await getRunList()
     if (props.active) runListPolling.start()
+})
+
+onActivated(() => {
+    void getRunList()
 })
 </script>
 
