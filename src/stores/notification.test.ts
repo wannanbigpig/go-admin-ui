@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 const hoisted = vi.hoisted(() => {
@@ -40,15 +40,67 @@ vi.mock('@/utils/logger', () => ({
     },
 }))
 
-import { useNotificationStore } from '@/stores/notification'
+const originalWebSocket = globalThis.WebSocket
+const mockSockets: MockWebSocket[] = []
+
+class MockWebSocket {
+    static readonly OPEN = 1
+    static readonly CLOSED = 3
+
+    readyState = MockWebSocket.OPEN
+    sent: string[] = []
+    onopen: ((event: Event) => void) | null = null
+    onmessage: ((event: MessageEvent<string>) => void) | null = null
+    onclose: ((event: CloseEvent) => void) | null = null
+    onerror: ((event: Event) => void) | null = null
+
+    constructor(public url: string) {
+        mockSockets.push(this)
+        setTimeout(() => {
+            this.onopen?.(new Event('open'))
+        }, 0)
+    }
+
+    send(data: string) {
+        this.sent.push(data)
+    }
+
+    close() {
+        this.readyState = MockWebSocket.CLOSED
+    }
+
+    emitMessage(data: string) {
+        this.onmessage?.({ data } as MessageEvent<string>)
+    }
+}
+
+const sentActions = (socket: MockWebSocket, action: string) => socket.sent.map((item) => JSON.parse(item) as { action?: string; channel?: string }).filter((item) => item.action === action)
+
+import { subscribeChannel, unsubscribeChannel, useNotificationStore } from '@/stores/notification'
 
 describe('stores/notification.ts', () => {
     beforeEach(() => {
         setActivePinia(createPinia())
+        Object.defineProperty(globalThis, 'WebSocket', {
+            value: MockWebSocket,
+            configurable: true,
+        })
+        mockSockets.length = 0
         hoisted.mockGetNotificationList.mockReset()
         hoisted.mockGetNotificationUnreadCount.mockReset()
         hoisted.mockMarkNotificationRead.mockReset()
         hoisted.mockRouter.push.mockReset()
+        hoisted.mockGetNotificationList.mockResolvedValue({ list: [], total: 0 })
+        hoisted.mockGetNotificationUnreadCount.mockResolvedValue({ unread_count: 0 })
+    })
+
+    afterEach(() => {
+        useNotificationStore().stop()
+        unsubscribeChannel('monitor')
+        Object.defineProperty(globalThis, 'WebSocket', {
+            value: originalWebSocket,
+            configurable: true,
+        })
     })
 
     it('loadNotifications 应当能把后端的文件下载 action_url 自动规一化为前端路由，以防止 404', async () => {
@@ -113,5 +165,53 @@ describe('stores/notification.ts', () => {
         expect(success).toBe(false)
         expect(store.notifications[0].read).toBe(false)
         expect(store.unreadCount).toBe(1)
+    })
+
+    it('message_read 事件不应被频道分发逻辑吞掉', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+        store.notifications.push({
+            id: '123',
+            title: 'title',
+            message: 'message',
+            level: 'info',
+            source: 'websocket',
+            read: false,
+            created_at: new Date().toISOString(),
+        })
+        store.unreadCount = 1
+
+        mockSockets[0].emitMessage(
+            JSON.stringify({
+                type: 'message_read',
+                message_id: '123',
+                unread_count: 0,
+            })
+        )
+
+        expect(store.notifications[0].read).toBe(true)
+        expect(store.unreadCount).toBe(0)
+    })
+
+    it('同一频道仍有其它 handler 时不应向服务端退订', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+        const socket = mockSockets[0]
+        const firstHandler = vi.fn()
+        const secondHandler = vi.fn()
+
+        subscribeChannel('monitor', firstHandler)
+        subscribeChannel('monitor', secondHandler)
+        expect(sentActions(socket, 'subscribe')).toEqual([{ action: 'subscribe', channel: 'monitor' }])
+
+        unsubscribeChannel('monitor', firstHandler)
+        expect(sentActions(socket, 'unsubscribe')).toEqual([])
+
+        unsubscribeChannel('monitor', secondHandler)
+        expect(sentActions(socket, 'unsubscribe')).toEqual([{ action: 'unsubscribe', channel: 'monitor' }])
     })
 })

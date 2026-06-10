@@ -11,7 +11,7 @@ const constantRoutes: RouteRecordRaw[] = [
             {
                 path: '/refresh',
                 name: 'refresh',
-                component: () => import('@/views/other/refresh.vue'),
+                component: () => import('@/views/other/refresh/index.vue'),
                 meta: {
                     title: 'Refresh',
                     titleKey: 'common.actions.refresh',
@@ -21,7 +21,7 @@ const constantRoutes: RouteRecordRaw[] = [
             {
                 path: '/iframe',
                 name: 'iframe',
-                component: () => import('@/views/other/iframe.vue'),
+                component: () => import('@/views/other/iframe/index.vue'),
                 meta: {
                     title: 'iframe',
                     show: false,
@@ -40,7 +40,7 @@ const constantRoutes: RouteRecordRaw[] = [
             {
                 path: '/system/notification',
                 name: 'SystemNotification',
-                component: () => import('@/views/system/notification.vue'),
+                component: () => import('@/views/system/notification/index.vue'),
                 meta: {
                     title: 'Notification',
                     titleKey: 'system.notification.title',
@@ -50,7 +50,7 @@ const constantRoutes: RouteRecordRaw[] = [
             {
                 path: '/system/notification-manage',
                 name: 'SystemNotificationManage',
-                component: () => import('@/views/system/notificationManage.vue'),
+                component: () => import('@/views/system/notificationManage/index.vue'),
                 meta: {
                     title: 'Notification Manage',
                     titleKey: 'system.notification.manageTitle',
@@ -72,7 +72,7 @@ const constantRoutes: RouteRecordRaw[] = [
     {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
-        component: () => import('@/views/other/404.vue'),
+        component: () => import('@/views/other/404/index.vue'),
         meta: {
             title: '404',
         },

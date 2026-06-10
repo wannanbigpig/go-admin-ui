@@ -122,8 +122,17 @@ export interface TaskDefinition extends WithId, WithTimestamp {
     allow_manual: number
     allow_retry: number
     is_high_risk: number
+    record_success_mode?: TaskRecordSuccessMode
+    record_success_rate?: number
+    record_success_interval_seconds?: number
+    record_detail_on_manual?: number
+    record_detail_on_failure?: number
     remark?: string
 }
+
+export type TaskRecordSuccessMode = 'all' | 'sample' | 'interval' | 'none'
+export type TaskDetailRecordMode = 'all' | 'sampled' | 'forced' | 'none'
+export type TaskRunStatus = 'pending' | 'running' | 'success' | 'failed' | 'canceled' | 'retrying' | 'timeout' | 'interrupted'
 
 export interface TaskRun extends WithId, WithTimestamp {
     task_code: string
@@ -131,15 +140,21 @@ export interface TaskRun extends WithId, WithTimestamp {
     source: string
     source_id: string
     queue: string
-    status: string
+    status: TaskRunStatus | string
     attempt: number
     max_retry: number
+    retry_of_run_id?: number | string
+    retry_root_run_id?: number | string
+    retry_seq?: number
+    can_retry?: boolean
+    retry_block_reason?: string
     error_message?: string
     duration_ms: number
     started_at?: string
     finished_at?: string
     trigger_user_id?: number
     trigger_account?: string
+    detail_record_mode?: TaskDetailRecordMode | string
     payload?: string
 }
 
@@ -150,6 +165,9 @@ export interface CronTaskState extends WithId {
     last_status?: string
     last_started_at?: string
     last_finished_at?: string
+    last_success_at?: string
+    last_failed_at?: string
+    last_stats_window_start?: string
     next_run_at?: string
     last_error?: string
     updated_at?: string
@@ -465,8 +483,64 @@ export interface TaskRunQuery extends PageParams {
     source?: string | null
     source_id?: string | null
     status?: string | null
+    detail_record_mode?: string | null
     start_time?: string | null
     end_time?: string | null
+}
+
+export interface TaskRunStatsQuery {
+    task_code?: string | null
+    kind?: string | null
+    source?: string | null
+    start_time?: string | null
+    end_time?: string | null
+}
+
+export interface TaskRunStats {
+    task_code?: string
+    kind?: string
+    source?: string
+    total_count: number
+    success_count: number
+    failed_count: number
+    canceled_count: number
+    timeout_count: number
+    interrupted_count: number
+    sampled_success_count: number
+    duration_total_ms: number
+    duration_max_ms: number
+    duration_avg_ms: number
+    success_rate: number
+}
+
+export interface TaskRunTrendPoint {
+    window_start: string
+    window_size: string
+    total_count: number
+    success_count: number
+    failed_count: number
+    canceled_count: number
+    timeout_count: number
+    interrupted_count: number
+    sampled_success_count: number
+    duration_total_ms: number
+    duration_max_ms: number
+}
+
+export interface TaskRecordPolicyPayload {
+    task_code: string
+    record_success_mode: TaskRecordSuccessMode
+    record_success_rate: number
+    record_success_interval_seconds: number
+    record_detail_on_manual: number
+    record_detail_on_failure: number
+}
+
+export interface TaskOperationConfigPayload {
+    task_code: string
+    status: number
+    allow_manual: number
+    allow_retry: number
 }
 
 export interface CronTaskStateQuery extends PageParams {
@@ -517,6 +591,8 @@ export interface TaskTriggerResult {
     queue: string
     type: string
     retry_from_run?: number | string
+    retry_root_run?: number | string
+    retry_seq?: number
     status?: string
     canceled_by?: number
     canceled_by_account?: string

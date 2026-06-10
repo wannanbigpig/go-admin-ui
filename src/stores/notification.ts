@@ -16,6 +16,81 @@ const RECONNECT_DELAYS_MS = [3000, 10000, 20000, 30000, 40000, 60000]
 // 收到这两类应停止重连并跳登录，不可继续重连（否则会无限拿新 ticket 重连被拒）。
 const SESSION_TERMINATED_CODES = new Set([4001, 4002])
 
+// 通用频道处理器类型
+export type ChannelHandler = (data: unknown) => void
+
+// 频道订阅管理
+const channelHandlers = new Map<string, Set<ChannelHandler>>()
+const subscribedChannels = new Set<string>()
+
+// 订阅频道
+export function subscribeChannel(channel: string, handler: ChannelHandler) {
+    if (!channel || !handler) return
+    const shouldSubscribe = !subscribedChannels.has(channel)
+    let handlers = channelHandlers.get(channel)
+    if (!handlers) {
+        handlers = new Set()
+        channelHandlers.set(channel, handlers)
+    }
+    handlers.add(handler)
+    subscribedChannels.add(channel)
+    // 如果 socket 已连接，发送订阅消息
+    if (shouldSubscribe && socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ action: 'subscribe', channel }))
+    }
+}
+
+// 退订频道
+export function unsubscribeChannel(channel: string, handler?: ChannelHandler) {
+    if (!channel) return
+    let shouldUnsubscribe = subscribedChannels.has(channel)
+    if (handler) {
+        const handlers = channelHandlers.get(channel)
+        if (handlers) {
+            handlers.delete(handler)
+            if (handlers.size === 0) {
+                channelHandlers.delete(channel)
+                subscribedChannels.delete(channel)
+            } else {
+                shouldUnsubscribe = false
+            }
+        } else {
+            shouldUnsubscribe = false
+        }
+    } else {
+        channelHandlers.delete(channel)
+        subscribedChannels.delete(channel)
+    }
+    // 如果 socket 已连接，发送退订消息
+    if (shouldUnsubscribe && socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ action: 'unsubscribe', channel }))
+    }
+}
+
+// 重新订阅所有频道（连接建立时调用）
+function resubscribeAllChannels() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return
+    for (const channel of subscribedChannels) {
+        socket.send(JSON.stringify({ action: 'subscribe', channel }))
+    }
+}
+
+// 分发频道消息
+function dispatchChannelMessage(channel: string, data: unknown) {
+    const handlers = channelHandlers.get(channel)
+    if (!handlers || handlers.size === 0) return
+    for (const handler of handlers) {
+        try {
+            handler(data)
+        } catch (error) {
+            Logger.error(`频道 ${channel} 处理器执行失败:`, error)
+        }
+    }
+}
+
+// 全局 socket 引用，供频道订阅使用
+let socket: WebSocket | null = null
+
 function normalizeEnvValue(value: unknown) {
     return typeof value === 'string' ? value.trim() : ''
 }
@@ -205,7 +280,6 @@ export const useNotificationStore = defineStore(
         const initialized = ref(false)
         const reconnectAttempt = ref(0)
 
-        let socket: WebSocket | null = null
         let reconnectTimer: ReturnType<typeof setTimeout> | null = null
         let currentToken = ''
         let currentLocale = 'zh-CN'
@@ -335,6 +409,15 @@ export const useNotificationStore = defineStore(
         const handleSocketMessage = (event: MessageEvent<string>) => {
             try {
                 const payload = JSON.parse(event.data) as NotificationSocketMessage
+
+                // 检查是否是已订阅的频道消息（type 字段），未订阅的 type 继续走通知事件处理。
+                const messageType = String(payload.type || '').toLowerCase()
+                if (messageType && messageType !== 'notification' && channelHandlers.has(messageType)) {
+                    // 分发到频道处理器
+                    dispatchChannelMessage(messageType, payload.data || payload)
+                    return
+                }
+
                 const list = Array.isArray(payload.list) ? payload.list : Array.isArray(payload.data) ? payload.data : null
                 if (list) {
                     list.forEach((item) => {
@@ -420,6 +503,8 @@ export const useNotificationStore = defineStore(
                     connectionStatus.value = 'connected'
                     lastError.value = ''
                     reconnectAttempt.value = 0
+                    // 重新订阅所有频道
+                    resubscribeAllChannels()
                 }
                 socket.onmessage = handleSocketMessage
                 socket.onerror = () => {
@@ -496,6 +581,8 @@ export const useNotificationStore = defineStore(
             start,
             stop,
             reconnect,
+            subscribeChannel,
+            unsubscribeChannel,
         }
     },
     {

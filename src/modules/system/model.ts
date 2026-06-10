@@ -1,4 +1,17 @@
-import type { SystemConfigQuery, DictTypeQuery, DictItemQuery, TaskQuery, TaskRunQuery, CronTaskStateQuery, SystemFileQuery, LocaleTextMap } from '@/types/system'
+import type {
+    SystemConfigQuery,
+    DictTypeQuery,
+    DictItemQuery,
+    TaskQuery,
+    TaskRunQuery,
+    TaskRunStatsQuery,
+    TaskRecordPolicyPayload,
+    TaskOperationConfigPayload,
+    TaskDefinition,
+    CronTaskStateQuery,
+    SystemFileQuery,
+    LocaleTextMap,
+} from '@/types/system'
 
 export function createLocaleTextMap(): LocaleTextMap {
     return {
@@ -65,8 +78,39 @@ export function createTaskRunQuery(): TaskRunQuery {
         source: null,
         source_id: null,
         status: null,
+        detail_record_mode: null,
         start_time: null,
         end_time: null,
+    }
+}
+
+export function createTaskRunStatsQuery(): TaskRunStatsQuery {
+    return {
+        task_code: null,
+        kind: null,
+        source: null,
+        start_time: null,
+        end_time: null,
+    }
+}
+
+export function createTaskRecordPolicyPayload(row?: Partial<TaskDefinition>): TaskRecordPolicyPayload {
+    return {
+        task_code: row?.code || '',
+        record_success_mode: row?.record_success_mode || 'all',
+        record_success_rate: Number(row?.record_success_rate ?? 100),
+        record_success_interval_seconds: Number(row?.record_success_interval_seconds ?? 0),
+        record_detail_on_manual: Number(row?.record_detail_on_manual ?? 1),
+        record_detail_on_failure: Number(row?.record_detail_on_failure ?? 1),
+    }
+}
+
+export function createTaskOperationConfigPayload(row?: Partial<TaskDefinition>): TaskOperationConfigPayload {
+    return {
+        task_code: row?.code || '',
+        status: Number(row?.status ?? 1),
+        allow_manual: Number(row?.allow_manual ?? 0),
+        allow_retry: Number(row?.allow_retry ?? 1),
     }
 }
 

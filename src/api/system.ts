@@ -1,4 +1,4 @@
-import { get, post, upload } from '@/utils/request'
+import { get, post, request, upload } from '@/utils/request'
 import type { AxiosRequestConfig } from 'axios'
 import type { PageData } from '@/types/common'
 import type { ExportRecord, ExportTaskSubmitResult } from '@/types/exportCenter'
@@ -37,6 +37,11 @@ import type {
     TaskTriggerPayload,
     TaskTriggerResult,
     TaskCancelPayload,
+    TaskRecordPolicyPayload,
+    TaskOperationConfigPayload,
+    TaskRunStats,
+    TaskRunStatsQuery,
+    TaskRunTrendPoint,
 } from '@/types/system'
 
 export function getSystemConfigList(params?: Record<string, unknown>) {
@@ -115,8 +120,24 @@ export function triggerTask(data: TaskTriggerPayload) {
     return post<TaskTriggerResult>('/v1/task/trigger', data)
 }
 
+export function updateTaskRecordPolicy(data: TaskRecordPolicyPayload) {
+    return request<TaskDefinition>('/v1/task/record-policy', 'PATCH', { data })
+}
+
+export function updateTaskOperationConfig(data: TaskOperationConfigPayload) {
+    return request<TaskDefinition>('/v1/task/operation-config', 'PATCH', { data })
+}
+
 export function getTaskRunList(params?: Record<string, unknown>) {
     return get<PageData<TaskRun>>('/v1/task/run/list', params)
+}
+
+export function getTaskRunStats(params?: TaskRunStatsQuery) {
+    return get<TaskRunStats>('/v1/task/run/stats', params as Record<string, unknown>)
+}
+
+export function getTaskRunStatsTrend(params?: TaskRunStatsQuery) {
+    return get<TaskRunTrendPoint[]>('/v1/task/run/stats/trend', params as Record<string, unknown>)
 }
 
 export function getTaskRunDetail(params: { id: number | string }) {

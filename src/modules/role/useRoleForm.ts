@@ -4,7 +4,7 @@ import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createRole, getRoleDetail, updateRole } from '@/api/permission'
 import { fetchMenuTree } from '@/modules/permission/service'
-import { createRoleForm, createRoleRules, isSuperAdminRole, ROLE_EDIT_TYPE, ROLE_STATUS, ROLE_SUBMIT_DELAY } from '@/modules/role/model'
+import { createRoleForm, createRoleRules, isSuperAdminRole, ROLE_STATUS, ROLE_SUBMIT_DELAY, DATA_SCOPE } from '@/modules/role/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import { normalizeDetailData } from '@/modules/shared/response'
 import type { Menu } from '@/types/menu'
@@ -144,6 +144,8 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
             description: formData.description || '',
             menu_list: Array.isArray(formData.menu_list) ? formData.menu_list : [],
             status: formData.status ?? ROLE_STATUS.NORMAL,
+            data_scope: formData.data_scope ?? DATA_SCOPE.DEPT,
+            dept_ids: formData.data_scope === DATA_SCOPE.CUSTOM ? formData.dept_ids || [] : [],
         }
         if (isEditMode.value && formData.id) {
             data.id = formData.id
@@ -232,127 +234,93 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         }
     }
 
-    const loadRoleIntoForm = async (roleId: number, mode: 'edit' | 'copy') => {
+    const loadRoleIntoForm = async (roleId: number) => {
         const response = await getRoleDetail({ id: roleId })
         const roleData = normalizeDetailData<Role>(response, {} as Role)
         const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
         const menuIds = normalizeMenuList(rawMenuList)
 
         Object.assign(formData, {
-            id: mode === 'edit' ? roleData.id : 0,
-            name: mode === 'copy' ? `${roleData.name}-copy` : roleData.name || '',
-            code: '',
+            id: roleData.id,
+            name: roleData.name || '',
+            code: roleData.code || '',
             sort: roleData.sort ?? 100,
             description: roleData.description || '',
             menu_list: menuIds,
             status: roleData.status ?? ROLE_STATUS.NORMAL,
+            data_scope: roleData.data_scope ?? DATA_SCOPE.DEPT,
+            dept_ids: roleData.dept_ids || [],
         })
 
-        if (mode === 'edit') {
-            formData.code = roleData.code || ''
-        }
-
-        isSuperAdminEditing.value = mode === 'edit' && isSuperAdminRole(roleData)
+        isSuperAdminEditing.value = isSuperAdminRole(roleData)
     }
 
-    const openEditDrawer = async (type: number, row?: Partial<Role>, index?: number) => {
-        if (typeof type !== 'number') return
-
+    const openCreateDrawer = async () => {
         showDrawer.value = true
-        currentIndex.value = index ?? null
+        currentIndex.value = null
         resetFormData()
+        formTitle.value = translate('permission.role.addTitle')
 
-        if (type === ROLE_EDIT_TYPE.EDIT) {
-            if (!row || typeof row.id !== 'number') {
-                ElMessage.error(translate('validation.role.invalidRow'))
-                showDrawer.value = false
-                return
-            }
-
-            formTitle.value = translate('permission.role.editTitle')
-            isEditMode.value = true
-
-            try {
-                await loadRoleIntoForm(row.id, 'edit')
-                if (menuTreeDataLoaded.value) {
-                    await setMenuTreeChecked()
-                }
-            } catch (error) {
-                Logger.error('获取角色详情失败:', error)
-                showDrawer.value = false
-                return
-            }
-        } else {
-            formTitle.value = translate('permission.role.addTitle')
-            if (menuTreeDataLoaded.value) {
-                await setMenuTreeChecked()
-            }
+        if (menuTreeDataLoaded.value) {
+            await setMenuTreeChecked()
         }
 
-        if (!menuTreeDataLoaded.value) {
-            menuTreeLoading.value = true
-            getMenuTreeData()
-                .then(() => {
-                    menuTreeDataLoaded.value = true
-                    setMenuTreeChecked()
-                })
-                .catch((error) => {
-                    Logger.error('获取菜单列表失败:', error)
-                    ElMessage.error(translate('validation.role.fetchMenuFailed'))
-                })
-                .finally(() => {
-                    menuTreeLoading.value = false
-                })
-        } else {
-            updateMenuTreeDisabled(menuTreeData.value)
-        }
+        await ensureMenuTreeLoaded()
 
         setTimeout(() => {
             formDataRef.value?.clearValidate()
         }, 50)
     }
 
-    const handleCopyRole = async (row: Role, index?: number) => {
-        const roleId = typeof row.id === 'number' ? row.id : Number(row.id)
-        if (!roleId) return
-
+    const openEditDrawer = async (row?: Partial<Role>, index?: number) => {
         showDrawer.value = true
         currentIndex.value = index ?? null
         resetFormData()
-        formTitle.value = translate('permission.role.copyTitle')
 
-        try {
-            await loadRoleIntoForm(roleId, 'copy')
-            if (menuTreeDataLoaded.value) {
-                await setMenuTreeChecked()
-            }
-        } catch (error) {
-            Logger.error('获取复制角色详情失败:', error)
+        if (!row || typeof row.id !== 'number') {
+            ElMessage.error(translate('validation.role.invalidRow'))
             showDrawer.value = false
             return
         }
 
-        if (!menuTreeDataLoaded.value) {
-            menuTreeLoading.value = true
-            getMenuTreeData()
-                .then(() => {
-                    menuTreeDataLoaded.value = true
-                    setMenuTreeChecked()
-                })
-                .catch((error) => {
-                    Logger.error('获取菜单列表失败:', error)
-                    ElMessage.error(translate('validation.role.fetchMenuFailed'))
-                })
-                .finally(() => {
-                    menuTreeLoading.value = false
-                })
-        } else {
-            updateMenuTreeDisabled(menuTreeData.value)
+        formTitle.value = translate('permission.role.editTitle')
+        isEditMode.value = true
+
+        try {
+            await loadRoleIntoForm(row.id)
+            if (menuTreeDataLoaded.value) {
+                await setMenuTreeChecked()
+            }
+        } catch (error) {
+            Logger.error('获取角色详情失败:', error)
+            showDrawer.value = false
+            return
         }
+
+        await ensureMenuTreeLoaded()
 
         setTimeout(() => {
             formDataRef.value?.clearValidate()
         }, 50)
+    }
+
+    const ensureMenuTreeLoaded = async () => {
+        if (menuTreeDataLoaded.value) {
+            updateMenuTreeDisabled(menuTreeData.value)
+            return
+        }
+
+        menuTreeLoading.value = true
+        try {
+            await getMenuTreeData()
+            menuTreeDataLoaded.value = true
+            await setMenuTreeChecked()
+        } catch (error) {
+            Logger.error('获取菜单列表失败:', error)
+            ElMessage.error(translate('validation.role.fetchMenuFailed'))
+        } finally {
+            menuTreeLoading.value = false
+        }
     }
 
     const editConfirmSubmit = async () => {
@@ -399,8 +367,8 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         menuTreeData,
         menuTreeLoading,
         handleMenuCheck,
+        openCreateDrawer,
         openEditDrawer,
-        handleCopyRole,
         editConfirmSubmit,
     }
 }

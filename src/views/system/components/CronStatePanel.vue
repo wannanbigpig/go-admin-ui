@@ -21,6 +21,7 @@
         </div>
 
         <div class="xl-container">
+            <el-alert class="xl-m-bottom-10" :title="t('system.task.cronScheduleNotice')" type="info" show-icon />
             <xl-table-list :loading="cronLoading" :data="cronList" :tableTitle="cronTableTitle" :pagination="cronPagination">
                 <template #td="{ item, val }">
                     <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
@@ -96,6 +97,10 @@ const cronTableTitle = computed(
             { prop: 'next_run_at', h_label: t('system.task.nextRunAt'), width: 160, align: 'center' },
             { prop: 'last_started_at', h_label: t('system.task.startedAt'), width: 160, align: 'center' },
             { prop: 'last_finished_at', h_label: t('system.task.finishedAt'), width: 160, align: 'center' },
+            { prop: 'last_success_at', h_label: t('system.task.lastSuccessAt'), width: 160, align: 'center' },
+            { prop: 'last_failed_at', h_label: t('system.task.lastFailedAt'), width: 160, align: 'center' },
+            { prop: 'last_stats_window_start', h_label: t('system.task.lastStatsWindowStart'), width: 170, align: 'center' },
+            { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
             { prop: 'last_error', h_label: t('system.task.lastError'), minWidth: 200, overflow: true },
         ] as TableColumn<CronTaskState>[]
 )

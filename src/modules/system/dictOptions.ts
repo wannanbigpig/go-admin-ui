@@ -7,6 +7,8 @@ export const SYSTEM_DICT_TYPES = {
     taskKind: 'task_kind',
     taskSource: 'task_source',
     taskRunStatus: 'task_run_status',
+    taskRecordSuccessMode: 'task_record_success_mode',
+    taskDetailRecordMode: 'task_detail_record_mode',
 } as const
 
 export const commonStatusFallbackOptions: DictOption[] = [
@@ -37,4 +39,20 @@ export const taskRunStatusFallbackOptions: DictOption[] = [
     { value: 'failed', label: translate('system.task.options.status.failed'), tag_type: 'danger' },
     { value: 'retrying', label: translate('system.task.options.status.retrying'), tag_type: 'warning' },
     { value: 'canceled', label: translate('system.task.options.status.canceled'), tag_type: 'info' },
+    { value: 'timeout', label: translate('system.task.options.status.timeout'), tag_type: 'danger' },
+    { value: 'interrupted', label: translate('system.task.options.status.interrupted'), tag_type: 'info' },
+]
+
+export const taskRecordSuccessModeFallbackOptions: DictOption[] = [
+    { value: 'all', label: translate('system.task.options.recordSuccessMode.all'), tag_type: 'success' },
+    { value: 'sample', label: translate('system.task.options.recordSuccessMode.sample'), tag_type: 'primary' },
+    { value: 'interval', label: translate('system.task.options.recordSuccessMode.interval'), tag_type: 'warning' },
+    { value: 'none', label: translate('system.task.options.recordSuccessMode.none'), tag_type: 'info' },
+]
+
+export const taskDetailRecordModeFallbackOptions: DictOption[] = [
+    { value: 'all', label: translate('system.task.options.detailRecordMode.all'), tag_type: 'success' },
+    { value: 'sampled', label: translate('system.task.options.detailRecordMode.sampled'), tag_type: 'primary' },
+    { value: 'forced', label: translate('system.task.options.detailRecordMode.forced'), tag_type: 'warning' },
+    { value: 'none', label: translate('system.task.options.detailRecordMode.none'), tag_type: 'info' },
 ]

@@ -103,7 +103,7 @@ import { useI18n } from 'vue-i18n'
 import router from '@/router'
 import { dispatchSystemNotification } from '@/modules/system/service'
 import type { NotificationAudienceType, NotificationSendPayload } from '@/types/notification'
-import { useNotificationCategoryOptions } from './notificationConstants'
+import { useNotificationCategoryOptions } from '../notification/notificationConstants'
 
 interface NotificationManageFormState {
     audience_type: NotificationAudienceType

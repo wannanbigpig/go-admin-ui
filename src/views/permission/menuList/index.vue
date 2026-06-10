@@ -58,11 +58,11 @@ import xlTableList from '@/components/tableList/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import MenuEditDrawer from './components/MenuEditDrawer.vue'
+import MenuEditDrawer from '../components/MenuEditDrawer.vue'
 import { onMounted, ref, reactive, computed, markRaw, nextTick } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
-import { MENU_STATUS } from '@/modules/menu/model'
+import { MENU_STATUS, MENU_TYPE } from '@/modules/menu/model'
 import { useMenuList } from '@/modules/menu/useMenuList'
 import { useMenuTreeExpand } from '@/modules/menu/useMenuTreeExpand'
 import type { Menu } from '@/types/menu'
@@ -116,6 +116,7 @@ const actionButtons = markRaw([
         permission: 'menu:addChild',
         buttonInfo: addChildButtonInfo || undefined,
         showIcon: false,
+        visible: (row: Menu) => Number(row.type) !== MENU_TYPE.BUTTON,
         click: (row: Menu) => menuDrawerRef.value?.handleAddChild(row),
     },
     {

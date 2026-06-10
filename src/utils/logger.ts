@@ -88,6 +88,16 @@ export const Logger = {
  * 捕获 Vue 应用未处理的错误
  */
 export function setupGlobalErrorHandlers(): void {
+    // 过滤控制台警告（例如 Vue3 的 Suspense 实验性警告）
+    const originalWarn = globalThis.console.warn
+    globalThis.console.warn = (...args: unknown[]) => {
+        const msg = args[0]
+        if (typeof msg === 'string' && msg.includes('<Suspense> is an experimental feature')) {
+            return
+        }
+        originalWarn.apply(globalThis.console, args)
+    }
+
     // 捕获未处理的 Promise rejection
     window.addEventListener('unhandledrejection', (event) => {
         Logger.error('[全局错误] 未处理的 Promise rejection:', event.reason)
@@ -95,6 +105,14 @@ export function setupGlobalErrorHandlers(): void {
 
     // 捕获全局 JavaScript 错误
     window.addEventListener('error', (event) => {
+        // 忽略 Element Plus 等组件频繁触发的无害 ResizeObserver 错误
+        const msg = event.message || ''
+        if (msg.includes('ResizeObserver loop limit exceeded') || msg.includes('ResizeObserver loop completed with undelivered notifications.')) {
+            // 阻止浏览器向控制台输出未捕获的错误
+            event.preventDefault()
+            return
+        }
+
         Logger.error('[全局错误] JavaScript 错误:', {
             message: event.message,
             filename: event.filename,

@@ -39,6 +39,8 @@ export interface ExportRecord extends WithId, WithTimestamp {
     file_id?: number | string
     error_message?: string
     fail_reason?: string
+    can_retry?: boolean
+    retry_block_reason?: string
     started_at?: string
     finished_at?: string
 }

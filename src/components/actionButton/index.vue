@@ -6,7 +6,7 @@
                     <el-icon v-if="shouldShowIcon">
                         <xl-icon :icon="resolvedButtonInfo?.icon || ''" />
                     </el-icon>
-                    <span v-if="shouldShowText">{{ resolvedButtonInfo?.title || text }}</span>
+                    <span v-if="shouldShowText">{{ displayText }}</span>
                 </el-button>
             </span>
         </el-tooltip>
@@ -14,7 +14,7 @@
             <el-icon v-if="shouldShowIcon">
                 <xl-icon :icon="resolvedButtonInfo?.icon || ''" />
             </el-icon>
-            <span v-if="shouldShowText">{{ resolvedButtonInfo?.title || text }}</span>
+            <span v-if="shouldShowText">{{ displayText }}</span>
         </el-button>
     </span>
 </template>
@@ -100,13 +100,15 @@ const shouldShowText = computed(() => {
     return !shouldShowIcon.value
 })
 
+const displayText = computed(() => props.text || resolvedButtonInfo.value?.title || '')
+
 const shouldShowTooltip = computed(() => {
     return props.showTooltip && !props.showText && shouldShowIcon.value && !shouldShowText.value
 })
 
 const tooltipContent = computed(() => {
     if (props.tooltipContent) return props.tooltipContent
-    return shouldShowTooltip.value ? resolvedButtonInfo.value?.title || props.text : ''
+    return shouldShowTooltip.value ? displayText.value : ''
 })
 
 const handleClick = (event: MouseEvent) => {

@@ -75,7 +75,6 @@ export default {
     role: {
         title: 'Role',
         addTitle: 'Add Role',
-        copyTitle: 'Copy Role',
         editTitle: 'Edit Role',
         name: 'Role Name',
         code: 'Code',

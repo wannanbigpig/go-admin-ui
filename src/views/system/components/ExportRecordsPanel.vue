@@ -15,13 +15,18 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
+                    <el-col :span="4">
+                        <el-form-item :label="t('system.task.taskRunId')" prop="task_run_id">
+                            <el-input v-model.trim="exportQuery.task_run_id" :placeholder="t('system.task.taskRunIdPlaceholder')" clearable />
+                        </el-form-item>
+                    </el-col>
                     <xl-collapsible-search-btn :loading="exportLoading" :maxShow="4" :onSearch="handleExportSearch" :onReset="handleExportReset" :modelRef="exportQueryFormRef" nodeName="#exportSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
 
         <div class="xl-container">
-            <el-alert v-if="!exportEndpointReady" class="xl-m-bottom-10" type="info" :closable="false" :title="t('system.task.exportEndpointPending')" />
+            <el-alert v-if="!exportEndpointReady" class="xl-m-bottom-10" type="info" :title="t('system.task.exportEndpointPending')" />
 
             <xl-table-list :loading="exportLoading" :data="exportList" :tableTitle="exportTableTitle" :pagination="exportPagination">
                 <template #td="{ item, row }">
@@ -272,7 +277,7 @@ const handleExportDownload = async (row: ExportRecord) => {
 }
 
 const canRetryExportRecord = (row: ExportRecord) => {
-    return !!row.task_run_id && ['failed', 'canceled'].includes(row.status || '')
+    return row.can_retry === true && row.status === 'failed'
 }
 
 const canCancelExportRecord = (row: ExportRecord) => {
@@ -320,6 +325,8 @@ const exportTableTitle = computed(
             { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
             { prop: 'export_name', h_label: t('system.task.exportName'), minWidth: 180, overflow: true, customRow: true },
             { prop: 'scene', h_label: t('system.task.exportScene'), minWidth: 140, overflow: true, customRow: true },
+            { prop: 'task_code', h_label: t('system.task.code'), minWidth: 160, overflow: true, customRow: true },
+            { prop: 'task_run_id', h_label: t('system.task.taskRunId'), width: 120, align: 'center', customRow: true },
             { prop: 'status', h_label: t('system.task.exportStatus'), width: 110, align: 'center', customRow: true },
             { prop: 'queue', h_label: t('system.task.queue'), minWidth: 110, overflow: true, customRow: true },
             { prop: 'progress', h_label: t('system.task.exportProgress'), width: 190, align: 'center', customRow: true },
@@ -327,7 +334,9 @@ const exportTableTitle = computed(
             { prop: 'file_name', h_label: t('system.task.fileName'), minWidth: 220, overflow: true, customRow: true },
             { prop: 'file_size', h_label: t('system.task.fileSize'), width: 110, align: 'right', customRow: true },
             { prop: 'format', h_label: t('system.task.fileFormat'), width: 100, align: 'center', customRow: true },
+            { prop: 'started_at', h_label: t('system.task.startedAt'), width: 160, align: 'center', customRow: true },
             { prop: 'finished_at', h_label: t('system.task.finishedAt'), width: 160, align: 'center', customRow: true },
+            { prop: 'created_at', h_label: t('common.labels.createdAt'), width: 160, align: 'center', customRow: true },
             { prop: 'fail_reason', h_label: t('system.task.failureReason'), minWidth: 220, overflow: true, customRow: true },
         ] as TableColumn<ExportRecord>[]
 )

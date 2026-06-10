@@ -2,7 +2,7 @@
     <div>
         <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="roleList" :pagination="pagination" row-key="id" @search="onSearch" @reset="handleReset">
             <template #actions>
-                <xl-action-button v-permission="'role:add'" code="role:add" :show-icon="false" type="primary" @click="openEditDrawer(1)" />
+                <xl-action-button v-permission="'role:add'" code="role:add" :show-icon="false" type="primary" @click="openCreateDrawer" />
             </template>
             <template #operation>
                 <el-table-column width="180" :label="t('common.labels.operation')" align="center" fixed="right">
@@ -41,6 +41,14 @@
                 <el-form-item :label="t('permission.role.description')" prop="description">
                     <el-input v-model.trim="formData.description" maxlength="255" :placeholder="t('permission.role.descriptionPlaceholder')" show-word-limit type="textarea" :rows="3" :disabled="isSuperAdminEditing" />
                 </el-form-item>
+                <el-form-item label="数据权限" prop="data_scope">
+                    <el-select v-model="formData.data_scope" placeholder="请选择数据权限" style="width: 100%" :disabled="isSuperAdminEditing">
+                        <el-option v-for="item in DATA_SCOPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item v-if="formData.data_scope === 5" label="自定义部门" prop="dept_ids">
+                    <DeptTreeSelect v-model="formData.dept_ids" :disabled="isSuperAdminEditing" placeholder="请选择部门" />
+                </el-form-item>
                 <el-form-item :label="t('permission.role.menuPermission')" prop="menu_list">
                     <div style="width: 100%; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 10px">
                         <el-skeleton v-if="menuTreeLoading" animated />
@@ -66,12 +74,13 @@ import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
+import DeptTreeSelect from '@/components/DeptTreeSelect.vue'
 import { computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePermission } from '@/composables/usePermission'
 import { CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, RESULT_MESSAGES } from '@/constants/messages'
 import { deleteRole } from '@/api/permission'
-import { ROLE_STATUS } from '@/modules/role/model'
+import { ROLE_STATUS, DATA_SCOPE_OPTIONS } from '@/modules/role/model'
 import { useRoleList } from '@/modules/role/useRoleList'
 import { useRoleForm } from '@/modules/role/useRoleForm'
 import type { Role } from '@/types/role'
@@ -79,7 +88,6 @@ import type { ProTableColumns } from '@/components/proTable/types'
 import { useI18n } from 'vue-i18n'
 
 const { getButtonInfoFull } = usePermission()
-const addButtonInfo = getButtonInfoFull('role:add')
 const updateButtonInfo = getButtonInfoFull('role:update')
 const deleteButtonInfo = getButtonInfoFull('role:delete')
 const { t } = useI18n()
@@ -113,8 +121,8 @@ const {
     menuTreeData,
     menuTreeLoading,
     handleMenuCheck,
+    openCreateDrawer,
     openEditDrawer,
-    handleCopyRole,
     editConfirmSubmit,
 } = useRoleForm({
     refreshRoleList,
@@ -125,20 +133,12 @@ type RoleActionScope = { row?: Role } | Role
 const actionButtons = (_scope: RoleActionScope): ActionButtonConfig<Role>[] => {
     const buttons: ActionButtonConfig<Role>[] = []
 
-    buttons.push({
-        permission: 'role:add',
-        buttonInfo: addButtonInfo || undefined,
-        text: t('permission.role.copyTitle'),
-        showIcon: false,
-        click: (row: Role, index: number) => handleCopyRole(row, index),
-    })
-
     buttons.push(
         {
             permission: 'role:update',
             buttonInfo: updateButtonInfo || undefined,
             showIcon: false,
-            click: (row: Role, index: number) => openEditDrawer(2, row, index),
+            click: (row: Role, index: number) => openEditDrawer(row, index),
             disabled: (row: Role) => row.code === 'super_admin',
         },
         {

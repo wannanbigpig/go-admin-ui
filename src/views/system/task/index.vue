@@ -20,10 +20,10 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import TaskDefinitionPanel from './components/TaskDefinitionPanel.vue'
-import TaskRunPanel from './components/TaskRunPanel.vue'
-import CronStatePanel from './components/CronStatePanel.vue'
-import ExportRecordsPanel from './components/ExportRecordsPanel.vue'
+import TaskDefinitionPanel from '../components/TaskDefinitionPanel.vue'
+import TaskRunPanel from '../components/TaskRunPanel.vue'
+import CronStatePanel from '../components/CronStatePanel.vue'
+import ExportRecordsPanel from '../components/ExportRecordsPanel.vue'
 
 type TaskTab = 'definition' | 'run' | 'cron' | 'export'
 

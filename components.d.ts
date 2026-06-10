@@ -13,6 +13,7 @@ declare module 'vue' {
     Breadcrumb: typeof import('./src/components/breadcrumb/index.vue')['default']
     CollapsibleSearchBtn: typeof import('./src/components/collapsibleSearchBtn/index.vue')['default']
     DateRangePicker: typeof import('./src/components/dateRangePicker/index.vue')['default']
+    DeptTreeSelect: typeof import('./src/components/DeptTreeSelect.vue')['default']
     Drawer: typeof import('./src/components/drawer/index.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']

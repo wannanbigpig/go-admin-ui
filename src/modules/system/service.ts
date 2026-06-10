@@ -44,6 +44,11 @@ import type {
     TaskTriggerPayload,
     TaskTriggerResult,
     TaskCancelPayload,
+    TaskRecordPolicyPayload,
+    TaskOperationConfigPayload,
+    TaskRunStats,
+    TaskRunStatsQuery,
+    TaskRunTrendPoint,
     RequestLogMaskConfig,
     MultipartInitPayload,
     MultipartInitResult,
@@ -284,6 +289,33 @@ export async function fetchTaskList(params?: Record<string, unknown>) {
 export async function fetchTaskRunList(params?: Record<string, unknown>) {
     const response = await systemApi.getTaskRunList(params)
     return normalizeListData<TaskRun>(response)
+}
+
+export async function fetchTaskRunStats(params?: TaskRunStatsQuery) {
+    const response = await systemApi.getTaskRunStats(params)
+    return normalizeDetailData(response, {
+        total_count: 0,
+        success_count: 0,
+        failed_count: 0,
+        canceled_count: 0,
+        timeout_count: 0,
+        interrupted_count: 0,
+        sampled_success_count: 0,
+        duration_total_ms: 0,
+        duration_max_ms: 0,
+        duration_avg_ms: 0,
+        success_rate: 0,
+    } as TaskRunStats)
+}
+
+export async function fetchTaskRunStatsTrend(params?: TaskRunStatsQuery) {
+    const response = await systemApi.getTaskRunStatsTrend(params)
+    return normalizeArrayData<TaskRunTrendPoint>(response)
+}
+
+export async function modifyTaskRecordPolicy(data: TaskRecordPolicyPayload) {
+    const response = await systemApi.updateTaskRecordPolicy(data)
+    return normalizeDetailData(response, {} as TaskDefinition)
 }
 
 export async function fetchTaskRunDetail(id: number | string) {
@@ -648,6 +680,11 @@ export async function fetchTaskRunEvents(runId: number | string) {
 export async function triggerTaskNow(data: TaskTriggerPayload) {
     const response = await systemApi.triggerTask(data)
     return normalizeDetailData(response, {} as TaskTriggerResult)
+}
+
+export async function modifyTaskOperationConfig(data: TaskOperationConfigPayload) {
+    const response = await systemApi.updateTaskOperationConfig(data)
+    return normalizeDetailData(response, {} as TaskDefinition)
 }
 
 export async function retryTaskByRunId(runId: number | string) {
