@@ -415,7 +415,7 @@ export default {
         recordPolicyManualNotice: 'Manually triggered task successes keep full detail by default.',
         detailRecordMode: 'Detail Mode',
         detailSamplingTip: 'This list shows execution details. Successful runs may be sampled; use Task Stats for true totals and trends.',
-        cronScheduleNotice: 'Cron Schedule shows the latest execution summary. True success counts and last success time update even when success details are not stored.',
+        cronScheduleNotice: 'Cron Schedule shows the latest status, run times, and stats window. Success details may be sampled, while the last success time still follows actual successful runs.',
         statsTruthTip: 'Task Stats comes from the full statistics table. Success sampling only affects detail rows; the default range is the latest 7 days and each query is limited to 31 days.',
         statsTrend: 'Run Trend',
         totalCount: 'Total Runs',

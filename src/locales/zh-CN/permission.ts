@@ -53,6 +53,7 @@ export default {
         superAdminDeleteForbidden: '超级管理员不允许删除',
         usernameTip: '用户名是唯一的，不能重复',
         statusTip: '判断用户是否被禁止登录',
+        isSuperAdmin: '超级管理员',
         lastLoginAt: '最后登录时间',
         lastLoginIp: '最后登录 IP',
     },

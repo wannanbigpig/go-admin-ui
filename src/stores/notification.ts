@@ -274,6 +274,7 @@ export const useNotificationStore = defineStore(
     () => {
         const notifications = ref<AppNotification[]>([])
         const unreadCount = ref(0)
+        const exportFinishedTime = ref<number>(0)
         const connectionStatus = ref<NotificationConnectionStatus>('idle')
         const listLoading = ref(false)
         const lastError = ref('')
@@ -409,6 +410,12 @@ export const useNotificationStore = defineStore(
         const handleSocketMessage = (event: MessageEvent<string>) => {
             try {
                 const payload = JSON.parse(event.data) as NotificationSocketMessage
+
+                const topic = String(payload.topic || '').toLowerCase()
+                const category = String(payload.category || '').toLowerCase()
+                if (topic === 'export.finished' || (category === 'export' && topic === 'export.finished')) {
+                    exportFinishedTime.value = Date.now()
+                }
 
                 // 检查是否是已订阅的频道消息（type 字段），未订阅的 type 继续走通知事件处理。
                 const messageType = String(payload.type || '').toLowerCase()
@@ -558,6 +565,9 @@ export const useNotificationStore = defineStore(
             connectionStatus.value = 'idle'
             lastError.value = ''
             unreadCount.value = 0
+            channelHandlers.clear()
+            subscribedChannels.clear()
+            exportFinishedTime.value = 0
         }
 
         const reconnect = () => {
@@ -569,6 +579,7 @@ export const useNotificationStore = defineStore(
         return {
             notifications,
             unreadCount,
+            exportFinishedTime,
             hasUnread,
             connectionStatus,
             listLoading,

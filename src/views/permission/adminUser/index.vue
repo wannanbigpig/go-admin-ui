@@ -79,6 +79,7 @@
                         </el-form-item>
                     </el-col>
                 </el-row>
+
                 <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.password')" prop="password">
@@ -88,6 +89,28 @@
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.confirmPassword')" prop="confirm_password">
                             <el-input v-model.trim="formData.confirm_password" :placeholder="t('common.placeholders.inputConfirmPassword')" type="password" show-password></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="24">
+                        <el-form-item prop="is_super_admin" :label="t('permission.adminUser.isSuperAdmin')">
+                            <div style="width: 100%">
+                                <el-switch
+                                    v-model="formData.is_super_admin"
+                                    :active-value="1"
+                                    :inactive-value="0"
+                                    :disabled="isRootAdminEditing"
+                                    inline-prompt
+                                    :active-text="t('common.yes')"
+                                    :inactive-text="t('common.no')"
+                                />
+                                <el-collapse-transition>
+                                    <div v-if="formData.is_super_admin === 1" style="margin-top: 8px">
+                                        <el-alert title="警告：超级管理员将拥有系统全部权限，请谨慎授权！" type="error" :closable="false" show-icon style="padding: 8px 12px; line-height: 1.4" />
+                                    </div>
+                                </el-collapse-transition>
+                            </div>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -135,6 +158,8 @@ import { useAdminUserRoleBinding } from '@/modules/adminUser/useAdminUserRoleBin
 import type { AdminUser } from '@/types/adminUser'
 import type { ProTableColumns } from '@/components/proTable/types'
 import { useI18n } from 'vue-i18n'
+
+type TagMap = Record<string | number, { type: string; text?: string }>
 
 const { getButtonInfoFull } = usePermission()
 const updateButtonInfo = getButtonInfoFull('adminUser:update')
@@ -315,6 +340,17 @@ const columns = computed<ProTableColumns<AdminUser>>(() => [
         },
     },
     {
+        prop: 'is_super_admin',
+        h_label: t('permission.adminUser.isSuperAdmin'),
+        align: 'center',
+        width: 120,
+        type: 'tag',
+        tag: {
+            1: { type: 'success', text: t('common.yes') },
+            0: { type: 'info', text: t('common.no') },
+        } as TagMap,
+    },
+    {
         prop: 'status',
         h_label: t('common.labels.status'),
         align: 'center',
@@ -323,7 +359,7 @@ const columns = computed<ProTableColumns<AdminUser>>(() => [
         tag: {
             [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
             [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
-        },
+        } as TagMap,
         h_tip: t('permission.adminUser.statusTip'),
     },
     { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },

@@ -20,22 +20,24 @@ export function checkNumber(value: number | string, decimal: number = 2, negativ
         return false
     }
 
-    if (Math.abs(numValue) >= 1e21 || Math.abs(numValue) < 1e-10) {
+    if (Math.abs(numValue) >= 1e21) {
         return decimal === 0 ? Number.isInteger(numValue) : true
     }
 
     const valueStr = numValue.toString()
-
-    if (decimal === 0) {
-        return !valueStr.includes('.')
+    let realDecimals = 0
+    if (valueStr.toLowerCase().includes('e')) {
+        const [base, expStr] = valueStr.toLowerCase().split('e')
+        const exponent = parseInt(expStr, 10)
+        const baseDecimalPart = base.split('.')[1]
+        const baseDecimals = baseDecimalPart ? baseDecimalPart.length : 0
+        realDecimals = Math.max(0, baseDecimals - exponent)
+    } else {
+        const decimalPart = valueStr.split('.')[1]
+        realDecimals = decimalPart ? decimalPart.length : 0
     }
 
-    const decimalPart = valueStr.split('.')[1]
-    if (decimalPart && decimalPart.length > decimal) {
-        return false
-    }
-
-    return true
+    return realDecimals <= decimal
 }
 
 /**
@@ -104,6 +106,10 @@ export function isEmpty(value: unknown): boolean {
     }
 
     if (val == null) return true
+
+    if (val instanceof Date) {
+        return isNaN(val.getTime())
+    }
 
     switch (typeof val) {
         case 'boolean':

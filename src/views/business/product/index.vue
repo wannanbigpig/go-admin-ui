@@ -109,7 +109,7 @@ const columns = [
     { prop: 'description', h_label: '描述', overflow: true },
     { prop: 'price', h_label: '价格(分)', width: 100 },
     { prop: 'status_name', h_label: '状态', width: 80 },
-    { prop: 'dept_id', h_label: '部门ID', width: 100 },
+    { prop: 'dept_name', h_label: '归属部门', width: 120 },
     { prop: 'created_at', h_label: '创建时间', width: 180 },
 ]
 

@@ -182,12 +182,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingStore } from '@/stores/setting'
 import { hasPermission } from '@/utils/auth'
 import { formatFileSize } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
@@ -198,6 +199,8 @@ let initChart: InitDashboardChart | null = null
 
 const { t } = useI18n()
 const router = useRouter()
+const settingStore = useSettingStore()
+let isMounted = false
 
 const username = ref('')
 const loginTime = ref('')
@@ -354,6 +357,7 @@ const refreshDashboard = async () => {
         dashboardLoading.value = false
     }
     syncUserInfo()
+    if (!isMounted) return
     trendChart?.dispose()
     trendChart = null
     responseTimeChart?.dispose()
@@ -361,6 +365,7 @@ const refreshDashboard = async () => {
     errorCodesChart?.dispose()
     errorCodesChart = null
     await nextTick()
+    if (!isMounted) return
     initTrendChart()
     initResponseTimeChart()
     initErrorCodesChart()
@@ -479,18 +484,29 @@ const ensureEcharts = async () => {
 }
 
 onMounted(async () => {
+    isMounted = true
     initResizeObserver()
     await ensureEcharts()
     await refreshDashboard()
 })
 
 onUnmounted(() => {
+    isMounted = false
     resizeObserver?.disconnect()
     resizeObserver = null
     trendChart?.dispose()
     responseTimeChart?.dispose()
     errorCodesChart?.dispose()
 })
+
+watch(
+    () => settingStore.locale,
+    async () => {
+        if (isMounted) {
+            await refreshDashboard()
+        }
+    }
+)
 </script>
 
 <style scoped lang="scss">

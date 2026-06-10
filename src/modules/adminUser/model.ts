@@ -13,6 +13,7 @@ export function createAdminUserForm(): AdminUser {
         phone_number: '',
         email: '',
         status: ADMIN_USER_STATUS.NORMAL,
+        is_super_admin: 0,
         dept_ids: [],
         password: '',
         confirm_password: '',

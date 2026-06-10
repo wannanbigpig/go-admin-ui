@@ -171,7 +171,7 @@ export function useDictOptions(typeCode: string, fallback: DictOption[] = []) {
             // 缓存 key 已经按 locale 隔离，不再全量清空缓存；
             // 仅切换当前 ref 至对应 locale 的缓存（命中即直接同步，未命中则发起请求）。
             remoteOptions.value = []
-            if (loaded.value) {
+            if (loaded.value || loading.value) {
                 void load()
             }
         }

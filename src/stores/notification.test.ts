@@ -214,4 +214,46 @@ describe('stores/notification.ts', () => {
         unsubscribeChannel('monitor', secondHandler)
         expect(sentActions(socket, 'unsubscribe')).toEqual([{ action: 'unsubscribe', channel: 'monitor' }])
     })
+
+    it('stop 应当彻底清理 channelHandlers, subscribedChannels 和 exportFinishedTime', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+        // 订阅一个频道，改变 exportFinishedTime
+        const handler = vi.fn()
+        subscribeChannel('test-channel', handler)
+        store.exportFinishedTime = 123456
+
+        store.stop()
+
+        expect(store.exportFinishedTime).toBe(0)
+
+        // 验证全局订阅列表是否被清空：如果被清空，那么再次登录时不会重新订阅 'test-channel'
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+        const socket = mockSockets[1] // 新创建的 socket 应该是第二个了
+        expect(sentActions(socket, 'subscribe')).toEqual([])
+    })
+
+    it('接收到 topic 为 export.finished 时应当拦截并更新 exportFinishedTime', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+        expect(store.exportFinishedTime).toBe(0)
+
+        mockSockets[0].emitMessage(
+            JSON.stringify({
+                topic: 'export.finished',
+                id: '999',
+                title: 'Export success',
+                message: 'Your export is done',
+                level: 'success',
+                category: 'export',
+            })
+        )
+
+        expect(store.exportFinishedTime).toBeGreaterThan(0)
+    })
 })

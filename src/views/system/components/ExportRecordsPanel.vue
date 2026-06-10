@@ -91,6 +91,7 @@
 import { computed, onMounted, onActivated, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import { useNotificationStore } from '@/stores/notification'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
@@ -107,6 +108,7 @@ import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 const props = defineProps<{ active: boolean }>()
 
 const { t } = useI18n()
+const notificationStore = useNotificationStore()
 
 const exportStatusOptions = computed(() => [
     { value: 'pending', label: t('system.task.exportStatusOptions.pending') },
@@ -351,6 +353,15 @@ watch(
         exportListPolling.pause()
     },
     { immediate: true }
+)
+
+watch(
+    () => notificationStore.exportFinishedTime,
+    (value) => {
+        if (value > 0) {
+            void getExportList()
+        }
+    }
 )
 
 onMounted(async () => {

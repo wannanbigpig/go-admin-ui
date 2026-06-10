@@ -74,6 +74,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
             nickname: formData.nickname,
             username: formData.username,
             status: formData.status ?? ADMIN_USER_STATUS.NORMAL,
+            is_super_admin: formData.is_super_admin ?? 0,
         }
 
         ;['phone_number', 'email', 'avatar', 'dept_ids', 'password'].forEach((field) => {
@@ -89,7 +90,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
         const submitData: Record<string, unknown> = { id: formData.id }
         const original = originalFormData.value
 
-        ;['nickname', 'username', 'status', 'phone_number', 'email', 'avatar'].forEach((field) => {
+        ;['nickname', 'username', 'status', 'is_super_admin', 'phone_number', 'email', 'avatar'].forEach((field) => {
             if (formData[field as keyof typeof formData] !== original?.[field as keyof typeof formData]) {
                 submitData[field] = formData[field as keyof typeof formData]
             }
@@ -97,6 +98,9 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
         if (isRootAdminEditing.value && submitData.status !== undefined) {
             delete submitData.status
+        }
+        if (isRootAdminEditing.value && submitData.is_super_admin !== undefined) {
+            delete submitData.is_super_admin
         }
 
         if (!isArrayEqual(formData.dept_ids || [], (originalFormData.value?.dept_ids as number[] | undefined) || [])) {
@@ -146,6 +150,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
                 nickname: formData.nickname,
                 username: formData.username,
                 status: formData.status,
+                is_super_admin: formData.is_super_admin,
                 phone_number: formData.phone_number,
                 email: formData.email,
                 avatar: formData.avatar,
@@ -174,6 +179,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
                     nickname: mergedUserData.nickname || '',
                     username: mergedUserData.username || '',
                     status: mergedUserData.status ?? ADMIN_USER_STATUS.NORMAL,
+                    is_super_admin: mergedUserData.is_super_admin ?? 0,
                     phone_number: mergedUserData.phone_number || '',
                     email: mergedUserData.email || '',
                     avatar: mergedUserData.avatar || '',

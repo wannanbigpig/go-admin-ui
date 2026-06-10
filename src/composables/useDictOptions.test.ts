@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, type EffectScope, reactive } from 'vue'
 
 const store = new Map<string, string>()
 const mockLocalStorage = {
@@ -20,6 +21,13 @@ const mockLocalStorage = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 vi.stubGlobal('localStorage', mockLocalStorage as any)
 
+const activeScopes: EffectScope[] = []
+const createTestScope = <T>(fn: () => T): T => {
+    const scope = effectScope()
+    activeScopes.push(scope)
+    return scope.run(fn) as T
+}
+
 const hoisted = vi.hoisted(() => {
     const mockSettingStore = {
         locale: 'zh-CN',
@@ -39,7 +47,7 @@ vi.mock('@/modules/system/service', () => ({
 }))
 
 vi.mock('@/stores/setting', () => ({
-    useSettingStore: () => hoisted.mockSettingStore,
+    useSettingStore: () => reactive(hoisted.mockSettingStore),
 }))
 
 vi.mock('@/locales', () => ({
@@ -51,25 +59,31 @@ vi.mock('@/utils/logger', () => ({
 }))
 
 import { invalidateDictOptionsCache, useDictOptions } from '@/composables/useDictOptions'
+import { useSettingStore } from '@/stores/setting'
 import type { DictOption } from '@/types/system'
 
 const fallbackOptions: DictOption[] = [{ label: 'Fallback', value: 0, tag_type: 'info' }]
 
 describe('composables/useDictOptions.ts', () => {
     beforeEach(() => {
-        hoisted.mockSettingStore.locale = 'zh-CN'
+        useSettingStore().locale = 'zh-CN'
         hoisted.mockFetchDictOptions.mockReset()
         hoisted.mockLogger.error.mockClear()
         mockLocalStorage.clear()
         invalidateDictOptionsCache()
     })
 
+    afterEach(() => {
+        activeScopes.forEach((s) => s.stop())
+        activeScopes.length = 0
+    })
+
     it('相同 typeCode 与语言的并发加载应复用同一个请求', async () => {
         const remoteOptions: DictOption[] = [{ label: 'Enabled', value: 1, tag_type: 'success' }]
         hoisted.mockFetchDictOptions.mockResolvedValue(remoteOptions)
 
-        const first = useDictOptions('common_status', fallbackOptions)
-        const second = useDictOptions('common_status', fallbackOptions)
+        const first = createTestScope(() => useDictOptions('common_status', fallbackOptions))
+        const second = createTestScope(() => useDictOptions('common_status', fallbackOptions))
 
         await Promise.all([first.load(), second.load()])
 
@@ -84,15 +98,15 @@ describe('composables/useDictOptions.ts', () => {
         const enOptions: DictOption[] = [{ label: 'Enabled', value: 1, tag_type: 'success' }]
         hoisted.mockFetchDictOptions.mockResolvedValueOnce(zhOptions).mockResolvedValueOnce(enOptions)
 
-        const zhDict = useDictOptions('common_status', fallbackOptions)
+        const zhDict = createTestScope(() => useDictOptions('common_status', fallbackOptions))
         await zhDict.load()
 
-        hoisted.mockSettingStore.locale = 'en-US'
-        const enDict = useDictOptions('common_status', fallbackOptions)
+        useSettingStore().locale = 'en-US'
+        const enDict = createTestScope(() => useDictOptions('common_status', fallbackOptions))
         await enDict.load()
 
         expect(hoisted.mockFetchDictOptions).toHaveBeenCalledTimes(2)
-        expect(zhDict.options.value).toEqual(zhOptions)
+        expect(zhDict.options.value).toEqual(enOptions)
         expect(enDict.options.value).toEqual(enOptions)
     })
 
@@ -100,7 +114,7 @@ describe('composables/useDictOptions.ts', () => {
         const remoteOptions: DictOption[] = [{ label: 'Yes', value: 1, tag_type: 'success' }]
         hoisted.mockFetchDictOptions.mockRejectedValueOnce(new Error('network error')).mockResolvedValueOnce(remoteOptions)
 
-        const dict = useDictOptions('yes_no', fallbackOptions)
+        const dict = createTestScope(() => useDictOptions('yes_no', fallbackOptions))
 
         await dict.load()
         expect(dict.options.value).toEqual(fallbackOptions)
@@ -116,7 +130,7 @@ describe('composables/useDictOptions.ts', () => {
         const nextOptions: DictOption[] = [{ label: 'Cron', value: 'cron', tag_type: 'warning' }]
         hoisted.mockFetchDictOptions.mockResolvedValueOnce(firstOptions).mockResolvedValueOnce(nextOptions)
 
-        const dict = useDictOptions('task_kind', fallbackOptions)
+        const dict = createTestScope(() => useDictOptions('task_kind', fallbackOptions))
 
         await dict.load()
         invalidateDictOptionsCache('task_kind')
@@ -124,5 +138,30 @@ describe('composables/useDictOptions.ts', () => {
 
         expect(hoisted.mockFetchDictOptions).toHaveBeenCalledTimes(2)
         expect(dict.options.value).toEqual(nextOptions)
+    })
+
+    it('在加载中 (loading === true) 时 locale 发生变化，应重新拉取新数据', async () => {
+        const zhOptions: DictOption[] = [{ label: '启用', value: 1, tag_type: 'success' }]
+        const enOptions: DictOption[] = [{ label: 'Enabled', value: 1, tag_type: 'success' }]
+
+        let resolveZh: (value: DictOption[]) => void = () => {}
+        const zhPromise = new Promise<DictOption[]>((resolve) => {
+            resolveZh = resolve
+        })
+
+        hoisted.mockFetchDictOptions.mockReturnValueOnce(zhPromise).mockResolvedValueOnce(enOptions)
+
+        const dict = createTestScope(() => useDictOptions('common_status', fallbackOptions))
+        const loadPromise = dict.load()
+
+        useSettingStore().locale = 'en-US'
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        resolveZh(zhOptions)
+        await loadPromise
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        expect(dict.options.value).toEqual(enOptions)
+        expect(hoisted.mockFetchDictOptions).toHaveBeenCalledTimes(2)
     })
 })

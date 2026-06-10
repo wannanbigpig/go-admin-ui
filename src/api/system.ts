@@ -42,6 +42,10 @@ import type {
     TaskRunStats,
     TaskRunStatsQuery,
     TaskRunTrendPoint,
+    MultipartInitPayload,
+    MultipartInitResult,
+    MultipartCompletePayload,
+    MultipartAbortPayload,
 } from '@/types/system'
 
 export function getSystemConfigList(params?: Record<string, unknown>) {
@@ -300,14 +304,14 @@ export function getTaskRunEvents(params: { run_id: number | string }) {
     return get<TaskRunEvent[]>('/v1/task/run/events', params)
 }
 
-export function multipartInit(data: Record<string, unknown>) {
-    return post<Record<string, unknown>>('/v1/system/file/upload/multipart/init', data)
+export function multipartInit(data: MultipartInitPayload) {
+    return post<MultipartInitResult>('/v1/system/file/upload/multipart/init', data)
 }
 
-export function multipartComplete(data: Record<string, unknown>) {
+export function multipartComplete(data: MultipartCompletePayload) {
     return post<SystemFile>('/v1/system/file/upload/multipart/complete', data)
 }
 
-export function multipartAbort(data: Record<string, unknown>) {
+export function multipartAbort(data: MultipartAbortPayload) {
     return post<unknown>('/v1/system/file/upload/multipart/abort', data)
 }

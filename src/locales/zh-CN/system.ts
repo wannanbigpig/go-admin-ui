@@ -421,7 +421,7 @@ export default {
         recordPolicyManualNotice: '手动触发任务默认成功也保留完整明细。',
         detailRecordMode: '明细模式',
         detailSamplingTip: '这里展示的是执行明细，成功记录可能按策略抽样；总次数、成功次数和趋势请以任务统计为准。',
-        cronScheduleNotice: '定时调度页展示最近执行摘要；即使成功未写入明细，也会更新真实成功次数和最近成功时间。',
+        cronScheduleNotice: '定时调度页展示最近状态、执行时间和统计窗口；成功明细可能按策略抽样，最近成功时间仍按实际成功结果更新。',
         statsTruthTip: '任务统计来自全量统计表，成功抽样只影响执行明细列表；默认展示最近 7 天，单次查询最多 31 天。',
         statsTrend: '执行趋势',
         totalCount: '总执行次数',

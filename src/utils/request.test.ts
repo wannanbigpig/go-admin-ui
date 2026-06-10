@@ -106,6 +106,8 @@ const getCallback = <T>(value: T | undefined, name: string): T => {
 
 describe('utils/request.ts', () => {
     beforeEach(() => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'false')
+        vi.stubEnv('VITE_ENABLE_MOCK_FALLBACK', 'false')
         hoisted.mockAuthStore.token = ''
         hoisted.mockAuthStore.refreshToken = ''
         hoisted.mockSettingStore.locale = 'zh-CN'
@@ -115,6 +117,7 @@ describe('utils/request.ts', () => {
         hoisted.mockRefreshTokenApi.mockReset()
         hoisted.mockLogger.error.mockClear()
         hoisted.mockLogger.warn.mockClear()
+        vi.mocked(ElMessage).mockClear()
     })
 
     it('应导出 axios.create 生成的 service 实例并注册拦截器', () => {
@@ -390,5 +393,60 @@ describe('utils/request.ts', () => {
             })
         ).rejects.toEqual(payload)
         expect(ElMessage).toHaveBeenCalledWith(expect.objectContaining({ message: '服务器内部错误', type: 'error' }))
+    })
+
+    it('当开启 Mock 时，匹配的请求应直接返回 Mock 数据而不发起网络请求', async () => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'true')
+        const result = await request('/v1/login-captcha', 'GET')
+        expect(result).toMatchObject({
+            id: 'mock-captcha-id',
+            answer: '1234',
+        })
+        expect(hoisted.mockService.request).not.toHaveBeenCalled()
+    })
+
+    it('当开启 Mock 时，未匹配 Mock 的请求应直接拒绝并弹错提示', async () => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'true')
+        await expect(request('/v1/non-existent-api', 'GET')).rejects.toMatchObject({
+            code: 404,
+        })
+        expect(hoisted.mockService.request).not.toHaveBeenCalled()
+        expect(ElMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: expect.stringContaining('未找到 Mock 接口匹配规则'),
+                type: 'error',
+            })
+        )
+    })
+
+    it('当关闭 Mock 时，发生 HTTP 5xx 错误时应直接拒绝，不再走 Mock 降级', async () => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'false')
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const error = {
+            response: { status: 500, data: 'Proxy error: ECONNREFUSED', headers: {} },
+            config: { url: '/admin/v1/login-captcha', method: 'get' },
+            message: 'Request failed with status code 500',
+        }
+        await expect(onRejected(error)).rejects.toBe(error)
+        expect(ElMessage).toHaveBeenCalledWith({
+            message: 'Proxy error: ECONNREFUSED',
+            type: 'error',
+            duration: MESSAGE_ERROR_DURATION,
+        })
+    })
+
+    it('当关闭 Mock 时，发生网络错误时应直接拒绝，不再走 Mock 降级', async () => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'false')
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const error = {
+            config: { url: '/admin/v1/login', method: 'post', data: { username: 'super_admin' } },
+            message: 'Network Error',
+        }
+        await expect(onRejected(error)).rejects.toBe(error)
+        expect(ElMessage).toHaveBeenCalledWith({
+            message: '服务器连接异常，请检查服务器！',
+            type: 'error',
+            duration: MESSAGE_ERROR_DURATION,
+        })
     })
 })

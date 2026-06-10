@@ -36,19 +36,22 @@
                 </el-button>
                 <template #dropdown>
                     <el-dropdown-menu>
-                        <el-dropdown-item
+                        <el-tooltip
                             v-for="(button, index) in moreButtons"
                             :key="button.permission || (resolveButtonInfo(button)?.id as any) || button.text || index"
-                            :divided="button.divided"
-                            :disabled="normalizeDisabled(button)"
-                            :title="normalizeTooltip(button) || undefined"
-                            @click="handleClick(button, scope, $event)"
+                            :content="normalizeTooltip(button)"
+                            :disabled="!normalizeTooltip(button)"
+                            placement="top"
                         >
-                            <el-icon v-if="resolveButtonInfo(button)?.icon && button.showIcon !== false" class="el-icon--left">
-                                <xl-icon :icon="String(resolveButtonInfo(button)?.icon)" />
-                            </el-icon>
-                            {{ String(resolveButtonInfo(button)?.title || button.text || t('common.labels.operation')) }}
-                        </el-dropdown-item>
+                            <div class="more-button-tooltip-wrapper" :class="{ 'is-disabled': normalizeDisabled(button) }">
+                                <el-dropdown-item :divided="button.divided" :disabled="normalizeDisabled(button)" @click="handleClick(button, scope, $event)">
+                                    <el-icon v-if="resolveButtonInfo(button)?.icon && button.showIcon !== false" class="el-icon--left">
+                                        <xl-icon :icon="String(resolveButtonInfo(button)?.icon)" />
+                                    </el-icon>
+                                    {{ String(resolveButtonInfo(button)?.title || button.text || t('common.labels.operation')) }}
+                                </el-dropdown-item>
+                            </div>
+                        </el-tooltip>
                     </el-dropdown-menu>
                 </template>
             </el-dropdown>
@@ -193,5 +196,14 @@ const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, ev
     justify-content: center;
     gap: 8px;
     width: 100%;
+}
+.more-button-tooltip-wrapper {
+    display: block;
+    width: 100%;
+    outline: none;
+
+    &.is-disabled {
+        cursor: not-allowed;
+    }
 }
 </style>

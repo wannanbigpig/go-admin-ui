@@ -22,6 +22,21 @@ describe('helper.ts', () => {
             expect(checkNumber(NaN)).toBe(false)
             expect(checkNumber('abc')).toBe(false)
         })
+
+        it('应该在极小数或科学计数法下正确判断小数位数', () => {
+            expect(checkNumber(1.23e-11, 2)).toBe(false)
+            expect(checkNumber(1.23e-11, 13)).toBe(true)
+            expect(checkNumber(1.23e-11, 12)).toBe(false)
+
+            expect(checkNumber('1.23e-11', 2)).toBe(false)
+            expect(checkNumber('1.23e-11', 13)).toBe(true)
+
+            expect(checkNumber(1e-10, 10)).toBe(true)
+            expect(checkNumber(1e-10, 9)).toBe(false)
+
+            expect(checkNumber(0.00000000001, 2)).toBe(false)
+            expect(checkNumber(0.00000000001, 11)).toBe(true)
+        })
     })
 
     describe('isEmpty', () => {
@@ -54,6 +69,12 @@ describe('helper.ts', () => {
             expect(isEmpty('hello')).toBe(false)
             expect(isEmpty(123)).toBe(false)
             expect(isEmpty(true)).toBe(false)
+        })
+
+        it('应该正确判定 Date 对象是否为空', () => {
+            expect(isEmpty(new Date('2024-01-01'))).toBe(false)
+            expect(isEmpty(new Date())).toBe(false)
+            expect(isEmpty(new Date('invalid-date'))).toBe(true)
         })
     })
 

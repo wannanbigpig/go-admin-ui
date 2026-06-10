@@ -75,6 +75,23 @@ const showApiErrorMessage = (payload: ApiResponse, config?: AxiosRequestConfig &
     })
 }
 
+const isMockEnabled = () => {
+    return import.meta.env.DEV && (import.meta.env.VITE_ENABLE_MOCK === 'true' || import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true')
+}
+
+const tryGetMock = async (url: string, method: string, dataOrParams: unknown) => {
+    if (!isMockEnabled()) return null
+
+    try {
+        const { getMockFallback } = await import('@/mock')
+        return getMockFallback(url, method, dataOrParams)
+    } catch (e) {
+        Logger.error('[Mock] error loading mock module:', e)
+    }
+
+    return null
+}
+
 const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, authErrorMode: 'credential' | 'session' = 'session') => {
     const authStore = useAuthStore()
 
@@ -210,7 +227,7 @@ service.interceptors.response.use(
         }
 
         // 处理网络错误
-        if (error.message === 'Network Error') {
+        if (!error.response && (error.message === 'Network Error' || error.message.includes('ECONNREFUSED'))) {
             ElMessage({
                 message: translate('request.networkError'),
                 type: 'error',
@@ -230,7 +247,17 @@ service.interceptors.response.use(
         }
 
         // 处理其他错误（非 API payload）
-        const errorMessage = error.response?.data?.msg || error.message || translate('request.failed')
+        const data = error.response?.data
+        let responseMsg: string | undefined
+        if (typeof data === 'string') {
+            responseMsg = data
+        } else if (data && typeof data === 'object' && 'msg' in data) {
+            const msgVal = (data as unknown as Record<string, unknown>).msg
+            if (typeof msgVal === 'string') {
+                responseMsg = msgVal
+            }
+        }
+        const errorMessage = responseMsg || error.message || translate('request.failed')
         ElMessage({
             message: errorMessage,
             type: 'error',
@@ -249,7 +276,31 @@ service.interceptors.response.use(
  * @param {AxiosRequestConfig} options - 请求配置选项（data、params、headers 等）
  * @returns {Promise<T>} 业务数据 Promise (ApiResponse.data)
  */
-export function request<T = unknown>(url: string, method: string, options: AxiosRequestConfig = {}): Promise<T> {
+export async function request<T = unknown>(url: string, method: string, options: AxiosRequestConfig = {}): Promise<T> {
+    if (isMockEnabled()) {
+        const targetMethod = (method || 'GET').toUpperCase()
+        const fallback = await tryGetMock(url, targetMethod, options.data ?? options.params)
+        if (fallback) {
+            if (fallback.code === 0) {
+                return fallback.data as T
+            } else {
+                return Promise.reject(fallback)
+            }
+        } else {
+            const mockErr: ApiResponse = {
+                code: 404,
+                msg: `未找到 Mock 接口匹配规则: [${targetMethod}] ${url}`,
+                data: null,
+            }
+            ElMessage({
+                message: mockErr.msg,
+                type: 'error',
+                duration: MESSAGE_ERROR_DURATION,
+            })
+            return Promise.reject(mockErr)
+        }
+    }
+
     return service.request<ApiResponse<T>, T>({
         url,
         method: method.toUpperCase(),

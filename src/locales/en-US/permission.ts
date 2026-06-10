@@ -53,6 +53,7 @@ export default {
         superAdminDeleteForbidden: 'Super admin cannot be deleted',
         usernameTip: 'Username must be unique',
         statusTip: 'Whether the user is forbidden to log in',
+        isSuperAdmin: 'Super Admin',
         lastLoginAt: 'Last Login Time',
         lastLoginIp: 'Last Login IP',
     },

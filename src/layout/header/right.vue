@@ -122,6 +122,7 @@ import { useI18n } from 'vue-i18n'
 import type { LocaleCode } from '@/types/i18n'
 import { LOCALE_OPTIONS, ENABLE_I18N } from '@/locales'
 import { addDynamicRoutes } from '@/router/dynamicRoutes'
+import { resolveRouteTitle } from '@/utils/routeTitle'
 import NotificationCenter from './notificationCenter.vue'
 
 enum COMMAND {
@@ -202,10 +203,29 @@ const handleThemeCommand = (mode: ThemeMode) => {
     settingStore.setTheme(mode)
 }
 
+const updateDocumentTitle = () => {
+    const currentRoute = router.currentRoute.value
+    const title = resolveRouteTitle({
+        titleKey: currentRoute.meta?.titleKey as string,
+        title: currentRoute.meta?.title as string,
+        name: typeof currentRoute.name === 'string' ? currentRoute.name : '',
+        path: currentRoute.path,
+    })
+    const appTitle = (import.meta.env.VITE_APP_TITLE as string) || ''
+    if (title) {
+        document.title = appTitle ? `${title} - ${appTitle}` : title
+    } else if (appTitle) {
+        document.title = appTitle
+    }
+}
+
 const handleLanguageCommand = async (locale: LocaleCode) => {
     if (settingStore.locale === locale) return
 
     settingStore.setLocale(locale)
+
+    // 语言切换后，立即为本地静态路由标题触发一次更新
+    updateDocumentTitle()
 
     // 菜单标题由后端按请求语言返回，切换语言后需刷新菜单缓存
     if (!authStore.token) return
@@ -215,6 +235,8 @@ const handleLanguageCommand = async (locale: LocaleCode) => {
         if (authStore.routerData.length > 0) {
             addDynamicRoutes(authStore.routerData)
         }
+        // 动态路由和用户信息刷新后，再次更新一次标题，确保动态标题和后端翻译一致
+        updateDocumentTitle()
     } catch (error) {
         Logger.error('切换语言后刷新菜单失败:', error)
         ElMessage({ type: 'error', message: t(RESULT_MESSAGES.REFRESH_FAILED) })

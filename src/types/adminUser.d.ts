@@ -19,6 +19,7 @@ export interface AdminUser extends WithId, WithTimestamp {
     email?: string
     country_code?: string
     status: number
+    is_super_admin?: number
     dept_ids?: number[]
     departments?: DepartmentInfo[]
     password?: string

@@ -9,6 +9,7 @@ export interface Product {
     status: number
     status_name: string
     dept_id: number
+    dept_name: string
     created_by: number
     created_at: string
     updated_at: string

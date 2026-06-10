@@ -19,46 +19,46 @@
 
 ### 1. 核心业务与高阶配置
 
--   **RBAC 权限管理**：系统级细粒度权限控制，支持管理员、部门、角色、动态菜单、API 接口权限的统一分配与授权。
--   **日志审计中心**：支持全面的登录日志与请求日志追踪；支持请求日志一键 CSV 异步导出，支持配置敏感日志字段掩码脱敏。
--   **系统存储配置**：支持本地存储（`local`）与阿里云对象存储（`aliyun_oss`）多驱动运行时一键切换；包含敏感密钥安全展示机制（需具备 `storage:secret` 权限通过后端实时解密获取明文）；直观地配置允许的后缀名（`allowed_extensions`）完成上传过滤。
--   **统一导出配置**：支持设置默认导出文件夹、导出临时文件夹及临时文件保留天数，后端服务将在到期后自动执行物理清理，释放服务器存储资源。
+- **RBAC 权限管理**：系统级细粒度权限控制，支持管理员、部门、角色、动态菜单、API 接口权限的统一分配与授权。
+- **日志审计中心**：支持全面的登录日志与请求日志追踪；支持请求日志一键 CSV 异步导出，支持配置敏感日志字段掩码脱敏。
+- **系统存储配置**：支持本地存储（`local`）与阿里云对象存储（`aliyun_oss`）多驱动运行时一键切换；包含敏感密钥安全展示机制（需具备 `storage:secret` 权限通过后端实时解密获取明文）；直观地配置允许的后缀名（`allowed_extensions`）完成上传过滤。
+- **统一导出配置**：支持设置默认导出文件夹、导出临时文件夹及临时文件保留天数，后端服务将在到期后自动执行物理清理，释放服务器存储资源。
 
 ### 2. 精致交互与最佳实践
 
--   **配置化驱动 ProTable**：列表页基于 columns / searchSchema 配置化驱动，自带强大的搜索表单折叠、自适应多终端、以及 tag/avatar/eye 等内置渲染器。
--   **响应式按钮文案**：`xl-action-button` 通过绑定权限 `:code` 属性，响应式加载最新的权限映射配置，实现国际化切换时按钮标题的无刷新即时刷新。
--   **主题切换系统**：支持 `浅色` / `深色` / `跟随系统` 三种模式（默认跟随系统主题，自动响应操作系统的深色模式变化）。
--   **语言国际化 (i18n)**：支持 `简体中文` / `English` 运行时一键切换，语言切换后自动刷新用户信息与菜单路由树，侧边栏、按钮文案均即时更新。
--   **高性能直传与分片**：
-    -   支持文件分片并行上传（文件体积大于 20MB 时并发并行 3，单片 5MB），带自动降级单体上传机制。
-    -   支持 OSS 批量 SSE 直传：通过 Server-Sent Events 流式预取上传凭证，前端并发 PUT 直传 OSS 平台。
--   **任务与异步导出中心**：异步导出大型报表文件，支持在导出历史面板（`ExportRecordsPanel.vue`）中进行进度条跟踪与任务的下载、重试、取消。
--   **通知中心**：支持全体广播或指定用户 ID 列表推送通知，带常驻红点、折叠折叠列表以及 `action_url` 一键智能跳转。
+- **配置化驱动 ProTable**：列表页基于 columns / searchSchema 配置化驱动，自带强大的搜索表单折叠、自适应多终端、以及 tag/avatar/eye 等内置渲染器；**支持属性级别的响应式浅拷贝监听，解决级联表单联动清除失效的问题，同时彻底防范 `deep: true` 带来的无限死循环。**
+- **响应式按钮文案**：`xl-action-button` 通过绑定权限 `:code` 属性，响应式加载最新的权限映射配置，实现国际化切换时按钮标题的无刷新即时刷新。
+- **主题切换系统**：支持 `浅色` / `深色` / `跟随系统` 三种模式（默认跟随系统主题，自动响应操作系统的深色模式变化）。
+- **语言国际化 (i18n)**：支持 `简体中文` / `English` 运行时一键切换，语言切换后自动刷新用户信息与菜单路由树，侧边栏、按钮文案、**当前网页标题（Tab 栏）及 ECharts 图表图例均即时刷新。**
+- **高性能直传与分片**：
+    - 支持文件分片并行上传（文件体积大于 20MB 时并发并行 3，单片 5MB），带自动降级单体上传机制；**内建大文件内存释放防御机制（OOM 防御），在上传结束/出错后自动解绑并释放大文件 `File` 强引用，保障浏览器在批量上传超大文件时的稳定性。**
+    - 支持 OSS 批量 SSE 直传：通过 Server-Sent Events 流式预取上传凭证，前端并发 PUT 直传 OSS 平台。
+- **任务与异步导出中心**：异步导出大型报表文件，支持在导出历史面板（`ExportRecordsPanel.vue`）中进行进度条跟踪与任务的下载、重试、取消；**打通 WebSocket 终态事件通知，在任务成功/失败后由 WS 驱动前端即时更新，无需延迟等待轮询刷新。**
+- **通知中心**：支持全体广播或指定用户 ID 列表推送通知，带常驻红点、折叠折叠列表以及 `action_url` 一键智能跳转；**建立完善的多会话安全隔离，在用户登出时彻底注销并清除全局 WebSocket 订阅频道与处理器缓存，严防不同用户会话切换时的越权数据泄漏。**
 
-### 3. 工程质量保证
+### 3. 工程质量
 
--   **TypeScript + Composition API**：严格的类型约束，模块与逻辑完全解耦。
--   **代码规范**：配置 ESLint + Prettier，严格约束代码风格。
--   **Vitest 单元测试**：针对分页、轮询、请求等底层关键组合式函数与通用组件，实现了单测全覆盖，以保障回归稳定性。
+- **TypeScript + Composition API**：严格的类型约束，模块与逻辑完全解耦。
+- **代码规范**：配置 ESLint + Prettier，严格约束代码风格。
+- **Vitest 单元测试**：针对分页、轮询、请求等底层关键组合式函数与通用组件，实现了单测全覆盖，以保障回归稳定性。
 
 ---
 
 ## 技术栈
 
--   **框架核心**：Vue 3 (Composition API) + Vue Router
--   **构建工具**：Vite 5 (带有 gzip 压缩、包体积优化与自动组件导入配置)
--   **状态管理**：Pinia + `pinia-plugin-persistedstate` (实现状态自动持久化)
--   **UI 组件库**：Element Plus + Iconify (自动按需引入核心图标)
--   **网络请求**：Axios (支持业务静默码降级、动态多语言头、请求锁、以及 Token 自动刷新)
--   **国际化**：Vue I18n
+- **框架核心**：Vue 3 (Composition API) + Vue Router
+- **构建工具**：Vite 5 (带有 gzip 压缩、包体积优化与自动组件导入配置)
+- **状态管理**：Pinia + `pinia-plugin-persistedstate` (实现状态自动持久化)
+- **UI 组件库**：Element Plus + Iconify (自动按需引入核心图标)
+- **网络请求**：Axios (支持业务静默码降级、动态多语言头、请求锁、以及 Token 自动刷新)
+- **国际化**：Vue I18n
 
 ---
 
 ## 环境要求
 
--   **Node.js** >= 18
--   **npm** >= 9 (或 yarn / pnpm)
+- **Node.js** >= 18
+- **npm** >= 9 (或 yarn / pnpm)
 
 ---
 
@@ -124,19 +124,19 @@ npm run test:coverage
 
 ### 1. 国际化与菜单契约
 
--   **语言包目录**：
-    -   中文包：`src/locales/zh-CN/*`
-    -   英文包：`src/locales/en-US/*`
--   **请求语言头**：在 `src/utils/request.ts` 中拦截所有请求，并自动往请求头中注入 `Accept-Language`，以保证接口报错和配置能返回匹配的语言。
--   **菜单国际化前端契约**：
-    -   **列表或侧边树展示**：直接展示接口返回的 `title` 原文。
-    -   **详情或编辑场景**：表单组件应读取 `title_i18n` 字段，多语言环境下通过弹窗编辑各语种的配置。
-    -   **菜单新增与编辑提交**：只提交清洗后的 `title_i18n` 字段，**绝对不能提交 `title`**。
-    -   **校验规则**：校验表单时，至少必须有一个语言的标题经 `trim()` 后非空。
+- **语言包目录**：
+    - 中文包：`src/locales/zh-CN/*`
+    - 英文包：`src/locales/en-US/*`
+- **请求语言头**：在 `src/utils/request.ts` 中拦截所有请求，并自动往请求头中注入 `Accept-Language`，以保证接口报错和配置能返回匹配的语言。
+- **菜单国际化前端契约**：
+    - **列表或侧边树展示**：直接展示接口返回的 `title` 原文。
+    - **详情或编辑场景**：表单组件应读取 `title_i18n` 字段，多语言环境下通过弹窗编辑各语种的配置。
+    - **菜单新增与编辑提交**：只提交清洗后的 `title_i18n` 字段，**绝对不能提交 `title`**。
+    - **校验规则**：校验表单时，至少必须有一个语言的标题经 `trim()` 后非空。
 
 ### 2. 权限按钮与指令系统
 
--   **指令用法 (`v-permission`)**：
+- **指令用法 (`v-permission`)**：
 
     ```vue
     <!-- 默认模式：拥有指定权限才显示 -->
@@ -152,8 +152,8 @@ npm run test:coverage
     <el-button v-permission.hide="'adminUser:delete'">删除</el-button>
     ```
 
--   **响应式按钮组件 (`xl-action-button`)**：
-    在操作列或普通按钮中，推荐使用 `xl-action-button` 并绑定 `:code`：
+- **响应式按钮组件 (`xl-action-button`)**：
+  在操作列或普通按钮中，推荐使用 `xl-action-button` 并绑定 `:code`：
 
     ```vue
     <xl-action-button code="adminUser:add" @click="handleAdd" />
@@ -161,22 +161,22 @@ npm run test:coverage
 
     > **注意**：绑定 `code` 后，按钮组件内部将响应式地通过 `usePermission().getButtonInfoFull(code)` 动态抓取最新的标题、图标、隐藏等信息。这消除了多语言切换后按钮文案不刷新的历史问题。
 
--   **操作按钮收纳 (`xl-action-buttons`)**：
-    在 `el-table` 操作列中，如果按钮较多，推荐使用 `xl-action-buttons`。它会根据绑定的 `:buttons` 配置和 `:maxVisibleButtons`（默认为 2）自适应收纳多余的按钮，并自动进行前端权限过滤：
+- **操作按钮收纳 (`xl-action-buttons`)**：
+  在 `el-table` 操作列中，如果按钮较多，推荐使用 `xl-action-buttons`。它会根据绑定的 `:buttons` 配置和 `:maxVisibleButtons`（默认为 2）自适应收纳多余的按钮，并自动进行前端权限过滤：
     ```vue
     <xl-action-buttons :buttons="actionButtons" :scope="scope" />
     ```
 
 ### 3. 核心 Composables 介绍
 
--   **`useListPage`**：
-    提供列表页通用的分页状态、重置流程和加载反馈。内部对 `fetcher` 进行了全局 try/catch 兜底并输出错误日志。若接口抛错，自动将数据清空并更新分页状态为 `EMPTY_RESULT` 以防界面崩溃，业务层调用列表时无需编写冗余的 `try/catch` 逻辑。
--   **`usePermission`**：
-    动态权限获取辅助，直接代理 Pinia 状态，提供 `getButtonInfoFull(code)` 以响应式获取最新的按钮状态。
--   **`useDictOptions`**：
-    字典字段加载。集成内存 Map 缓存与 `localStorage` 二级缓存（30分钟 TTL），缓存 Key 按 `locale` 隔离，提供 `invalidateDictOptionsCache(typeCode)` 废弃缓存函数。
--   **`useIntervalPolling`**：
-    安全的轮询机制。上一轮 fn 异步结束后才派发下一轮（防止并行雪崩）；监听视口可见性（页面最小化或切入后台自动暂停，切回时自动唤醒）；内置 `AbortController`，在暂停或重新调度前向 fn 传递取消信号，彻底切断进行中的网络资源浪费。
+- **`useListPage`**：
+  提供列表页通用的分页状态、重置流程和加载反馈。内部对 `fetcher` 进行了全局 try/catch 兜底并输出错误日志。若接口抛错，自动将数据清空并更新分页状态为 `EMPTY_RESULT` 以防界面崩溃，业务层调用列表时无需编写冗余的 `try/catch` 逻辑。
+- **`usePermission`**：
+  动态权限获取辅助，直接代理 Pinia 状态，提供 `getButtonInfoFull(code)` 以响应式获取最新的按钮状态。
+- **`useDictOptions`**：
+  字典字段加载。集成内存 Map 缓存与 `localStorage` 二级缓存（30分钟 TTL），缓存 Key 按 `locale` 隔离，提供 `invalidateDictOptionsCache(typeCode)` 废弃缓存函数。
+- **`useIntervalPolling`**：
+  安全的轮询机制。上一轮 fn 异步结束后才派发下一轮（防止并行雪崩）；监听视口可见性（页面最小化或切入后台自动暂停，切回时自动唤醒）；内置 `AbortController`，在暂停或重新调度前向 fn 传递取消信号，彻底切断进行中的网络资源浪费。
 
 ---
 
@@ -212,9 +212,9 @@ npm run test:coverage
 
 ## 仓库与反馈
 
--   **前端仓库 (本项目)**：[go-admin-ui](https://github.com/wannanbigpig/go-admin-ui)
--   **后端仓库**：[gin-layout](https://github.com/wannanbigpig/gin-layout)
--   **问题反馈 (Issues)**：[go-admin-ui/issues](https://github.com/wannanbigpig/go-admin-ui/issues)
+- **前端仓库 (本项目)**：[go-admin-ui](https://github.com/wannanbigpig/go-admin-ui)
+- **后端仓库**：[gin-layout](https://github.com/wannanbigpig/gin-layout)
+- **问题反馈 (Issues)**：[go-admin-ui/issues](https://github.com/wannanbigpig/go-admin-ui/issues)
 
 ---
 

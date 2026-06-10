@@ -36,7 +36,7 @@ export type UploadTaskStatus = 'hashing' | 'pending' | 'uploading' | 'reuse' | '
 
 export interface UploadTask {
     id: string
-    file: File
+    file: File | null
     name: string
     size: number
     folderId?: number | string | null
@@ -144,6 +144,11 @@ export function useFileUpload() {
 
         const doNormalUpload = async () => {
             let reused = false
+            if (!task.file) {
+                task.status = 'error'
+                task.error = 'File is released'
+                return
+            }
             const result = await uploadSystemFile(task.file, {
                 folder_id: targetFolderId,
                 driver: options?.driver,
@@ -168,6 +173,11 @@ export function useFileUpload() {
 
         try {
             const storageConfig = await fetchStorageConfig()
+            if (!task.file) {
+                task.status = 'error'
+                task.error = 'File is released'
+                return
+            }
             const maxBytes = (storageConfig?.config?.max_file_size_mb || 0) * 1024 * 1024
             if (maxBytes > 0 && task.file.size > maxBytes) {
                 task.status = 'error'
@@ -182,7 +192,7 @@ export function useFileUpload() {
                 task.progress = progress
             })
             task.status = 'uploading'
-            if (options?.enableMultipart && task.file.size > MULTIPART_THRESHOLD) {
+            if (options?.enableMultipart && task.file!.size > MULTIPART_THRESHOLD) {
                 try {
                     const result = await uploadMultipart(task, {
                         ...options,
@@ -207,6 +217,8 @@ export function useFileUpload() {
             task.status = 'error'
             task.error = getErrorMessage(error)
             Logger.error('上传文件资源失败:', error)
+        } finally {
+            task.file = null
         }
     }
 
@@ -230,7 +242,7 @@ export function useFileUpload() {
 
         try {
             const results = await uploadSystemFiles(
-                tasks.map((task) => task.file),
+                tasks.map((task) => task.file!),
                 {
                     folder_id: getTaskTargetFolderId(tasks[0], options),
                     driver: resolvedDriver,
@@ -267,7 +279,7 @@ export function useFileUpload() {
                 } else {
                     const failureName = String(failure.origin_name || failure.file_name || failure.name || '')
                     if (failureName) {
-                        task = unassignedTasks.find((candidate) => candidate.file.name === failureName || candidate.name === failureName)
+                        task = unassignedTasks.find((candidate) => candidate.file?.name === failureName || candidate.name === failureName)
                     }
                 }
                 if (!task) {
@@ -310,6 +322,10 @@ export function useFileUpload() {
             }
             Logger.error('批量上传文件资源失败:', error)
             return true
+        } finally {
+            tasks.forEach((task) => {
+                task.file = null
+            })
         }
     }
 
@@ -328,6 +344,12 @@ export function useFileUpload() {
             task.result = undefined
             task.progress = 0
             task.status = 'hashing'
+            if (!task.file) {
+                task.status = 'error'
+                task.progress = 0
+                task.error = 'File is released'
+                continue
+            }
             task.hash = await calculateSystemFileSha256(task.file, (progress) => {
                 task.progress = progress
             })
@@ -344,9 +366,9 @@ export function useFileUpload() {
                 items: tasks.map((task) => ({
                     client_id: task.id,
                     folder_id: getTaskTargetFolderId(task, options),
-                    origin_name: task.file.name,
-                    size: task.file.size,
-                    mime_type: task.file.type || 'application/octet-stream',
+                    origin_name: task.name,
+                    size: task.size,
+                    mime_type: task.file?.type || 'application/octet-stream',
                     hash: task.hash!,
                 })),
             })
@@ -368,9 +390,9 @@ export function useFileUpload() {
                 const credential = item.data
                 const uploadMeta = {
                     hash: task.hash,
-                    origin_name: task.file.name,
-                    size: task.file.size,
-                    mime_type: task.file.type || 'application/octet-stream',
+                    origin_name: task.name,
+                    size: task.size,
+                    mime_type: task.file?.type || 'application/octet-stream',
                     folder_id: getTaskTargetFolderId(task, options),
                 }
                 const completeToken = resolveCompleteToken(credential)
@@ -403,7 +425,7 @@ export function useFileUpload() {
                 }
 
                 if (credential.upload_url) {
-                    pendingUploads.push({ task, file: task.file, credential })
+                    pendingUploads.push({ task, file: task.file!, credential })
                 } else if (!hasDirectCompletePayload(completeItem)) {
                     task.status = 'error'
                     task.progress = 0
@@ -492,6 +514,10 @@ export function useFileUpload() {
             })
             Logger.error('批量直传文件资源失败:', error)
             return true
+        } finally {
+            tasks.forEach((task) => {
+                task.file = null
+            })
         }
     }
 
@@ -505,7 +531,7 @@ export function useFileUpload() {
 
             validTasks = []
             for (const task of reactiveTasks) {
-                if (maxBytes > 0 && task.file.size > maxBytes) {
+                if (maxBytes > 0 && task.file && task.file.size > maxBytes) {
                     task.status = 'error'
                     task.progress = 0
                     task.error = i18n.global.t('system.file.sizeExceedsLimit', { size: storageConfig.config.max_file_size_mb })
@@ -559,13 +585,16 @@ export function useFileUpload() {
 }
 
 async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
+    if (!task.file) {
+        throw new Error('File is released')
+    }
     const chunkSize = DEFAULT_CHUNK_SIZE
-    const partCount = Math.ceil(task.file.size / chunkSize)
+    const partCount = Math.ceil(task.size / chunkSize)
 
     const initResult: MultipartInitResult = await initMultipartUpload({
         hash: task.hash!,
-        origin_name: task.file.name,
-        size: task.file.size,
+        origin_name: task.name,
+        size: task.size,
         mime_type: task.file.type || 'application/octet-stream',
         folder_id: options?.folderId,
         driver: options?.driver as StorageDriver,
@@ -585,8 +614,8 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         return await completeMultipartUpload({
             complete_token: completeToken,
             reuse: true,
-            origin_name: task.file.name,
-            size: task.file.size,
+            origin_name: task.name,
+            size: task.size,
             hash: task.hash,
             mime_type: task.file.type,
             folder_id: options?.folderId,
@@ -600,7 +629,7 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
     }
     const completedParts: MultipartCompletePart[] = []
-    const totalSize = Math.max(task.file.size, 1)
+    const totalSize = Math.max(task.size, 1)
     let completedBytes = 0
     const inflightLoaded = new Map<number, number>()
 
@@ -627,7 +656,7 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
                 const chunk = partChunks[cursor]
                 cursor += 1
                 const presignedPart = presignedParts[chunk.index]
-                const blob = task.file.slice(chunk.start, chunk.end)
+                const blob = task.file!.slice(chunk.start, chunk.end)
                 const partSize = chunk.end - chunk.start
                 const headers: Record<string, string> = {
                     ...(presignedPart.headers || {}),
@@ -666,8 +695,8 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
 
         const result = await completeMultipartUpload({
             complete_token: completeToken,
-            origin_name: task.file.name,
-            size: task.file.size,
+            origin_name: task.name,
+            size: task.size,
             hash: task.hash,
             mime_type: task.file.type,
             folder_id: options?.folderId,

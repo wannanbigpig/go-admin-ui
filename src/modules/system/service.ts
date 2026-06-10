@@ -736,15 +736,15 @@ export async function downloadSystemFileBlob(uuid: string, fileName?: string) {
 }
 
 export async function initMultipartUpload(data: MultipartInitPayload) {
-    const response = await systemApi.multipartInit(data as unknown as Record<string, unknown>)
+    const response = await systemApi.multipartInit(data)
     return normalizeDetailData<MultipartInitResult>(response, {} as MultipartInitResult)
 }
 
 export async function completeMultipartUpload(data: MultipartCompletePayload) {
-    const response = await systemApi.multipartComplete(data as unknown as Record<string, unknown>)
+    const response = await systemApi.multipartComplete(data)
     return normalizeDetailData(response, {} as SystemFile)
 }
 
 export async function abortMultipartUpload(data: MultipartAbortPayload) {
-    return systemApi.multipartAbort(data as unknown as Record<string, unknown>)
+    return systemApi.multipartAbort(data)
 }

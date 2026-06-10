@@ -237,9 +237,9 @@ const hasBuiltinSearch = computed(() => searchFields.value.length > 0)
 
 const localModel = reactive<Record<string, unknown>>({})
 
-// 监听 props.searchModel 的改变（仅浅层监听对象引用的替换，如重置操作）
+// 监听 props.searchModel 的改变（浅层监听其第一层属性变化及对象引用替换）
 watch(
-    () => props.searchModel,
+    () => (props.searchModel ? { ...props.searchModel } : null),
     (newVal) => {
         if (newVal) {
             // 移除 localModel 中 newVal 不存在的 key
