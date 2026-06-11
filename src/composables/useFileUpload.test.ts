@@ -74,4 +74,82 @@ describe('composables/useFileUpload.ts', () => {
         expect(tasks[0].file).toBeNull()
         expect(tasks[1].file).not.toBeNull()
     })
+
+    it('runUploadQueue 批量上传时，fetchStorageConfig 调用次数不超过 1 次', async () => {
+        hoisted.mockFetchStorageConfig.mockClear()
+        hoisted.mockFetchStorageConfig.mockResolvedValue({ config: { max_file_size_mb: 10 } })
+        
+        const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
+        vi.mocked(mockUploadSystemFile).mockResolvedValue({ id: 1 } as any)
+        
+        hoisted.mockCalculateHash.mockResolvedValue('hash-code')
+        
+        const { runUploadQueue } = useFileUpload()
+        const tasks: UploadTask[] = [
+            { id: 'task-1', file: new File(['a'], 'a.txt', { type: 'text/plain' }), name: 'a.txt', size: 1, progress: 0, status: 'pending' as const },
+            { id: 'task-2', file: new File(['b'], 'b.txt', { type: 'text/plain' }), name: 'b.txt', size: 1, progress: 0, status: 'pending' as const },
+        ]
+
+        await runUploadQueue(tasks, { enableMultipart: true })
+        
+        expect(hoisted.mockFetchStorageConfig).toHaveBeenCalledTimes(1)
+    })
+
+    it('clearTasks 应取消进行中的 axios 请求', async () => {
+        hoisted.mockFetchStorageConfig.mockResolvedValue({ config: { max_file_size_mb: 10 } })
+        
+        const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
+        
+        let capturedSignal: AbortSignal | undefined
+        vi.mocked(mockUploadSystemFile).mockImplementation(async (file, options) => {
+            capturedSignal = (options as any)?.signal
+            return new Promise((resolve) => setTimeout(resolve, 1000))
+        })
+        
+        const { runUploadQueue, clearTasks } = useFileUpload()
+        const tasks: UploadTask[] = [
+            { id: 'task-1', file: new File(['a'], 'a.txt', { type: 'text/plain' }), name: 'a.txt', size: 1, progress: 0, status: 'pending' as const }
+        ]
+        
+        const uploadPromise = runUploadQueue(tasks, { enableMultipart: true })
+        
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        
+        expect(capturedSignal).toBeDefined()
+        expect(capturedSignal?.aborted).toBe(false)
+        
+        clearTasks()
+        
+        expect(capturedSignal?.aborted).toBe(true)
+        
+        try {
+            await uploadPromise
+        } catch {}
+    })
+
+    it('retry 时 uploadOneTask 应使用 task 自身固化的 uploadOptions', async () => {
+        const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
+        vi.mocked(mockUploadSystemFile).mockClear()
+
+        const { uploadOneTask } = useFileUpload()
+        
+        const task: UploadTask = {
+            id: 'task-1',
+            file: new File(['a'], 'a.txt', { type: 'text/plain' }),
+            name: 'a.txt',
+            size: 1,
+            progress: 0,
+            status: 'error' as const,
+            uploadOptions: { folderId: 101, enableMultipart: true }
+        }
+
+        await uploadOneTask(task, task.uploadOptions)
+
+        expect(vi.mocked(mockUploadSystemFile)).toHaveBeenCalledWith(
+            expect.any(File),
+            expect.objectContaining({
+                folder_id: 101
+            })
+        )
+    })
 })

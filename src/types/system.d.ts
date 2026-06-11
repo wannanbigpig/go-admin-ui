@@ -387,6 +387,7 @@ export interface SystemFileUploadOptions {
     origin_name?: string
     onProgress?: (percent: number) => void
     onReuse?: () => void
+    signal?: AbortSignal
 }
 
 export type StorageDriver = 'local' | 'aliyun_oss' | (string & {})

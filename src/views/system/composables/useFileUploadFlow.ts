@@ -18,7 +18,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const uploadDirectoryInputRef = ref<HTMLInputElement>()
     const isDraggingUpload = ref(false)
     const uploadQueueExpanded = ref(false)
-    let lastUploadOptions: UploadOptions = {}
+
 
     const { uploadTasks, uploading, uploadFinishedCount, uploadFinished, createUploadTask, uploadOneTask, runUploadQueue, clearTasks } = useFileUpload()
 
@@ -45,11 +45,11 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
 
     const uploadFilesInQueue = async (files: File[]) => {
         if (files.length === 0) return
-        const currentTasks = files.map((file) => createUploadTask(file))
+        const uploadOptions = { folderId: options.selectedFolderId.value, enableMultipart: true }
+        const currentTasks = files.map((file) => createUploadTask(file, { uploadOptions }))
         uploadTasks.value = currentTasks
         uploadQueueExpanded.value = false
-        lastUploadOptions = { folderId: options.selectedFolderId.value, enableMultipart: true }
-        await runUploadQueue(uploadTasks.value, lastUploadOptions)
+        await runUploadQueue(uploadTasks.value, uploadOptions)
         showUploadSummary(uploadTasks.value)
         if (uploadTasks.value.some((task) => task.status === 'success' || task.status === 'reuse')) {
             await options.getList()
@@ -63,7 +63,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
 
     const retryUploadTask = async (task: UploadTask) => {
         if (task.status !== 'error') return
-        await uploadOneTask(task, lastUploadOptions)
+        await uploadOneTask(task, task.uploadOptions)
         await options.getList()
         if (uploadTasks.value.length > 0 && uploadTasks.value.every((item) => item.status === 'success' || item.status === 'reuse')) {
             showUploadSummary(uploadTasks.value)
@@ -192,6 +192,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
             await Promise.all(paths.map((p) => ensureFolderPathExists(p, baseFolderId, folderIndex, createdPathIds, pendingPathIds)))
         }
 
+        const uploadOptions = { enableMultipart: true }
         const currentTasks = [] as ReturnType<typeof createUploadTask>[]
         for (const file of files) {
             const relativeFolderPath = extractRelativeFolderPath(file)
@@ -200,14 +201,14 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
                 createUploadTask(file, {
                     name: extractRelativeDisplayName(file),
                     folderId: targetFolderId,
+                    uploadOptions,
                 })
             )
         }
 
         uploadTasks.value = currentTasks
         uploadQueueExpanded.value = false
-        lastUploadOptions = { enableMultipart: true }
-        await runUploadQueue(currentTasks, lastUploadOptions)
+        await runUploadQueue(currentTasks, uploadOptions)
         await options.loadFolderTree()
         showUploadSummary(currentTasks)
         if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
