@@ -9,6 +9,7 @@ const hoisted = vi.hoisted(() => {
     const mockAddDynamicRoutes = vi.fn()
     const mockRemoveDynamicRoute = vi.fn()
     const mockFindFirstValidRoute = vi.fn()
+    const mockLogoutApi = vi.fn()
 
     const localStorageStore: Record<string, string> = {}
     const mockLocalStorage = {
@@ -33,6 +34,7 @@ const hoisted = vi.hoisted(() => {
         mockRemoveDynamicRoute,
         mockFindFirstValidRoute,
         mockLocalStorage,
+        mockLogoutApi,
         mockRouter: {
             push: vi.fn(),
             currentRoute: {
@@ -53,6 +55,10 @@ vi.mock('@/modules/auth/service', () => ({
     fetchCurrentUser: hoisted.mockFetchCurrentUser,
     fetchUserMenuTree: hoisted.mockFetchUserMenuTree,
     loginWithCredentials: hoisted.mockSubmitLogin,
+}))
+
+vi.mock('@/api/auth', () => ({
+    logout: hoisted.mockLogoutApi,
 }))
 
 vi.mock('@/modules/auth/model', () => ({
@@ -107,6 +113,7 @@ describe('stores/auth.ts', () => {
         hoisted.mockRemoveDynamicRoute.mockReset()
         hoisted.mockFindFirstValidRoute.mockReset()
         hoisted.mockRouter.push.mockReset()
+        hoisted.mockLogoutApi.mockReset()
     })
 
     it('refreshUserInfo 应在菜单刷新后立即同步动态路由', async () => {
@@ -186,5 +193,55 @@ describe('stores/auth.ts', () => {
         expect(store.userInfo.username).toBe('admin')
         expect(store.menu).toEqual(menuList)
         expect(hoisted.mockAddDynamicRoutes).toHaveBeenCalledWith(convertedRoutes)
+    })
+
+    it('handleTokenExpired 应触发弹窗并在确认时吊销 refresh_token 并本地退出', async () => {
+        const store = useAuthStore()
+        store.updateToken('test-access', Math.floor(Date.now() / 1000) + 3600, 'test-refresh', Math.floor(Date.now() / 1000) + 7200)
+
+        const { ElMessageBox } = await import('element-plus')
+        vi.mocked(ElMessageBox.alert).mockImplementation((msg, title, options) => {
+            if (options && typeof options.callback === 'function') {
+                options.callback('confirm', {} as any)
+            }
+            return Promise.resolve({ action: 'confirm', value: '' } as any)
+        })
+
+        hoisted.mockLogoutApi.mockResolvedValue({})
+
+        store.handleTokenExpired()
+
+        expect(hoisted.mockLogoutApi).toHaveBeenCalledWith('test-refresh')
+        expect(store.access_token).toBe('')
+        expect(store.refresh_token).toBe('')
+        expect(hoisted.mockRouter.push).toHaveBeenCalledWith({
+            name: 'Login',
+            query: { redirect: '/system/user' }
+        })
+    })
+
+    it('handleTokenExpired 在吊销 refresh_token 失败时仍应本地退出', async () => {
+        const store = useAuthStore()
+        store.updateToken('test-access', Math.floor(Date.now() / 1000) + 3600, 'test-refresh', Math.floor(Date.now() / 1000) + 7200)
+
+        const { ElMessageBox } = await import('element-plus')
+        vi.mocked(ElMessageBox.alert).mockImplementation((msg, title, options) => {
+            if (options && typeof options.callback === 'function') {
+                options.callback('confirm', {} as any)
+            }
+            return Promise.resolve({ action: 'confirm', value: '' } as any)
+        })
+
+        hoisted.mockLogoutApi.mockRejectedValue(new Error('Revoke network error'))
+
+        store.handleTokenExpired()
+
+        expect(hoisted.mockLogoutApi).toHaveBeenCalledWith('test-refresh')
+        expect(store.access_token).toBe('')
+        expect(store.refresh_token).toBe('')
+        expect(hoisted.mockRouter.push).toHaveBeenCalledWith({
+            name: 'Login',
+            query: { redirect: '/system/user' }
+        })
     })
 })

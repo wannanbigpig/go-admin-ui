@@ -6,6 +6,7 @@ export default {
     profile: 'Profile',
     userRefresh: 'Refresh Cache',
     logout: 'Log Out',
+    logoutLocalOnly: 'Logout API failed, cleared local session instead',
     userDetail: 'Profile',
     themeSwitch: 'Switch Theme',
     exportCenter: 'Export Center',
