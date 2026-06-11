@@ -30,6 +30,7 @@ export interface UploadOptions {
     signal?: AbortSignal
     onReuse?: () => void
     onResult?: (result: unknown) => void
+    storageConfig?: Awaited<ReturnType<typeof fetchStorageConfig>>
 }
 
 export type UploadTaskStatus = 'hashing' | 'pending' | 'uploading' | 'reuse' | 'success' | 'error'
@@ -45,6 +46,7 @@ export interface UploadTask {
     hash?: string
     error?: string
     result?: unknown
+    uploadOptions?: UploadOptions
 }
 
 const MAX_PARALLEL_UPLOADS = 5
@@ -108,12 +110,13 @@ function hasDirectCompletePayload(item: SystemFileUploadCompleteBatchItemPayload
 
 export function useFileUpload() {
     const uploadTasks = ref<UploadTask[]>([])
+    let uploadAbortController: AbortController | null = null
 
     const uploading = computed(() => uploadTasks.value.some((task) => task.status === 'hashing' || task.status === 'pending' || task.status === 'uploading'))
     const uploadFinishedCount = computed(() => uploadTasks.value.filter((task) => task.status === 'reuse' || task.status === 'success' || task.status === 'error').length)
     const uploadFinished = computed(() => uploadTasks.value.length > 0 && uploadFinishedCount.value === uploadTasks.value.length)
 
-    const createUploadTask = (file: File, overrides?: { name?: string; folderId?: number | string | null }): UploadTask => ({
+    const createUploadTask = (file: File, overrides?: { name?: string; folderId?: number | string | null; uploadOptions?: UploadOptions }): UploadTask => ({
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         file,
         name: overrides?.name || file.name,
@@ -121,6 +124,7 @@ export function useFileUpload() {
         folderId: overrides?.folderId,
         progress: 0,
         status: 'pending',
+        uploadOptions: overrides?.uploadOptions,
     })
 
     const isLocalStorageMultipartUnsupportedError = (error: unknown): boolean => {
@@ -153,6 +157,7 @@ export function useFileUpload() {
                 folder_id: targetFolderId,
                 driver: options?.driver,
                 hash: task.hash,
+                signal: options?.signal,
                 onProgress: (percent) => {
                     task.progress = Math.min(99, Math.max(0, percent))
                 },
@@ -172,7 +177,7 @@ export function useFileUpload() {
         }
 
         try {
-            const storageConfig = await fetchStorageConfig()
+            const storageConfig = options?.storageConfig || await fetchStorageConfig()
             if (!task.file) {
                 task.status = 'error'
                 task.error = 'File is released'
@@ -440,6 +445,7 @@ export function useFileUpload() {
                 let cursor = 0
                 const workers = Array.from({ length: Math.min(MAX_PARALLEL_UPLOADS, pendingUploads.length) }, async () => {
                     while (cursor < pendingUploads.length) {
+                        if (options?.signal?.aborted) break
                         const current = pendingUploads[cursor]
                         cursor += 1
                         try {
@@ -522,11 +528,15 @@ export function useFileUpload() {
     }
 
     const runUploadQueue = async (tasks: UploadTask[], options?: UploadOptions) => {
+        uploadAbortController = new AbortController()
+        const signal = options?.signal ?? uploadAbortController.signal
+
         const reactiveTasks = tasks.map((t) => uploadTasks.value.find((item) => item.id === t.id) || t)
 
         let validTasks = reactiveTasks
+        let storageConfig: Awaited<ReturnType<typeof fetchStorageConfig>> | undefined
         try {
-            const storageConfig = await fetchStorageConfig()
+            storageConfig = await fetchStorageConfig()
             const maxBytes = (storageConfig?.config?.max_file_size_mb || 0) * 1024 * 1024
 
             validTasks = []
@@ -546,19 +556,22 @@ export function useFileUpload() {
 
         if (validTasks.length === 0) return
 
-        if (await runLocalBatchUpload(validTasks, options)) {
+        const nextOptions = { ...options, signal, storageConfig }
+
+        if (await runLocalBatchUpload(validTasks, nextOptions)) {
             return
         }
-        if (await runDirectBatchUpload(validTasks, options)) {
+        if (await runDirectBatchUpload(validTasks, nextOptions)) {
             return
         }
         let cursor = 0
         const workers = Array.from({ length: Math.min(MAX_PARALLEL_UPLOADS, validTasks.length) }, async () => {
             while (cursor < validTasks.length) {
+                if (signal.aborted) break
                 const task = validTasks[cursor]
                 cursor += 1
                 try {
-                    await uploadOneTask(task, options)
+                    await uploadOneTask(task, nextOptions)
                 } catch {
                     task.status = 'error'
                     if (!task.error) task.error = 'Upload failed'
@@ -569,6 +582,8 @@ export function useFileUpload() {
     }
 
     const clearTasks = () => {
+        uploadAbortController?.abort()
+        uploadAbortController = null
         uploadTasks.value = []
     }
 
@@ -653,6 +668,7 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         let cursor = 0
         const workers = Array.from({ length: Math.min(PART_CONCURRENCY, partChunks.length) }, async () => {
             while (cursor < partChunks.length) {
+                if (options?.signal?.aborted) break
                 const chunk = partChunks[cursor]
                 cursor += 1
                 const presignedPart = presignedParts[chunk.index]
