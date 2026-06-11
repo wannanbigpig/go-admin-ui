@@ -6,6 +6,7 @@ export default {
     profile: '个人中心',
     userRefresh: '刷新缓存',
     logout: '退出登录',
+    logoutLocalOnly: '退出登录接口失败，已清理本地状态',
     userDetail: '个人中心',
     themeSwitch: '主题切换',
     exportCenter: '导出中心',

@@ -79,5 +79,12 @@
         "vite-plugin-eslint": "^1.8.1",
         "vitest": "^2.1.9",
         "vue-tsc": "^3.2.6"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "@parcel/watcher",
+            "esbuild",
+            "vue-demi"
+        ]
     }
 }

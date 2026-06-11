@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
+import { logout as logoutApi } from '@/api/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
 import { removeDynamicRoute, convertRoute, addDynamicRoutes, findFirstValidRoute } from '@/router/dynamicRoutes'
@@ -185,6 +186,10 @@ export const useAuthStore = defineStore(
                 authStateVersion.value++
                 if (newRefreshToken !== undefined) {
                     refresh_token.value = newRefreshToken
+                    // [安全过渡方案说明]
+                    // 此处将 refresh_token 存在 localStorage 是因后端未改动 Cookie 方案的临时过渡方案。
+                    // 未来为了规避 XSS 风险，应配合后端使用 HttpOnly; Secure; SameSite=Lax/Strict 的 Cookie。
+                    // 并在部署侧配合 3.2 补强 Content-Security-Policy (CSP)。
                     localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
                 }
                 if (newRefreshExpiresAt !== undefined) {
@@ -240,12 +245,24 @@ export const useAuthStore = defineStore(
         }
 
         /**
+         * 异步吊销 refresh_token
+         */
+        const revokeRefreshToken = (token?: string) => {
+            if (!token) return
+            void logoutApi(token).catch((error) => {
+                Logger.error('吊销 refresh_token 失败:', error)
+            })
+        }
+
+        /**
          * 处理 token 过期
          */
         const handleTokenExpired = () => {
             if (isTokenExpiredModalShown.value) return
 
             isTokenExpiredModalShown.value = true
+            const tokenToRevoke = refreshToken.value
+
             ElMessageBox.alert(translate('validation.tokenExpired.content'), translate('validation.tokenExpired.title'), {
                 type: 'warning',
                 confirmButtonText: translate('validation.tokenExpired.relogin'),
@@ -253,6 +270,7 @@ export const useAuthStore = defineStore(
                     if (action === 'confirm') {
                         isTokenExpiredModalShown.value = false
                         const redirectUrl = router.currentRoute.value.fullPath
+                        revokeRefreshToken(tokenToRevoke)
                         logout(redirectUrl)
                     } else {
                         isTokenExpiredModalShown.value = false
@@ -284,6 +302,7 @@ export const useAuthStore = defineStore(
             resetAuthStore,
             logout,
             handleTokenExpired,
+            revokeRefreshToken,
             // Button Permission Helpers
             getButtonInfo,
             getButtonInfoFull,

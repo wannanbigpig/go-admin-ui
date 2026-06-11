@@ -156,16 +156,20 @@ const handleLogout = async () => {
             autofocus: false,
             type: 'warning',
         })
+    } catch (error) {
+        ElMessage({ type: 'info', message: t(RESULT_MESSAGES.LOGOUT_CANCEL) })
+        return
+    }
 
+    const redirectUrl = router.currentRoute.value.fullPath
+    try {
         await logout(authStore.refreshToken)
-        authStore.logout(router.currentRoute.value.fullPath)
         ElMessage({ type: 'success', message: t(RESULT_MESSAGES.LOGOUT_SUCCESS) })
     } catch (error) {
-        if (error !== 'cancel') {
-            Logger.error('退出登录失败:', error)
-        } else {
-            ElMessage({ type: 'info', message: t(RESULT_MESSAGES.LOGOUT_CANCEL) })
-        }
+        Logger.error('退出登录接口失败，继续清理本地状态:', error)
+        ElMessage.warning(t('layout.logoutLocalOnly'))
+    } finally {
+        authStore.logout(redirectUrl)
     }
 }
 
