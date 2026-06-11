@@ -1,0 +1,18 @@
+export default {
+    title: '产品管理',
+    addTitle: '新增产品',
+    editTitle: '编辑产品',
+    name: '产品名称',
+    description: '产品描述',
+    price: '价格(分)',
+    ownerDepartment: '归属部门',
+    namePlaceholder: '请输入产品名称',
+    descriptionPlaceholder: '请输入产品描述',
+    pricePlaceholder: '请输入价格',
+    ownerDepartmentPlaceholder: '请选择部门（不选则使用默认部门）',
+    nameRequired: '请输入产品名称',
+    createSuccess: '创建成功',
+    updateSuccess: '更新成功',
+    deleteSuccess: '删除成功',
+    deleteConfirm: '确定要删除产品"{name}"吗？',
+}

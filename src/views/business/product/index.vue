@@ -2,43 +2,43 @@
     <div>
         <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="productList" :pagination="pagination" @search="onSearch" @reset="handleReset">
             <template #actions>
-                <el-button type="primary" @click="openCreateDrawer">新增产品</el-button>
+                <el-button type="primary" @click="openCreateDrawer">{{ t('product.addTitle') }}</el-button>
             </template>
             <template #operation>
-                <el-table-column width="200" label="操作" align="center" fixed="right">
+                <el-table-column width="200" :label="t('common.labels.operation')" align="center" fixed="right">
                     <template #default="scope">
-                        <el-button link type="primary" @click="openEditDrawer(scope.row)">编辑</el-button>
-                        <el-button link type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                        <el-button link type="primary" @click="openEditDrawer(scope.row)">{{ t('common.actions.edit') }}</el-button>
+                        <el-button link type="danger" @click="handleDelete(scope.row)">{{ t('common.actions.delete') }}</el-button>
                     </template>
                 </el-table-column>
             </template>
         </xl-pro-table>
 
         <!-- 产品表单抽屉 -->
-        <el-drawer v-model="showDrawer" :title="isEditMode ? '编辑产品' : '新增产品'" size="40%">
+        <el-drawer v-model="showDrawer" :title="isEditMode ? t('product.editTitle') : t('product.addTitle')" size="40%">
             <el-form ref="formRef" :model="formData" :rules="formRules" label-width="auto">
-                <el-form-item label="产品名称" prop="name">
-                    <el-input v-model.trim="formData.name" placeholder="请输入产品名称" />
+                <el-form-item :label="t('product.name')" prop="name">
+                    <el-input v-model.trim="formData.name" :placeholder="t('product.namePlaceholder')" />
                 </el-form-item>
-                <el-form-item label="产品描述" prop="description">
-                    <el-input v-model.trim="formData.description" placeholder="请输入产品描述" type="textarea" />
+                <el-form-item :label="t('product.description')" prop="description">
+                    <el-input v-model.trim="formData.description" :placeholder="t('product.descriptionPlaceholder')" type="textarea" />
                 </el-form-item>
-                <el-form-item label="价格(分)" prop="price">
-                    <el-input-number v-model="formData.price" :min="0" placeholder="请输入价格" />
+                <el-form-item :label="t('product.price')" prop="price">
+                    <el-input-number v-model="formData.price" :min="0" :placeholder="t('product.pricePlaceholder')" />
                 </el-form-item>
-                <el-form-item label="状态" prop="status">
-                    <el-select v-model="formData.status" placeholder="请选择状态">
-                        <el-option label="启用" :value="1" />
-                        <el-option label="禁用" :value="0" />
+                <el-form-item :label="t('common.labels.status')" prop="status">
+                    <el-select v-model="formData.status" :placeholder="t('common.placeholders.selectStatus')">
+                        <el-option :label="t('common.status.enabled')" :value="1" />
+                        <el-option :label="t('common.status.disabled')" :value="0" />
                     </el-select>
                 </el-form-item>
-                <el-form-item label="归属部门" prop="dept_id">
-                    <DeptTreeSelect v-model="formData.dept_id" :multiple="false" placeholder="请选择部门（不选则使用默认部门）" />
+                <el-form-item :label="t('product.ownerDepartment')" prop="dept_id">
+                    <DeptTreeSelect v-model="formData.dept_id" :multiple="false" :placeholder="t('product.ownerDepartmentPlaceholder')" />
                 </el-form-item>
             </el-form>
             <template #footer>
-                <el-button @click="showDrawer = false">取消</el-button>
-                <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+                <el-button @click="showDrawer = false">{{ t('common.actions.cancel') }}</el-button>
+                <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ t('common.actions.confirm') }}</el-button>
             </template>
         </el-drawer>
     </div>
@@ -54,8 +54,10 @@ import { useListPage } from '@/composables/useListPage'
 import { normalizeListData } from '@/modules/shared/response'
 import { Logger } from '@/utils/logger'
 import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 // 列表相关
 const queryWhere = reactive({
@@ -99,18 +101,18 @@ const formData = reactive({
 })
 
 const formRules: FormRules = {
-    name: [{ required: true, message: '请输入产品名称', trigger: 'blur' }],
+    name: [{ required: true, message: t('product.nameRequired'), trigger: 'blur' }],
 }
 
 // 表格列定义
 const columns = [
     { prop: 'id', h_label: 'ID', width: 80 },
-    { prop: 'name', h_label: '产品名称', label: '产品名称', search: { type: 'input' as const, placeholder: '请输入产品名称', span: 6 } },
-    { prop: 'description', h_label: '描述', overflow: true },
-    { prop: 'price', h_label: '价格(分)', width: 100 },
-    { prop: 'status_name', h_label: '状态', width: 80 },
-    { prop: 'dept_name', h_label: '归属部门', width: 120 },
-    { prop: 'created_at', h_label: '创建时间', width: 180 },
+    { prop: 'name', h_label: t('product.name'), label: t('product.name'), search: { type: 'input' as const, placeholder: t('product.namePlaceholder'), span: 6 } },
+    { prop: 'description', h_label: t('common.labels.description'), overflow: true },
+    { prop: 'price', h_label: t('product.price'), width: 100 },
+    { prop: 'status_name', h_label: t('common.labels.status'), width: 80 },
+    { prop: 'dept_name', h_label: t('product.ownerDepartment'), width: 120 },
+    { prop: 'created_at', h_label: t('common.labels.createdAt'), width: 180 },
 ]
 
 // 搜索
@@ -173,10 +175,10 @@ const handleSubmit = async () => {
 
         if (isEditMode.value) {
             await updateProduct({ id: formData.id, ...data })
-            ElMessage.success('更新成功')
+            ElMessage.success(t('product.updateSuccess'))
         } else {
             await createProduct(data)
-            ElMessage.success('创建成功')
+            ElMessage.success(t('product.createSuccess'))
         }
         showDrawer.value = false
         await getList()
@@ -190,11 +192,11 @@ const handleSubmit = async () => {
 // 删除
 const handleDelete = async (row: Product) => {
     try {
-        await ElMessageBox.confirm(`确定要删除产品"${row.name}"吗？`, '提示', {
+        await ElMessageBox.confirm(t('product.deleteConfirm', { name: row.name }), t('common.confirm.title'), {
             type: 'warning',
         })
         await deleteProduct(row.id)
-        ElMessage.success('删除成功')
+        ElMessage.success(t('product.deleteSuccess'))
         await getList()
     } catch (error) {
         if (error !== 'cancel') {

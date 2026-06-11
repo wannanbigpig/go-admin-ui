@@ -1,0 +1,18 @@
+export default {
+    title: 'Product Management',
+    addTitle: 'Add Product',
+    editTitle: 'Edit Product',
+    name: 'Product Name',
+    description: 'Product Description',
+    price: 'Price (cents)',
+    ownerDepartment: 'Owner Department',
+    namePlaceholder: 'Please enter product name',
+    descriptionPlaceholder: 'Please enter product description',
+    pricePlaceholder: 'Please enter price',
+    ownerDepartmentPlaceholder: 'Please select department (default department is used if empty)',
+    nameRequired: 'Please enter product name',
+    createSuccess: 'Created successfully',
+    updateSuccess: 'Updated successfully',
+    deleteSuccess: 'Deleted successfully',
+    deleteConfirm: 'Are you sure you want to delete product "{name}"?',
+}

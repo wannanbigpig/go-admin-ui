@@ -86,6 +86,16 @@ export default {
         codePlaceholder: 'Please enter role code (auto-generated if empty)',
         statusPlaceholder: 'Please select status',
         descriptionPlaceholder: 'Please enter role description',
+        dataScope: 'Data Scope',
+        dataScopePlaceholder: 'Please select data scope',
+        customDept: 'Custom Departments',
+        dataScopeOptions: {
+            all: 'All Data',
+            deptAndChild: 'Department & Children',
+            dept: 'Department Only',
+            self: 'Self Only',
+            custom: 'Custom Departments',
+        },
     },
     menu: {
         title: 'Menu Management',

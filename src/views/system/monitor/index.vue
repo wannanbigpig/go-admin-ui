@@ -6,8 +6,8 @@
                 <el-card shadow="hover">
                     <template #header>
                         <div class="card-header">
-                            <span>CPU</span>
-                            <el-tag :type="getUsageTagType(data?.host?.cpu?.usage_percent || 0)" size="small"> {{ data?.host?.cpu?.cores || 0 }} 核心 </el-tag>
+                            <span>{{ t('system.monitor.cpu') }}</span>
+                            <el-tag :type="getUsageTagType(data?.host?.cpu?.usage_percent || 0)" size="small"> {{ t('system.monitor.cpuCores', { cores: data?.host?.cpu?.cores || 0 }) }} </el-tag>
                         </div>
                     </template>
                     <div class="progress-wrapper">
@@ -19,7 +19,7 @@
                 <el-card shadow="hover">
                     <template #header>
                         <div class="card-header">
-                            <span>内存</span>
+                            <span>{{ t('system.monitor.memory') }}</span>
                             <el-tag size="small"> {{ formatBytes(data?.host?.memory?.used || 0) }} / {{ formatBytes(data?.host?.memory?.total || 0) }} </el-tag>
                         </div>
                     </template>
@@ -32,7 +32,7 @@
                 <el-card shadow="hover">
                     <template #header>
                         <div class="card-header">
-                            <span>磁盘</span>
+                            <span>{{ t('system.monitor.disk') }}</span>
                             <el-tag size="small"> {{ formatBytes(data?.host?.disk?.used || 0) }} / {{ formatBytes(data?.host?.disk?.total || 0) }} </el-tag>
                         </div>
                     </template>
@@ -48,12 +48,12 @@
             <el-col :span="24">
                 <el-card shadow="hover">
                     <template #header>
-                        <span>系统负载</span>
+                        <span>{{ t('system.monitor.load') }}</span>
                     </template>
                     <el-row :gutter="16">
                         <el-col :span="8">
                             <div class="load-item">
-                                <div class="load-label">1 分钟</div>
+                                <div class="load-label">{{ t('system.monitor.load1') }}</div>
                                 <div class="load-value" :class="getLoadClass(data?.host?.load?.load1 || 0, data?.host?.cpu?.cores || 1)">
                                     {{ (data?.host?.load?.load1 || 0).toFixed(2) }}
                                 </div>
@@ -61,7 +61,7 @@
                         </el-col>
                         <el-col :span="8">
                             <div class="load-item">
-                                <div class="load-label">5 分钟</div>
+                                <div class="load-label">{{ t('system.monitor.load5') }}</div>
                                 <div class="load-value" :class="getLoadClass(data?.host?.load?.load5 || 0, data?.host?.cpu?.cores || 1)">
                                     {{ (data?.host?.load?.load5 || 0).toFixed(2) }}
                                 </div>
@@ -69,7 +69,7 @@
                         </el-col>
                         <el-col :span="8">
                             <div class="load-item">
-                                <div class="load-label">15 分钟</div>
+                                <div class="load-label">{{ t('system.monitor.load15') }}</div>
                                 <div class="load-value" :class="getLoadClass(data?.host?.load?.load15 || 0, data?.host?.cpu?.cores || 1)">
                                     {{ (data?.host?.load?.load15 || 0).toFixed(2) }}
                                 </div>
@@ -85,31 +85,31 @@
             <el-col :span="12">
                 <el-card shadow="hover">
                     <template #header>
-                        <span>Go 运行时</span>
+                        <span>{{ t('system.monitor.goRuntime') }}</span>
                     </template>
                     <el-descriptions :column="2" border>
-                        <el-descriptions-item label="Go 版本">{{ data?.runtime?.go_version || '-' }}</el-descriptions-item>
-                        <el-descriptions-item label="Goroutines">{{ data?.runtime?.goroutines || 0 }}</el-descriptions-item>
-                        <el-descriptions-item label="堆内存分配">{{ formatBytes(data?.runtime?.heap_alloc || 0) }}</el-descriptions-item>
-                        <el-descriptions-item label="堆内存使用">{{ formatBytes(data?.runtime?.heap_inuse || 0) }}</el-descriptions-item>
-                        <el-descriptions-item label="堆内存系统">{{ formatBytes(data?.runtime?.heap_sys || 0) }}</el-descriptions-item>
-                        <el-descriptions-item label="堆内存释放">{{ formatBytes(data?.runtime?.heap_released || 0) }}</el-descriptions-item>
-                        <el-descriptions-item label="GC 次数">{{ data?.runtime?.gc_cycles || 0 }}</el-descriptions-item>
-                        <el-descriptions-item label="GC 暂停总时间">{{ formatDuration(data?.runtime?.gc_pause_total_ns || 0) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.goVersion')">{{ data?.runtime?.go_version || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.goroutines')">{{ data?.runtime?.goroutines || 0 }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.heapAlloc')">{{ formatBytes(data?.runtime?.heap_alloc || 0) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.heapInuse')">{{ formatBytes(data?.runtime?.heap_inuse || 0) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.heapSys')">{{ formatBytes(data?.runtime?.heap_sys || 0) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.heapReleased')">{{ formatBytes(data?.runtime?.heap_released || 0) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.gcCycles')">{{ data?.runtime?.gc_cycles || 0 }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.gcPauseTotal')">{{ formatDuration(data?.runtime?.gc_pause_total_ns || 0) }}</el-descriptions-item>
                     </el-descriptions>
                 </el-card>
             </el-col>
             <el-col :span="12">
                 <el-card shadow="hover">
                     <template #header>
-                        <span>主机信息</span>
+                        <span>{{ t('system.monitor.hostInfo') }}</span>
                     </template>
                     <el-descriptions :column="2" border>
-                        <el-descriptions-item label="主机名">{{ data?.host?.hostname || '-' }}</el-descriptions-item>
-                        <el-descriptions-item label="操作系统">{{ data?.host?.os || '-' }}</el-descriptions-item>
-                        <el-descriptions-item label="平台">{{ data?.host?.platform || '-' }}</el-descriptions-item>
-                        <el-descriptions-item label="运行时长">{{ formatUptime(data?.host?.uptime || 0) }}</el-descriptions-item>
-                        <el-descriptions-item label="更新时间" :span="2">{{ data?.host?.updated_at || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.hostname')">{{ data?.host?.hostname || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.os')">{{ data?.host?.os || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.platform')">{{ data?.host?.platform || '-' }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.uptime')">{{ formatUptime(data?.host?.uptime || 0) }}</el-descriptions-item>
+                        <el-descriptions-item :label="t('system.monitor.updateTime')" :span="2">{{ data?.host?.updated_at || '-' }}</el-descriptions-item>
                     </el-descriptions>
                 </el-card>
             </el-col>
@@ -120,37 +120,37 @@
             <el-col :span="24">
                 <el-card shadow="hover">
                     <template #header>
-                        <span>应用状态</span>
+                        <span>{{ t('system.monitor.appStatus') }}</span>
                     </template>
                     <el-row :gutter="16">
                         <el-col :span="6">
                             <div class="stat-item">
                                 <div class="stat-value">{{ data?.app?.online_sessions || 0 }}</div>
-                                <div class="stat-label">在线会话</div>
+                                <div class="stat-label">{{ t('system.monitor.onlineSessions') }}</div>
                             </div>
                         </el-col>
                         <el-col :span="6">
                             <div class="stat-item">
                                 <div class="stat-value">{{ data?.app?.ws_online || 0 }}</div>
-                                <div class="stat-label">WS 连接</div>
+                                <div class="stat-label">{{ t('system.monitor.wsOnline') }}</div>
                             </div>
                         </el-col>
                         <el-col :span="4">
                             <div class="stat-item">
                                 <div class="stat-value warning">{{ data?.app?.queue_pending || 0 }}</div>
-                                <div class="stat-label">队列待处理</div>
+                                <div class="stat-label">{{ t('system.monitor.queuePending') }}</div>
                             </div>
                         </el-col>
                         <el-col :span="4">
                             <div class="stat-item">
                                 <div class="stat-value warning">{{ data?.app?.queue_retrying || 0 }}</div>
-                                <div class="stat-label">队列重试中</div>
+                                <div class="stat-label">{{ t('system.monitor.queueRetrying') }}</div>
                             </div>
                         </el-col>
                         <el-col :span="4">
                             <div class="stat-item">
                                 <div class="stat-value primary">{{ data?.app?.queue_running || 0 }}</div>
-                                <div class="stat-label">队列执行中</div>
+                                <div class="stat-label">{{ t('system.monitor.queueRunning') }}</div>
                             </div>
                         </el-col>
                     </el-row>
@@ -162,9 +162,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
 import { subscribeChannel, unsubscribeChannel } from '@/stores/notification'
 
+const { t } = useI18n()
 const data = ref<DashboardMonitor | null>(null)
 const loading = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
@@ -230,10 +232,10 @@ const formatUptime = (seconds: number): string => {
     const minutes = Math.floor((seconds % 3600) / 60)
 
     const parts = []
-    if (days > 0) parts.push(`${days} 天`)
-    if (hours > 0) parts.push(`${hours} 小时`)
-    if (minutes > 0) parts.push(`${minutes} 分钟`)
-    return parts.join(' ') || '刚启动'
+    if (days > 0) parts.push(t('system.monitor.uptimeDays', { days }))
+    if (hours > 0) parts.push(t('system.monitor.uptimeHours', { hours }))
+    if (minutes > 0) parts.push(t('system.monitor.uptimeMinutes', { minutes }))
+    return parts.join(' ') || t('system.monitor.uptimeJustStarted')
 }
 
 const getProgressColor = (percentage: number): string => {

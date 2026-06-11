@@ -68,7 +68,7 @@
                         <template #header>
                             <div class="card-header-title">
                                 <el-icon class="header-icon"><User /></el-icon>
-                                <span>{{ t('common.labels.basicInfo') || '基本信息' }}</span>
+                                <span>{{ t('common.labels.basicInfo') }}</span>
                             </div>
                         </template>
                         <div class="profile-detail-grid">

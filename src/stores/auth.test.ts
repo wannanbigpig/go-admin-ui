@@ -202,8 +202,10 @@ describe('stores/auth.ts', () => {
         const { ElMessageBox } = await import('element-plus')
         vi.mocked(ElMessageBox.alert).mockImplementation((msg, title, options) => {
             if (options && typeof options.callback === 'function') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 options.callback('confirm', {} as any)
             }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return Promise.resolve({ action: 'confirm', value: '' } as any)
         })
 
@@ -216,7 +218,7 @@ describe('stores/auth.ts', () => {
         expect(store.refresh_token).toBe('')
         expect(hoisted.mockRouter.push).toHaveBeenCalledWith({
             name: 'Login',
-            query: { redirect: '/system/user' }
+            query: { redirect: '/system/user' },
         })
     })
 
@@ -227,8 +229,10 @@ describe('stores/auth.ts', () => {
         const { ElMessageBox } = await import('element-plus')
         vi.mocked(ElMessageBox.alert).mockImplementation((msg, title, options) => {
             if (options && typeof options.callback === 'function') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 options.callback('confirm', {} as any)
             }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return Promise.resolve({ action: 'confirm', value: '' } as any)
         })
 
@@ -241,7 +245,7 @@ describe('stores/auth.ts', () => {
         expect(store.refresh_token).toBe('')
         expect(hoisted.mockRouter.push).toHaveBeenCalledWith({
             name: 'Login',
-            query: { redirect: '/system/user' }
+            query: { redirect: '/system/user' },
         })
     })
 })

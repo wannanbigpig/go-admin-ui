@@ -39,12 +39,12 @@ const formatSizeMB = (size: number) => Number((size / 1024 / 1024).toFixed(2))
 
 const beforeUpload = (file: UploadRawFile) => {
     if (!allowedMimeTypes.has(file.type)) {
-        ElMessage.error(t('common.messages.invalidImageType') || 'Invalid image type')
+        ElMessage.error(t('common.messages.invalidImageType'))
         return false
     }
     const maxSize = props.maxSize
     if (file.size > maxSize) {
-        ElMessage.error(t('common.messages.imageTooLarge', { size: formatSizeMB(maxSize) }) || `Image must be smaller than ${formatSizeMB(maxSize)}MB`)
+        ElMessage.error(t('common.messages.imageTooLarge', { size: formatSizeMB(maxSize) }))
         return false
     }
     return true

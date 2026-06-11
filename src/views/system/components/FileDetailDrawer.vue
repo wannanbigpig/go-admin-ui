@@ -38,7 +38,7 @@
                     <div class="section-header">
                         <span class="section-title">
                             <el-icon class="section-icon"><InfoFilled /></el-icon>
-                            {{ t('common.labels.basicInfo') || '基础信息' }}
+                            {{ t('common.labels.basicInfo') }}
                         </span>
                     </div>
                     <el-descriptions :column="2" border size="small" class="modern-descriptions">

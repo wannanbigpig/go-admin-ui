@@ -11,6 +11,7 @@ import validation from './validation'
 import system from './system'
 import about from './about'
 import filePicker from './filePicker'
+import product from './product'
 
 export default {
     common,
@@ -24,6 +25,7 @@ export default {
     system,
     about,
     filePicker,
+    product,
     request,
     validation,
 }

@@ -113,4 +113,8 @@ export default {
         localePlaceholder: 'Please enter {lang} content',
         loadFailed: 'Failed to load language data',
     },
+    messages: {
+        invalidImageType: 'Invalid image type',
+        imageTooLarge: 'Image must be smaller than {size}MB',
+    },
 }

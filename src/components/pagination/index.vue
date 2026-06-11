@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, getCurrentInstance } from 'vue'
 
 // ==================== Props 定义 ====================
 interface Props {
@@ -55,18 +55,28 @@ const currentPageValue = computed(() => props.currentPage ?? props.page ?? 1)
 /** 每页显示条数（兼容旧属性名） */
 const pageSizeValue = computed(() => props.pageSize ?? props.page_size ?? 10)
 
+const instance = getCurrentInstance()
+const hasSizeChangeListener = computed(() => {
+    const vnodeProps = instance?.vnode.props
+    return !!(vnodeProps && (vnodeProps['onSize-change'] || vnodeProps.onSizeChange))
+})
+const hasCurrentChangeListener = computed(() => {
+    const vnodeProps = instance?.vnode.props
+    return !!(vnodeProps && (vnodeProps['onCurrent-change'] || vnodeProps.onCurrentChange))
+})
+
 // ==================== 方法 ====================
 /**
  * 处理每页显示条数变化
  * @param {number} size - 新的每页显示条数
  */
 const handleSizeChange = (size: number) => {
-    // 优先使用 emit，其次使用函数 props（向后兼容）
-    emit('size-change', size)
-    emit('update:pageSize', size)
-    if (props.pageSizeChange) {
-        props.pageSizeChange(size)
+    if (hasSizeChangeListener.value) {
+        emit('size-change', size)
+    } else {
+        props.pageSizeChange?.(size)
     }
+    emit('update:pageSize', size)
 }
 
 /**
@@ -74,12 +84,12 @@ const handleSizeChange = (size: number) => {
  * @param {number} page - 新的页码
  */
 const handleCurrentChange = (page: number) => {
-    // 优先使用 emit，其次使用函数 props（向后兼容）
-    emit('current-change', page)
-    emit('update:currentPage', page)
-    if (props.pageChange) {
-        props.pageChange(page)
+    if (hasCurrentChangeListener.value) {
+        emit('current-change', page)
+    } else {
+        props.pageChange?.(page)
     }
+    emit('update:currentPage', page)
 }
 </script>
 

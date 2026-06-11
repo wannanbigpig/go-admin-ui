@@ -144,7 +144,7 @@ describe('composables/useDictOptions.ts', () => {
         const zhOptions: DictOption[] = [{ label: '启用', value: 1, tag_type: 'success' }]
         const enOptions: DictOption[] = [{ label: 'Enabled', value: 1, tag_type: 'success' }]
 
-        let resolveZh: (value: DictOption[]) => void = () => {}
+        let resolveZh: (value: DictOption[]) => void = () => undefined
         const zhPromise = new Promise<DictOption[]>((resolve) => {
             resolveZh = resolve
         })

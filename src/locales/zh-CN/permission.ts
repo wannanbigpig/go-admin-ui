@@ -86,6 +86,16 @@ export default {
         codePlaceholder: '请输入角色标识（可留空自动生成）',
         statusPlaceholder: '请选择状态',
         descriptionPlaceholder: '请输入角色描述',
+        dataScope: '数据权限',
+        dataScopePlaceholder: '请选择数据权限',
+        customDept: '自定义部门',
+        dataScopeOptions: {
+            all: '全部数据',
+            deptAndChild: '本部门及子级',
+            dept: '本部门',
+            self: '仅本人',
+            custom: '自定义部门',
+        },
     },
     menu: {
         title: '菜单管理',

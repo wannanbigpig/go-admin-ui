@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { useFileUpload, type UploadTask, type UploadOptions } from '@/composables/useFileUpload'
+import { useFileUpload, type UploadTask } from '@/composables/useFileUpload'
 import { addSystemFileFolder } from '@/modules/system/service'
 import { ROOT_FOLDER_KEY, type FolderTreeNode } from './useFileFolder'
 
@@ -18,7 +18,6 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const uploadDirectoryInputRef = ref<HTMLInputElement>()
     const isDraggingUpload = ref(false)
     const uploadQueueExpanded = ref(false)
-
 
     const { uploadTasks, uploading, uploadFinishedCount, uploadFinished, createUploadTask, uploadOneTask, runUploadQueue, clearTasks } = useFileUpload()
 

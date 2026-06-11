@@ -260,12 +260,12 @@ const formatTimeAgo = (value?: string) => {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return '刚刚'
-    if (diffMins < 60) return `${diffMins}分钟前`
-    if (diffHours < 24) return `${diffHours}小时前`
-    if (diffDays < 7) return `${diffDays}天前`
+    if (diffMins < 1) return t('system.notification.timeAgo.justNow')
+    if (diffMins < 60) return t('system.notification.timeAgo.minutesAgo', { count: diffMins })
+    if (diffHours < 24) return t('system.notification.timeAgo.hoursAgo', { count: diffHours })
+    if (diffDays < 7) return t('system.notification.timeAgo.daysAgo', { count: diffDays })
 
-    return `${date.getMonth() + 1}月${date.getDate()}日`
+    return t('system.notification.timeAgo.monthDay', { month: date.getMonth() + 1, day: date.getDate() })
 }
 
 // 精简左侧消息显示

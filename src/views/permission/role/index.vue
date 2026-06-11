@@ -41,13 +41,13 @@
                 <el-form-item :label="t('permission.role.description')" prop="description">
                     <el-input v-model.trim="formData.description" maxlength="255" :placeholder="t('permission.role.descriptionPlaceholder')" show-word-limit type="textarea" :rows="3" :disabled="isSuperAdminEditing" />
                 </el-form-item>
-                <el-form-item label="数据权限" prop="data_scope">
-                    <el-select v-model="formData.data_scope" placeholder="请选择数据权限" style="width: 100%" :disabled="isSuperAdminEditing">
-                        <el-option v-for="item in DATA_SCOPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+                <el-form-item :label="t('permission.role.dataScope')" prop="data_scope">
+                    <el-select v-model="formData.data_scope" :placeholder="t('permission.role.dataScopePlaceholder')" style="width: 100%" :disabled="isSuperAdminEditing">
+                        <el-option v-for="item in DATA_SCOPE_OPTIONS" :key="item.value" :label="t(item.label)" :value="item.value" />
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="formData.data_scope === 5" label="自定义部门" prop="dept_ids">
-                    <DeptTreeSelect v-model="formData.dept_ids" :disabled="isSuperAdminEditing" placeholder="请选择部门" />
+                <el-form-item v-if="formData.data_scope === 5" :label="t('permission.role.customDept')" prop="dept_ids">
+                    <DeptTreeSelect v-model="formData.dept_ids" :disabled="isSuperAdminEditing" :placeholder="t('common.placeholders.selectDepartment')" />
                 </el-form-item>
                 <el-form-item :label="t('permission.role.menuPermission')" prop="menu_list">
                     <div style="width: 100%; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 10px">

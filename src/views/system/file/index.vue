@@ -674,7 +674,7 @@ const columns = computed(
     () =>
         [
             { prop: 'origin_name', label: t('system.file.originName'), h_label: t('system.file.originName'), minWidth: 260, overflow: true, type: 'custom' },
-            { prop: 'file_type', label: t('system.file.fileType') || '文件类型', h_label: t('system.file.fileType') || '文件类型', width: 100, align: 'center', formatter: (row) => getFileTypeLabel(row.file_type) },
+            { prop: 'file_type', label: t('system.file.fileType'), h_label: t('system.file.fileType'), width: 100, align: 'center', formatter: (row) => getFileTypeLabel(row.file_type) },
             { prop: 'size', label: t('system.file.size'), h_label: t('system.file.size'), width: 100, align: 'right', formatter: (row) => formatFileSize(row.size) },
             { prop: 'mime_type', label: t('system.file.mimeType'), h_label: t('system.file.mimeType'), minWidth: 140, overflow: true },
             {
@@ -703,7 +703,7 @@ const trashColumns = computed(
     () =>
         [
             { prop: 'origin_name', label: t('system.file.originName'), h_label: t('system.file.originName'), minWidth: 260, overflow: true, type: 'custom' },
-            { prop: 'file_type', label: t('system.file.fileType') || '文件类型', h_label: t('system.file.fileType') || '文件类型', width: 100, align: 'center', formatter: (row) => getFileTypeLabel(row.file_type) },
+            { prop: 'file_type', label: t('system.file.fileType'), h_label: t('system.file.fileType'), width: 100, align: 'center', formatter: (row) => getFileTypeLabel(row.file_type) },
             { prop: 'storage_driver', label: t('system.file.storageDriver'), h_label: t('system.file.storageDriver'), width: 130, align: 'center', type: 'custom' },
             { prop: 'storage_status', label: t('system.file.storageStatus'), h_label: t('system.file.storageStatus'), width: 130, align: 'center', type: 'custom' },
             { prop: 'reference_count', label: t('system.file.referenceCount'), h_label: t('system.file.referenceCount'), width: 110, align: 'center' },

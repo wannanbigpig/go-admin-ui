@@ -51,11 +51,11 @@ export const DATA_SCOPE = {
 }
 
 export const DATA_SCOPE_OPTIONS = [
-    { label: '全部数据', value: DATA_SCOPE.ALL },
-    { label: '本部门及子级', value: DATA_SCOPE.DEPT_AND_CHILD },
-    { label: '本部门', value: DATA_SCOPE.DEPT },
-    { label: '仅本人', value: DATA_SCOPE.SELF },
-    { label: '自定义部门', value: DATA_SCOPE.CUSTOM },
+    { label: 'permission.role.dataScopeOptions.all', value: DATA_SCOPE.ALL },
+    { label: 'permission.role.dataScopeOptions.deptAndChild', value: DATA_SCOPE.DEPT_AND_CHILD },
+    { label: 'permission.role.dataScopeOptions.dept', value: DATA_SCOPE.DEPT },
+    { label: 'permission.role.dataScopeOptions.self', value: DATA_SCOPE.SELF },
+    { label: 'permission.role.dataScopeOptions.custom', value: DATA_SCOPE.CUSTOM },
 ]
 
 export const ROLE_STATUS_OPTIONS = [

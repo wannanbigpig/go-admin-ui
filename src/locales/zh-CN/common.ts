@@ -113,4 +113,8 @@ export default {
         localePlaceholder: '请输入 {lang} 内容',
         loadFailed: '多语言数据加载失败',
     },
+    messages: {
+        invalidImageType: '不支持的图片格式',
+        imageTooLarge: '图片大小不能超过 {size}MB',
+    },
 }

@@ -17,10 +17,10 @@
                 <span>{{ uploading ? t('system.file.uploading') : t('system.file.uploadTasks') }} ({{ finishedCount }}/{{ tasks.length }})</span>
                 <div class="queue-actions">
                     <button v-if="tasks.length > 3" type="button" class="queue-toggle" @click="emit('toggle-expand')">
-                        {{ expanded ? t('common.actions.collapse') || '收起' : t('common.actions.expand') || '展开' }}
+                        {{ expanded ? t('common.actions.collapse') : t('common.actions.expand') }}
                     </button>
                     <!-- 仅保留最小化折叠按钮，移除清空关闭按钮 -->
-                    <el-icon class="close-icon" :title="t('common.actions.collapse') || '最小化'" @click="minimized = true"><Minus /></el-icon>
+                    <el-icon class="close-icon" :title="t('common.actions.collapse')" @click="minimized = true"><Minus /></el-icon>
                 </div>
             </div>
             <div class="queue-body">
@@ -92,12 +92,12 @@ const getTaskStatusInfo = (task: UploadTask) => {
     switch (task.status) {
         case 'hashing':
             return {
-                label: t('system.file.uploadTaskStatuses.hashing') || '校验中...',
+                label: t('system.file.uploadTaskStatuses.hashing'),
                 progressStatus: 'warning' as const,
             }
         case 'pending':
             return {
-                label: t('system.file.uploadTaskStatuses.pending') || '排队中...',
+                label: t('system.file.uploadTaskStatuses.pending'),
                 progressStatus: 'warning' as const,
             }
         case 'uploading':
@@ -108,12 +108,12 @@ const getTaskStatusInfo = (task: UploadTask) => {
         case 'success':
         case 'reuse':
             return {
-                label: t('system.file.uploadTaskStatuses.success') || '已完成',
+                label: t('system.file.uploadTaskStatuses.success'),
                 progressStatus: 'success' as const,
             }
         case 'error':
             return {
-                label: t('system.file.uploadTaskStatuses.error') || '上传失败',
+                label: t('system.file.uploadTaskStatuses.error'),
                 progressStatus: 'exception' as const,
             }
         default:

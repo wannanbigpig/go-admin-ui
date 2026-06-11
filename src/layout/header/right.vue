@@ -156,7 +156,7 @@ const handleLogout = async () => {
             autofocus: false,
             type: 'warning',
         })
-    } catch (error) {
+    } catch {
         ElMessage({ type: 'info', message: t(RESULT_MESSAGES.LOGOUT_CANCEL) })
         return
     }
