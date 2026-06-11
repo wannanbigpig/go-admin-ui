@@ -18,6 +18,7 @@ import {
     moveSystemFileFolder,
     moveSystemFiles,
 } from '@/modules/system/service'
+import { ROOT_FOLDER_KEY } from './useFileFolder'
 
 export function useFileOperations(options: { selectedFolderId: Ref<number | string | null>; getList: () => Promise<void>; loadFolderTree: () => Promise<void> }) {
     const { t } = useI18n()
@@ -75,7 +76,8 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
 
     const moveDialogTitle = computed(() => (moveMode.value === 'folder' ? t('system.file.moveFolder') : t('system.file.batchMove')))
 
-    const normalizeFolderId = (value?: number | string | null) => (value === '__root__' || value === undefined ? null : value)
+    const normalizeFolderId = (value?: number | string | null) => (value === ROOT_FOLDER_KEY || value === undefined || value === '' || value === 0 || value === '0' ? null : value)
+    const normalizeFolderSelectValue = (value?: number | string | null): number | string | null => (normalizeFolderId(value) === null ? ROOT_FOLDER_KEY : (value ?? null))
 
     const handleSelectionChange = (selection: SystemFile[]) => {
         selectedFiles.value = selection
@@ -87,14 +89,14 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
             return
         }
         moveMode.value = 'file'
-        moveTargetFolderId.value = selectedFolderId.value
+        moveTargetFolderId.value = normalizeFolderSelectValue(selectedFolderId.value)
         showMoveDialog.value = true
     }
 
     const openFolderMoveDialog = (folder: SystemFileFolder) => {
         moveMode.value = 'folder'
         movingFolder.value = folder
-        moveTargetFolderId.value = folder.parent_id ?? null
+        moveTargetFolderId.value = normalizeFolderSelectValue(folder.parent_id)
         showMoveDialog.value = true
     }
 

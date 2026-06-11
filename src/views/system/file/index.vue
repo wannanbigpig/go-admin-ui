@@ -38,9 +38,6 @@
             <div
                 class="file-content-wrapper"
                 v-loading="loading"
-                v-infinite-scroll="loadMore"
-                :infinite-scroll-disabled="scrollDisabled"
-                :infinite-scroll-distance="30"
                 @dragenter.prevent="handleUploadDragEnter"
                 @dragover.prevent="handleUploadDragOver"
                 @dragleave.prevent="handleUploadDragLeave"
@@ -63,22 +60,23 @@
                     @retry="retryUploadTask"
                 />
 
-                <FileGrid
-                    v-if="viewMode === 'grid'"
-                    :files="displayFiles"
-                    :folders="currentLevelFolders"
-                    :selected-category="selectedCategory"
-                    :selected-files="selectedFiles"
-                    @selection-change="handleSelectionChange"
-                    @folder-click="handleFolderSelect"
-                    @file-click="openDetailDrawer"
-                    @folder-command="({ command, folder }) => handleFolderCommand(command, folder)"
-                    @delete-file="handleDelete"
-                    @move-file="handleSingleMove"
-                />
+                <el-scrollbar v-if="viewMode === 'grid'" :distance="30" @end-reached="handleScrollEnd" style="height: 100%">
+                    <FileGrid
+                        :files="displayFiles"
+                        :folders="currentLevelFolders"
+                        :selected-category="selectedCategory"
+                        :selected-files="selectedFiles"
+                        @selection-change="handleSelectionChange"
+                        @folder-click="handleFolderSelect"
+                        @file-click="openDetailDrawer"
+                        @folder-command="({ command, folder }) => handleFolderCommand(command, folder)"
+                        @delete-file="handleDelete"
+                        @move-file="handleSingleMove"
+                    />
+                </el-scrollbar>
 
                 <div v-else class="file-list-view">
-                    <xl-pro-table :loading="loading" :data="fileList" :columns="columns" :pagination="pagination" selectable @selection-change="handleSelectionChange">
+                    <xl-pro-table :loading="loading" :skeleton="false" :data="fileList" :columns="columns" :pagination="pagination" selectable @selection-change="handleSelectionChange">
                         <template #td="{ item, val, row }">
                             <div v-if="item.prop === 'origin_name'" class="file-name-cell" @click="openDetailDrawer(row)">
                                 <el-image
@@ -478,7 +476,7 @@ const folderRules = {
     name: [{ required: true, min: 1, message: t('system.file.folderNameRequired'), trigger: 'blur' }],
 }
 
-const normalizeMoveTargetFolderId = (value?: number | string | null) => (value === '' || value === ROOT_FOLDER_KEY || value === undefined ? null : value)
+const normalizeMoveTargetFolderId = (value?: number | string | null) => (value === '' || value === ROOT_FOLDER_KEY || value === undefined || value === 0 || value === '0' ? null : value)
 const moveFormData = computed(() => ({ target_folder_id: normalizeMoveTargetFolderId(moveTargetFolderId.value) }))
 const moveRules = {}
 
@@ -547,6 +545,12 @@ const loadMore = async () => {
     await rawGetList()
 }
 
+const handleScrollEnd = (direction: 'top' | 'bottom' | 'left' | 'right') => {
+    if (direction === 'bottom' && !scrollDisabled.value) {
+        void loadMore()
+    }
+}
+
 // 监听视图模式切换，重置参数并重新加载
 watch(viewMode, (newMode) => {
     queryWhere.page = 1
@@ -556,6 +560,7 @@ watch(viewMode, (newMode) => {
 
     selectedFiles.value = []
     allFilesList.value = []
+    fileList.value = []
 
     void handleSearch()
 })
@@ -717,7 +722,7 @@ onMounted(() => {
 <style scoped lang="scss">
 .file-content-wrapper {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     padding: var(--xl-space-5);
     position: relative;
     min-width: 0;

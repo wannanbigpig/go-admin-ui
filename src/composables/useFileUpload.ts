@@ -72,6 +72,12 @@ function isSameTaskFolder(tasks: UploadTask[], options?: UploadOptions) {
     return tasks.every((task) => getTaskTargetFolderId(task, options) === firstFolderId)
 }
 
+function releaseCompletedTaskFile(task: UploadTask) {
+    if (task.status === 'success' || task.status === 'reuse') {
+        task.file = null
+    }
+}
+
 function extractBatchFailureList(error: unknown): Array<Record<string, unknown>> {
     const record = asRecord(error)
     const data = asRecord(record?.data)
@@ -218,7 +224,7 @@ export function useFileUpload() {
             task.error = getErrorMessage(error)
             Logger.error('上传文件资源失败:', error)
         } finally {
-            task.file = null
+            releaseCompletedTaskFile(task)
         }
     }
 
@@ -324,7 +330,7 @@ export function useFileUpload() {
             return true
         } finally {
             tasks.forEach((task) => {
-                task.file = null
+                releaseCompletedTaskFile(task)
             })
         }
     }
@@ -516,7 +522,7 @@ export function useFileUpload() {
             return true
         } finally {
             tasks.forEach((task) => {
-                task.file = null
+                releaseCompletedTaskFile(task)
             })
         }
     }

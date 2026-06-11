@@ -96,6 +96,7 @@ vi.mock('@/api/auth', () => ({
 
 import { ElMessage } from 'element-plus'
 import service, { get, post, request, upload } from '@/utils/request'
+import * as mockModule from '@/mock'
 
 const getCallback = <T>(value: T | undefined, name: string): T => {
     if (!value) {
@@ -448,5 +449,43 @@ describe('utils/request.ts', () => {
             type: 'error',
             duration: MESSAGE_ERROR_DURATION,
         })
+    })
+
+    it('当开启 Mock 且 Mock 遇到 handler 抛错时应返回 500 并弹后端 msg', async () => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'true')
+        const spy = vi.spyOn(mockModule, 'getMockFallback').mockReturnValue({
+            matched: true,
+            error: new Error('mock handler crash'),
+        })
+
+        await expect(request('/v1/crash-api', 'GET')).rejects.toMatchObject({
+            code: 500,
+            msg: expect.stringContaining('mock handler crash'),
+        })
+        expect(ElMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: expect.stringContaining('mock handler crash'),
+                type: 'error',
+            })
+        )
+        spy.mockRestore()
+    })
+
+    it('当开启 Mock 且 options.responseType === "blob" 时应正确返回 Blob 数据', async () => {
+        vi.stubEnv('VITE_ENABLE_MOCK', 'true')
+        const spy = vi.spyOn(mockModule, 'getMockFallback').mockReturnValue({
+            matched: true,
+            response: {
+                code: 0,
+                msg: 'ok',
+                data: { content: 'test' },
+            },
+        })
+
+        const blobResult = await request<Blob>('/v1/blob-api', 'GET', { responseType: 'blob' })
+        expect(blobResult).toBeInstanceOf(Blob)
+        const text = await blobResult.text()
+        expect(text).toBe(JSON.stringify({ content: 'test' }))
+        spy.mockRestore()
     })
 })

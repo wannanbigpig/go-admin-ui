@@ -55,6 +55,7 @@
 
             <xl-table-list
                 :loading="loading"
+                :skeleton="skeleton"
                 :data="data"
                 :table-title="resolvedTableTitle"
                 :border="border"
@@ -65,8 +66,8 @@
                 :selectable="selectable"
                 :height="height"
                 :pagination="pagination"
-                @size-change="(size) => emit('size-change', size)"
-                @current-change="(page) => emit('current-change', page)"
+                @size-change="handleTableSizeChange"
+                @current-change="handleTableCurrentChange"
                 @selection-change="(selection) => emit('selection-change', selection)"
                 @sort-change="(payload) => emit('sort-change', payload)"
             >
@@ -106,7 +107,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends object">
-import { computed, ref, watch, reactive } from 'vue'
+import { computed, ref, watch, reactive, getCurrentInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance } from 'element-plus'
 import xlTableList from '@/components/tableList/index.vue'
@@ -115,6 +116,7 @@ import type { ProTableColumns, ProTableSearchSchema, ProTableCellType, ProTableC
 
 interface Props {
     loading?: boolean
+    skeleton?: boolean
     data: T[]
     /** 兼容旧用法：直接传 TableColumn[]；推荐使用 columns */
     tableTitle?: TableColumn<T>[]
@@ -145,6 +147,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     loading: false,
+    skeleton: true,
     data: () => [],
     tableTitle: undefined,
     columns: undefined,
@@ -237,6 +240,25 @@ const hasBuiltinSearch = computed(() => searchFields.value.length > 0)
 
 const localModel = reactive<Record<string, unknown>>({})
 
+const isPlainRecord = (value: unknown): value is Record<string, unknown> => {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+const isModelValueEqual = (left: unknown, right: unknown): boolean => {
+    if (Object.is(left, right)) return true
+    if (Array.isArray(left) || Array.isArray(right)) {
+        if (!Array.isArray(left) || !Array.isArray(right)) return false
+        if (left.length !== right.length) return false
+        return left.every((item, index) => isModelValueEqual(item, right[index]))
+    }
+    if (isPlainRecord(left) || isPlainRecord(right)) {
+        if (!isPlainRecord(left) || !isPlainRecord(right)) return false
+        const keys = Object.keys({ ...left, ...right })
+        return keys.every((key) => isModelValueEqual(left[key], right[key]))
+    }
+    return false
+}
+
 // 监听 props.searchModel 的改变（浅层监听其第一层属性变化及对象引用替换）
 watch(
     () => (props.searchModel ? { ...props.searchModel } : null),
@@ -263,7 +285,7 @@ watch(
             let hasDiff = false
             const keys = Object.keys({ ...newVal, ...props.searchModel })
             for (const key of keys) {
-                if (newVal[key] !== props.searchModel[key]) {
+                if (!isModelValueEqual(newVal[key], props.searchModel[key])) {
                     hasDiff = true
                     break
                 }
@@ -293,12 +315,43 @@ const resetText = computed(() => t('common.actions.reset'))
 const expandText = computed(() => t('common.actions.expand'))
 const collapseText = computed(() => t('common.actions.collapse'))
 
+const instance = getCurrentInstance()
+const hasSizeChangeListener = computed(() => {
+    const props = instance?.vnode.props
+    return !!(props && (props['onSize-change'] || props['onSizeChange']))
+})
+const hasCurrentChangeListener = computed(() => {
+    const props = instance?.vnode.props
+    return !!(props && (props['onCurrent-change'] || props['onCurrentChange']))
+})
+
+const handleTableSizeChange = (size: number) => {
+    if (hasSizeChangeListener.value) {
+        emit('size-change', size)
+    } else {
+        props.pagination?.pageSizeChange?.(size)
+    }
+}
+
+const handleTableCurrentChange = (page: number) => {
+    if (hasCurrentChangeListener.value) {
+        emit('current-change', page)
+    } else {
+        props.pagination?.pageChange?.(page)
+    }
+}
+
 const handleSearch = () => {
     emit('search', { ...localModel })
 }
 
 const handleReset = () => {
     searchFormRef.value?.resetFields()
+    Object.keys(localModel).forEach((key) => {
+        const field = searchFields.value.find((f) => f.prop === key)
+        localModel[key] = field?.type === 'daterange' ? [] : ''
+    })
+    emit('update:searchModel', { ...localModel })
     emit('reset')
 }
 

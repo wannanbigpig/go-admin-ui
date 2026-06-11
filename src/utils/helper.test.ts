@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { checkNumber, isEmpty, pick, filterNullUndefined, formatDate, isExternal, getSystemFileUrl, getImageUrl } from '@/utils/helper'
+import { checkNumber, isEmpty, isBlankOrFalsy, pick, filterNullUndefined, formatDate, isExternal, getSystemFileUrl, getImageUrl } from '@/utils/helper'
 
 describe('helper.ts', () => {
     describe('checkNumber', () => {
@@ -50,9 +50,9 @@ describe('helper.ts', () => {
             expect(isEmpty('   ')).toBe(true)
         })
 
-        it('应该判断 0 为空', () => {
-            expect(isEmpty(0)).toBe(true)
-            expect(isEmpty(false)).toBe(true)
+        it('不应判断 0 或 false 为空', () => {
+            expect(isEmpty(0)).toBe(false)
+            expect(isEmpty(false)).toBe(false)
         })
 
         it('应该判断空数组为空', () => {
@@ -75,6 +75,21 @@ describe('helper.ts', () => {
             expect(isEmpty(new Date('2024-01-01'))).toBe(false)
             expect(isEmpty(new Date())).toBe(false)
             expect(isEmpty(new Date('invalid-date'))).toBe(true)
+        })
+    })
+
+    describe('isBlankOrFalsy', () => {
+        it('应该判断 null, undefined, 0, false, 空值为空', () => {
+            expect(isBlankOrFalsy(null)).toBe(true)
+            expect(isBlankOrFalsy(undefined)).toBe(true)
+            expect(isBlankOrFalsy(0)).toBe(true)
+            expect(isBlankOrFalsy(false)).toBe(true)
+            expect(isBlankOrFalsy('')).toBe(true)
+            expect(isBlankOrFalsy([])).toBe(true)
+            expect(isBlankOrFalsy({})).toBe(true)
+            expect(isBlankOrFalsy('hello')).toBe(false)
+            expect(isBlankOrFalsy(123)).toBe(false)
+            expect(isBlankOrFalsy(true)).toBe(false)
         })
     })
 

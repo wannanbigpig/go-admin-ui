@@ -113,6 +113,37 @@ export function isEmpty(value: unknown): boolean {
 
     switch (typeof val) {
         case 'boolean':
+            return false
+        case 'number':
+            return false
+        case 'string':
+            return val.trim() === ''
+    }
+
+    if (val instanceof Map || val instanceof Set) return val.size === 0
+    if (Array.isArray(val)) return val.length === 0
+
+    if (typeof val === 'object') {
+        return Reflect.ownKeys(val).length === 0
+    }
+
+    return false
+}
+
+export function isBlankOrFalsy(value: unknown): boolean {
+    let val = value
+    if (isVueRef(val)) {
+        val = val.value
+    }
+
+    if (val == null) return true
+
+    if (val instanceof Date) {
+        return isNaN(val.getTime())
+    }
+
+    switch (typeof val) {
+        case 'boolean':
             return !val
         case 'number':
             return val === 0

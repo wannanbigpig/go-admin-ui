@@ -72,6 +72,6 @@ describe('composables/useFileUpload.ts', () => {
         expect(tasks[1].status).toBe('error')
         expect(tasks[1].error).toBe('system.file.completeUploadRegistrationFailed')
         expect(tasks[0].file).toBeNull()
-        expect(tasks[1].file).toBeNull()
+        expect(tasks[1].file).not.toBeNull()
     })
 })

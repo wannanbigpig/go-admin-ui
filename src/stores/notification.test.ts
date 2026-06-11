@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
 
 const hoisted = vi.hoisted(() => {
     const mockGetNotificationList = vi.fn()
@@ -135,6 +136,15 @@ describe('stores/notification.ts', () => {
         expect(store.notifications[0].action_url).toBe('/task/center?tab=export')
     })
 
+    it('normalizeNotificationActionUrl 应该能正确清洗和白名单验证 action_url', () => {
+        expect(normalizeNotificationActionUrl('/task/center')).toBe('/task/center')
+        expect(normalizeNotificationActionUrl('https://example.com')).toBeUndefined()
+        expect(normalizeNotificationActionUrl('//example.com')).toBeUndefined()
+        expect(normalizeNotificationActionUrl('javascript:alert(1)')).toBeUndefined()
+        expect(normalizeNotificationActionUrl('/task\\center')).toBeUndefined()
+        expect(normalizeNotificationActionUrl(undefined)).toBeUndefined()
+    })
+
     it('markRead 在本地缓存未命中时仍应调用后端并同步未读数', async () => {
         const store = useNotificationStore()
         hoisted.mockMarkNotificationRead.mockResolvedValue({ updated: true, unread_count: 3 })
@@ -255,5 +265,41 @@ describe('stores/notification.ts', () => {
         )
 
         expect(store.exportFinishedTime).toBeGreaterThan(0)
+    })
+
+    it('连接建立后应定时发送 ping 保活', async () => {
+        vi.useFakeTimers()
+        try {
+            const store = useNotificationStore()
+            store.start('valid-token', 'zh-CN')
+            await vi.advanceTimersByTimeAsync(0)
+            await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+            const socket = mockSockets[0]
+            await vi.advanceTimersByTimeAsync(30000)
+
+            expect(sentActions(socket, 'ping')).toEqual([{ action: 'ping' }])
+        } finally {
+            useNotificationStore().stop()
+            vi.useRealTimers()
+        }
+    })
+
+    it('心跳超时时应主动关闭半开连接以触发重连', async () => {
+        vi.useFakeTimers()
+        try {
+            const store = useNotificationStore()
+            store.start('valid-token', 'zh-CN')
+            await vi.advanceTimersByTimeAsync(0)
+            await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+            const socket = mockSockets[0]
+            await vi.advanceTimersByTimeAsync(120000)
+
+            expect(socket.readyState).toBe(MockWebSocket.CLOSED)
+        } finally {
+            useNotificationStore().stop()
+            vi.useRealTimers()
+        }
     })
 })

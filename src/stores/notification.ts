@@ -8,10 +8,13 @@ import { normalizeListData } from '@/modules/shared/response'
 import type { AppNotification, NotificationConnectionStatus, NotificationLevel, NotificationSocketMessage } from '@/types/notification'
 import { Logger } from '@/utils/logger'
 import { translate } from '@/locales'
+import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
 
 const NOTIFICATION_PERSIST_KEY = 'notification'
 const NOTIFICATION_PANEL_LIMIT = 50
 const RECONNECT_DELAYS_MS = [3000, 10000, 20000, 30000, 40000, 60000]
+const HEARTBEAT_INTERVAL_MS = 30000
+const HEARTBEAT_TIMEOUT_MS = 90000
 // 服务端会话强踢 Close code：4001 会话失效/被撤销，4002 被强制下线/主动登出。
 // 收到这两类应停止重连并跳登录，不可继续重连（否则会无限拿新 ticket 重连被拒）。
 const SESSION_TERMINATED_CODES = new Set([4001, 4002])
@@ -201,6 +204,7 @@ export function normalizeNotification(input: Partial<AppNotification> & Record<s
     if (actionURL && (actionURL.includes('/v1/file/') || actionURL.includes('/admin/v1/file/'))) {
         actionURL = '/task/center?tab=export'
     }
+    actionURL = normalizeNotificationActionUrl(actionURL)
 
     return {
         id: String(input.id || input.message_id || buildNotificationId(exportMessage ? 'export' : 'ws', `${titleStr}:${input.created_at || Date.now()}`)),
@@ -282,6 +286,8 @@ export const useNotificationStore = defineStore(
         const reconnectAttempt = ref(0)
 
         let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+        let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+        let lastSocketMessageAt = 0
         let currentToken = ''
         let currentLocale = 'zh-CN'
         let isStopping = false
@@ -292,6 +298,26 @@ export const useNotificationStore = defineStore(
             if (!reconnectTimer) return
             clearTimeout(reconnectTimer)
             reconnectTimer = null
+        }
+
+        const resetHeartbeatTimer = () => {
+            if (!heartbeatTimer) return
+            clearInterval(heartbeatTimer)
+            heartbeatTimer = null
+        }
+
+        const startHeartbeat = () => {
+            resetHeartbeatTimer()
+            lastSocketMessageAt = Date.now()
+            heartbeatTimer = setInterval(() => {
+                if (!socket || socket.readyState !== WebSocket.OPEN) return
+                if (Date.now() - lastSocketMessageAt > HEARTBEAT_TIMEOUT_MS) {
+                    Logger.warn('通知 WebSocket 心跳超时，主动断开并等待重连')
+                    socket.close()
+                    return
+                }
+                socket.send(JSON.stringify({ action: 'ping' }))
+            }, HEARTBEAT_INTERVAL_MS)
         }
 
         const upsertNotification = (notification: AppNotification, showToast = false) => {
@@ -327,8 +353,9 @@ export const useNotificationStore = defineStore(
                     duration: 5000,
                     customClass: 'xl-notification-toast',
                     onClick: () => {
-                        if (notification.action_url) {
-                            router.push(notification.action_url)
+                        const target = normalizeNotificationActionUrl(notification.action_url)
+                        if (target) {
+                            router.push(target)
                         }
                     },
                 })
@@ -409,6 +436,7 @@ export const useNotificationStore = defineStore(
 
         const handleSocketMessage = (event: MessageEvent<string>) => {
             try {
+                lastSocketMessageAt = Date.now()
                 const payload = JSON.parse(event.data) as NotificationSocketMessage
 
                 const topic = String(payload.topic || '').toLowerCase()
@@ -467,6 +495,7 @@ export const useNotificationStore = defineStore(
         }
 
         const disconnect = () => {
+            resetHeartbeatTimer()
             if (!socket) return
             socket.onopen = null
             socket.onmessage = null
@@ -497,6 +526,11 @@ export const useNotificationStore = defineStore(
             resetReconnectTimer()
             disconnect()
 
+            if (import.meta.env.DEV && (import.meta.env.VITE_ENABLE_MOCK === 'true' || import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true')) {
+                connectionStatus.value = 'connected'
+                return
+            }
+
             try {
                 connectionStatus.value = reconnectAttempt.value > 0 ? 'reconnecting' : 'connecting'
                 const ticketResult = await systemApi.getWsTicket()
@@ -510,6 +544,7 @@ export const useNotificationStore = defineStore(
                     connectionStatus.value = 'connected'
                     lastError.value = ''
                     reconnectAttempt.value = 0
+                    startHeartbeat()
                     // 重新订阅所有频道
                     resubscribeAllChannels()
                 }
@@ -561,6 +596,7 @@ export const useNotificationStore = defineStore(
             currentToken = ''
             disconnect()
             resetReconnectTimer()
+            resetHeartbeatTimer()
             reconnectAttempt.value = 0
             connectionStatus.value = 'idle'
             lastError.value = ''

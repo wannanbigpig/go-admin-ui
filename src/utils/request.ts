@@ -80,7 +80,7 @@ const isMockEnabled = () => {
 }
 
 const tryGetMock = async (url: string, method: string, dataOrParams: unknown) => {
-    if (!isMockEnabled()) return null
+    if (!isMockEnabled()) return { matched: false } as const
 
     try {
         const { getMockFallback } = await import('@/mock')
@@ -89,7 +89,7 @@ const tryGetMock = async (url: string, method: string, dataOrParams: unknown) =>
         Logger.error('[Mock] error loading mock module:', e)
     }
 
-    return null
+    return { matched: false } as const
 }
 
 const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, authErrorMode: 'credential' | 'session' = 'session') => {
@@ -280,25 +280,42 @@ export async function request<T = unknown>(url: string, method: string, options:
     if (isMockEnabled()) {
         const targetMethod = (method || 'GET').toUpperCase()
         const fallback = await tryGetMock(url, targetMethod, options.data ?? options.params)
-        if (fallback) {
-            if (fallback.code === 0) {
-                return fallback.data as T
-            } else {
-                return Promise.reject(fallback)
+        if (fallback.matched) {
+            if ('error' in fallback && fallback.error) {
+                const mockErr: ApiResponse = {
+                    code: 500,
+                    msg: `Mock handler 执行出错: [${targetMethod}] ${url} - ${fallback.error.message}`,
+                    data: null,
+                }
+                ElMessage({
+                    message: mockErr.msg,
+                    type: 'error',
+                    duration: MESSAGE_ERROR_DURATION,
+                })
+                return Promise.reject(mockErr)
             }
-        } else {
-            const mockErr: ApiResponse = {
-                code: 404,
-                msg: `未找到 Mock 接口匹配规则: [${targetMethod}] ${url}`,
-                data: null,
+            if ('response' in fallback && fallback.response) {
+                if (options.responseType === 'blob') {
+                    const resData = fallback.response.data
+                    if (resData instanceof Blob) {
+                        return resData as unknown as T
+                    }
+                    return new Blob([JSON.stringify(resData)], { type: 'application/json' }) as unknown as T
+                }
+                return fallback.response.data as T
             }
-            ElMessage({
-                message: mockErr.msg,
-                type: 'error',
-                duration: MESSAGE_ERROR_DURATION,
-            })
-            return Promise.reject(mockErr)
         }
+        const mockErr: ApiResponse = {
+            code: 404,
+            msg: `未找到 Mock 接口匹配规则: [${targetMethod}] ${url}`,
+            data: null,
+        }
+        ElMessage({
+            message: mockErr.msg,
+            type: 'error',
+            duration: MESSAGE_ERROR_DURATION,
+        })
+        return Promise.reject(mockErr)
     }
 
     return service.request<ApiResponse<T>, T>({

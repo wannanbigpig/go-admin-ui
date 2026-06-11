@@ -101,7 +101,13 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         return relativePath || file.name
     }
 
-    const ensureFolderPathExists = async (relativeFolderPath: string, baseFolderId: number | string | null, folderIndex: Map<string, FolderTreeNode>, createdPathIds: Map<string, number | string | null>) => {
+    const ensureFolderPathExists = async (
+        relativeFolderPath: string,
+        baseFolderId: number | string | null,
+        folderIndex: Map<string, FolderTreeNode>,
+        createdPathIds: Map<string, number | string | null>,
+        pendingPathIds: Map<string, Promise<number | string | null>>
+    ) => {
         if (!relativeFolderPath) return baseFolderId
         if (createdPathIds.has(relativeFolderPath)) {
             return createdPathIds.get(relativeFolderPath) ?? baseFolderId
@@ -117,31 +123,46 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
                 currentParentId = createdPathIds.get(currentPath) ?? currentParentId
                 continue
             }
+            const pendingPathId = pendingPathIds.get(currentPath)
+            if (pendingPathId) {
+                currentParentId = (await pendingPathId) ?? currentParentId
+                continue
+            }
 
             const folderKey = buildFolderIndexKey(currentParentId, segment)
             let targetFolder = folderIndex.get(folderKey)
             if (!targetFolder) {
-                try {
-                    const createdFolder = (await addSystemFileFolder({
-                        name: segment,
-                        parent_id: currentParentId,
-                    })) as FolderTreeNode
-                    targetFolder = {
-                        ...createdFolder,
-                        children: Array.isArray(createdFolder.children) ? createdFolder.children : [],
+                const createFolderPromise = (async () => {
+                    try {
+                        const createdFolder = (await addSystemFileFolder({
+                            name: segment,
+                            parent_id: currentParentId,
+                        })) as FolderTreeNode
+                        targetFolder = {
+                            ...createdFolder,
+                            children: Array.isArray(createdFolder.children) ? createdFolder.children : [],
+                        }
+                    } catch (error) {
+                        await options.loadFolderTree()
+                        folderIndex.clear()
+                        for (const [key, value] of buildFolderIndex(options.folderTree.value as FolderTreeNode[])) {
+                            folderIndex.set(key, value)
+                        }
+                        targetFolder = folderIndex.get(folderKey)
+                        if (!targetFolder) {
+                            throw error
+                        }
+                    } finally {
+                        pendingPathIds.delete(currentPath)
                     }
-                } catch (error) {
-                    await options.loadFolderTree()
-                    folderIndex.clear()
-                    for (const [key, value] of buildFolderIndex(options.folderTree.value as FolderTreeNode[])) {
-                        folderIndex.set(key, value)
-                    }
-                    targetFolder = folderIndex.get(folderKey)
-                    if (!targetFolder) {
-                        throw error
-                    }
-                }
-                folderIndex.set(folderKey, targetFolder)
+
+                    folderIndex.set(folderKey, targetFolder)
+                    createdPathIds.set(currentPath, targetFolder.id)
+                    return targetFolder.id
+                })()
+                pendingPathIds.set(currentPath, createFolderPromise)
+                currentParentId = (await createFolderPromise) ?? currentParentId
+                continue
             }
 
             currentParentId = targetFolder.id
@@ -158,6 +179,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         await options.loadFolderTree()
         const folderIndex = buildFolderIndex(options.folderTree.value as FolderTreeNode[])
         const createdPathIds = new Map<string, number | string | null>([['', baseFolderId]])
+        const pendingPathIds = new Map<string, Promise<number | string | null>>()
         const relativeFolderPaths = Array.from(new Set(files.map(extractRelativeFolderPath).filter(Boolean))).sort((left, right) => left.split('/').length - right.split('/').length)
 
         const byDepth = new Map<number, string[]>()
@@ -167,7 +189,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
             byDepth.get(depth)!.push(p)
         }
         for (const paths of [...byDepth.values()].sort((a, b) => a[0].split('/').length - b[0].split('/').length)) {
-            await Promise.all(paths.map((p) => ensureFolderPathExists(p, baseFolderId, folderIndex, createdPathIds)))
+            await Promise.all(paths.map((p) => ensureFolderPathExists(p, baseFolderId, folderIndex, createdPathIds, pendingPathIds)))
         }
 
         const currentTasks = [] as ReturnType<typeof createUploadTask>[]

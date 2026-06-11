@@ -60,7 +60,7 @@
                                 <el-dropdown-menu>
                                     <el-dropdown-item command="create">{{ t('system.file.createSubFolder') }}</el-dropdown-item>
                                     <el-dropdown-item command="rename">{{ t('system.file.rename') }}</el-dropdown-item>
-                                    <el-dropdown-item v-permission="'file:update'" command="move">{{ t('system.file.move') }}</el-dropdown-item>
+                                    <el-dropdown-item v-if="hasPermission('file:update')" command="move">{{ t('system.file.moveFolder') }}</el-dropdown-item>
                                     <el-dropdown-item command="delete" divided>{{ t('common.actions.delete') }}</el-dropdown-item>
                                 </el-dropdown-menu>
                             </template>
@@ -85,6 +85,7 @@
 import { Files, Picture, VideoCamera, Headset, Folder, Delete, MoreFilled, Plus, Document, More } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { SystemFileFolder } from '@/types/system'
+import { hasPermission } from '@/utils/auth'
 
 const { t } = useI18n()
 

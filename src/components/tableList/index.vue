@@ -1,5 +1,5 @@
 <template>
-    <el-skeleton :loading="loading && data.length === 0" animated>
+    <el-skeleton :loading="skeleton && loading && data.length === 0" animated>
         <template #template>
             <div style="padding: 15px">
                 <el-skeleton-item variant="rect" style="width: 100%; height: 40px; margin-bottom: 20px" />
@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends object">
-import { computed, ref } from 'vue'
+import { computed, ref, getCurrentInstance } from 'vue'
 import type { TableInstance } from 'element-plus'
 import xlPagination from '@/components/pagination/index.vue'
 import type { TableColumn } from '@/types/common'
@@ -82,6 +82,7 @@ interface SortChangePayload {
 // ==================== Props 定义 ====================
 interface Props {
     loading?: boolean
+    skeleton?: boolean
     data: T[]
     tableTitle: TableColumn<T>[]
     border?: boolean
@@ -104,6 +105,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     loading: false,
+    skeleton: true,
     data: () => [],
     tableTitle: () => [],
     border: false,
@@ -154,14 +156,30 @@ const getTagText = (item: TableColumn<T>, row: T) => {
     return tagConfig?.text ?? cellValue
 }
 
+const instance = getCurrentInstance()
+const hasSizeChangeListener = computed(() => {
+    const props = instance?.vnode.props
+    return !!(props && (props['onSize-change'] || props['onSizeChange']))
+})
+const hasCurrentChangeListener = computed(() => {
+    const props = instance?.vnode.props
+    return !!(props && (props['onCurrent-change'] || props['onCurrentChange']))
+})
+
 const handlePageSizeChange = (size: number) => {
-    emit('size-change', size)
-    props.pagination?.pageSizeChange?.(size)
+    if (hasSizeChangeListener.value) {
+        emit('size-change', size)
+    } else {
+        props.pagination?.pageSizeChange?.(size)
+    }
 }
 
 const handlePageChange = (page: number) => {
-    emit('current-change', page)
-    props.pagination?.pageChange?.(page)
+    if (hasCurrentChangeListener.value) {
+        emit('current-change', page)
+    } else {
+        props.pagination?.pageChange?.(page)
+    }
 }
 
 const handleSelectionChange = (selection: T[]) => {

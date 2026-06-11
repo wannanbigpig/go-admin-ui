@@ -188,6 +188,7 @@ import { Logger } from '@/utils/logger'
 import router from '@/router'
 import type { AppNotification } from '@/types/notification'
 import { useNotificationCategoryOptions } from './notificationConstants'
+import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
 
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
@@ -361,12 +362,12 @@ const handleMarkRead = async (item: AppNotification) => {
 }
 
 const handleActionClick = async (item: AppNotification) => {
-    if (!item.action_url) return
-    if (!item.action_url.startsWith('/')) return
+    const target = normalizeNotificationActionUrl(item.action_url)
+    if (!target) return
     if (!item.read) {
         await handleMarkRead(item)
     }
-    await router.push(item.action_url)
+    await router.push(target)
 }
 
 const handleMarkAllRead = async () => {

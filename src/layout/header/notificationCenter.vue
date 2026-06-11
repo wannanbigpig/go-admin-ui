@@ -92,6 +92,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSettingStore } from '@/stores/setting'
 import { useNotificationStore } from '@/stores/notification'
 import type { AppNotification } from '@/types/notification'
+import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
 
 const authStore = useAuthStore()
 const settingStore = useSettingStore()
@@ -180,11 +181,12 @@ const handleMarkRead = async (item: AppNotification) => {
 }
 
 const handleGoProcess = async (item: AppNotification) => {
-    if (!item.action_url) return
+    const target = normalizeNotificationActionUrl(item.action_url)
+    if (!target) return
     if (!item.read) {
         await handleMarkRead(item)
     }
-    await router.push(item.action_url)
+    await router.push(target)
 }
 
 const handlePanelOpen = async () => {
