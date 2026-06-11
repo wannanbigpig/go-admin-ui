@@ -13,6 +13,9 @@ export default {
     fetchCaptchaFailed: 'Failed to fetch captcha',
     loginSuccess: 'Login successful',
     noPermission: 'No permission',
+    username: 'Username',
+    password: 'Password',
+    captcha: 'Captcha',
     placeholders: {
         username: 'Enter username',
         password: 'Enter password',

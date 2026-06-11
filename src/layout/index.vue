@@ -1,5 +1,10 @@
 <template>
     <component :is="watermarkWrapper" v-bind="watermarkBindings" :class="watermarkClass">
+        <!-- Skip Link -->
+        <a class="skip-link" href="#main-content">{{ t('layout.skipToMain') }}</a>
+        <!-- Global announcement for screen readers -->
+        <div class="sr-only" aria-live="polite">{{ notificationStore.latestAnnouncement }}</div>
+
         <el-container class="common-layout">
             <el-aside id="xl-aside" :class="{ collapse: settingStore.isCollapse }">
                 <xl-aside />
@@ -20,6 +25,8 @@
 import { computed } from 'vue'
 import { ElWatermark } from 'element-plus'
 import { useSettingStore } from '@/stores/setting'
+import { useI18n } from 'vue-i18n'
+import { useNotificationStore } from '@/stores/notification'
 import XlAside from '@/layout/sidebar/index.vue'
 import XlMainView from '@/layout/main/index.vue'
 import XlHead from '@/layout/header/index.vue'
@@ -29,6 +36,8 @@ defineOptions({
 })
 
 const settingStore = useSettingStore()
+const { t } = useI18n()
+const notificationStore = useNotificationStore()
 
 const watermarkConfig = computed(() => ({
     content: settingStore.watermarkContent || '',
@@ -45,6 +54,38 @@ const watermarkClass = computed(() => (settingStore.watermarkEnabled ? 'xl-layou
 
 <style scoped lang="scss">
 @use '@/assets/styles/layout/index.scss' as *;
+
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 10px;
+    background: var(--el-color-primary);
+    color: #fff;
+    padding: 8px 16px;
+    z-index: 9999;
+    border-radius: 0 0 4px 4px;
+    transition: top 0.2s ease;
+    text-decoration: none;
+    font-size: 14px;
+}
+.skip-link:focus-visible {
+    top: 0;
+    outline: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* visually-hidden */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
 
 .xl-layout-watermark {
     display: block;

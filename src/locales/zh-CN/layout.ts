@@ -1,5 +1,6 @@
 export default {
     refreshPage: '刷新页面',
+    skipToMain: '跳过导航直接进入主内容',
     menuLoading: '菜单加载中...',
     menuEmpty: '暂无可用菜单',
     home: '首页',
@@ -12,6 +13,8 @@ export default {
     exportCenter: '导出中心',
     notification: {
         title: '通知中心',
+        connected: '通知服务已连接',
+        disconnected: '通知服务连接已断开',
         empty: '暂无通知',
         markAllRead: '全部已读',
         reconnect: '重连',

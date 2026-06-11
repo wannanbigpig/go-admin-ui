@@ -284,6 +284,7 @@ export const useNotificationStore = defineStore(
         const lastError = ref('')
         const initialized = ref(false)
         const reconnectAttempt = ref(0)
+        const latestAnnouncement = ref('')
 
         let reconnectTimer: ReturnType<typeof setTimeout> | null = null
         let heartbeatTimer: ReturnType<typeof setInterval> | null = null
@@ -321,6 +322,7 @@ export const useNotificationStore = defineStore(
         }
 
         const upsertNotification = (notification: AppNotification, showToast = false) => {
+            latestAnnouncement.value = `${notification.title}。${notification.message}`
             const existingIndex = notifications.value.findIndex((item) => item.id === notification.id)
             if (existingIndex >= 0) {
                 const existing = notifications.value[existingIndex]
@@ -547,11 +549,13 @@ export const useNotificationStore = defineStore(
                     startHeartbeat()
                     // 重新订阅所有频道
                     resubscribeAllChannels()
+                    latestAnnouncement.value = translate('layout.notification.connected') || '通知服务已连接'
                 }
                 socket.onmessage = handleSocketMessage
                 socket.onerror = () => {
                     connectionStatus.value = 'error'
                     lastError.value = translate('layout.notification.connectionError')
+                    latestAnnouncement.value = translate('layout.notification.disconnected') || '通知服务连接已断开'
                 }
                 socket.onclose = (event: CloseEvent) => {
                     disconnect()
@@ -625,6 +629,7 @@ export const useNotificationStore = defineStore(
             refreshUnreadCount,
             markRead,
             markAllRead,
+            latestAnnouncement,
             start,
             stop,
             reconnect,

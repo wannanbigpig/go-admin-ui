@@ -8,7 +8,7 @@
     >
         <!-- Folders first -->
         <template v-if="selectedCategory === 'all'">
-            <div v-for="folder in folders" :key="folder.id" class="file-grid-item folder-item" @dblclick="emit('folder-click', folder)" @contextmenu.prevent="openContextMenu($event, 'folder', folder)">
+            <div v-for="folder in folders" :key="folder.id" class="file-grid-item folder-item" role="button" tabindex="0" @dblclick="emit('folder-click', folder)" @keydown.enter="emit('folder-click', folder)" @keydown.space.prevent="openContextMenu($event, 'folder', folder)" @contextmenu.prevent="openContextMenu($event, 'folder', folder)">
                 <div class="item-icon-box">
                     <div class="folder-icon">
                         <el-icon :size="48"><FolderOpened /></el-icon>
@@ -46,7 +46,11 @@
             :key="file.id"
             class="file-grid-item file-item"
             :class="{ 'is-selected': isFileSelected(file) }"
+            role="button"
+            tabindex="0"
             @click="handleFileClick($event, file)"
+            @keydown.enter="handleFileClick($event, file)"
+            @keydown.space.prevent="toggleFileSelection(file)"
             @contextmenu.prevent="openContextMenu($event, 'file', file)"
         >
             <!-- Checkbox -->
@@ -184,7 +188,7 @@ const toggleFileSelection = (file: SystemFile) => {
 }
 
 // 点击卡片
-const handleFileClick = (event: MouseEvent, file: SystemFile) => {
+const handleFileClick = (event: MouseEvent | KeyboardEvent, file: SystemFile) => {
     if (props.selectedFiles.length > 0) {
         toggleFileSelection(file)
     } else {
@@ -221,12 +225,24 @@ const contextMenu = reactive({
     item: null as SystemFile | SystemFileFolder | null,
 })
 
-const openContextMenu = (e: MouseEvent, type: 'file' | 'folder', item: SystemFile | SystemFileFolder) => {
+const openContextMenu = (e: MouseEvent | KeyboardEvent, type: 'file' | 'folder', item: SystemFile | SystemFileFolder) => {
     contextMenu.show = true
     contextMenu.type = type
     contextMenu.item = item
-    contextMenu.x = e.clientX
-    contextMenu.y = e.clientY
+    if ('clientX' in e && (e.clientX || e.clientY)) {
+        contextMenu.x = e.clientX
+        contextMenu.y = e.clientY
+    } else {
+        const target = e.target as HTMLElement
+        if (target) {
+            const rect = target.getBoundingClientRect()
+            contextMenu.x = rect.left + rect.width / 2
+            contextMenu.y = rect.top + rect.height / 2
+        } else {
+            contextMenu.x = 100
+            contextMenu.y = 100
+        }
+    }
 }
 
 const closeContextMenu = () => {
@@ -283,6 +299,12 @@ onBeforeUnmount(() => {
         .item-actions {
             opacity: 1;
         }
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--el-color-primary);
+        outline-offset: 2px;
+        background: var(--el-fill-color-light);
     }
 
     &.is-selected {

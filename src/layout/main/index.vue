@@ -9,7 +9,7 @@
             appear
         >
             <div class="xl-main-inner" :key="refreshStore.key">
-                <div class="xl-main-content">
+                <div class="xl-main-content" id="main-content" tabindex="-1">
                     <Suspense>
                         <component :is="Component" @vue:updated="renderComplete" />
                         <template #fallback>
@@ -97,6 +97,9 @@ watch(
 
 .xl-main-content {
     flex: 1;
+    &:focus {
+        outline: none;
+    }
 }
 
 .xl-main-loading {

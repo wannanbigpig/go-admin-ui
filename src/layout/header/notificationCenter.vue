@@ -1,7 +1,7 @@
 <template>
     <el-popover placement="bottom-end" :width="380" trigger="click" popper-class="notification-center-popper" @before-enter="handlePanelOpen">
         <template #reference>
-            <div class="xl-theme-trigger xl-cursor-pointer notification-bell">
+            <div class="xl-theme-trigger xl-cursor-pointer notification-bell" role="button" tabindex="0" :aria-label="t('layout.notification.title')" @keydown.enter="triggerClick" @keydown.space.prevent="triggerClick">
                 <el-tooltip :content="t('layout.notification.title')" placement="bottom" :show-after="200">
                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center">
                         <el-badge :value="badgeValue" :hidden="!notificationStore.hasUnread" :max="99">
@@ -236,6 +236,10 @@ watch(
     },
     { immediate: true }
 )
+
+const triggerClick = (e: Event) => {
+    (e.currentTarget as HTMLElement)?.click()
+}
 
 onBeforeUnmount(() => {
     notificationStore.stop()

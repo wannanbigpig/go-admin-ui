@@ -13,6 +13,9 @@ export default {
     fetchCaptchaFailed: '获取验证码失败',
     loginSuccess: '登录成功',
     noPermission: '暂无权限',
+    username: '用户名',
+    password: '密码',
+    captcha: '验证码',
     placeholders: {
         username: '请输入用户名',
         password: '请输入密码',

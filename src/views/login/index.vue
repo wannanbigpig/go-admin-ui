@@ -6,7 +6,7 @@
         <!-- 右上角工具栏 -->
         <div class="login-toolbar">
             <el-dropdown v-if="ENABLE_I18N" trigger="click" @command="handleLanguageCommand" teleported persistent>
-                <div class="toolbar-btn" :title="t('layout.language.switch')">
+                <div class="toolbar-btn" :title="t('layout.language.switch')" role="button" tabindex="0" :aria-label="t('layout.language.switch')" @keydown.enter="triggerClick" @keydown.space.prevent="triggerClick">
                     <el-icon size="18"><i-lucide-languages /></el-icon>
                 </div>
                 <template #dropdown>
@@ -18,7 +18,7 @@
                 </template>
             </el-dropdown>
             <el-dropdown trigger="click" @command="handleThemeCommand" teleported persistent>
-                <div class="toolbar-btn" :title="t('layout.themeSwitch')">
+                <div class="toolbar-btn" :title="t('layout.themeSwitch')" role="button" tabindex="0" :aria-label="t('layout.themeSwitch')" @keydown.enter="triggerClick" @keydown.space.prevent="triggerClick">
                     <el-icon size="18"><i-lucide-sun-moon /></el-icon>
                 </div>
                 <template #dropdown>
@@ -54,21 +54,21 @@
 
                 <div class="login-form">
                     <el-form :model="loginForm" ref="loginFormRef" :rules="validateRules" size="large">
-                        <el-form-item prop="username">
+                        <el-form-item prop="username" :label="t('login.username')">
                             <el-input v-model.trim="loginForm.username" class="custom-input" :placeholder="t('login.placeholders.username')" @keyup.enter="handleLogin(loginFormRef)">
                                 <template #prefix>
                                     <i-ep-user class="input-icon" />
                                 </template>
                             </el-input>
                         </el-form-item>
-                        <el-form-item prop="password">
+                        <el-form-item prop="password" :label="t('login.password')">
                             <el-input v-model.trim="loginForm.password" class="custom-input" :placeholder="t('login.placeholders.password')" type="password" show-password @keyup.enter="handleLogin(loginFormRef)">
                                 <template #prefix>
                                     <i-ep-lock class="input-icon" />
                                 </template>
                             </el-input>
                         </el-form-item>
-                        <el-form-item prop="captcha">
+                        <el-form-item prop="captcha" :label="t('login.captcha')">
                             <div class="captcha-wrapper">
                                 <el-input
                                     v-model.trim="loginForm.captcha"
@@ -83,9 +83,9 @@
                                         <i-ant-design-safety-outlined class="input-icon" />
                                     </template>
                                 </el-input>
-                                <div class="captcha-img" @click="refreshCaptcha" :title="t('login.placeholders.captcha')">
+                                <div class="captcha-img" @click="refreshCaptcha" :title="t('login.placeholders.captcha')" role="button" tabindex="0" :aria-label="t('login.placeholders.captcha')" @keydown.enter="refreshCaptcha" @keydown.space.prevent="refreshCaptcha">
                                     <img :src="captchaSrc" alt="captcha" v-if="captchaSrc" />
-                                    <div class="captcha-loading" v-else>...</div>
+                                    <div class="captcha-loading" v-else aria-live="polite">...</div>
                                 </div>
                             </div>
                         </el-form-item>
@@ -418,6 +418,10 @@ const initCanvasBg = () => {
 }
 
 // ==================== 生命周期 ====================
+const triggerClick = (e: Event) => {
+    (e.currentTarget as HTMLElement)?.click()
+}
+
 onBeforeMount(refreshCaptcha)
 onMounted(() => {
     initCanvasBg()
@@ -596,6 +600,18 @@ onMounted(() => {
 }
 
 .login-form {
+    :deep(.el-form-item__label) {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+
     :deep(.el-input__wrapper) {
         background: rgba(255, 255, 255, 0.95);
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);

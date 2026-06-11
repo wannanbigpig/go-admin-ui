@@ -1,5 +1,6 @@
 export default {
     refreshPage: 'Refresh Page',
+    skipToMain: 'Skip to main content',
     menuLoading: 'Loading menus...',
     menuEmpty: 'No menus available',
     home: 'Home',
@@ -12,6 +13,8 @@ export default {
     exportCenter: 'Export Center',
     notification: {
         title: 'Notifications',
+        connected: 'Notification service connected',
+        disconnected: 'Notification service disconnected',
         empty: 'No notifications',
         markAllRead: 'Mark all read',
         reconnect: 'Reconnect',
