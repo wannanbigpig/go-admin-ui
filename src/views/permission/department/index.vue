@@ -8,7 +8,7 @@
                             <el-input :placeholder="t('permission.department.namePlaceholder')" v-model.trim="queryWhere.name" clearable></el-input>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearchWrapper" :onReset="handleResetWrapper" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" @search="handleSearchWrapper" @reset="handleResetWrapper" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>

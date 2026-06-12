@@ -1,7 +1,7 @@
 <template>
     <div ref="btnRef" class="xl-search-btn">
-        <el-button type="primary" @click="handleSearch" :disabled="loading">{{ t('common.actions.search') }}</el-button>
-        <el-button v-if="withReset" @click="handleReset" :disabled="loading">{{ t('common.actions.reset') }}</el-button>
+        <el-button type="primary" native-type="button" @click="handleSearch" :disabled="loading">{{ t('common.actions.search') }}</el-button>
+        <el-button v-if="withReset" native-type="button" @click="handleReset" :disabled="loading">{{ t('common.actions.reset') }}</el-button>
         <el-text v-show="showCollapsible" class="xl-collapsible xl-cursor-pointer" type="primary" @click="toggleCollapse">
             {{ isFolded ? t('common.actions.collapse') : t('common.actions.expand') }}
             <el-icon>
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, inject } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, inject, getCurrentInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formContextKey, type FormInstance } from 'element-plus'
 import { Logger } from '@/utils/logger'
@@ -28,10 +28,6 @@ interface Props {
     loading?: boolean
     /** 表单项选择器，用于查找需要控制的表单项 */
     nodeName?: string
-    /** 查询按钮点击回调函数 */
-    onSearch?: () => void
-    /** 重置按钮点击回调函数，如果不提供则使用 modelRef 的 resetFields 方法 */
-    onReset?: () => void
     /** 表单引用对象，用于获取表单元素或调用 resetFields 方法 */
     modelRef?: FormInstance | Record<string, unknown> | HTMLElement | null
     /** 是否显示重置按钮 */
@@ -42,10 +38,6 @@ const props = withDefaults(defineProps<Props>(), {
     maxShow: 3,
     loading: false,
     nodeName: '#searchForm > .el-col',
-    onSearch: () => {
-        /* noop */
-    },
-    onReset: undefined,
     modelRef: null,
     withReset: true,
 })
@@ -56,6 +48,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const instance = getCurrentInstance()
 
 // ==================== 响应式数据 ====================
 const isFolded = ref(false)
@@ -65,15 +58,17 @@ const btnRef = ref<HTMLDivElement | null>(null)
 // ==================== 计算属性 ====================
 const showCollapsible = computed(() => props.maxShow > 0 && visibleItems.value.length > props.maxShow)
 
+const hasResetListener = computed(() => {
+    const vnodeProps = instance?.vnode.props
+    return !!(vnodeProps && (vnodeProps.onReset || vnodeProps['onReset']))
+})
+
 // ==================== 方法 ====================
 /**
  * 处理查询按钮点击
  */
 const handleSearch = () => {
     emit('search')
-    if (props.onSearch) {
-        props.onSearch()
-    }
 }
 
 /**
@@ -85,16 +80,17 @@ const toggleCollapse = () => {
 
 /**
  * 重置表单
- * 优先使用 onReset 回调，其次使用 modelRef 的 resetFields 方法
+ * 优先通知父级处理，未监听 reset 时使用 modelRef 的 resetFields 方法
  */
 const handleReset = () => {
     emit('reset')
-    if (props.onReset) {
-        props.onReset()
-    } else if (props.modelRef && 'resetFields' in props.modelRef && typeof props.modelRef.resetFields === 'function') {
+    if (hasResetListener.value) {
+        return
+    }
+    if (props.modelRef && 'resetFields' in props.modelRef && typeof props.modelRef.resetFields === 'function') {
         props.modelRef.resetFields()
     } else {
-        Logger.warn('collapsibleSearchBtn: onReset 未提供且 modelRef 无 resetFields 方法')
+        Logger.warn('collapsibleSearchBtn: reset 未监听且 modelRef 无 resetFields 方法')
     }
 }
 

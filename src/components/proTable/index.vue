@@ -29,8 +29,8 @@
                     </el-col>
 
                     <div ref="searchBtnRef" class="xl-search-btn xl-pro-table__search-btn">
-                        <el-button type="primary" :disabled="loading" @click="handleSearch">{{ searchText }}</el-button>
-                        <el-button :disabled="loading" @click="handleReset">{{ resetText }}</el-button>
+                        <el-button type="primary" native-type="button" :disabled="loading" @click="handleSearch">{{ searchText }}</el-button>
+                        <el-button native-type="button" :disabled="loading" @click="handleReset">{{ resetText }}</el-button>
                         <el-text v-show="canCollapse" class="xl-collapsible xl-cursor-pointer" type="primary" @click="toggleCollapse">
                             {{ isExpanded ? collapseText : expandText }}
                             <el-icon>

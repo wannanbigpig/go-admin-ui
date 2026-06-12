@@ -18,7 +18,7 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="2" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#notificationSearchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="2" @search="handleSearch" @reset="handleReset" :modelRef="queryFormRef" nodeName="#notificationSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>

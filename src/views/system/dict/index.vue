@@ -67,8 +67,8 @@
                             </el-form-item>
                         </el-col>
                         <div class="xl-search-btn">
-                            <el-button type="primary" :disabled="itemLoading" @click="handleItemSearch">{{ t('common.actions.search') }}</el-button>
-                            <el-button :disabled="itemLoading" @click="handleItemReset">{{ t('common.actions.reset') }}</el-button>
+                            <el-button type="primary" native-type="button" :disabled="itemLoading" @click="handleItemSearch">{{ t('common.actions.search') }}</el-button>
+                            <el-button native-type="button" :disabled="itemLoading" @click="handleItemReset">{{ t('common.actions.reset') }}</el-button>
                         </div>
                     </el-row>
                 </el-form>

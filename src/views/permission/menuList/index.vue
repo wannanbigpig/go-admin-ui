@@ -12,7 +12,7 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="3" @search="handleSearch" @reset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -20,11 +20,11 @@
             <div class="xl-table-actions">
                 <el-button @click="handleToggleExpand">{{ isExpanded ? t('common.actions.collapseAll') : t('common.actions.expandAll') }}</el-button>
                 <xl-action-button
-                    v-permission="'menu:update'"
+                    v-permission="'menu:refreshPermissionCache'"
                     :loading="refreshingPermissions"
                     :show-icon="false"
                     :text="t('permission.menu.refreshPermissionCache')"
-                    code="menu:update"
+                    code="menu:refreshPermissionCache"
                     @click="handleRefreshPermissions"
                 />
                 <xl-action-button v-permission="'menu:add'" :show-icon="false" type="primary" code="menu:add" @click="menuDrawerRef?.openEditDrawer(1)" />

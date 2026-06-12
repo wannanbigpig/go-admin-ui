@@ -15,7 +15,7 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="cronLoading" :maxShow="2" :onSearch="handleCronSearch" :onReset="handleCronReset" :modelRef="cronQueryFormRef" nodeName="#cronSearchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="cronLoading" :maxShow="2" @search="handleCronSearch" @reset="handleCronReset" :modelRef="cronQueryFormRef" nodeName="#cronSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -25,7 +25,7 @@
             <xl-table-list :loading="cronLoading" :data="cronList" :tableTitle="cronTableTitle" :pagination="cronPagination">
                 <template #td="{ item, val, row }">
                     <template v-if="item.tag">
-                        <el-tag v-if="val && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
+                        <el-tag v-if="val !== undefined && val !== null && val !== '' && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
                             {{ item.tag[val as string | number]?.text || val }}
                         </el-tag>
                     </template>

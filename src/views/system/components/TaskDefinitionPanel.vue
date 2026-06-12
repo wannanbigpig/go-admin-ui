@@ -27,7 +27,7 @@
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="taskLoading" :maxShow="4" :onSearch="handleTaskSearch" :onReset="handleTaskReset" :modelRef="taskQueryFormRef" nodeName="#taskSearchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="taskLoading" :maxShow="4" @search="handleTaskSearch" @reset="handleTaskReset" :modelRef="taskQueryFormRef" nodeName="#taskSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -36,7 +36,7 @@
             <xl-table-list :loading="taskLoading" :data="taskList" :tableTitle="taskTableTitle" :pagination="taskPagination">
                 <template #td="{ item, val, row }">
                     <template v-if="item.tag">
-                        <el-tag v-if="val && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
+                        <el-tag v-if="val !== undefined && val !== null && val !== '' && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
                             {{ item.tag[val as string | number]?.text || val }}
                         </el-tag>
                     </template>

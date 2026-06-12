@@ -46,7 +46,7 @@
                             <xl-date-range-picker v-model="runDateRange" />
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="runLoading" :maxShow="4" :onSearch="handleRunSearch" :onReset="handleRunReset" :modelRef="runQueryFormRef" nodeName="#runSearchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="runLoading" :maxShow="4" @search="handleRunSearch" @reset="handleRunReset" :modelRef="runQueryFormRef" nodeName="#runSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>
@@ -56,7 +56,7 @@
             <xl-table-list :loading="runLoading" :data="runList" :tableTitle="runTableTitle" :pagination="runPagination">
                 <template #td="{ item, val }">
                     <template v-if="item.tag">
-                        <el-tag v-if="val && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
+                        <el-tag v-if="val !== undefined && val !== null && val !== '' && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
                             {{ item.tag[val as string | number]?.text || val }}
                         </el-tag>
                     </template>

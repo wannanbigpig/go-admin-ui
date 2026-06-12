@@ -285,6 +285,27 @@ describe('stores/notification.ts', () => {
         }
     })
 
+    it('收到 pong 后应刷新心跳时间，避免空闲连接被误断开', async () => {
+        vi.useFakeTimers()
+        try {
+            const store = useNotificationStore()
+            store.start('valid-token', 'zh-CN')
+            await vi.advanceTimersByTimeAsync(0)
+            await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+            const socket = mockSockets[0]
+            await vi.advanceTimersByTimeAsync(60000)
+            socket.emitMessage(JSON.stringify({ type: 'pong' }))
+            await vi.advanceTimersByTimeAsync(60000)
+
+            expect(socket.readyState).toBe(MockWebSocket.OPEN)
+            expect(store.notifications).toEqual([])
+        } finally {
+            useNotificationStore().stop()
+            vi.useRealTimers()
+        }
+    })
+
     it('心跳超时时应主动关闭半开连接以触发重连', async () => {
         vi.useFakeTimers()
         try {

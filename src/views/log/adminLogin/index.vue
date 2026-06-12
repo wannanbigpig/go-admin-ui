@@ -26,7 +26,7 @@
                             <xl-date-range-picker v-model="dateRange" />
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" :onSearch="handleSearch" :onReset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" @search="handleSearch" @reset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>

@@ -135,7 +135,18 @@ export function useDictOptions(typeCode: string, fallback: DictOption[] = []) {
     const remoteOptions = ref<DictOption[]>([])
     const loaded = ref(false)
 
-    const options = computed(() => (remoteOptions.value.length > 0 ? remoteOptions.value : fallback))
+    const options = computed(() => {
+        const rawOptions = remoteOptions.value.length > 0 ? remoteOptions.value : fallback
+        if (typeCode === 'common_status') {
+            return rawOptions.map((item) => {
+                if (String(item.value) === '0') {
+                    return { ...item, tag_type: 'danger' }
+                }
+                return item
+            })
+        }
+        return rawOptions
+    })
     const tagMap = computed(() => buildDictTagMap(options.value))
 
     const getCurrentLocale = () => settingStore.locale || DEFAULT_LOCALE

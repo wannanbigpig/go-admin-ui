@@ -20,7 +20,7 @@
                             <el-input v-model.trim="exportQuery.task_run_id" :placeholder="t('system.task.taskRunIdPlaceholder')" clearable />
                         </el-form-item>
                     </el-col>
-                    <xl-collapsible-search-btn :loading="exportLoading" :maxShow="4" :onSearch="handleExportSearch" :onReset="handleExportReset" :modelRef="exportQueryFormRef" nodeName="#exportSearchForm > .el-col" />
+                    <xl-collapsible-search-btn :loading="exportLoading" :maxShow="4" @search="handleExportSearch" @reset="handleExportReset" :modelRef="exportQueryFormRef" nodeName="#exportSearchForm > .el-col" />
                 </el-row>
             </el-form>
         </div>

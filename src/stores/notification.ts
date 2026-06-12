@@ -237,7 +237,7 @@ function normalizeSocketPayload(rawPayload: NotificationSocketMessage): AppNotif
     }
 
     const eventType = String(payload.type || payload.event || '').toLowerCase()
-    if (eventType === 'ping' || eventType === 'message_read' || eventType === 'message_read_all') {
+    if (eventType === 'ping' || eventType === 'pong' || eventType === 'message_read' || eventType === 'message_read_all') {
         return null
     }
 
