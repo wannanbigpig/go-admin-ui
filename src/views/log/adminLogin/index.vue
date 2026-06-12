@@ -89,7 +89,7 @@
                     <template v-if="currentDetail.token_hash || currentDetail.refresh_token_hash">
                         <el-divider />
 
-                        <el-descriptions :column="2" border>
+                        <el-descriptions :column="1" border>
                             <el-descriptions-item v-if="currentDetail.token_hash" :label="t('log.login.accessToken')">
                                 <code class="hash-content">{{ currentDetail.token_hash }}</code>
                             </el-descriptions-item>

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
-import { logout as logoutApi } from '@/api/auth'
+import { refreshAccessToken as refreshAccessTokenApi } from '@/api/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
 import { removeDynamicRoute, convertRoute, addDynamicRoutes, findFirstValidRoute } from '@/router/dynamicRoutes'
@@ -15,8 +15,6 @@ import { translate } from '@/locales'
 /** 当前刷新用户信息的 Promise（用于并发控制） */
 let refreshingPromise: Promise<void> | null = null
 const AUTH_PERSIST_KEY = 'auth'
-const REFRESH_TOKEN_KEY = 'refresh_token'
-const REFRESH_EXPIRES_KEY = 'refresh_expires_at'
 
 export const useAuthStore = defineStore(
     'auth',
@@ -24,8 +22,6 @@ export const useAuthStore = defineStore(
         // ==================== State ====================
         const access_token = ref<string>('')
         const expires_at = ref<number>(0)
-        const refresh_token = ref<string>('')
-        const refresh_expires_at = ref<number>(0)
         const userInfo = ref<UserInfo>(createEmptyUserInfo())
         const menu = ref<UserPermission[]>([])
         const isTokenExpiredModalShown = ref<boolean>(false)
@@ -42,14 +38,6 @@ export const useAuthStore = defineStore(
 
         const token = computed(() => {
             return isTokenExpired.value ? '' : access_token.value
-        })
-
-        /**
-         * 获取 refresh_token（仅在未过期时返回）
-         */
-        const refreshToken = computed(() => {
-            if (Date.now() / 1000 >= refresh_expires_at.value) return ''
-            return refresh_token.value
         })
 
         /**
@@ -124,7 +112,7 @@ export const useAuthStore = defineStore(
         const loginWithCredentials = async (credentials: Record<string, unknown>) => {
             resetAuthStore()
             const result = await submitLogin(credentials)
-            updateToken(result.access_token, result.expires_at, result.refresh_token, result.refresh_expires_at)
+            updateToken(result.access_token, result.expires_at)
             try {
                 await refreshUserInfo({ force: true })
             } catch (error) {
@@ -175,46 +163,25 @@ export const useAuthStore = defineStore(
         }
 
         /**
-         * 更新 token（支持可选的 refresh_token 参数）
+         * 更新 access token
          */
-        const updateToken = (token: string, exp: number, newRefreshToken?: string, newRefreshExpiresAt?: number) => {
+        const updateToken = (token: string, exp: number) => {
             // 单调递增校验，防止并发响应旧的刷新 token 覆盖了更新的版本
-            // access_token + refresh_token 作为原子对一起更新，避免内存与 localStorage 不同步
             if (exp > expires_at.value) {
                 access_token.value = token
                 expires_at.value = exp
                 authStateVersion.value++
-                if (newRefreshToken !== undefined) {
-                    refresh_token.value = newRefreshToken
-                    // [安全过渡方案说明]
-                    // 此处将 refresh_token 存在 localStorage 是因后端未改动 Cookie 方案的临时过渡方案。
-                    // 未来为了规避 XSS 风险，应配合后端使用 HttpOnly; Secure; SameSite=Lax/Strict 的 Cookie。
-                    // 并在部署侧配合 3.2 补强 Content-Security-Policy (CSP)。
-                    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
-                }
-                if (newRefreshExpiresAt !== undefined) {
-                    refresh_expires_at.value = newRefreshExpiresAt
-                    localStorage.setItem(REFRESH_EXPIRES_KEY, String(newRefreshExpiresAt))
-                }
             }
         }
 
         /**
-         * 从 localStorage 恢复 refresh_token
+         * 通过 HttpOnly Cookie 静默刷新 access token
          */
-        const restoreRefreshToken = () => {
-            const storedRT = localStorage.getItem(REFRESH_TOKEN_KEY)
-            const storedExp = localStorage.getItem(REFRESH_EXPIRES_KEY)
-            if (storedRT) {
-                refresh_token.value = storedRT
-            }
-            if (storedExp) {
-                refresh_expires_at.value = Number(storedExp)
-            }
+        const refreshAccessToken = async () => {
+            const result = await refreshAccessTokenApi()
+            updateToken(result.access_token, result.expires_at)
+            return result.access_token
         }
-
-        // 初始化时恢复
-        restoreRefreshToken()
 
         /**
          * 重置认证状态
@@ -224,15 +191,11 @@ export const useAuthStore = defineStore(
             authStateVersion.value++
             access_token.value = ''
             expires_at.value = 0
-            refresh_token.value = ''
-            refresh_expires_at.value = 0
             userInfo.value = createEmptyUserInfo()
             menu.value = []
             isTokenExpiredModalShown.value = false
             refreshingPromise = null
             localStorage.removeItem(AUTH_PERSIST_KEY)
-            localStorage.removeItem(REFRESH_TOKEN_KEY)
-            localStorage.removeItem(REFRESH_EXPIRES_KEY)
             removeDynamicRoute()
         }
 
@@ -245,23 +208,12 @@ export const useAuthStore = defineStore(
         }
 
         /**
-         * 异步吊销 refresh_token
-         */
-        const revokeRefreshToken = (token?: string) => {
-            if (!token) return
-            void logoutApi(token).catch((error) => {
-                Logger.error('吊销 refresh_token 失败:', error)
-            })
-        }
-
-        /**
          * 处理 token 过期
          */
         const handleTokenExpired = () => {
             if (isTokenExpiredModalShown.value) return
 
             isTokenExpiredModalShown.value = true
-            const tokenToRevoke = refreshToken.value
 
             ElMessageBox.alert(translate('validation.tokenExpired.content'), translate('validation.tokenExpired.title'), {
                 type: 'warning',
@@ -270,7 +222,6 @@ export const useAuthStore = defineStore(
                     if (action === 'confirm') {
                         isTokenExpiredModalShown.value = false
                         const redirectUrl = router.currentRoute.value.fullPath
-                        revokeRefreshToken(tokenToRevoke)
                         logout(redirectUrl)
                     } else {
                         isTokenExpiredModalShown.value = false
@@ -283,14 +234,11 @@ export const useAuthStore = defineStore(
             // State
             access_token,
             expires_at,
-            refresh_token,
-            refresh_expires_at,
             userInfo,
             menu,
             // Getters
             isTokenExpired,
             token,
-            refreshToken,
             routerData,
             firstPath,
             buttonPermissions,
@@ -298,11 +246,11 @@ export const useAuthStore = defineStore(
             // Actions
             loginWithCredentials,
             refreshUserInfo,
+            refreshAccessToken,
             updateToken,
             resetAuthStore,
             logout,
             handleTokenExpired,
-            revokeRefreshToken,
             // Button Permission Helpers
             getButtonInfo,
             getButtonInfoFull,

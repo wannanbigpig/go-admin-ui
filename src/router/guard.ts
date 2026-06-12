@@ -39,7 +39,10 @@ export async function beforeEach(to: RouteLocationNormalized) {
 
     // 检查登录状态
     if (!authStore.token) {
-        return redirectToLogin(to)
+        const refreshed = await silentRefreshAccessToken(authStore)
+        if (!refreshed) {
+            return redirectToLogin(to)
+        }
     }
 
     // 刷新用户信息（如果需要）
@@ -74,6 +77,17 @@ function redirectToLogin(to: RouteLocationNormalized) {
     return {
         name: ROUTE_NAME.LOGIN,
         query: { redirect: to.fullPath },
+    }
+}
+
+async function silentRefreshAccessToken(authStore: ReturnType<typeof useAuthStore>) {
+    try {
+        await authStore.refreshAccessToken()
+        return Boolean(authStore.token)
+    } catch (error) {
+        Logger.warn('静默刷新 access token 失败:', error)
+        authStore.resetAuthStore()
+        return false
     }
 }
 

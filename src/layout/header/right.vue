@@ -163,7 +163,7 @@ const handleLogout = async () => {
 
     const redirectUrl = router.currentRoute.value.fullPath
     try {
-        await logout(authStore.refreshToken)
+        await logout()
         ElMessage({ type: 'success', message: t(RESULT_MESSAGES.LOGOUT_SUCCESS) })
     } catch (error) {
         Logger.error('退出登录接口失败，继续清理本地状态:', error)

@@ -41,7 +41,7 @@
                             :key="button.permission || (resolveButtonInfo(button)?.id as any) || button.text || index"
                             :content="normalizeTooltip(button)"
                             :disabled="!normalizeTooltip(button)"
-                            placement="top"
+                            placement="left"
                         >
                             <div class="more-button-tooltip-wrapper" :class="{ 'is-disabled': normalizeDisabled(button) }">
                                 <el-dropdown-item :divided="button.divided" :disabled="normalizeDisabled(button)" @click="handleClick(button, scope, $event)">

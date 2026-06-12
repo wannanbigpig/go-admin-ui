@@ -34,12 +34,10 @@
                         {{ getExportStatusLabel(row.status) }}
                     </el-tag>
                     <div v-else-if="item.prop === 'progress'" class="task-export-progress">
-                        <div v-if="getExportProgress(row) !== null" class="task-export-progress-bar">
-                            <el-progress :percentage="getExportProgress(row) || 0" :status="getExportProgressStatus(row.status)" :stroke-width="8" />
-                            <span class="task-export-progress-percent">{{ getExportProgressPercentText(row) }}</span>
+                        <div class="task-export-progress-bar">
+                            <el-progress v-if="row.status !== 'pending' && getExportProgress(row) !== null" :percentage="getExportProgress(row) || 0" :status="getExportProgressStatus(row.status)" :stroke-width="8" />
+                            <span v-if="getExportProgressDescription(row)" class="task-export-progress-desc">{{ getExportProgressDescription(row) }}</span>
                         </div>
-                        <div v-if="getExportProgressDescription(row)" class="task-export-progress-text">{{ getExportProgressDescription(row) }}</div>
-                        <span v-else-if="getExportProgress(row) === null">-</span>
                     </div>
                     <span v-else-if="item.prop === 'export_count'">{{ getExportCountText(row) }}</span>
                     <span v-else>{{ getExportCellValue(item.prop, row) }}</span>
@@ -214,11 +212,11 @@ const getExportProgressStatus = (status?: string) => {
 }
 
 const getExportProgress = (row: ExportRecord) => getExportRecordProgress(row)
-const getExportProgressPercentText = (row: ExportRecord) => {
-    const progress = getExportProgress(row)
-    return progress === null ? '-' : `${progress}%`
+const getExportProgressDescription = (row: ExportRecord) => {
+    if (row.stage_name) return row.stage_name
+    if (row.status === 'pending') return '-'
+    return ''
 }
-const getExportProgressDescription = (row: ExportRecord) => row.stage_name || '-'
 const getExportCountText = (row: ExportRecord) => getExportRecordProgressText(row) || '-'
 
 const exportSceneNameMap = computed<Record<string, string>>(() => ({
@@ -385,23 +383,21 @@ onActivated(() => {
         display: flex;
         align-items: center;
         gap: var(--xl-space-2);
+
+        :deep(.el-progress) {
+            flex: 1;
+
+            .el-progress__text {
+                min-width: auto;
+            }
+        }
     }
 
-    .task-export-progress-percent {
-        min-width: 40px;
+    .task-export-progress-desc {
         font-size: var(--xl-font-sm);
         line-height: 1;
-        color: var(--el-text-color-regular);
-        text-align: right;
-        flex-shrink: 0;
-    }
-
-    .task-export-progress-text {
-        margin-top: 6px;
-        font-size: var(--xl-font-sm);
-        line-height: 1.4;
         color: var(--el-text-color-secondary);
-        text-align: center;
+        flex-shrink: 0;
     }
 }
 </style>

@@ -36,14 +36,18 @@ export interface UserInfo {
 }
 
 /**
- * 登录响应结果
+ * Token 响应结果
  */
-export interface LoginResult {
-    refresh_token: string
-    refresh_expires_at: number
+export interface TokenResult {
     access_token: string
+    token_type: 'Bearer'
     expires_at: number
 }
+
+/**
+ * 登录响应结果
+ */
+export type LoginResult = TokenResult
 
 export interface CaptchaResult {
     b64s: string

@@ -4,11 +4,11 @@ import { MESSAGE_ERROR_DURATION } from '@/modules/shared/constants'
 const hoisted = vi.hoisted(() => {
     const mockAuthStore = {
         token: '',
-        refreshToken: '',
         updateToken: vi.fn(),
         handleTokenExpired: vi.fn(),
+        resetAuthStore: vi.fn(),
+        refreshAccessToken: vi.fn(),
     }
-    const mockRefreshTokenApi = vi.fn()
     const mockSettingStore = {
         locale: 'zh-CN',
     }
@@ -50,7 +50,6 @@ const hoisted = vi.hoisted(() => {
         mockSettingStore,
         mockLogger,
         mockService,
-        mockRefreshTokenApi,
         callbacks: {
             get requestOnFulfilled() {
                 return requestOnFulfilled
@@ -90,10 +89,6 @@ vi.mock('@/utils/logger', () => ({
     Logger: hoisted.mockLogger,
 }))
 
-vi.mock('@/api/auth', () => ({
-    refreshTokenApi: hoisted.mockRefreshTokenApi,
-}))
-
 import { ElMessage } from 'element-plus'
 import service, { get, post, request, upload } from '@/utils/request'
 import * as mockModule from '@/mock'
@@ -110,12 +105,12 @@ describe('utils/request.ts', () => {
         vi.stubEnv('VITE_ENABLE_MOCK', 'false')
         vi.stubEnv('VITE_ENABLE_MOCK_FALLBACK', 'false')
         hoisted.mockAuthStore.token = ''
-        hoisted.mockAuthStore.refreshToken = ''
         hoisted.mockSettingStore.locale = 'zh-CN'
         hoisted.mockService.request.mockReset()
         hoisted.mockAuthStore.updateToken.mockClear()
         hoisted.mockAuthStore.handleTokenExpired.mockClear()
-        hoisted.mockRefreshTokenApi.mockReset()
+        hoisted.mockAuthStore.resetAuthStore.mockClear()
+        hoisted.mockAuthStore.refreshAccessToken.mockReset()
         hoisted.mockLogger.error.mockClear()
         hoisted.mockLogger.warn.mockClear()
         vi.mocked(ElMessage).mockClear()
@@ -140,6 +135,7 @@ describe('utils/request.ts', () => {
         expect(config.headers).toMatchObject({
             Authorization: 'Bearer access-token',
             'Accept-Language': 'zh-CN',
+            'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/json',
         })
     })
@@ -153,6 +149,7 @@ describe('utils/request.ts', () => {
 
         expect(config.headers).toMatchObject({
             'Accept-Language': 'en-US',
+            'X-Requested-With': 'XMLHttpRequest',
         })
     })
 
@@ -225,36 +222,40 @@ describe('utils/request.ts', () => {
         expect(lastCall.data).toBeInstanceOf(FormData)
     })
 
-    it('响应拦截器成功分支应处理 token 刷新与业务数据解包', async () => {
+    it('响应拦截器成功分支应解包业务数据', async () => {
         const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
         const result = await onFulfilled({
-            headers: {
-                'refresh-access-token': 'new-token',
-                'refresh-exp': '100',
-            },
+            headers: {},
             data: {
                 code: 0,
                 data: { id: 1 },
             },
+            config: {},
         })
 
-        expect(hoisted.mockAuthStore.updateToken).toHaveBeenCalledWith('new-token', 100)
+        expect(hoisted.mockAuthStore.updateToken).not.toHaveBeenCalled()
         expect(result).toEqual({ id: 1 })
     })
 
-    it('响应拦截器遇到业务 401 应触发过期处理并拒绝', async () => {
-        hoisted.mockAuthStore.refreshToken = 'valid-refresh-token'
-        hoisted.mockRefreshTokenApi.mockRejectedValueOnce(new Error('refresh failed'))
+    it('响应拦截器遇到业务 401 应刷新 access token 并重放请求', async () => {
+        hoisted.mockAuthStore.refreshAccessToken.mockResolvedValueOnce('new-access-token')
+        hoisted.mockService.request.mockResolvedValueOnce({ id: 1 })
         const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
         const payload = { code: 401, msg: 'unauthorized' }
-        await expect(
-            onFulfilled({
-                headers: {},
-                data: payload,
-                config: {},
+        const result = await onFulfilled({
+            headers: {},
+            data: payload,
+            config: { url: '/v1/admin-user/get', method: 'GET', headers: { Authorization: 'Bearer old-token' } },
+        })
+
+        expect(result).toEqual({ id: 1 })
+        expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(1)
+        expect(hoisted.mockService.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                _retry: true,
+                headers: expect.objectContaining({ Authorization: 'Bearer new-access-token' }),
             })
-        ).rejects.toEqual(payload)
-        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
+        )
     })
 
     it('响应拦截器遇到业务错误应提示并拒绝', async () => {
@@ -272,9 +273,9 @@ describe('utils/request.ts', () => {
         })
     })
 
-    it('响应拦截器应解析 Blob 中的 JSON 业务错误', async () => {
-        hoisted.mockAuthStore.refreshToken = 'valid-refresh-token'
-        hoisted.mockRefreshTokenApi.mockRejectedValueOnce(new Error('refresh failed'))
+    it('响应拦截器应解析 Blob 中的 JSON 业务 401 并刷新重放', async () => {
+        hoisted.mockAuthStore.refreshAccessToken.mockResolvedValueOnce('new-access-token')
+        hoisted.mockService.request.mockResolvedValueOnce({ ok: true })
         const onFulfilled = getCallback(hoisted.callbacks.responseOnFulfilled, 'responseOnFulfilled')
         const payload = { code: 401, msg: 'unauthorized', data: null }
         const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
@@ -285,8 +286,8 @@ describe('utils/request.ts', () => {
                 headers: { 'content-type': 'application/json' },
                 data: blob,
             })
-        ).rejects.toEqual(payload)
-        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
+        ).resolves.toEqual({ ok: true })
+        expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(1)
     })
 
     it('响应错误拦截器应处理网络错误、超时和兜底错误', async () => {
@@ -355,19 +356,118 @@ describe('utils/request.ts', () => {
         expect(ElMessage).toHaveBeenCalledWith(expect.objectContaining({ message: '账号或密码错误', type: 'error' }))
     })
 
-    it('会话失效 HTTP 401 + API payload 应触发 handleTokenExpired 并 reject 业务 payload', async () => {
-        hoisted.mockAuthStore.refreshToken = 'valid-refresh-token'
-        hoisted.mockRefreshTokenApi.mockRejectedValueOnce(new Error('refresh failed'))
+    it('会话失效 HTTP 401 + API payload 应刷新并重放原请求', async () => {
+        hoisted.mockAuthStore.refreshAccessToken.mockResolvedValueOnce('new-access-token')
+        hoisted.mockService.request.mockResolvedValueOnce({ ok: true })
         const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
         const payload = { code: 401, msg: '登录已过期', data: null }
         await expect(
             onRejected({
                 response: { status: 401, data: payload, headers: {} },
-                config: {},
+                config: { url: '/v1/admin-user/get', method: 'GET' },
+                message: 'Request failed with status code 401',
+            })
+        ).resolves.toEqual({ ok: true })
+        expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(1)
+        expect(hoisted.mockService.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                _retry: true,
+                headers: expect.objectContaining({ Authorization: 'Bearer new-access-token' }),
+            })
+        )
+    })
+
+    it('并发 401 应只发起一次 refresh，并分别重放请求', async () => {
+        let resolveRefresh!: (value: string) => void
+        hoisted.mockAuthStore.refreshAccessToken.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveRefresh = resolve
+            })
+        )
+        hoisted.mockService.request.mockResolvedValue({ ok: true })
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 401, msg: '登录已过期', data: null }
+
+        const first = onRejected({
+            response: { status: 401, data: payload, headers: {} },
+            config: { url: '/v1/a', method: 'GET' },
+            message: 'Request failed with status code 401',
+        })
+        const second = onRejected({
+            response: { status: 401, data: payload, headers: {} },
+            config: { url: '/v1/b', method: 'GET' },
+            message: 'Request failed with status code 401',
+        })
+
+        resolveRefresh('shared-access-token')
+        await expect(Promise.all([first, second])).resolves.toEqual([{ ok: true }, { ok: true }])
+        expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(1)
+        expect(hoisted.mockService.request).toHaveBeenCalledTimes(2)
+    })
+
+    it('refresh 接口自身 401 不应递归刷新', async () => {
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const payload = { code: 401, msg: 'refresh invalid', data: null }
+        await expect(
+            onRejected({
+                response: { status: 401, data: payload, headers: {} },
+                config: { url: '/v1/auth/refresh', method: 'POST', authErrorMode: 'refresh' },
                 message: 'Request failed with status code 401',
             })
         ).rejects.toEqual(payload)
-        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalled()
+        expect(hoisted.mockAuthStore.refreshAccessToken).not.toHaveBeenCalled()
+        expect(hoisted.mockAuthStore.handleTokenExpired).not.toHaveBeenCalled()
+    })
+
+    it('refresh 返回 HTTP 401 时应清空登录态并提示过期', async () => {
+        const refreshError = { response: { status: 401, data: { code: 401, msg: 'refresh invalid', data: null } } }
+        hoisted.mockAuthStore.refreshAccessToken.mockRejectedValueOnce(refreshError)
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+
+        await expect(
+            onRejected({
+                response: { status: 401, data: { code: 401, msg: '登录已过期', data: null }, headers: {} },
+                config: { url: '/v1/admin-user/get', method: 'GET' },
+                message: 'Request failed with status code 401',
+            })
+        ).rejects.toBe(refreshError)
+
+        expect(hoisted.mockAuthStore.resetAuthStore).toHaveBeenCalledTimes(1)
+        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalledTimes(1)
+    })
+
+    it('refresh 返回 RefreshTokenInvalid 业务码时应清空登录态并提示过期', async () => {
+        const refreshPayload = { code: 20048, msg: 'refresh invalid', data: null }
+        hoisted.mockAuthStore.refreshAccessToken.mockRejectedValueOnce(refreshPayload)
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+
+        await expect(
+            onRejected({
+                response: { status: 401, data: { code: 401, msg: '登录已过期', data: null }, headers: {} },
+                config: { url: '/v1/admin-user/get', method: 'GET' },
+                message: 'Request failed with status code 401',
+            })
+        ).rejects.toEqual(refreshPayload)
+
+        expect(hoisted.mockAuthStore.resetAuthStore).toHaveBeenCalledTimes(1)
+        expect(hoisted.mockAuthStore.handleTokenExpired).toHaveBeenCalledTimes(1)
+    })
+
+    it('refresh 网络异常、超时或 5xx 时不应清空登录态', async () => {
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const original401 = {
+            response: { status: 401, data: { code: 401, msg: '登录已过期', data: null }, headers: {} },
+            config: { url: '/v1/admin-user/get', method: 'GET' },
+            message: 'Request failed with status code 401',
+        }
+
+        for (const refreshError of [{ message: 'Network Error' }, { code: 'ECONNABORTED', message: 'timeout of 10000ms exceeded' }, { response: { status: 503, data: { code: 500, msg: '服务不可用', data: null } } }]) {
+            hoisted.mockAuthStore.refreshAccessToken.mockRejectedValueOnce(refreshError)
+            await expect(onRejected(original401)).rejects.toBe(refreshError)
+        }
+
+        expect(hoisted.mockAuthStore.resetAuthStore).not.toHaveBeenCalled()
+        expect(hoisted.mockAuthStore.handleTokenExpired).not.toHaveBeenCalled()
     })
 
     it('HTTP 403 + API payload 应 reject 业务 payload 并弹后端 msg', async () => {

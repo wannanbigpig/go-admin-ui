@@ -10,14 +10,19 @@ import { resolveBaseURL } from '@/utils/env'
 
 declare module 'axios' {
     interface AxiosRequestConfig {
-        /** 401 处理模式：'credential' 表示登录凭证失败（不触发过期弹窗），'session' 表示会话失效（默认） */
-        authErrorMode?: 'credential' | 'session'
+        /** 401 处理模式：'credential' 表示登录凭证失败，'refresh' 表示刷新接口自身，'session' 表示会话失效（默认） */
+        authErrorMode?: 'credential' | 'refresh' | 'session'
         /** 跳过 Authorization 头注入 */
         _skipAuth?: boolean
+        /** 401 刷新后重放标记 */
+        _retry?: boolean
     }
 }
 
 const LANGUAGE_HEADER = 'Accept-Language'
+const REQUESTED_WITH_HEADER = 'X-Requested-With'
+const REQUESTED_WITH_VALUE = 'XMLHttpRequest'
+const REFRESH_TOKEN_INVALID_CODE = 20048
 
 /**
  * 静默业务码：响应 code 命中后不弹 ElMessage，由业务侧自行处理。
@@ -33,7 +38,10 @@ export const SILENT_BUSINESS_CODES = [11011] as const
 const service = axios.create({
     baseURL: resolveBaseURL(),
     timeout: REQUEST_TIMEOUT,
+    withCredentials: true,
 })
+
+let refreshPromise: Promise<string> | null = null
 
 const isJsonContentType = (contentType: unknown) => {
     return typeof contentType === 'string' && contentType.toLowerCase().includes('application/json')
@@ -92,39 +100,106 @@ const tryGetMock = async (url: string, method: string, dataOrParams: unknown) =>
     return { matched: false } as const
 }
 
-const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, authErrorMode: 'credential' | 'session' = 'session') => {
-    const authStore = useAuthStore()
-
-    // 处理 token 滑动刷新（响应头）
-    if (response.headers['refresh-access-token']) {
-        authStore.updateToken(response.headers['refresh-access-token'], Number(response.headers['refresh-exp']))
-    }
-
+const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, authErrorMode: 'credential' | 'refresh' | 'session' = 'session') => {
     const code = response.data.code
 
     // 处理 401 未授权
     if (code === 401) {
-        // credential 模式（登录请求）：不触发过期处理，直接拒绝
+        // credential 模式（登录请求）：不触发刷新和过期弹窗，直接拒绝
         if (authErrorMode === 'credential') {
             showApiErrorMessage(response.data, response.config as AxiosRequestConfig & { silent?: boolean; silentCodes?: number[] })
             return Promise.reject(response.data)
         }
 
-        // 会话失效：后端未提供 refresh-token 接口，access token 续期由响应头
-        // refresh-access-token 滑动刷新完成；命中 401 直接触发过期处理跳登录。
-        authStore.handleTokenExpired()
-        return Promise.reject(response.data)
+        return retryAfterRefresh(response.config, response.data)
     }
 
     // 处理业务错误（code !== 0）
     if (code !== 0) {
-        const config = response.config as AxiosRequestConfig & { silent?: boolean; silentCodes?: number[]; authErrorMode?: 'credential' | 'session' }
+        const config = response.config as AxiosRequestConfig & { silent?: boolean; silentCodes?: number[]; authErrorMode?: 'credential' | 'refresh' | 'session' }
         showApiErrorMessage(response.data, config)
         return Promise.reject(response.data)
     }
 
     // 返回业务数据，避免将 AxiosResponse 结构透传到业务层
     return response.data.data
+}
+
+const isRefreshRequest = (config?: AxiosRequestConfig) => {
+    return config?.authErrorMode === 'refresh' || String(config?.url || '').includes('/auth/refresh')
+}
+
+const markSessionExpired = () => {
+    const authStore = useAuthStore()
+    authStore.resetAuthStore()
+    authStore.handleTokenExpired()
+}
+
+const isRefreshAuthExpiredError = (error: unknown) => {
+    if (error && typeof error === 'object') {
+        const maybeAxios = error as AxiosError<ApiResponse<unknown>>
+        if (maybeAxios.response?.status === 401) return true
+        const responseData = maybeAxios.response?.data
+        if (responseData && isApiPayload(responseData)) {
+            return responseData.code === 401 || responseData.code === REFRESH_TOKEN_INVALID_CODE
+        }
+        if (isApiPayload(error)) {
+            return error.code === 401 || error.code === REFRESH_TOKEN_INVALID_CODE
+        }
+    }
+    return false
+}
+
+/**
+ * access token 续期入口。
+ *
+ * 关键约束：
+ * - 多个业务请求同时 401 时共享同一个 refreshPromise，避免并发轮换 refresh token。
+ * - 只有后端明确返回认证失效（HTTP 401 / code=401 / RefreshTokenInvalid）才清登录态。
+ * - 网络错误、超时、5xx 只让当前请求失败，保留本地状态，用户下次操作可重新尝试刷新。
+ */
+const refreshAccessTokenOnce = async () => {
+    if (!refreshPromise) {
+        const authStore = useAuthStore()
+        refreshPromise = authStore
+            .refreshAccessToken()
+            .catch((error) => {
+                if (isRefreshAuthExpiredError(error)) {
+                    markSessionExpired()
+                }
+                throw error
+            })
+            .finally(() => {
+                refreshPromise = null
+            })
+    }
+    return refreshPromise
+}
+
+const retryAfterRefresh = async (config: AxiosRequestConfig | undefined, rejectPayload: unknown) => {
+    if (!config) {
+        markSessionExpired()
+        return Promise.reject(rejectPayload)
+    }
+    if (config.authErrorMode === 'credential' || isRefreshRequest(config)) {
+        return Promise.reject(rejectPayload)
+    }
+    if (config._retry) {
+        markSessionExpired()
+        return Promise.reject(rejectPayload)
+    }
+
+    const nextToken = await refreshAccessTokenOnce()
+    // 用新 access token 覆盖原请求头并标记 _retry，防止重放后再次 401 形成递归刷新。
+    const retryConfig = {
+        ...config,
+        _retry: true,
+        headers: {
+            ...(config.headers || {}),
+            Authorization: `Bearer ${nextToken}`,
+        },
+    }
+    return service.request(retryConfig)
 }
 
 // ==================== 请求拦截器 ====================
@@ -140,6 +215,7 @@ service.interceptors.request.use(
         config.headers = config.headers || {}
         // 后端不传语言头时默认中文，这里显式携带当前前端语言。
         config.headers[LANGUAGE_HEADER] = settingStore.locale || DEFAULT_LOCALE
+        config.headers[REQUESTED_WITH_HEADER] = REQUESTED_WITH_VALUE
         // 添加认证 token（_skipAuth 标记的请求跳过）
         if (!config._skipAuth) {
             if (authStore.token) {
@@ -165,7 +241,7 @@ service.interceptors.request.use(
 // ==================== 响应拦截器 ====================
 /**
  * 响应拦截器
- * - 处理 token 刷新
+ * - access token 失效后调用 /auth/refresh，并用新 token 重放原请求
  * - 统一处理业务错误码
  * - 处理网络错误
  */
@@ -177,7 +253,7 @@ service.interceptors.response.use(
             return undefined
         }
 
-        const authErrorMode = (response.config as AxiosRequestConfig & { authErrorMode?: 'credential' | 'session' })?.authErrorMode ?? 'session'
+        const authErrorMode = (response.config as AxiosRequestConfig & { authErrorMode?: 'credential' | 'refresh' | 'session' })?.authErrorMode ?? 'session'
 
         if (response.config?.responseType === 'blob' || response.data instanceof Blob) {
             const jsonPayload = await parseBlobJson(response)
@@ -208,9 +284,7 @@ service.interceptors.response.use(
                 // 登录凭证失败：不触发过期弹窗，直接拒绝
                 return Promise.reject(error.response?.data ?? error)
             }
-            const authStore = useAuthStore()
-            authStore.handleTokenExpired()
-            return Promise.reject(error.response?.data ?? error)
+            return retryAfterRefresh(config, error.response?.data ?? error) as Promise<never>
         }
 
         // 如果响应体是 API payload（{ code, msg, data }），走 handleApiResponse 统一处理

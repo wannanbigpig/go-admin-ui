@@ -1,9 +1,18 @@
 import { post, get, request } from '@/utils/request'
-import type { UserInfo, UserPermission } from '@/types/auth'
+import type { TokenResult, UserInfo, UserPermission } from '@/types/auth'
 
 // 退出登录
-export function logout(refreshToken?: string) {
-    return post<unknown>('/v1/auth/logout', { refresh_token: refreshToken })
+export function logout() {
+    return post<unknown>('/v1/auth/logout')
+}
+
+// 刷新 access token，refresh token 由浏览器自动携带 HttpOnly Cookie
+export function refreshAccessToken() {
+    return request<TokenResult>('/v1/auth/refresh', 'POST', {
+        _skipAuth: true,
+        authErrorMode: 'refresh',
+        withCredentials: true,
+    })
 }
 
 // 获取用户信息

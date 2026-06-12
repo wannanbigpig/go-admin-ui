@@ -35,9 +35,11 @@
         <div class="xl-container">
             <xl-table-list :loading="taskLoading" :data="taskList" :tableTitle="taskTableTitle" :pagination="taskPagination">
                 <template #td="{ item, val, row }">
-                    <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                        {{ item.tag[val as string | number]?.text || val }}
-                    </el-tag>
+                    <template v-if="item.tag">
+                        <el-tag v-if="val && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
+                            {{ item.tag[val as string | number]?.text || val }}
+                        </el-tag>
+                    </template>
                     <div v-else-if="item.prop === 'cron_spec'" class="cron-spec-cell">
                         <span class="cron-spec-value">{{ row.cron_spec || '-' }}</span>
                         <span v-if="row.cron_spec_description" class="cron-spec-description">{{ row.cron_spec_description }}</span>

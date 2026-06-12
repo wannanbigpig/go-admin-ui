@@ -2377,9 +2377,17 @@ export const authMock: MockRoute[] = [
         method: 'POST',
         handler: () => ({
             access_token: 'mock-access-token-987654321',
+            token_type: 'Bearer',
             expires_at: Math.floor(Date.now() / 1000) + 7200,
-            refresh_token: 'mock-refresh-token-123456789',
-            refresh_expires_at: Math.floor(Date.now() / 1000) + 86400,
+        }),
+    },
+    {
+        pattern: /^\/v1\/auth\/refresh$/,
+        method: 'POST',
+        handler: () => ({
+            access_token: `mock-access-token-${Date.now()}`,
+            token_type: 'Bearer',
+            expires_at: Math.floor(Date.now() / 1000) + 7200,
         }),
     },
     {

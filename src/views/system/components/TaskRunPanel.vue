@@ -55,9 +55,11 @@
             <el-alert class="xl-m-bottom-10" :title="t('system.task.detailSamplingTip')" type="info" show-icon />
             <xl-table-list :loading="runLoading" :data="runList" :tableTitle="runTableTitle" :pagination="runPagination">
                 <template #td="{ item, val }">
-                    <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
-                        {{ item.tag[val as string | number]?.text || val }}
-                    </el-tag>
+                    <template v-if="item.tag">
+                        <el-tag v-if="val && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
+                            {{ item.tag[val as string | number]?.text || val }}
+                        </el-tag>
+                    </template>
                     <span v-else>{{ val }}</span>
                 </template>
                 <template #operation>

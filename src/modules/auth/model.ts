@@ -16,8 +16,7 @@ export function createEmptyUserInfo(): UserInfo {
 export function createEmptyLoginResult(): LoginResult {
     return {
         access_token: '',
+        token_type: 'Bearer',
         expires_at: 0,
-        refresh_token: '',
-        refresh_expires_at: 0,
     }
 }
