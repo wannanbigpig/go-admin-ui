@@ -28,3 +28,32 @@ export interface Menu extends WithId, WithTimestamp {
     full_path?: string
     [key: string]: unknown
 }
+
+export type MenuPayload = Partial<
+    Pick<
+        Menu,
+        | 'id'
+        | 'pid'
+        | 'title'
+        | 'title_i18n'
+        | 'code'
+        | 'name'
+        | 'type'
+        | 'icon'
+        | 'path'
+        | 'component_key'
+        | 'redirect'
+        | 'is_show'
+        | 'is_auth'
+        | 'is_new_window'
+        | 'is_external_links'
+        | 'sort'
+        | 'status'
+        | 'description'
+        | 'animate_duration'
+        | 'animate_enter'
+        | 'animate_leave'
+        | 'api_list'
+    >
+> &
+    Record<string, unknown>

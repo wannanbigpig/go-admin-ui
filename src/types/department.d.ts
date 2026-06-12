@@ -14,3 +14,5 @@ export interface Department extends WithId, WithTimestamp {
 export interface DepartmentQuery {
     name?: string
 }
+
+export type DepartmentPayload = Partial<Pick<Department, 'id' | 'pid' | 'name' | 'code' | 'sort' | 'description'>> & Record<string, unknown>

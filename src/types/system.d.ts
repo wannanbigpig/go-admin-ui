@@ -179,6 +179,7 @@ export interface CronTaskState extends WithId {
 }
 
 export interface SystemFile extends WithId, WithTimestamp {
+    file_object_id?: number | string
     uid: number | string
     uploader_name?: string
     uploader_username?: string
@@ -211,6 +212,10 @@ export interface SystemFile extends WithId, WithTimestamp {
     upload_status?: string
     upload_status_name?: string
     reference_count?: number
+    object_reuse_count?: number
+    object_status?: string
+    object_status_name?: string
+    last_accessed_at?: string
     deleted_at?: string
     deleted_by?: number | string
     deleted_reason?: string

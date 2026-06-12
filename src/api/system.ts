@@ -2,7 +2,7 @@ import { get, post, request, upload } from '@/utils/request'
 import type { AxiosRequestConfig } from 'axios'
 import type { PageData } from '@/types/common'
 import type { ExportRecord, ExportTaskSubmitResult } from '@/types/exportCenter'
-import type { AppNotification, NotificationReadPayload, NotificationSendPayload, NotificationSendResult, NotificationUnreadCount } from '@/types/notification'
+import type { AppNotification, NotificationReadPayload, NotificationSendPayload, NotificationSendResult, NotificationUnreadCount, WsTicketResult } from '@/types/notification'
 import type {
     SystemConfig,
     SystemConfigPayload,
@@ -162,10 +162,6 @@ export function getCronTaskStateList(params?: Record<string, unknown>) {
 
 export function getExportRecordList(params?: Record<string, unknown>) {
     return get<PageData<ExportRecord>>('/v1/system/export/list', params)
-}
-
-export interface WsTicketResult {
-    ticket: string
 }
 
 export function getWsTicket() {

@@ -33,8 +33,8 @@ interface UseListPageOptions<T, Q extends Record<string, unknown> & PaginationQu
      */
     onError?: (err: unknown) => void
     /**
-     * 是否在首次加载时延迟避让路由切换动画，默认为 true。
-     * 开启后在首次请求时会在 microtask 中等待 350ms，以防接口缓存立即同步 resolved 造成跳转卡死。
+     * 是否在首次加载时避让路由切换渲染帧，默认为 true。
+     * 开启后首次请求会等待两个 animation frame，避免接口缓存同步 resolved 抢占首屏渲染。
      */
     delayFirstFetch?: boolean
 }
@@ -50,6 +50,8 @@ const EMPTY_RESULT = <T>(query: PaginationQuery): ListPageResult<T> => ({
     page: query.page ?? 1,
     pageSize: query.per_page ?? 10,
 })
+
+const waitForRenderFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 /**
  * 通用列表页组合式函数，统一处理加载状态、分页、查询与重置逻辑。
@@ -94,10 +96,10 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
             syncQueryPagination(query, pagination)
             const params = { ...buildParams() } as Q
 
-            // 首次请求且启用了动画避让，则通过 setTimeout 等待过渡动画 (300ms) 彻底执行完毕，确保流畅展示骨架屏
+            // 首次请求且启用了动画避让，则等待浏览器完成首屏渲染帧。
             if (delayFirstFetch && isFirstFetch.value) {
                 isFirstFetch.value = false
-                await new Promise<void>((resolve) => setTimeout(resolve, 350))
+                await waitForRenderFrame()
             } else {
                 isFirstFetch.value = false
             }

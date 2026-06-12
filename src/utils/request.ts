@@ -16,6 +16,10 @@ declare module 'axios' {
         _skipAuth?: boolean
         /** 401 刷新后重放标记 */
         _retry?: boolean
+        /** 静默错误提示 */
+        silent?: boolean
+        /** 指定静默业务码 */
+        silentCodes?: number[]
     }
 }
 
@@ -58,6 +62,29 @@ const parseBlobJson = async (response: AxiosResponse<ApiResponse<unknown>>) => {
         Logger.error('解析 Blob JSON 响应失败:', error)
         return null
     }
+}
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> => {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+export const normalizeApiData = (data: unknown): unknown => {
+    if (!isPlainRecord(data)) return data
+
+    if ('result' in data) {
+        return data.result
+    }
+
+    if (Array.isArray(data.data) && ('total' in data || 'current_page' in data || 'per_page' in data)) {
+        return {
+            list: data.data,
+            total: Number(data.total ?? 0),
+            page: Number(data.current_page ?? data.page ?? 1),
+            pageSize: Number(data.per_page ?? data.pageSize ?? 10),
+        }
+    }
+
+    return data
 }
 
 /**
@@ -122,7 +149,7 @@ const handleApiResponse = async (response: AxiosResponse<ApiResponse<unknown>>, 
     }
 
     // 返回业务数据，避免将 AxiosResponse 结构透传到业务层
-    return response.data.data
+    return normalizeApiData(response.data.data)
 }
 
 const isRefreshRequest = (config?: AxiosRequestConfig) => {

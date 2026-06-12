@@ -1,10 +1,11 @@
 import { get, post } from '@/utils/request'
 import { apiCache } from '@/utils/apiCache'
+import { API_CACHE_PREFIX, buildApiCacheKey } from '@/utils/apiCacheKeys'
 import { useSettingStore } from '@/stores/setting'
 import { DEFAULT_LOCALE } from '@/locales'
 import type { PageData } from '@/types/common'
-import type { Role } from '@/types/role'
-import type { Menu } from '@/types/menu'
+import type { Role, RolePayload } from '@/types/role'
+import type { Menu, MenuPayload } from '@/types/menu'
 
 // 角色选项类型（仅包含下拉所需的最小字段）
 export interface RoleOption {
@@ -36,7 +37,7 @@ export function editPermission(data: Record<string, unknown>) {
 export function getMenuList(params?: Record<string, unknown>) {
     const settingStore = useSettingStore()
     const locale = settingStore.locale || DEFAULT_LOCALE
-    const key = `menu:list:${locale}:${JSON.stringify(params || {})}`
+    const key = `${API_CACHE_PREFIX.MENU_LIST}${locale}:${JSON.stringify(params || {})}`
     const cached = apiCache.get<Menu[]>(key)
     if (cached) return Promise.resolve(cached)
 
@@ -59,17 +60,17 @@ export function getMenuList(params?: Record<string, unknown>) {
 }
 
 // 新增菜单
-export function createMenu(data: Record<string, unknown>) {
+export function createMenu(data: MenuPayload) {
     return post<unknown>('/v1/menu/create', data).then((res) => {
-        apiCache.deleteByPrefix('menu:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.MENU_LIST)
         return res
     })
 }
 
 // 更新菜单
-export function updateMenu(data: Record<string, unknown>) {
+export function updateMenu(data: MenuPayload) {
     return post<unknown>('/v1/menu/update', data).then((res) => {
-        apiCache.deleteByPrefix('menu:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.MENU_LIST)
         return res
     })
 }
@@ -82,14 +83,21 @@ export function getMenuDetail(params: { id: number | string }) {
 // 删除菜单
 export function deleteMenu(data: { id: number | string }) {
     return post<unknown>('/v1/menu/delete', data).then((res) => {
-        apiCache.deleteByPrefix('menu:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.MENU_LIST)
+        return res
+    })
+}
+
+export function refreshAllMenuPermissions() {
+    return post<unknown>('/v1/menu/update-all-menu-permissions').then((res) => {
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.MENU_LIST)
         return res
     })
 }
 
 // 获取角色列表
 export function getRoleList(params?: Record<string, unknown>) {
-    const key = `role:list:${JSON.stringify(params || {})}`
+    const key = buildApiCacheKey(API_CACHE_PREFIX.ROLE_LIST, params)
     const cached = apiCache.get<PageData<Role>>(key)
     if (cached) return Promise.resolve(cached)
 
@@ -112,17 +120,17 @@ export function getRoleList(params?: Record<string, unknown>) {
 }
 
 // 新增角色
-export function createRole(data: Record<string, unknown>) {
+export function createRole(data: RolePayload) {
     return post<unknown>('/v1/role/create', data).then((res) => {
-        apiCache.deleteByPrefix('role:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.ROLE_LIST)
         return res
     })
 }
 
 // 更新角色
-export function updateRole(data: Record<string, unknown>) {
+export function updateRole(data: RolePayload) {
     return post<unknown>('/v1/role/update', data).then((res) => {
-        apiCache.deleteByPrefix('role:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.ROLE_LIST)
         return res
     })
 }
@@ -135,7 +143,7 @@ export function getRoleDetail(params: { id: number | string }) {
 // 删除角色
 export function deleteRole(data: { id: number | string }) {
     return post<unknown>('/v1/role/delete', data).then((res) => {
-        apiCache.deleteByPrefix('role:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.ROLE_LIST)
         return res
     })
 }
@@ -147,7 +155,7 @@ interface ResultResponse<T> {
 
 // 获取角色选项（供下拉选择器使用）
 export function getRoleOptions(params?: { keyword?: string }) {
-    const key = `role:options:${JSON.stringify(params || {})}`
+    const key = buildApiCacheKey(API_CACHE_PREFIX.ROLE_OPTIONS, params)
     const cached = apiCache.get<RoleOption[]>(key)
     if (cached) return Promise.resolve(cached)
 
@@ -171,7 +179,7 @@ export function getRoleOptions(params?: { keyword?: string }) {
 
 // 获取接口权限选项（供菜单编辑时下拉选择器使用）
 export function getApiOptions(params?: { keyword?: string; is_auth?: number }) {
-    const key = `api:options:${JSON.stringify(params || {})}`
+    const key = buildApiCacheKey(API_CACHE_PREFIX.API_OPTIONS, params)
     const cached = apiCache.get<ApiOption[]>(key)
     if (cached) return Promise.resolve(cached)
 

@@ -90,7 +90,7 @@ vi.mock('@/utils/logger', () => ({
 }))
 
 import { ElMessage } from 'element-plus'
-import service, { get, post, request, upload } from '@/utils/request'
+import service, { get, normalizeApiData, post, request, upload } from '@/utils/request'
 import * as mockModule from '@/mock'
 
 const getCallback = <T>(value: T | undefined, name: string): T => {
@@ -235,6 +235,23 @@ describe('utils/request.ts', () => {
 
         expect(hoisted.mockAuthStore.updateToken).not.toHaveBeenCalled()
         expect(result).toEqual({ id: 1 })
+    })
+
+    it('normalizeApiData 应解包 result 与后端分页结构', () => {
+        expect(normalizeApiData({ result: [{ id: 1 }] })).toEqual([{ id: 1 }])
+        expect(
+            normalizeApiData({
+                data: [{ id: 2 }],
+                total: 8,
+                current_page: 3,
+                per_page: 20,
+            })
+        ).toEqual({
+            list: [{ id: 2 }],
+            total: 8,
+            page: 3,
+            pageSize: 20,
+        })
     })
 
     it('响应拦截器遇到业务 401 应刷新 access token 并重放请求', async () => {

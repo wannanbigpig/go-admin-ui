@@ -1,6 +1,6 @@
 import { get, post } from '@/utils/request'
 import type { PageData } from '@/types/common'
-import type { AdminUser, AdminUserQuery } from '@/types/adminUser'
+import type { AdminUser, AdminUserPayload, AdminUserQuery } from '@/types/adminUser'
 
 export function getAdminUserList(params: Partial<AdminUserQuery>) {
     return get<PageData<AdminUser>>('/v1/admin-user/list', { ...params })
@@ -29,11 +29,11 @@ export function getAdminUserDetail(params: { id: number | string }) {
     return get<AdminUser>('/v1/admin-user/detail', params)
 }
 
-export function createAdminUser(data: Record<string, unknown>) {
+export function createAdminUser(data: AdminUserPayload) {
     return post<unknown>('/v1/admin-user/create', data)
 }
 
-export function updateAdminUser(data: Record<string, unknown>) {
+export function updateAdminUser(data: AdminUserPayload) {
     return post<unknown>('/v1/admin-user/update', data)
 }
 

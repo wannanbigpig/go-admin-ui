@@ -49,6 +49,14 @@ export interface TokenResult {
  */
 export type LoginResult = TokenResult
 
+export interface LoginPayload {
+    username: string
+    password: string
+    captcha_id?: string
+    captcha?: string
+    [key: string]: unknown
+}
+
 export interface CaptchaResult {
     b64s: string
     id: string

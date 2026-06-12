@@ -19,6 +19,14 @@
         <div class="xl-container">
             <div class="xl-table-actions">
                 <el-button @click="handleToggleExpand">{{ isExpanded ? t('common.actions.collapseAll') : t('common.actions.expandAll') }}</el-button>
+                <xl-action-button
+                    v-permission="'menu:update'"
+                    :loading="refreshingPermissions"
+                    :show-icon="false"
+                    :text="t('permission.menu.refreshPermissionCache')"
+                    code="menu:update"
+                    @click="handleRefreshPermissions"
+                />
                 <xl-action-button v-permission="'menu:add'" :show-icon="false" type="primary" code="menu:add" @click="menuDrawerRef?.openEditDrawer(1)" />
             </div>
             <div>
@@ -65,9 +73,11 @@ import { useClipboard } from '@/composables/useClipboard'
 import { MENU_STATUS, MENU_TYPE } from '@/modules/menu/model'
 import { useMenuList } from '@/modules/menu/useMenuList'
 import { useMenuTreeExpand } from '@/modules/menu/useMenuTreeExpand'
+import { refreshMenuPermissionCache } from '@/modules/permission/service'
 import type { Menu } from '@/types/menu'
 import type { TableColumn } from '@/types/common'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 
 const { getButtonInfoFull } = usePermission()
 const { copyText } = useClipboard()
@@ -78,6 +88,7 @@ const deleteButtonInfo = getButtonInfoFull('menu:delete')
 
 const { loading, menuList, getList } = useMenuList()
 loading.value = true
+const refreshingPermissions = ref(false)
 const menuDrawerRef = ref<InstanceType<typeof MenuEditDrawer> | null>(null)
 
 const queryFormRef = ref()
@@ -111,6 +122,19 @@ const handleReset = () => {
     getList()
 }
 
+const handleRefreshPermissions = async () => {
+    refreshingPermissions.value = true
+    try {
+        await refreshMenuPermissionCache()
+        ElMessage.success(t('common.result.refreshSuccess'))
+        await getList(queryWhere)
+    } catch {
+        ElMessage.error(t('common.result.refreshFailed'))
+    } finally {
+        refreshingPermissions.value = false
+    }
+}
+
 const actionButtons = markRaw([
     {
         permission: 'menu:addChild',
@@ -137,9 +161,7 @@ const actionButtons = markRaw([
 onMounted(async () => {
     loading.value = true
     await nextTick()
-    // 等待过渡动画 (300ms) 彻底执行完毕，确保先流畅进入页面并显示骨架屏
-    // 避开由于 apiCache 立即同步 resolved 导致的重度 DOM 同步渲染对动画执行帧率的侵占
-    await new Promise<void>((resolve) => setTimeout(resolve, 350))
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
     await getList(queryWhere)
 })
 

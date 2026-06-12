@@ -13,3 +13,5 @@ export interface Role extends WithId, WithTimestamp {
     data_scope: number // 1=全部数据, 2=本部门及子级, 3=本部门, 4=仅本人, 5=自定义部门
     dept_ids?: number[] // 自定义部门时的部门 ID 列表
 }
+
+export type RolePayload = Partial<Pick<Role, 'id' | 'name' | 'code' | 'sort' | 'description' | 'menu_list' | 'permission_ids' | 'status' | 'remark' | 'data_scope' | 'dept_ids'>> & Record<string, unknown>

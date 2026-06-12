@@ -15,6 +15,11 @@ export function refreshAccessToken() {
     })
 }
 
+// 校验当前 access token 是否仍有效
+export function checkToken() {
+    return request<unknown>('/v1/auth/check-token', 'GET', { silent: true })
+}
+
 // 获取用户信息
 export function getUserInfo() {
     return get<UserInfo>('/v1/admin-user/get')

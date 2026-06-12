@@ -2,14 +2,14 @@ import { login, getCaptcha } from '@/api/login'
 import { getUserInfo, getUserMenuList, updateProfile } from '@/api/auth'
 import { createEmptyLoginResult, createEmptyUserInfo } from '@/modules/auth/model'
 import { normalizeArrayData, normalizeDetailData } from '@/modules/shared/response'
-import type { CaptchaResult, LoginResult, UserInfo, UserPermission } from '@/types/auth'
+import type { CaptchaResult, LoginPayload, LoginResult, UserInfo, UserPermission } from '@/types/auth'
 
 export async function fetchCaptcha(): Promise<CaptchaResult> {
     const response = await getCaptcha()
     return normalizeDetailData(response, { b64s: '', id: '', answer: '' })
 }
 
-export async function loginWithCredentials(data: Record<string, unknown>): Promise<LoginResult> {
+export async function loginWithCredentials(data: LoginPayload): Promise<LoginResult> {
     const response = await login(data)
     return normalizeDetailData(response, createEmptyLoginResult())
 }

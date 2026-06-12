@@ -1,10 +1,11 @@
 import { get, post } from '@/utils/request'
 import { apiCache } from '@/utils/apiCache'
-import type { Department } from '@/types/department'
+import { API_CACHE_PREFIX, buildApiCacheKey } from '@/utils/apiCacheKeys'
+import type { Department, DepartmentPayload } from '@/types/department'
 
 // 获取部门列表
 export function getDepartmentList(params?: Record<string, unknown>) {
-    const key = `dept:list:${JSON.stringify(params || {})}`
+    const key = buildApiCacheKey(API_CACHE_PREFIX.DEPARTMENT_LIST, params)
     const cached = apiCache.get<Department[]>(key)
     if (cached) return Promise.resolve(cached)
 
@@ -32,17 +33,17 @@ export function getDepartmentDetail(params: { id: number | string }) {
 }
 
 // 新增部门
-export function createDepartment(data: Record<string, unknown>) {
+export function createDepartment(data: DepartmentPayload) {
     return post<unknown>('/v1/department/create', data).then((res) => {
-        apiCache.deleteByPrefix('dept:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.DEPARTMENT_LIST)
         return res
     })
 }
 
 // 更新部门
-export function updateDepartment(data: Record<string, unknown>) {
+export function updateDepartment(data: DepartmentPayload) {
     return post<unknown>('/v1/department/update', data).then((res) => {
-        apiCache.deleteByPrefix('dept:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.DEPARTMENT_LIST)
         return res
     })
 }
@@ -50,7 +51,7 @@ export function updateDepartment(data: Record<string, unknown>) {
 // 删除部门
 export function deleteDepartment(data: { id: number | string }) {
     return post<unknown>('/v1/department/delete', data).then((res) => {
-        apiCache.deleteByPrefix('dept:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.DEPARTMENT_LIST)
         return res
     })
 }
@@ -58,7 +59,7 @@ export function deleteDepartment(data: { id: number | string }) {
 // 绑定角色
 export function bindDepartmentRole(data: { dept_id: number | string; role_ids: number[] }) {
     return post<unknown>('/v1/department/bind-role', data).then((res) => {
-        apiCache.deleteByPrefix('dept:list:')
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.DEPARTMENT_LIST)
         return res
     })
 }

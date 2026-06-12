@@ -43,6 +43,11 @@ export async function beforeEach(to: RouteLocationNormalized) {
         if (!refreshed) {
             return redirectToLogin(to)
         }
+    } else {
+        const valid = await authStore.ensureTokenValid()
+        if (!valid) {
+            return redirectToLogin(to)
+        }
     }
 
     // 刷新用户信息（如果需要）

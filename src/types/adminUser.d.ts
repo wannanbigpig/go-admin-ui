@@ -42,3 +42,8 @@ export interface AdminUserQuery {
     email?: string | null
     dept_id?: number | null
 }
+
+export type AdminUserPayload = Partial<
+    Pick<AdminUser, 'id' | 'username' | 'nickname' | 'password' | 'confirm_password' | 'phone_number' | 'country_code' | 'email' | 'avatar' | 'status' | 'is_super_admin' | 'dept_ids'>
+> &
+    Record<string, unknown>

@@ -1,4 +1,18 @@
-import { getPermissionList, editPermission, getMenuList, createMenu, updateMenu, getMenuDetail, deleteMenu, getRoleList, createRole, updateRole, getRoleDetail, deleteRole } from '@/api/permission'
+import {
+    getPermissionList,
+    editPermission,
+    getMenuList,
+    createMenu,
+    updateMenu,
+    getMenuDetail,
+    deleteMenu,
+    refreshAllMenuPermissions,
+    getRoleList,
+    createRole,
+    updateRole,
+    getRoleDetail,
+    deleteRole,
+} from '@/api/permission'
 import { normalizeArrayData, normalizeDetailData, normalizeListData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
@@ -35,6 +49,11 @@ export async function updateMenuItem(data: Record<string, unknown>) {
 
 export async function deleteMenuItem(id: number | string) {
     const response = await deleteMenu({ id })
+    return normalizeDetailData(response, {} as Record<string, unknown>)
+}
+
+export async function refreshMenuPermissionCache() {
+    const response = await refreshAllMenuPermissions()
     return normalizeDetailData(response, {} as Record<string, unknown>)
 }
 

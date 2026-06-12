@@ -34,6 +34,10 @@ export interface NotificationUnreadCount {
     count?: number
 }
 
+export interface WsTicketResult {
+    ticket: string
+}
+
 export interface NotificationReadPayload {
     id: string | number
 }

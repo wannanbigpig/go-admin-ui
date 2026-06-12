@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
-import { refreshAccessToken as refreshAccessTokenApi } from '@/api/auth'
+import { checkToken as checkTokenApi, refreshAccessToken as refreshAccessTokenApi } from '@/api/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
 import { removeDynamicRoute, convertRoute, addDynamicRoutes, findFirstValidRoute } from '@/router/dynamicRoutes'
@@ -8,12 +8,13 @@ import { ref, computed } from 'vue'
 import { buildButtonPermissionMap, extractButtonPermissions } from '@/modules/auth/permission'
 import { ElMessageBox } from 'element-plus'
 import { Logger } from '@/utils/logger'
-import type { UserInfo, UserPermission } from '@/types/auth'
+import type { LoginPayload, UserInfo, UserPermission } from '@/types/auth'
 import { translate } from '@/locales'
 
 // ==================== 常量定义 ====================
 /** 当前刷新用户信息的 Promise（用于并发控制） */
 let refreshingPromise: Promise<void> | null = null
+let checkingTokenPromise: Promise<boolean> | null = null
 const AUTH_PERSIST_KEY = 'auth'
 
 export const useAuthStore = defineStore(
@@ -27,6 +28,7 @@ export const useAuthStore = defineStore(
         const isTokenExpiredModalShown = ref<boolean>(false)
         const authStateVersion = ref(0)
         const authSessionVersion = ref(0)
+        const tokenCheckedKey = ref('')
 
         // ==================== Getters ====================
         /**
@@ -109,7 +111,7 @@ export const useAuthStore = defineStore(
         /**
          * 使用凭证登录
          */
-        const loginWithCredentials = async (credentials: Record<string, unknown>) => {
+        const loginWithCredentials = async (credentials: LoginPayload) => {
             resetAuthStore()
             const result = await submitLogin(credentials)
             updateToken(result.access_token, result.expires_at)
@@ -170,8 +172,31 @@ export const useAuthStore = defineStore(
             if (exp > expires_at.value) {
                 access_token.value = token
                 expires_at.value = exp
+                tokenCheckedKey.value = ''
                 authStateVersion.value++
             }
+        }
+
+        const ensureTokenValid = async () => {
+            if (!token.value) return false
+            const currentKey = `${access_token.value}:${expires_at.value}`
+            if (tokenCheckedKey.value === currentKey) return true
+            if (!checkingTokenPromise) {
+                checkingTokenPromise = checkTokenApi()
+                    .then(() => {
+                        tokenCheckedKey.value = currentKey
+                        return true
+                    })
+                    .catch(async (error) => {
+                        Logger.warn('access token 校验失败，尝试静默刷新:', error)
+                        await refreshAccessToken()
+                        return Boolean(token.value)
+                    })
+                    .finally(() => {
+                        checkingTokenPromise = null
+                    })
+            }
+            return checkingTokenPromise
         }
 
         /**
@@ -191,10 +216,12 @@ export const useAuthStore = defineStore(
             authStateVersion.value++
             access_token.value = ''
             expires_at.value = 0
+            tokenCheckedKey.value = ''
             userInfo.value = createEmptyUserInfo()
             menu.value = []
             isTokenExpiredModalShown.value = false
             refreshingPromise = null
+            checkingTokenPromise = null
             localStorage.removeItem(AUTH_PERSIST_KEY)
             removeDynamicRoute()
         }
@@ -246,6 +273,7 @@ export const useAuthStore = defineStore(
             // Actions
             loginWithCredentials,
             refreshUserInfo,
+            ensureTokenValid,
             refreshAccessToken,
             updateToken,
             resetAuthStore,

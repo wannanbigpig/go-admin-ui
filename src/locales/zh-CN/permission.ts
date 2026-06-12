@@ -126,6 +126,7 @@ export default {
         basicInfo: '基础信息',
         selectPermission: '选择权限',
         menuPermission: '菜单权限',
+        refreshPermissionCache: '刷新权限缓存',
         bindableApi: '可绑定接口',
         boundApi: '已绑定接口',
         allStatus: '全部',

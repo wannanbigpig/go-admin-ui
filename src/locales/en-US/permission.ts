@@ -126,6 +126,7 @@ export default {
         basicInfo: 'Basic Info',
         selectPermission: 'Select Permissions',
         menuPermission: 'Menu Permissions',
+        refreshPermissionCache: 'Refresh Permission Cache',
         bindableApi: 'Bindable APIs',
         boundApi: 'Bound APIs',
         allStatus: 'All',
