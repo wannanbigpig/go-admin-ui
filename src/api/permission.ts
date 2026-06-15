@@ -148,11 +148,6 @@ export function deleteRole(data: { id: number | string }) {
     })
 }
 
-// 后端响应包装类型（数组会被包装成 { result: [...] } 格式）
-interface ResultResponse<T> {
-    result: T[]
-}
-
 // 获取角色选项（供下拉选择器使用）
 export function getRoleOptions(params?: { keyword?: string }) {
     const key = buildApiCacheKey(API_CACHE_PREFIX.ROLE_OPTIONS, params)
@@ -162,11 +157,11 @@ export function getRoleOptions(params?: { keyword?: string }) {
     const pending = apiCache.getPending<RoleOption[]>(key)
     if (pending) return pending
 
-    const promise = get<ResultResponse<RoleOption>>('/v1/role/options', params)
+    const promise = get<RoleOption[]>('/v1/role/options', params)
         .then((res) => {
-            apiCache.set(key, res.result)
+            apiCache.set(key, res)
             apiCache.deletePending(key)
-            return res.result
+            return res
         })
         .catch((err) => {
             apiCache.deletePending(key)
@@ -186,11 +181,11 @@ export function getApiOptions(params?: { keyword?: string; is_auth?: number }) {
     const pending = apiCache.getPending<ApiOption[]>(key)
     if (pending) return pending
 
-    const promise = get<ResultResponse<ApiOption>>('/v1/permission/options', params)
+    const promise = get<ApiOption[]>('/v1/permission/options', params)
         .then((res) => {
-            apiCache.set(key, res.result)
+            apiCache.set(key, res)
             apiCache.deletePending(key)
-            return res.result
+            return res
         })
         .catch((err) => {
             apiCache.deletePending(key)

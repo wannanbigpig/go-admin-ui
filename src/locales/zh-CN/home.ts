@@ -17,6 +17,7 @@ export default {
         shortcuts: '快捷入口',
         todoTitle: '待办事项',
         activityTitle: '最近动态',
+        serverMonitor: '服务器监控',
         pendingCount: '{count} 项待处理',
         empty: '暂无数据',
         trend: {

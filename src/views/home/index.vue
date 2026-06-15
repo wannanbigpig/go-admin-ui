@@ -154,6 +154,76 @@
             </el-col>
         </el-row>
 
+        <el-row v-if="hasPermission('dashboard:monitor') && dashboardMonitor" :gutter="16" class="dashboard-row">
+            <el-col :span="24">
+                <el-card shadow="never">
+                    <template #header>
+                        <div class="card-header">
+                            <span>{{ t('home.dashboard.serverMonitor') }}</span>
+                            <el-tag type="info" size="small">{{ formatUptime(dashboardMonitor.host?.uptime || 0) }}</el-tag>
+                        </div>
+                    </template>
+                    <el-row :gutter="16">
+                        <el-col :span="6">
+                            <div class="monitor-stat">
+                                <div class="monitor-stat-label">{{ t('system.monitor.cpu') }}</div>
+                                <el-progress
+                                    type="dashboard"
+                                    :percentage="Math.round(dashboardMonitor.host?.cpu?.usage_percent || 0)"
+                                    :color="getProgressColor(dashboardMonitor.host?.cpu?.usage_percent || 0)"
+                                    :size="100"
+                                />
+                                <div class="monitor-stat-info">{{ t('system.monitor.cpuCores', { cores: dashboardMonitor.host?.cpu?.cores || 0 }) }}</div>
+                            </div>
+                        </el-col>
+                        <el-col :span="6">
+                            <div class="monitor-stat">
+                                <div class="monitor-stat-label">{{ t('system.monitor.memory') }}</div>
+                                <el-progress
+                                    type="dashboard"
+                                    :percentage="Math.round(dashboardMonitor.host?.memory?.usage_percent || 0)"
+                                    :color="getProgressColor(dashboardMonitor.host?.memory?.usage_percent || 0)"
+                                    :size="100"
+                                />
+                                <div class="monitor-stat-info">{{ formatBytes(dashboardMonitor.host?.memory?.used || 0) }} / {{ formatBytes(dashboardMonitor.host?.memory?.total || 0) }}</div>
+                            </div>
+                        </el-col>
+                        <el-col :span="6">
+                            <div class="monitor-stat">
+                                <div class="monitor-stat-label">{{ t('system.monitor.disk') }}</div>
+                                <el-progress
+                                    type="dashboard"
+                                    :percentage="Math.round(dashboardMonitor.host?.disk?.usage_percent || 0)"
+                                    :color="getProgressColor(dashboardMonitor.host?.disk?.usage_percent || 0)"
+                                    :size="100"
+                                />
+                                <div class="monitor-stat-info">{{ formatBytes(dashboardMonitor.host?.disk?.used || 0) }} / {{ formatBytes(dashboardMonitor.host?.disk?.total || 0) }}</div>
+                            </div>
+                        </el-col>
+                        <el-col :span="6">
+                            <div class="monitor-stat">
+                                <div class="monitor-stat-label">{{ t('system.monitor.load') }}</div>
+                                <div class="monitor-load-grid">
+                                    <div class="monitor-load-item">
+                                        <div class="monitor-load-value">{{ (dashboardMonitor.host?.load?.load1 || 0).toFixed(2) }}</div>
+                                        <div class="monitor-load-label">1 min</div>
+                                    </div>
+                                    <div class="monitor-load-item">
+                                        <div class="monitor-load-value">{{ (dashboardMonitor.host?.load?.load5 || 0).toFixed(2) }}</div>
+                                        <div class="monitor-load-label">5 min</div>
+                                    </div>
+                                    <div class="monitor-load-item">
+                                        <div class="monitor-load-value">{{ (dashboardMonitor.host?.load?.load15 || 0).toFixed(2) }}</div>
+                                        <div class="monitor-load-label">15 min</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-col>
+                    </el-row>
+                </el-card>
+            </el-col>
+        </el-row>
+
         <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
             <el-col :span="24">
                 <el-card shadow="never">
@@ -187,6 +257,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
+import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingStore } from '@/stores/setting'
 import { hasPermission } from '@/utils/auth'
@@ -208,6 +279,7 @@ const lastLoginIP = ref('')
 const dashboardLoading = ref(false)
 const dashboardOverview = ref<DashboardOverview | null>(null)
 const dashboardStatistics = ref<DashboardStatistics | null>(null)
+const dashboardMonitor = ref<DashboardMonitor | null>(null)
 const trendChartRef = ref<HTMLDivElement>()
 const responseTimeChartRef = ref<HTMLDivElement>()
 const errorCodesChartRef = ref<HTMLDivElement>()
@@ -302,6 +374,43 @@ const storageByType = computed(() => {
     }))
 })
 
+// 服务器监控相关
+const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const formatUptime = (seconds: number): string => {
+    if (seconds === 0) return '-'
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+
+    const parts = []
+    if (days > 0) parts.push(t('system.monitor.uptimeDays', { days }))
+    if (hours > 0) parts.push(t('system.monitor.uptimeHours', { hours }))
+    if (minutes > 0) parts.push(t('system.monitor.uptimeMinutes', { minutes }))
+    return parts.join(' ') || t('system.monitor.uptimeJustStarted')
+}
+
+const getProgressColor = (percentage: number): string => {
+    if (percentage >= 90) return '#f56c6c'
+    if (percentage >= 70) return '#e6a23c'
+    return '#67c23a'
+}
+
+const fetchMonitor = async () => {
+    try {
+        const res = await getDashboardMonitor()
+        dashboardMonitor.value = res
+    } catch {
+        // 获取监控数据失败
+    }
+}
+
 const toDisplayText = (value: unknown, fallback: string) => {
     return typeof value === 'string' && value.trim() ? value : fallback
 }
@@ -381,6 +490,7 @@ const gridWithAxisLabelBounds = {
 }
 
 let resizeObserver: ResizeObserver | null = null
+let monitorTimer: ReturnType<typeof setInterval> | null = null
 
 const initResizeObserver = () => {
     if (typeof ResizeObserver === 'undefined') return
@@ -487,7 +597,9 @@ onMounted(async () => {
     isMounted = true
     initResizeObserver()
     await ensureEcharts()
-    await refreshDashboard()
+    await Promise.all([refreshDashboard(), fetchMonitor()])
+    // 每 30 秒刷新一次监控数据
+    monitorTimer = setInterval(fetchMonitor, 30000)
 })
 
 onUnmounted(() => {
@@ -497,6 +609,10 @@ onUnmounted(() => {
     trendChart?.dispose()
     responseTimeChart?.dispose()
     errorCodesChart?.dispose()
+    if (monitorTimer) {
+        clearInterval(monitorTimer)
+        monitorTimer = null
+    }
 })
 
 watch(
@@ -611,6 +727,45 @@ h1 {
     justify-content: flex-start;
     height: 44px;
     margin: 0;
+}
+
+.monitor-stat {
+    text-align: center;
+    padding: 16px 0;
+}
+
+.monitor-stat-label {
+    font-size: 14px;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 12px;
+}
+
+.monitor-stat-info {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    margin-top: 8px;
+}
+
+.monitor-load-grid {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px 0;
+}
+
+.monitor-load-item {
+    text-align: center;
+}
+
+.monitor-load-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+}
+
+.monitor-load-label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    margin-top: 4px;
 }
 
 .dashboard-table {

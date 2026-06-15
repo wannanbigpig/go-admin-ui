@@ -17,6 +17,7 @@ export default {
         shortcuts: 'Shortcuts',
         todoTitle: 'Todo Items',
         activityTitle: 'Recent Activity',
+        serverMonitor: 'Server Monitor',
         pendingCount: '{count} pending',
         empty: 'No data',
         trend: {
