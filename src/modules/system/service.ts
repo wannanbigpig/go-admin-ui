@@ -24,6 +24,7 @@ import type {
     SystemFileReference,
     SystemFileFolder,
     SystemFileFolderPayload,
+    SystemFilePayload,
     SystemFileBatchDeletePayload,
     SystemFileBatchDeleteResult,
     SystemFileMovePayload,
@@ -383,6 +384,11 @@ export async function fetchSystemFileReferences(params: { id?: number | string; 
     return normalizeListData<SystemFileReference>(response).list
 }
 
+export async function modifySystemFile(data: SystemFilePayload) {
+    const response = await systemApi.updateSystemFile(data)
+    return normalizeDetailData(response, {} as SystemFile)
+}
+
 export async function fetchSystemFileFolderTree() {
     const response = await systemApi.getSystemFileFolderTree()
     return normalizeArrayData<SystemFileFolder>(response)
@@ -399,7 +405,7 @@ export async function modifySystemFileFolder(data: SystemFileFolderPayload) {
 }
 
 export async function removeSystemFileFolder(id: number | string) {
-    return systemApi.deleteSystemFileFolder({ id })
+    return systemApi.deleteSystemFileFolder({ id, confirm: 1 })
 }
 
 export async function fetchSystemFileFolderStats(id: number | string) {

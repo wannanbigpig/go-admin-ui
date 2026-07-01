@@ -85,9 +85,15 @@
                         <span>{{ t('system.notification.formScopeTitle') }}</span>
                     </template>
                     <ul class="notification-manage-page__scope-list">
-                        <li>{{ t('system.notification.formScopeItems.listOnly') }}</li>
-                        <li>{{ t('system.notification.formScopeItems.noDetail') }}</li>
-                        <li>{{ t('system.notification.formScopeItems.noRichText') }}</li>
+                        <li v-for="item in scopeItems" :key="item.key" class="scope-item">
+                            <div class="scope-item__icon-wrapper" :style="{ backgroundColor: item.bgColor, color: item.color }">
+                                <el-icon :size="16"><component :is="item.icon" /></el-icon>
+                            </div>
+                            <div class="scope-item__body">
+                                <div class="scope-item__title" :style="{ color: item.color }">{{ item.title }}</div>
+                                <div class="scope-item__content">{{ item.content }}</div>
+                            </div>
+                        </li>
                     </ul>
                 </el-card>
             </div>
@@ -96,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, Bell, Position, Warning } from '@element-plus/icons-vue'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -132,6 +138,39 @@ const createInitialForm = (): NotificationManageFormState => ({
 const form = reactive<NotificationManageFormState>(createInitialForm())
 
 const categoryOptions = useNotificationCategoryOptions()
+
+const scopeItems = computed(() => {
+    const items = [
+        {
+            key: 'listOnly',
+            icon: Bell,
+            color: 'var(--el-color-primary)',
+            bgColor: 'var(--el-color-primary-light-9)',
+        },
+        {
+            key: 'noDetail',
+            icon: Position,
+            color: 'var(--el-color-success)',
+            bgColor: 'var(--el-color-success-light-9)',
+        },
+        {
+            key: 'noRichText',
+            icon: Warning,
+            color: 'var(--el-color-warning)',
+            bgColor: 'var(--el-color-warning-light-9)',
+        },
+    ]
+
+    return items.map((item) => {
+        const rawText = t(`system.notification.formScopeItems.${item.key}`)
+        const match = rawText.match(/^([【[])(.*?)([】\]])(.*)$/)
+        return {
+            ...item,
+            title: match ? match[2] : '',
+            content: match ? match[4].trim() : rawText,
+        }
+    })
+})
 
 const currentCategoryLabel = computed(() => categoryOptions.value.find((item) => item.value === form.category)?.label || form.category)
 
@@ -341,21 +380,54 @@ const openNotificationCenter = async () => {
     flex-direction: column;
     gap: 12px;
 
-    li {
-        position: relative;
-        padding: 12px 14px;
-        background-color: var(--el-fill-color-light);
+    .scope-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+        background-color: var(--el-bg-color-overlay);
+        border: 1px solid var(--el-border-color-lighter);
         border-radius: 8px;
-        font-size: 13px;
-        line-height: 1.6;
-        color: var(--el-text-color-regular);
-        border-left: 3px solid var(--el-color-primary-light-3);
-        transition: all 0.2s ease;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
-            background-color: var(--el-fill-color-lighter);
-            transform: translateX(2px);
+            border-color: var(--el-border-color-light);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            transform: translateY(-1px);
         }
+    }
+
+    .scope-item__icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+    }
+
+    .scope-item:hover .scope-item__icon-wrapper {
+        transform: scale(1.05);
+    }
+
+    .scope-item__body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .scope-item__title {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.4;
+    }
+
+    .scope-item__content {
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--el-text-color-regular);
     }
 }
 

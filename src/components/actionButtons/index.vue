@@ -30,9 +30,11 @@
                 @click="handleClick(button, scope)"
             />
             <el-dropdown v-if="hasMoreButtons" trigger="click" size="small" teleported persistent>
-                <el-button type="primary" link>
-                    {{ t('layout.more') }}
-                    <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                <el-button type="primary" link class="more-trigger-button">
+                    <span class="more-trigger-content">
+                        <span>{{ t('layout.more') }}</span>
+                        <el-icon><ArrowDown /></el-icon>
+                    </span>
                 </el-button>
                 <template #dropdown>
                     <el-dropdown-menu>
@@ -196,6 +198,18 @@ const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, ev
     justify-content: center;
     gap: 8px;
     width: 100%;
+}
+.more-trigger-button {
+    :deep(span) {
+        display: inline-flex;
+        align-items: center;
+    }
+}
+.more-trigger-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
 }
 .more-button-tooltip-wrapper {
     display: block;

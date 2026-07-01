@@ -37,10 +37,10 @@
 
             <el-row :gutter="16">
                 <el-col v-for="item in summaryCardsTop" :key="item.key" :xs="24" :sm="12" :lg="6">
-                    <el-card shadow="hover" class="xl-stat-card premium-card">
+                    <el-card shadow="hover" class="xl-stat-card premium-stat-card">
                         <div class="stat-content">
                             <div class="stat-icon-wrapper" :style="{ backgroundColor: item.bgColor, color: item.color }">
-                                <el-icon :size="24"><component :is="item.icon" /></el-icon>
+                                <el-icon :size="20"><component :is="item.icon" /></el-icon>
                             </div>
                             <div class="stat-info">
                                 <div class="stat-title">{{ item.title }}</div>
@@ -55,15 +55,15 @@
 
             <el-row :gutter="16" class="xl-m-top-16">
                 <el-col v-for="item in summaryCardsBottom" :key="item.key" :xs="24" :sm="12" :lg="6">
-                    <el-card shadow="hover" class="xl-stat-card mini-card">
+                    <el-card shadow="hover" class="xl-stat-card premium-stat-card">
                         <div class="stat-content">
-                            <div class="stat-icon-wrapper mini" :style="{ backgroundColor: item.bgColor, color: item.color }">
-                                <el-icon :size="16"><component :is="item.icon" /></el-icon>
+                            <div class="stat-icon-wrapper" :style="{ backgroundColor: item.bgColor, color: item.color }">
+                                <el-icon :size="20"><component :is="item.icon" /></el-icon>
                             </div>
                             <div class="stat-info">
                                 <div class="stat-title">{{ item.title }}</div>
-                                <div class="stat-value">
-                                    <el-statistic :value="item.value" :precision="item.precision" :suffix="item.suffix" value-style="font-size: 18px; font-weight: 600;" />
+                                <div class="stat-value" :style="{ color: item.color }">
+                                    <el-statistic :value="item.value" :precision="item.precision" :suffix="item.suffix" />
                                 </div>
                             </div>
                         </div>
@@ -389,34 +389,35 @@ onBeforeUnmount(() => {
         border: 1px solid var(--el-border-color-light);
     }
 
-    /* 顶部高级卡片样式 */
-    .premium-card {
+    /* 统一的优质统计卡片样式 */
+    .premium-stat-card {
         border-radius: 12px;
-        border: none;
+        border: 1px solid var(--el-border-color-lighter);
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         background: linear-gradient(145deg, var(--el-bg-color), var(--el-bg-color-page));
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 
         &:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            border-color: var(--el-border-color-light);
 
             .stat-icon-wrapper {
-                transform: scale(1.1) rotate(5deg);
+                transform: scale(1.08) rotate(3deg);
             }
         }
 
         .stat-content {
             display: flex;
             align-items: center;
-            padding: 10px 4px;
-            gap: 16px;
+            padding: 8px 4px;
+            gap: 14px;
         }
 
         .stat-icon-wrapper {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -430,7 +431,7 @@ onBeforeUnmount(() => {
         }
 
         .stat-title {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--el-text-color-secondary);
             margin-bottom: 4px;
             white-space: nowrap;
@@ -439,7 +440,7 @@ onBeforeUnmount(() => {
         }
 
         .stat-value {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 700;
             line-height: 1.2;
         }
@@ -448,55 +449,6 @@ onBeforeUnmount(() => {
             font-size: inherit;
             font-weight: inherit;
             color: inherit;
-        }
-    }
-
-    /* 底部次要卡片样式 */
-    .mini-card {
-        border-radius: 10px;
-        border: 1px solid var(--el-border-color-lighter);
-        transition: all 0.3s ease;
-        box-shadow: none;
-
-        &:hover {
-            border-color: var(--el-color-primary-light-5);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-            transform: translateY(-2px);
-        }
-
-        .stat-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 4px;
-        }
-
-        .stat-icon-wrapper.mini {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .stat-info {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .stat-title {
-            font-size: 13px;
-            color: var(--el-text-color-regular);
-            margin-bottom: 2px;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-        }
-
-        .stat-value {
-            color: var(--el-text-color-primary);
         }
     }
 

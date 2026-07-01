@@ -7,24 +7,30 @@ import type { PageData } from '@/types/common'
 import type { SystemFile, SystemFileFolder, SystemFileReference, SystemFileBatchDeleteResult } from '@/types/system'
 import {
     fetchSystemFileDetail,
+    fetchSystemFileFolderStats,
     removeSystemFile,
+    removeSystemFileFolder,
     fetchSystemFileTrashList,
     restoreSystemFileFromTrash,
     restoreSystemFilesBatchFromTrash,
     destroySystemFileFromTrash,
     destroySystemFilesBatchFromTrash,
     fetchSystemFileReferences,
+    modifySystemFile,
+    modifySystemFileFolder,
     removeSystemFilesBatch,
     moveSystemFileFolder,
     moveSystemFiles,
 } from '@/modules/system/service'
 import { ROOT_FOLDER_KEY } from './useFileFolder'
 
+export type FileOperationItem = (SystemFile & { item_type?: 'file' }) | (SystemFileFolder & { item_type: 'folder'; origin_name?: string; total_size?: number; file_count?: number; child_folder_count?: number })
+
 export function useFileOperations(options: { selectedFolderId: Ref<number | string | null>; getList: () => Promise<void>; loadFolderTree: () => Promise<void> }) {
     const { t } = useI18n()
     const { selectedFolderId, getList, loadFolderTree } = options
 
-    const selectedFiles = ref<SystemFile[]>([])
+    const selectedFiles = ref<FileOperationItem[]>([])
     const selectedTrashFiles = ref<SystemFile[]>([])
     const batchDeleting = ref(false)
     const batchTrashOperating = ref(false)
@@ -55,6 +61,11 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
     const deleteConfirmReferences = ref<SystemFileReference[]>([])
     const pendingDeleteFile = ref<SystemFile | null>(null)
 
+    const showRenameDialog = ref(false)
+    const renameSubmitting = ref(false)
+    const renameTarget = ref<FileOperationItem | null>(null)
+    const renameForm = reactive({ name: '' })
+
     const showTrashDialog = ref(false)
     const trashList = ref<SystemFile[]>([])
     const trashLoading = ref(false)
@@ -75,11 +86,23 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
     })
 
     const moveDialogTitle = computed(() => (moveMode.value === 'folder' ? t('system.file.moveFolder') : t('system.file.batchMove')))
+    const renameDialogTitle = computed(() => (isFolderItem(renameTarget.value) ? t('system.file.renameFolder') : t('system.file.renameFile')))
 
     const normalizeFolderId = (value?: number | string | null) => (value === ROOT_FOLDER_KEY || value === undefined || value === '' || value === 0 || value === '0' ? null : value)
     const normalizeFolderSelectValue = (value?: number | string | null): number | string | null => (normalizeFolderId(value) === null ? ROOT_FOLDER_KEY : (value ?? null))
 
-    const handleSelectionChange = (selection: SystemFile[]) => {
+    const isFolderItem = (item?: FileOperationItem | null): item is Extract<FileOperationItem, { item_type: 'folder' }> => item?.item_type === 'folder'
+    const isFileItem = (item?: FileOperationItem | null): item is SystemFile => !isFolderItem(item)
+    const splitOperationItems = (items: FileOperationItem[]) => ({
+        files: items.filter(isFileItem),
+        folders: items.filter(isFolderItem),
+    })
+    const getItemName = (item: FileOperationItem | null) => {
+        if (!item) return ''
+        return isFolderItem(item) ? item.name : item.origin_name || item.display_name || item.name || ''
+    }
+
+    const handleSelectionChange = (selection: FileOperationItem[]) => {
         selectedFiles.value = selection
     }
 
@@ -111,15 +134,22 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
                 await loadFolderTree()
                 return
             }
-            const ids = selectedFiles.value.map((item) => item.id)
-            if (ids.length === 0) {
+            const { files, folders } = splitOperationItems(selectedFiles.value)
+            if (files.length === 0 && folders.length === 0) {
                 ElMessage.warning(t('system.file.selectFileFirst'))
                 return
             }
-            await moveSystemFiles({ ids, folder_id: normalizeFolderId(moveTargetFolderId.value) })
+            const targetFolderId = normalizeFolderId(moveTargetFolderId.value)
+            if (files.length > 0) {
+                await moveSystemFiles({ ids: files.map((item) => item.id), folder_id: targetFolderId })
+            }
+            for (const folder of folders) {
+                await moveSystemFileFolder(folder.id, targetFolderId)
+            }
             ElMessage.success(t('system.file.moveSuccess'))
             showMoveDialog.value = false
             selectedFiles.value = []
+            await loadFolderTree()
             await getList()
         } catch (error) {
             Logger.error('移动文件资源失败:', error)
@@ -128,11 +158,36 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         }
     }
 
-    const openDetailDrawer = async (row: SystemFile) => {
+    const openDetailDrawer = async (row: FileOperationItem) => {
         showDetailDrawer.value = true
         detailLoading.value = true
         detailReferences.value = []
         try {
+            if (isFolderItem(row)) {
+                const stats = await fetchSystemFileFolderStats(row.id)
+                currentDetail.value = {
+                    id: row.id,
+                    item_type: 'folder',
+                    uid: 0,
+                    folder_id: row.parent_id ?? null,
+                    logical_path: row.path || '',
+                    display_name: row.name,
+                    origin_name: row.name,
+                    name: row.name,
+                    path: row.path || '',
+                    size: stats.total_size || row.total_size || 0,
+                    uuid: '',
+                    mime_type: '',
+                    file_type: 'folder',
+                    is_public: 0,
+                    file_count: stats.file_count,
+                    child_folder_count: stats.child_folder_count,
+                    total_size: stats.total_size,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                } as SystemFile
+                return
+            }
             const detail = await fetchSystemFileDetail(row.id)
             currentDetail.value = detail
             detailReferences.value = Array.isArray(detail.references) ? detail.references : await fetchSystemFileReferences({ id: row.id })
@@ -140,6 +195,37 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
             Logger.error('获取文件资源详情失败:', error)
         } finally {
             detailLoading.value = false
+        }
+    }
+
+    const openRenameDialog = (item: FileOperationItem) => {
+        renameTarget.value = item
+        renameForm.name = getItemName(item)
+        showRenameDialog.value = true
+    }
+
+    const submitRenameDialog = async () => {
+        const target = renameTarget.value
+        const name = renameForm.name.trim()
+        if (!target || !name) {
+            ElMessage.warning(t('system.file.fileNameRequired'))
+            return
+        }
+        renameSubmitting.value = true
+        try {
+            if (isFolderItem(target)) {
+                await modifySystemFileFolder({ id: target.id, name })
+                await loadFolderTree()
+            } else {
+                await modifySystemFile({ id: target.id, origin_name: name })
+            }
+            ElMessage.success(t('common.result.editSuccess'))
+            showRenameDialog.value = false
+            await getList()
+        } catch (error) {
+            Logger.error('重命名文件资源失败:', error)
+        } finally {
+            renameSubmitting.value = false
         }
     }
 
@@ -227,7 +313,47 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         }
     }
 
-    const handleDelete = async (row: SystemFile) => {
+    const showReferenceFailure = (references: SystemFileReference[], title?: string) => {
+        activeReferences.value = references
+        referencesDialogTitle.value = title || t('system.file.deleteBlockedTitle')
+        showReferencesDialog.value = true
+    }
+
+    const deleteFolderWithConfirm = async (folder: Extract<FileOperationItem, { item_type: 'folder' }>) => {
+        const stats = await fetchSystemFileFolderStats(folder.id)
+        await ElMessageBox.confirm(
+            t('system.file.deleteFolderCascadeConfirm', {
+                fileCount: stats.file_count,
+                folderCount: stats.child_folder_count,
+            }),
+            t(CONFIRM_DIALOG_TITLE),
+            { type: 'warning' }
+        )
+        deletingId.value = folder.id
+        await removeSystemFileFolder(folder.id)
+        ElMessage.success(t('common.result.deleteSuccess'))
+        await loadFolderTree()
+        await getList()
+    }
+
+    const handleDelete = async (row: FileOperationItem) => {
+        if (isFolderItem(row)) {
+            try {
+                await deleteFolderWithConfirm(row)
+            } catch (error) {
+                if (error === 'cancel' || error === 'close') return
+                const references = findReferencesInError(error)
+                if (references.length > 0) {
+                    showReferenceFailure(references)
+                    return
+                }
+                Logger.error('删除文件夹失败:', error)
+            } finally {
+                deletingId.value = null
+            }
+            return
+        }
+
         try {
             await ElMessageBox.confirm(t('system.file.deleteConfirm'), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
             deletingId.value = row.id
@@ -320,22 +446,59 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         }
 
         try {
-            await ElMessageBox.confirm(t('system.file.batchDeleteConfirm', { count: selectedFiles.value.length }), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
+            const { files, folders } = splitOperationItems(selectedFiles.value)
+            if (folders.length > 0) {
+                const statsList = await Promise.all(folders.map((folder) => fetchSystemFileFolderStats(folder.id)))
+                const fileCount = statsList.reduce((total, item) => total + Number(item.file_count || 0), 0)
+                const childFolderCount = statsList.reduce((total, item) => total + Number(item.child_folder_count || 0), 0)
+                await ElMessageBox.confirm(
+                    t('system.file.batchDeleteWithFoldersConfirm', {
+                        count: selectedFiles.value.length,
+                        folderCount: folders.length,
+                        fileCount,
+                        childFolderCount,
+                    }),
+                    t(CONFIRM_DIALOG_TITLE),
+                    { type: 'warning' }
+                )
+            } else {
+                await ElMessageBox.confirm(t('system.file.batchDeleteConfirm', { count: files.length }), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
+            }
             batchDeleting.value = true
-            const result = await removeSystemFilesBatch({
-                ids: selectedFiles.value.map((item) => item.id),
-            })
 
-            const firstFailureWithReferences = (result.failures || []).find((item) => Array.isArray(item.references) && item.references.length > 0)
-            if (firstFailureWithReferences) {
-                activeReferences.value = firstFailureWithReferences.references || []
-                referencesDialogTitle.value = firstFailureWithReferences.message || t('system.file.deleteBlockedTitle')
-                showReferencesDialog.value = true
+            let fileResult: SystemFileBatchDeleteResult | null = null
+            if (files.length > 0) {
+                fileResult = await removeSystemFilesBatch({
+                    ids: files.map((item) => item.id),
+                })
+
+                const firstFailureWithReferences = (fileResult.failures || []).find((item) => Array.isArray(item.references) && item.references.length > 0)
+                if (firstFailureWithReferences) {
+                    showReferenceFailure(firstFailureWithReferences.references || [], firstFailureWithReferences.message)
+                }
+            }
+
+            for (const folder of folders) {
+                try {
+                    await removeSystemFileFolder(folder.id)
+                } catch (error) {
+                    const references = findReferencesInError(error)
+                    if (references.length > 0) {
+                        showReferenceFailure(references)
+                        continue
+                    }
+                    throw error
+                }
             }
 
             selectedFiles.value = []
+            await loadFolderTree()
             await getList()
-            showBatchDeleteResult(result)
+            if (fileResult) {
+                showBatchDeleteResult(fileResult)
+            } else {
+                ElMessage.success(t('common.result.deleteSuccess'))
+            }
         } catch (error) {
             if (error === 'cancel' || error === 'close') return
             Logger.error('批量删除文件资源失败:', error)
@@ -365,6 +528,11 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         moveTargetFolderId,
         movingFolder,
         moveDialogTitle,
+        showRenameDialog,
+        renameSubmitting,
+        renameTarget,
+        renameForm,
+        renameDialogTitle,
         showDetailDrawer,
         detailLoading,
         currentDetail,
@@ -393,6 +561,8 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         openFolderMoveDialog,
         submitMoveDialog,
         openDetailDrawer,
+        openRenameDialog,
+        submitRenameDialog,
         formatReferenceField,
         openReferencesDialog,
         loadTrashList,

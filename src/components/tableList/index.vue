@@ -24,7 +24,7 @@
                 @selection-change="handleSelectionChange"
                 @sort-change="handleSortChange"
             >
-                <el-table-column v-if="selectable" type="selection" width="48" align="center" />
+                <el-table-column v-if="selectable" type="selection" width="48" align="center" :selectable="rowSelectable" />
                 <template v-if="hasTableTitle">
                     <el-table-column
                         v-for="(item, index) in tableTitle"
@@ -91,7 +91,7 @@ interface Props {
     load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
     defaultExpandAll?: boolean
-    selectable?: boolean
+    selectable?: boolean | ((row: T, index: number) => boolean)
     height?: string | number
     pagination?: {
         total: number
@@ -124,6 +124,9 @@ const showPagination = computed(() => props.pagination && typeof props.paginatio
 const currentPage = computed(() => props.pagination.currentPage ?? props.pagination.page ?? 1)
 const pageSize = computed(() => props.pagination.pageSize ?? 10)
 const hasTableTitle = computed(() => props.tableTitle.length > 0)
+const rowSelectable = (row: T, index: number) => {
+    return typeof props.selectable === 'function' ? props.selectable(row, index) : true
+}
 
 const getCellValue = (item: TableColumn<T>, row: T) => {
     if (typeof item.formatter === 'function') return item.formatter(row)

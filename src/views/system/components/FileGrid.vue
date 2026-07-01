@@ -8,7 +8,22 @@
     >
         <!-- Folders first -->
         <template v-if="selectedCategory === 'all'">
-            <div v-for="folder in folders" :key="folder.id" class="file-grid-item folder-item" role="button" tabindex="0" @dblclick="emit('folder-click', folder)" @keydown.enter="emit('folder-click', folder)" @keydown.space.prevent="openContextMenu($event, 'folder', folder)" @contextmenu.prevent="openContextMenu($event, 'folder', folder)">
+            <div
+                v-for="folder in folders"
+                :key="folder.id"
+                class="file-grid-item folder-item"
+                :class="{ 'is-selected': isFolderSelected(folder) }"
+                role="button"
+                tabindex="0"
+                @click="handleFolderClick(folder)"
+                @dblclick="emit('folder-click', folder)"
+                @keydown.enter="emit('folder-click', folder)"
+                @keydown.space.prevent="toggleFolderSelection(folder)"
+                @contextmenu.prevent="openContextMenu($event, 'folder', folder)"
+            >
+                <div class="item-checkbox" @click.stop>
+                    <el-checkbox :model-value="isFolderSelected(folder)" @change="toggleFolderSelection(folder)" />
+                </div>
                 <div class="item-icon-box">
                     <div class="folder-icon">
                         <el-icon :size="48"><FolderOpened /></el-icon>
@@ -85,6 +100,9 @@
                             <el-dropdown-item command="detail">
                                 <el-icon><InfoFilled /></el-icon>{{ t('common.actions.detail') }}
                             </el-dropdown-item>
+                            <el-dropdown-item command="rename">
+                                <el-icon><Edit /></el-icon>{{ t('common.actions.rename') }}
+                            </el-dropdown-item>
                             <el-dropdown-item command="move">
                                 <el-icon><Rank /></el-icon>{{ t('system.file.batchMove') }}
                             </el-dropdown-item>
@@ -121,6 +139,10 @@
                         <el-icon><InfoFilled /></el-icon>
                         <span>{{ t('common.actions.detail') }}</span>
                     </div>
+                    <div class="context-menu-item" @click="handleFileCommand('rename', contextMenu.item)">
+                        <el-icon><Edit /></el-icon>
+                        <span>{{ t('common.actions.rename') }}</span>
+                    </div>
                     <div class="context-menu-item" @click="handleFileCommand('move', contextMenu.item)">
                         <el-icon><Rank /></el-icon>
                         <span>{{ t('system.file.batchMove') }}</span>
@@ -141,6 +163,7 @@ import { FolderOpened, Document, Picture, MoreFilled, Edit, Rank, Delete, InfoFi
 import { useI18n } from 'vue-i18n'
 import { formatFileSize } from '@/utils/helper'
 import type { SystemFile, SystemFileFolder } from '@/types/system'
+import type { FileOperationItem } from '../composables/useFileOperations'
 
 const { t } = useI18n()
 
@@ -148,7 +171,7 @@ interface Props {
     files: SystemFile[]
     folders: SystemFileFolder[]
     selectedCategory: string
-    selectedFiles?: SystemFile[]
+    selectedFiles?: FileOperationItem[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -158,8 +181,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
     (e: 'folder-click', folder: SystemFileFolder): void
     (e: 'file-click', file: SystemFile): void
-    (e: 'selection-change', selection: SystemFile[]): void
+    (e: 'selection-change', selection: FileOperationItem[]): void
     (e: 'folder-command', payload: { command: string; folder: SystemFileFolder }): void
+    (e: 'rename-file', file: SystemFile): void
     (e: 'delete-file', file: SystemFile): void
     (e: 'move-file', file: SystemFile): void
 }>()
@@ -170,21 +194,49 @@ const isImageFile = (file: SystemFile) => {
 
 const getFileThumbnailUrl = (file: SystemFile) => file.thumbnail_url || file.url || ''
 
+const getItemType = (item: FileOperationItem) => (item.item_type === 'folder' ? 'folder' : 'file')
+
+const isSameItem = (left: FileOperationItem, right: FileOperationItem) => {
+    return getItemType(left) === getItemType(right) && String(left.id) === String(right.id)
+}
+
+const toFolderSelectionItem = (folder: SystemFileFolder): FileOperationItem => ({
+    ...folder,
+    item_type: 'folder',
+    origin_name: folder.name,
+})
+
+const isItemSelected = (item: FileOperationItem) => {
+    return props.selectedFiles.some((selected) => isSameItem(selected, item))
+}
+
 // 多选判断
 const isFileSelected = (file: SystemFile) => {
-    return props.selectedFiles.some((f) => f.id === file.id)
+    return isItemSelected(file)
+}
+
+const isFolderSelected = (folder: SystemFileFolder) => {
+    return isItemSelected(toFolderSelectionItem(folder))
 }
 
 // 切换选择
-const toggleFileSelection = (file: SystemFile) => {
-    const index = props.selectedFiles.findIndex((f) => f.id === file.id)
+const toggleItemSelection = (item: FileOperationItem) => {
+    const index = props.selectedFiles.findIndex((selected) => isSameItem(selected, item))
     const newSelection = [...props.selectedFiles]
     if (index > -1) {
         newSelection.splice(index, 1)
     } else {
-        newSelection.push(file)
+        newSelection.push(item)
     }
     emit('selection-change', newSelection)
+}
+
+const toggleFileSelection = (file: SystemFile) => {
+    toggleItemSelection(file)
+}
+
+const toggleFolderSelection = (folder: SystemFileFolder) => {
+    toggleItemSelection(toFolderSelectionItem(folder))
 }
 
 // 点击卡片
@@ -193,6 +245,12 @@ const handleFileClick = (event: MouseEvent | KeyboardEvent, file: SystemFile) =>
         toggleFileSelection(file)
     } else {
         emit('file-click', file)
+    }
+}
+
+const handleFolderClick = (folder: SystemFileFolder) => {
+    if (props.selectedFiles.length > 0) {
+        toggleFolderSelection(folder)
     }
 }
 
@@ -208,6 +266,8 @@ const handleFileCommand = (command: string, file: SystemFile | SystemFileFolder 
         const targetFile = file as SystemFile
         if (command === 'detail') {
             emit('file-click', targetFile)
+        } else if (command === 'rename') {
+            emit('rename-file', targetFile)
         } else if (command === 'delete') {
             emit('delete-file', targetFile)
         } else if (command === 'move') {

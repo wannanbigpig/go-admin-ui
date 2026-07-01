@@ -13,6 +13,7 @@ import type {
     TaskRun,
     CronTaskState,
     SystemFile,
+    SystemFilePayload,
     StorageConfig,
     StorageConfigPayload,
     StorageSecretPayload,
@@ -232,12 +233,16 @@ export function getSystemFileReferences(params: { id?: number | string; file_id?
     return get<SystemFileReference[]>('/v1/system/file/references', params)
 }
 
+export function updateSystemFile(data: SystemFilePayload) {
+    return post<SystemFile>('/v1/system/file/update', data)
+}
+
 export function getSystemFileFolderTree() {
     return get<SystemFileFolder[]>('/v1/system/file/folder/tree')
 }
 
 export function getSystemFileFolderStats(data: { id: number | string }) {
-    return get<{ file_count: number; child_folder_count: number }>('/v1/system/file/folder/stats', data)
+    return get<{ file_count: number; child_folder_count: number; total_size: number }>('/v1/system/file/folder/stats', data)
 }
 
 export function createSystemFileFolder(data: SystemFileFolderPayload) {
@@ -248,7 +253,7 @@ export function updateSystemFileFolder(data: SystemFileFolderPayload) {
     return post<SystemFileFolder>('/v1/system/file/folder/update', data)
 }
 
-export function deleteSystemFileFolder(data: { id: number | string }) {
+export function deleteSystemFileFolder(data: { id: number | string; confirm?: number; deleted_reason?: string }) {
     return post<unknown>('/v1/system/file/folder/delete', data)
 }
 

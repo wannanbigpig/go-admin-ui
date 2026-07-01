@@ -7,7 +7,7 @@
                 :selected-category="selectedCategory"
                 @select-category="selectCategory"
                 @select-folder="handleFolderSelect"
-                @folder-command="({ command, folder }) => handleFolderCommand(command, folder)"
+                @folder-command="({ command, folder }) => handleFolderAction(command, folder)"
                 @open-folder-dialog="(mode, folder) => openFolderDialog(mode, folder)"
                 @open-trash-dialog="openTrashDialog"
             />
@@ -69,18 +69,31 @@
                         @selection-change="handleSelectionChange"
                         @folder-click="handleFolderSelect"
                         @file-click="openDetailDrawer"
-                        @folder-command="({ command, folder }) => handleFolderCommand(command, folder)"
+                        @folder-command="({ command, folder }) => handleFolderAction(command, folder)"
+                        @rename-file="openRenameDialog"
                         @delete-file="handleDelete"
                         @move-file="handleSingleMove"
                     />
                 </el-scrollbar>
 
                 <div v-else class="file-list-view">
-                    <xl-pro-table :loading="loading" :skeleton="false" :data="fileList" :columns="columns" :pagination="pagination" selectable @selection-change="handleSelectionChange">
+                    <xl-pro-table
+                        :loading="loading"
+                        :skeleton="false"
+                        :data="listTableRows"
+                        :columns="columns"
+                        :pagination="pagination"
+                        row-key="list_key"
+                        :selectable="isFileListRowSelectable"
+                        @selection-change="handleListSelectionChange"
+                    >
                         <template #td="{ item, val, row }">
-                            <div v-if="item.prop === 'origin_name'" class="file-name-cell" @click="openDetailDrawer(row)">
+                            <div v-if="item.prop === 'origin_name'" class="file-name-cell" @click="handleListNameClick(row)">
+                                <div v-if="isFolderListRow(row)" class="file-thumbnail-placeholder folder-thumbnail">
+                                    <el-icon color="var(--el-color-primary)"><FolderOpened /></el-icon>
+                                </div>
                                 <el-image
-                                    v-if="isImageFile(row) && getFileThumbnailUrl(row)"
+                                    v-else-if="isImageFile(row) && getFileThumbnailUrl(row)"
                                     :src="getFileThumbnailUrl(row)"
                                     fit="cover"
                                     class="file-thumbnail"
@@ -96,6 +109,19 @@
                                 </div>
                                 <span class="file-name-text">{{ val || '-' }}</span>
                             </div>
+                            <span v-else-if="isFolderListRow(row) && item.prop === 'file_type'">{{ t('system.file.folders') }}</span>
+                            <span v-else-if="isFolderListRow(row) && item.prop === 'uploader_name'">{{ getFolderUploaderName(row) }}</span>
+                            <el-tag v-else-if="isFolderListRow(row) && item.prop === 'is_public' && hasCellValue(row.is_public)" :type="item.tag?.[row.is_public as string | number]?.type || 'info'">
+                                {{ item.tag?.[row.is_public as string | number]?.text || row.is_public }}
+                            </el-tag>
+                            <el-tag v-else-if="isFolderListRow(row) && item.prop === 'storage_driver' && hasCellValue(row.storage_driver)" :type="getStorageDriverTagType(row.storage_driver)">
+                                {{ getStorageDriverLabel(row.storage_driver) }}
+                            </el-tag>
+                            <el-tag v-else-if="isFolderListRow(row) && item.prop === 'storage_status' && hasCellValue(row.storage_status)" :type="getStorageStatusTagType(row.storage_status)">
+                                {{ getStorageStatusLabel(row.storage_status) }}
+                            </el-tag>
+                            <span v-else-if="isFolderListRow(row) && hasCellValue(val)">{{ val }}</span>
+                            <span v-else-if="isFolderListRow(row)">-</span>
                             <el-tag v-else-if="item.prop === 'storage_driver'" :type="getStorageDriverTagType(row.storage_driver)">
                                 {{ getStorageDriverLabel(row.storage_driver) }}
                             </el-tag>
@@ -111,7 +137,7 @@
                             <span v-else>{{ val }}</span>
                         </template>
                         <template #operation>
-                            <el-table-column width="130" :label="t('common.labels.operation')" align="center" fixed="right">
+                            <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
                                 <template #default="scope">
                                     <xl-action-buttons :buttons="actionButtons" :scope="scope" />
                                 </template>
@@ -150,6 +176,18 @@
                 <template #footer>
                     <el-button @click="showMoveDialog = false">{{ t('common.actions.cancel') }}</el-button>
                     <el-button type="primary" :loading="moveSubmitting" @click="handleSubmitMoveDialog">{{ t('common.actions.confirm') }}</el-button>
+                </template>
+            </el-dialog>
+
+            <el-dialog v-model="showRenameDialog" :title="renameDialogTitle" width="420px" append-to-body>
+                <el-form label-width="90px" @submit.prevent>
+                    <el-form-item :label="t('system.file.fileName')">
+                        <el-input v-model.trim="renameForm.name" :placeholder="t('system.file.fileNamePlaceholder')" @keyup.enter="submitRenameDialog" />
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <el-button @click="showRenameDialog = false">{{ t('common.actions.cancel') }}</el-button>
+                    <el-button type="primary" :loading="renameSubmitting" @click="submitRenameDialog">{{ t('common.actions.confirm') }}</el-button>
                 </template>
             </el-dialog>
 
@@ -244,10 +282,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { Document, UploadFilled } from '@element-plus/icons-vue'
+import { Document, FolderOpened, UploadFilled } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
-import xlActionButtons from '@/components/actionButtons/index.vue'
+import xlActionButtons, { type ActionButtonConfig, type TableScope } from '@/components/actionButtons/index.vue'
 import { useI18n } from 'vue-i18n'
 import { useListPage } from '@/composables/useListPage'
 import { createSystemFileQuery } from '@/modules/system/model'
@@ -256,10 +294,10 @@ import { applyDateRangeToQuery } from '@/modules/log/helpers'
 import { debounce, formatFileSize, getImageUrl } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import type { ProTableColumns } from '@/components/proTable/types'
-import type { SystemFile } from '@/types/system'
+import type { SystemFile, SystemFileFolder } from '@/types/system'
 
 import { useFileFolder, ROOT_FOLDER_KEY } from '../composables/useFileFolder'
-import { useFileOperations } from '../composables/useFileOperations'
+import { useFileOperations, type FileOperationItem } from '../composables/useFileOperations'
 import { useFileCategory } from '../composables/useFileCategory'
 import { useFileExport } from '../composables/useFileExport'
 import { useFileUploadFlow } from '../composables/useFileUploadFlow'
@@ -279,6 +317,40 @@ const queryWhere = reactive(createSystemFileQuery())
 queryWhere.per_page = 40
 const dateRange = ref<[string, string] | []>([])
 const viewMode = ref<'grid' | 'list'>('grid')
+
+type FileListRow =
+    | (SystemFile & {
+          item_type: 'file'
+          list_key: string
+      })
+    | (SystemFileFolder & {
+          item_type: 'folder'
+          list_key: string
+          origin_name: string
+          file_type: 'folder'
+          size?: number
+          mime_type?: string
+          is_public?: number
+          storage_driver?: string
+          storage_status?: string
+          reference_count?: number
+          uploader_name?: string
+          uploader_username?: string
+          creator_name?: string
+          creator_username?: string
+          created_by?: number | string
+          uuid?: string
+      })
+
+type FolderRowSource = Omit<Partial<SystemFileFolder>, 'item_type'> & {
+    id?: number | string
+    item_type?: string
+    file_type?: string
+    origin_name?: string
+    display_name?: string
+    size?: number
+    total_size?: number
+}
 
 const {
     folderTree,
@@ -424,6 +496,10 @@ const {
     moveSubmitting,
     moveTargetFolderId,
     moveDialogTitle,
+    showRenameDialog,
+    renameSubmitting,
+    renameForm,
+    renameDialogTitle,
     showDetailDrawer,
     detailLoading,
     currentDetail,
@@ -446,6 +522,8 @@ const {
     openFolderMoveDialog,
     submitMoveDialog,
     openDetailDrawer,
+    openRenameDialog,
+    submitRenameDialog,
     formatReferenceField,
     openReferencesDialog,
     loadTrashList,
@@ -505,18 +583,130 @@ const handleSingleMove = (file: SystemFile) => {
     openBatchMoveDialog()
 }
 
+const toFolderOperationItem = (folder: SystemFileFolder): FileOperationItem => ({
+    ...folder,
+    item_type: 'folder',
+    origin_name: folder.name,
+})
+
+const isFolderLikeRow = (row?: { item_type?: string; file_type?: string } | null) => row?.item_type === 'folder' || row?.file_type === 'folder'
+const hasCellValue = (value: unknown) => value !== undefined && value !== null && value !== ''
+
+const getFolderUploaderName = (row: Extract<FileListRow, { item_type: 'folder' }>) => {
+    return row.uploader_name || row.creator_name || row.uploader_username || row.creator_username || (hasCellValue(row.created_by) ? String(row.created_by) : '-')
+}
+
+const toListFolderRow = (folder: FolderRowSource): Extract<FileListRow, { item_type: 'folder' }> => {
+    const folderWithoutChildren = { ...folder }
+    delete folderWithoutChildren.children
+    const name = String(folder.name || folder.origin_name || folder.display_name || '')
+    const uploaderName = folder.uploader_name || folder.creator_name || ''
+    const uploaderUsername = folder.uploader_username || folder.creator_username || ''
+    return {
+        ...folderWithoutChildren,
+        item_type: 'folder',
+        list_key: `folder-${folder.id}`,
+        origin_name: name,
+        name,
+        file_type: 'folder',
+        size: folder.total_size || folder.size || 0,
+        reference_count: 0,
+        uploader_name: uploaderName,
+        uploader_username: uploaderUsername,
+    } as Extract<FileListRow, { item_type: 'folder' }>
+}
+
+const handleFolderAction = (command: string, folder: SystemFileFolder | null) => {
+    if (!folder) return
+    const folderItem = toFolderOperationItem(folder)
+
+    if (command === 'rename') {
+        openRenameDialog(folderItem)
+        return
+    }
+
+    if (command === 'move') {
+        selectedFiles.value = [folderItem]
+        openBatchMoveDialog()
+        return
+    }
+
+    if (command === 'delete') {
+        void handleDelete(folderItem)
+        return
+    }
+
+    handleFolderCommand(command, folder)
+}
+
+const isFolderListRow = (row?: FileListRow | FileOperationItem): row is Extract<FileListRow, { item_type: 'folder' }> => isFolderLikeRow(row)
+const getOperationItemKey = (item: FileOperationItem) => `${item.item_type === 'folder' ? 'folder' : 'file'}-${item.id}`
+
+const listTableRows = computed<FileListRow[]>(() => {
+    const rows = fileList.value.map((file) => {
+        if (isFolderLikeRow(file)) {
+            return toListFolderRow(file)
+        }
+        return {
+            ...file,
+            item_type: 'file' as const,
+            list_key: `file-${file.id}`,
+        }
+    })
+
+    if (selectedCategory.value !== 'all') return rows
+
+    const folderRows = currentLevelFolders.value.map(toListFolderRow)
+
+    const uniqueRows = new Map<string, FileListRow>()
+    for (const row of [...folderRows, ...rows]) {
+        uniqueRows.set(row.list_key, row)
+    }
+    return [...uniqueRows.values()]
+})
+
+const isFileListRowSelectable = () => true
+
+const handleListSelectionChange = (selection: FileListRow[]) => {
+    handleSelectionChange(selection)
+}
+
+const handleListNameClick = (row: FileListRow) => {
+    if (isFolderListRow(row)) {
+        handleFolderSelect(row)
+        return
+    }
+    openDetailDrawer(row)
+}
+
 // ==================== 全选/反选计算与逻辑 ====================
+const gridSelectableItems = computed<FileOperationItem[]>(() => {
+    const fileRows = displayFiles.value.map((file) => ({
+        ...file,
+        item_type: 'file' as const,
+    }))
+
+    if (selectedCategory.value !== 'all') return fileRows
+
+    return [...currentLevelFolders.value.map(toFolderOperationItem), ...fileRows]
+})
+
+const selectedCurrentGridCount = computed(() => {
+    const selectedKeys = new Set(selectedFiles.value.map(getOperationItemKey))
+    return gridSelectableItems.value.filter((item) => selectedKeys.has(getOperationItemKey(item))).length
+})
+
 const isAllSelected = computed(() => {
-    return displayFiles.value.length > 0 && selectedFiles.value.length === displayFiles.value.length
+    return gridSelectableItems.value.length > 0 && selectedCurrentGridCount.value === gridSelectableItems.value.length
 })
 
 const isIndeterminate = computed(() => {
-    return selectedFiles.value.length > 0 && selectedFiles.value.length < displayFiles.value.length
+    return selectedCurrentGridCount.value > 0 && selectedCurrentGridCount.value < gridSelectableItems.value.length
 })
 
 const handleToggleSelectAll = (val: boolean) => {
     if (val) {
-        selectedFiles.value = [...displayFiles.value]
+        selectedFiles.value = [...gridSelectableItems.value]
     } else {
         selectedFiles.value = []
     }
@@ -598,18 +788,21 @@ const storageStatusLabelOptions = computed(() => [
 
 const getFileTypeLabel = (value?: string) => fileTypeOptions.value.find((item) => item.value === value)?.label || value || '-'
 
-const isImageFile = (row?: SystemFile) => {
+const isImageFile = (row?: FileListRow | SystemFile) => {
     if (!row) return false
+    if ('item_type' in row && row.item_type === 'folder') return false
     return row.file_type === 'image' || String(row.mime_type || '').startsWith('image/')
 }
 
-const getFileThumbnailUrl = (row?: SystemFile) => {
+const getFileThumbnailUrl = (row?: FileListRow | SystemFile) => {
     if (!row) return ''
+    if ('item_type' in row && row.item_type === 'folder') return ''
     return row.thumbnail_url || row.url || (row.uuid ? getImageUrl(row.uuid) : '')
 }
 
-const getFilePreviewList = (row?: SystemFile) => {
+const getFilePreviewList = (row?: FileListRow | SystemFile) => {
     if (!row) return []
+    if ('item_type' in row && row.item_type === 'folder') return []
     const url = row.url || (row.uuid ? getImageUrl(row.uuid) : '')
     return url ? [url] : []
 }
@@ -634,22 +827,43 @@ const getStorageStatusTagType = (value?: string) => {
     return typeMap[value || ''] || 'info'
 }
 
-const actionButtons = computed(() => [
-    {
-        permission: 'file:list',
-        text: t('common.actions.detail'),
-        showIcon: false,
-        click: (row: SystemFile) => openDetailDrawer(row),
-    },
-    {
-        permission: 'file:delete',
-        text: t('common.actions.delete'),
-        type: 'danger',
-        showIcon: false,
-        disabled: (row: SystemFile) => deletingId.value === row.id,
-        click: (row: SystemFile) => handleDelete(row),
-    },
-])
+const actionButtons = (scope: TableScope<FileListRow> | FileListRow): ActionButtonConfig<FileListRow>[] => {
+    const row = 'row' in scope ? scope.row : scope
+    const isFolder = isFolderListRow(row)
+    return [
+        {
+            permission: 'file:list',
+            text: t('common.actions.detail'),
+            showIcon: false,
+            click: (targetRow: FileListRow) => openDetailDrawer(targetRow),
+        },
+        {
+            permission: 'file:update',
+            text: isFolder ? t('system.file.renameFolder') : t('system.file.renameFile'),
+            showIcon: false,
+            click: (targetRow: FileListRow) => openRenameDialog(targetRow),
+        },
+        {
+            permission: 'file:update',
+            text: isFolder ? t('system.file.moveFolder') : t('system.file.moveFile'),
+            showIcon: false,
+            click: (targetRow: FileListRow) => {
+                selectedFiles.value = [targetRow]
+                openBatchMoveDialog()
+            },
+        },
+        {
+            permission: 'file:delete',
+            text: t('common.actions.delete'),
+            type: 'danger',
+            showIcon: false,
+            disabled: (targetRow: FileListRow) => deletingId.value === targetRow.id,
+            click: (targetRow: FileListRow) => {
+                handleDelete(targetRow)
+            },
+        },
+    ]
+}
 
 const trashActionButtons = computed(() => [
     {
@@ -696,7 +910,7 @@ const columns = computed(
             { prop: 'uploader_name', label: t('system.file.uploaderName'), h_label: t('system.file.uploaderName'), width: 120, align: 'center', formatter: (row) => row.uploader_name || row.uploader_username || '-' },
             { prop: 'uuid', label: t('system.file.uuid'), h_label: t('system.file.uuid'), minWidth: 260, overflow: true },
             { prop: 'created_at', label: t('common.labels.createdAt'), h_label: t('common.labels.createdAt'), width: 180, align: 'center' },
-        ] as ProTableColumns<SystemFile>
+        ] as ProTableColumns<FileListRow>
 )
 
 const trashColumns = computed(

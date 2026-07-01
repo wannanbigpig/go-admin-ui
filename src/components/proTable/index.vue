@@ -133,7 +133,7 @@ interface Props {
     lazy?: boolean
     load?: (row: T, treeNode: unknown, resolve: (data: T[]) => void) => void
     treeProps?: { children?: string; hasChildren?: string }
-    selectable?: boolean
+    selectable?: boolean | ((row: T, index: number) => boolean)
     height?: string | number
     pagination?: {
         total: number

@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useFileUpload, type UploadTask } from '@/composables/useFileUpload'
 import { addSystemFileFolder } from '@/modules/system/service'
+import { Logger } from '@/utils/logger'
 import { ROOT_FOLDER_KEY, type FolderTreeNode } from './useFileFolder'
 
 export interface UseFileUploadFlowOptions {
@@ -11,6 +12,15 @@ export interface UseFileUploadFlowOptions {
     getList: () => Promise<void>
     loadFolderTree: () => Promise<void>
 }
+
+const normalizeFolderIndexParentId = (parentId: number | string | null | undefined) => {
+    if (parentId === null || parentId === undefined || parentId === 0 || parentId === '0' || parentId === ROOT_FOLDER_KEY) {
+        return null
+    }
+    return parentId
+}
+
+export const buildFolderIndexKey = (parentId: number | string | null | undefined, name: string) => `${String(normalizeFolderIndexParentId(parentId) ?? ROOT_FOLDER_KEY)}::${name}`
 
 export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const { t } = useI18n()
@@ -72,8 +82,6 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
             }, 1200)
         }
     }
-
-    const buildFolderIndexKey = (parentId: number | string | null | undefined, name: string) => `${String(parentId ?? ROOT_FOLDER_KEY)}::${name}`
 
     const buildFolderIndex = (folders: FolderTreeNode[]) => {
         const index = new Map<string, FolderTreeNode>()
@@ -231,7 +239,11 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         const input = event.target as HTMLInputElement
         const files = Array.from(input.files || [])
         input.value = ''
-        await uploadDirectoryInQueue(files)
+        try {
+            await uploadDirectoryInQueue(files)
+        } catch (error) {
+            Logger.error('上传目录失败:', error)
+        }
     }
 
     const handleUploadDragEnter = () => {

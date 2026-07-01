@@ -179,6 +179,7 @@ export interface CronTaskState extends WithId {
 }
 
 export interface SystemFile extends WithId, WithTimestamp {
+    item_type?: 'file' | 'folder'
     file_object_id?: number | string
     uid: number | string
     uploader_name?: string
@@ -220,16 +221,32 @@ export interface SystemFile extends WithId, WithTimestamp {
     deleted_by?: number | string
     deleted_reason?: string
     references?: SystemFileReference[]
+    file_count?: number
+    child_folder_count?: number
+    total_size?: number
 }
 
 export interface SystemFileFolder extends WithId, WithTimestamp {
+    item_type?: 'folder'
     parent_id?: number | string | null
     name: string
     path?: string
     level?: number
     sort?: number
+    created_by?: number | string
+    updated_by?: number | string
+    creator_name?: string
+    creator_username?: string
+    uploader_name?: string
+    uploader_username?: string
     file_count?: number
+    total_size?: number
     children?: SystemFileFolder[]
+}
+
+export interface SystemFilePayload {
+    id: number | string
+    origin_name: string
 }
 
 export interface SystemFileFolderPayload {

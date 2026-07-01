@@ -14,6 +14,9 @@
                             preview-teleported
                             :alt="file.origin_name || ''"
                         />
+                        <div v-else-if="isFolderDetail(file)" class="detail-icon-placeholder">
+                            <el-icon :size="48" color="var(--el-color-primary)"><FolderOpened /></el-icon>
+                        </div>
                         <div v-else class="detail-icon-placeholder">
                             <el-icon :size="48" color="var(--el-text-color-placeholder)"><Document /></el-icon>
                             <span class="detail-ext" v-if="file.ext">{{ String(file.ext).toUpperCase() }}</span>
@@ -22,9 +25,10 @@
                     <div class="header-info">
                         <h3 class="file-name">{{ file.origin_name || '-' }}</h3>
                         <div class="file-meta-badges">
-                            <el-tag size="small" :type="getStorageDriverTagType(file.storage_driver)" effect="plain">{{ getStorageDriverLabel(file.storage_driver) }}</el-tag>
-                            <el-tag size="small" :type="getStorageStatusTagType(file.storage_status)" effect="light">{{ getStorageStatusLabel(file.storage_status) }}</el-tag>
-                            <el-tag size="small" :type="Number(file.is_public) === 1 ? 'success' : 'info'" effect="plain">
+                            <el-tag v-if="isFolderDetail(file)" size="small" type="primary" effect="plain">{{ t('system.file.folders') }}</el-tag>
+                            <el-tag v-if="!isFolderDetail(file)" size="small" :type="getStorageDriverTagType(file.storage_driver)" effect="plain">{{ getStorageDriverLabel(file.storage_driver) }}</el-tag>
+                            <el-tag v-if="!isFolderDetail(file)" size="small" :type="getStorageStatusTagType(file.storage_status)" effect="light">{{ getStorageStatusLabel(file.storage_status) }}</el-tag>
+                            <el-tag v-if="!isFolderDetail(file)" size="small" :type="Number(file.is_public) === 1 ? 'success' : 'info'" effect="plain">
                                 {{ Number(file.is_public) === 1 ? t('system.file.publicLabel') : t('system.file.privateLabel') }}
                             </el-tag>
                         </div>
@@ -42,7 +46,7 @@
                         </span>
                     </div>
                     <el-descriptions :column="2" border size="small" class="modern-descriptions">
-                        <el-descriptions-item :label="t('system.file.url')" :span="2">
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.url')" :span="2">
                             <el-link
                                 v-if="file.url"
                                 :href="isSafeUrl(file.url) ? file.url : undefined"
@@ -56,11 +60,14 @@
                             <span v-else>-</span>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.size')">{{ formatFileSize(file.size) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.mimeType')">{{ file.mime_type || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="isFolderDetail(file)" :label="t('system.file.fileType')">{{ t('system.file.folders') }}</el-descriptions-item>
+                        <el-descriptions-item v-else :label="t('system.file.mimeType')">{{ file.mime_type || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.logicalPath')">{{ file.logical_path || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('system.file.folderId')">{{ file.folder_id ?? '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.storageDriver')">{{ getStorageDriverLabel(file.storage_driver) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.storageStatus')">{{ file.storage_status_name || file.storage_status || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="isFolderDetail(file)" :label="t('system.file.fileCount')">{{ file.file_count || 0 }}</el-descriptions-item>
+                        <el-descriptions-item v-if="isFolderDetail(file)" :label="t('system.file.childFolderCount')">{{ file.child_folder_count || 0 }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.storageDriver')">{{ getStorageDriverLabel(file.storage_driver) }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.storageStatus')">{{ file.storage_status_name || file.storage_status || '-' }}</el-descriptions-item>
                         <el-descriptions-item v-if="isLocalStorageFile(file)" :label="t('system.file.actualPath')" :span="2">
                             <span class="detail-text-mono">{{ buildActualLocalPath(file) || '-' }}</span>
                         </el-descriptions-item>
@@ -68,13 +75,13 @@
                         <el-descriptions-item v-if="!isLocalStorageFile(file)" :label="t('system.file.objectKey')" :span="2">
                             <span class="detail-text-mono">{{ file.object_key || '-' }}</span>
                         </el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.uploadSource')">{{ file.upload_source_name || file.upload_source || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.uploaderName')">{{ file.uploader_name || file.uploader_username || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.uploadStatus')">{{ file.upload_status_name || file.upload_status || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.uuid')" :span="2">
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uploadSource')">{{ file.upload_source_name || file.upload_source || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uploaderName')">{{ file.uploader_name || file.uploader_username || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uploadStatus')">{{ file.upload_status_name || file.upload_status || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uuid')" :span="2">
                             <span class="detail-text-mono">{{ file.uuid || '-' }}</span>
                         </el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.hash')" :span="2">
+                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.hash')" :span="2">
                             <span class="detail-text-mono">{{ file.hash || '-' }}</span>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('common.labels.createdAt')">{{ file.created_at || '-' }}</el-descriptions-item>
@@ -84,7 +91,7 @@
                 </div>
 
                 <!-- References -->
-                <div class="detail-section">
+                <div v-if="!isFolderDetail(file)" class="detail-section">
                     <div class="section-header">
                         <span class="section-title">
                             <el-icon class="section-icon"><Link /></el-icon>
@@ -114,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { Document, InfoFilled, Link } from '@element-plus/icons-vue'
+import { Document, FolderOpened, InfoFilled, Link } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -146,10 +153,14 @@ watch(visible, (val) => {
 })
 
 const isImageFile = (file: SystemFile) => {
+    if (isFolderDetail(file)) return false
     return file.file_type === 'image' || String(file.mime_type || '').startsWith('image/')
 }
 
+const isFolderDetail = (file: SystemFile) => file.item_type === 'folder' || file.file_type === 'folder'
+
 const isLocalStorageFile = (file: SystemFile) => {
+    if (isFolderDetail(file)) return false
     return String(file.storage_driver || 'local') === 'local'
 }
 
