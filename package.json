@@ -64,7 +64,7 @@
         "eslint-plugin-vue": "^9.27.0",
         "globals": "^15.8.0",
         "husky": "^9.1.7",
-        "jsdom": "^29.0.2",
+        "jsdom": "^29.1.1",
         "lint-staged": "^16.4.0",
         "prettier": "^3.3.2",
         "sass": "^1.77.7",
