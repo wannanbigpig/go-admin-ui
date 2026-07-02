@@ -22,6 +22,11 @@ const normalizeFolderIndexParentId = (parentId: number | string | null | undefin
 
 export const buildFolderIndexKey = (parentId: number | string | null | undefined, name: string) => `${String(normalizeFolderIndexParentId(parentId) ?? ROOT_FOLDER_KEY)}::${name}`
 
+const isExternalFileDragEvent = (event?: DragEvent) => {
+    const types = Array.from(event?.dataTransfer?.types || [])
+    return types.includes('Files')
+}
+
 export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const { t } = useI18n()
     const uploadInputRef = ref<HTMLInputElement>()
@@ -246,21 +251,25 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         }
     }
 
-    const handleUploadDragEnter = () => {
+    const handleUploadDragEnter = (event: DragEvent) => {
+        if (!isExternalFileDragEvent(event)) return
         isDraggingUpload.value = true
     }
 
-    const handleUploadDragOver = () => {
+    const handleUploadDragOver = (event: DragEvent) => {
+        if (!isExternalFileDragEvent(event)) return
         isDraggingUpload.value = true
     }
 
     const handleUploadDragLeave = (event: DragEvent) => {
+        if (!isExternalFileDragEvent(event)) return
         const current = event.currentTarget as HTMLElement
         const related = event.relatedTarget as Node | null
         if (!related || !current.contains(related)) isDraggingUpload.value = false
     }
 
     const handleUploadDrop = async (event: DragEvent) => {
+        if (!isExternalFileDragEvent(event)) return
         isDraggingUpload.value = false
         await uploadFilesInQueue(Array.from(event.dataTransfer?.files || []))
     }

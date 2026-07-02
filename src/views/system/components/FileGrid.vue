@@ -12,11 +12,18 @@
                 v-for="folder in folders"
                 :key="folder.id"
                 class="file-grid-item folder-item"
-                :class="{ 'is-selected': isFolderSelected(folder) }"
+                :class="{ 'is-selected': isFolderSelected(folder), 'is-drop-target': isDropTarget(folder), 'is-dragging': isDraggedFolder(folder) }"
                 role="button"
                 tabindex="0"
+                draggable="true"
                 @click="handleFolderClick(folder)"
                 @dblclick="emit('folder-click', folder)"
+                @dragstart="handleFolderDragStart($event, folder)"
+                @dragend="handleDragEnd"
+                @dragenter="handleFolderDragEnter($event, folder)"
+                @dragover="handleFolderDragOver($event, folder)"
+                @dragleave="handleFolderDragLeave($event, folder)"
+                @drop="handleFolderDrop($event, folder)"
                 @keydown.enter="emit('folder-click', folder)"
                 @keydown.space.prevent="toggleFolderSelection(folder)"
                 @contextmenu.prevent="openContextMenu($event, 'folder', folder)"
@@ -60,10 +67,13 @@
             v-for="file in files"
             :key="file.id"
             class="file-grid-item file-item"
-            :class="{ 'is-selected': isFileSelected(file) }"
+            :class="{ 'is-selected': isFileSelected(file), 'is-dragging': isDraggedFile(file) }"
             role="button"
             tabindex="0"
+            draggable="true"
             @click="handleFileClick($event, file)"
+            @dragstart="handleFileDragStart($event, file)"
+            @dragend="handleDragEnd"
             @keydown.enter="handleFileClick($event, file)"
             @keydown.space.prevent="toggleFileSelection(file)"
             @contextmenu.prevent="openContextMenu($event, 'file', file)"
@@ -158,11 +168,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted, onBeforeUnmount } from 'vue'
+import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
 import { FolderOpened, Document, Picture, MoreFilled, Edit, Rank, Delete, InfoFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { formatFileSize } from '@/utils/helper'
 import type { SystemFile, SystemFileFolder } from '@/types/system'
+import { RESOURCE_DRAG_MIME, isResourceDragEvent } from '../composables/fileDragDrop'
 import type { FileOperationItem } from '../composables/useFileOperations'
 
 const { t } = useI18n()
@@ -183,6 +194,9 @@ const emit = defineEmits<{
     (e: 'file-click', file: SystemFile): void
     (e: 'selection-change', selection: FileOperationItem[]): void
     (e: 'folder-command', payload: { command: string; folder: SystemFileFolder }): void
+    (e: 'folder-drop', payload: { folder: SystemFileFolder; items: FileOperationItem[] }): void
+    (e: 'drag-start', items: FileOperationItem[]): void
+    (e: 'drag-end'): void
     (e: 'rename-file', file: SystemFile): void
     (e: 'delete-file', file: SystemFile): void
     (e: 'move-file', file: SystemFile): void
@@ -219,6 +233,9 @@ const isFolderSelected = (folder: SystemFileFolder) => {
     return isItemSelected(toFolderSelectionItem(folder))
 }
 
+const draggingItems = ref<FileOperationItem[]>([])
+const dragOverFolderId = ref<number | string | null>(null)
+
 // 切换选择
 const toggleItemSelection = (item: FileOperationItem) => {
     const index = props.selectedFiles.findIndex((selected) => isSameItem(selected, item))
@@ -237,6 +254,93 @@ const toggleFileSelection = (file: SystemFile) => {
 
 const toggleFolderSelection = (folder: SystemFileFolder) => {
     toggleItemSelection(toFolderSelectionItem(folder))
+}
+
+const getDraggedItems = (item: FileOperationItem) => {
+    return isItemSelected(item) && props.selectedFiles.length > 0 ? [...props.selectedFiles] : [item]
+}
+
+const isDraggedFile = (file: SystemFile) => {
+    return draggingItems.value.some((item) => getItemType(item) === 'file' && String(item.id) === String(file.id))
+}
+
+const isDraggedFolder = (folder: SystemFileFolder) => {
+    return draggingItems.value.some((item) => getItemType(item) === 'folder' && String(item.id) === String(folder.id))
+}
+
+const canDropToFolder = (folder: SystemFileFolder) => {
+    if (draggingItems.value.length === 0) return false
+    return !draggingItems.value.some((item) => getItemType(item) === 'folder' && String(item.id) === String(folder.id))
+}
+
+const isDropTarget = (folder: SystemFileFolder) => {
+    return dragOverFolderId.value !== null && String(dragOverFolderId.value) === String(folder.id)
+}
+
+const handleDragStart = (event: DragEvent, item: FileOperationItem) => {
+    draggingItems.value = getDraggedItems(item)
+    dragOverFolderId.value = null
+    event.dataTransfer?.setData(RESOURCE_DRAG_MIME, JSON.stringify(draggingItems.value.map((dragItem) => ({ id: dragItem.id, item_type: getItemType(dragItem) }))))
+    event.dataTransfer?.setData('text/plain', getItemType(item) === 'folder' ? item.name : item.origin_name || item.name || '')
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+    }
+    emit('drag-start', [...draggingItems.value])
+}
+
+const handleFolderDragStart = (event: DragEvent, folder: SystemFileFolder) => {
+    handleDragStart(event, toFolderSelectionItem(folder))
+}
+
+const handleFileDragStart = (event: DragEvent, file: SystemFile) => {
+    handleDragStart(event, file)
+}
+
+const handleFolderDragEnter = (event: DragEvent, folder: SystemFileFolder) => {
+    if (!isResourceDragEvent(event)) return
+    dragOverFolderId.value = canDropToFolder(folder) ? folder.id : null
+}
+
+const handleFolderDragOver = (event: DragEvent, folder: SystemFileFolder) => {
+    if (!isResourceDragEvent(event)) return
+    if (!canDropToFolder(folder)) {
+        dragOverFolderId.value = null
+        return
+    }
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    dragOverFolderId.value = folder.id
+}
+
+const handleFolderDragLeave = (event: DragEvent, folder: SystemFileFolder) => {
+    if (!isResourceDragEvent(event)) return
+    const current = event.currentTarget as HTMLElement | null
+    const related = event.relatedTarget as Node | null
+    if (current && related && current.contains(related)) return
+    if (String(dragOverFolderId.value) === String(folder.id)) {
+        dragOverFolderId.value = null
+    }
+}
+
+const handleFolderDrop = (event: DragEvent, folder: SystemFileFolder) => {
+    if (!isResourceDragEvent(event)) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (!canDropToFolder(folder)) {
+        dragOverFolderId.value = null
+        return
+    }
+    emit('folder-drop', { folder, items: [...draggingItems.value] })
+    dragOverFolderId.value = null
+    draggingItems.value = []
+}
+
+const handleDragEnd = () => {
+    dragOverFolderId.value = null
+    draggingItems.value = []
+    emit('drag-end')
 }
 
 // 点击卡片
@@ -370,6 +474,17 @@ onBeforeUnmount(() => {
     &.is-selected {
         border-color: var(--el-color-primary);
         background: var(--el-color-primary-light-9);
+    }
+
+    &.is-dragging {
+        opacity: 0.45;
+        transform: scale(0.98);
+    }
+
+    &.is-drop-target {
+        border-color: var(--el-color-primary);
+        background: var(--el-color-primary-light-8);
+        box-shadow: 0 0 0 2px rgba(var(--el-color-primary-rgb), 0.18);
     }
 
     .item-checkbox {

@@ -163,6 +163,7 @@ export default {
         moveFolder: '移动目录',
         moveFile: '移动文件',
         moveSuccess: '移动成功',
+        dragMoveSelfInvalid: '不能将目录拖入自身',
         rename: '重命名',
         folders: '文件夹',
         favorites: '收藏',

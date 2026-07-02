@@ -5,9 +5,16 @@
                 :folder-tree="folderTree"
                 :selected-folder-id="selectedFolderId"
                 :selected-category="selectedCategory"
+                :dragging-items="draggingItems"
+                :drop-target-folder-id="dragOverFolderId"
                 @select-category="selectCategory"
                 @select-folder="handleFolderSelect"
                 @folder-command="({ command, folder }) => handleFolderAction(command, folder)"
+                @drag-start="handleResourceDragStart"
+                @drag-end="handleResourceDragEnd"
+                @folder-drag-enter="handleDropTargetEnter"
+                @folder-drag-leave="handleDropTargetLeave"
+                @folder-drop="handleTreeFolderDrop"
                 @open-folder-dialog="(mode, folder) => openFolderDialog(mode, folder)"
                 @open-trash-dialog="openTrashDialog"
             />
@@ -70,6 +77,9 @@
                         @folder-click="handleFolderSelect"
                         @file-click="openDetailDrawer"
                         @folder-command="({ command, folder }) => handleFolderAction(command, folder)"
+                        @drag-start="handleResourceDragStart"
+                        @drag-end="handleResourceDragEnd"
+                        @folder-drop="({ folder, items }) => handleGridFolderDrop(folder, items)"
                         @rename-file="openRenameDialog"
                         @delete-file="handleDelete"
                         @move-file="handleSingleMove"
@@ -107,7 +117,19 @@
                                     <el-icon color="var(--el-text-color-placeholder)"><Document /></el-icon>
                                     <span class="file-ext" v-if="row.ext">{{ String(row.ext).substring(0, 4).toUpperCase() }}</span>
                                 </div>
-                                <span class="file-name-text">{{ val || '-' }}</span>
+                                <span
+                                    class="file-name-text"
+                                    :class="{ 'is-dragging': isDraggedOperationItem(row), 'is-drop-target': isFolderListRow(row) && isDropTargetFolderId(row.id) }"
+                                    draggable="true"
+                                    @dragstart="handleListItemDragStart($event, row)"
+                                    @dragend="handleResourceDragEnd"
+                                    @dragenter="isFolderListRow(row) ? handleListFolderDragEnter($event, row) : undefined"
+                                    @dragover="isFolderListRow(row) ? handleListFolderDragOver($event, row) : undefined"
+                                    @dragleave="isFolderListRow(row) ? handleListFolderDragLeave($event, row) : undefined"
+                                    @drop="isFolderListRow(row) ? handleListFolderDrop($event, row) : undefined"
+                                >
+                                    {{ val || '-' }}
+                                </span>
                             </div>
                             <span v-else-if="isFolderListRow(row) && item.prop === 'file_type'">{{ t('system.file.folders') }}</span>
                             <span v-else-if="isFolderListRow(row) && item.prop === 'uploader_name'">{{ getFolderUploaderName(row) }}</span>
@@ -283,7 +305,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Document, FolderOpened, UploadFilled } from '@element-plus/icons-vue'
-import type { FormInstance } from 'element-plus'
+import { ElMessage, type FormInstance } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons, { type ActionButtonConfig, type TableScope } from '@/components/actionButtons/index.vue'
 import { useI18n } from 'vue-i18n'
@@ -296,6 +318,7 @@ import { Logger } from '@/utils/logger'
 import type { ProTableColumns } from '@/components/proTable/types'
 import type { SystemFile, SystemFileFolder } from '@/types/system'
 
+import { RESOURCE_DRAG_MIME, isResourceDragEvent } from '../composables/fileDragDrop'
 import { useFileFolder, ROOT_FOLDER_KEY } from '../composables/useFileFolder'
 import { useFileOperations, type FileOperationItem } from '../composables/useFileOperations'
 import { useFileCategory } from '../composables/useFileCategory'
@@ -518,6 +541,7 @@ const {
     selectedTrashFiles,
     batchTrashOperating,
     handleTrashSelectionChange,
+    moveItemsToFolder,
     openBatchMoveDialog,
     openFolderMoveDialog,
     submitMoveDialog,
@@ -588,6 +612,136 @@ const toFolderOperationItem = (folder: SystemFileFolder): FileOperationItem => (
     item_type: 'folder',
     origin_name: folder.name,
 })
+
+const draggingItems = ref<FileOperationItem[]>([])
+const dragOverFolderId = ref<number | string | null>(null)
+
+const isSameOperationItem = (left: FileOperationItem, right: FileOperationItem) => {
+    const leftType = left.item_type === 'folder' ? 'folder' : 'file'
+    const rightType = right.item_type === 'folder' ? 'folder' : 'file'
+    return leftType === rightType && String(left.id) === String(right.id)
+}
+
+const getDragItemsForItem = (item: FileOperationItem) => {
+    return selectedFiles.value.some((selected) => isSameOperationItem(selected, item)) && selectedFiles.value.length > 0 ? [...selectedFiles.value] : [item]
+}
+
+const isDraggedOperationItem = (item: FileOperationItem) => {
+    return draggingItems.value.some((dragItem) => isSameOperationItem(dragItem, item))
+}
+
+const isDescendantFolder = (sourceFolderId: number | string, targetFolderId: number | string, folders: SystemFileFolder[]) => {
+    const containsTarget = (nodes?: SystemFileFolder[]): boolean => {
+        if (!Array.isArray(nodes) || nodes.length === 0) return false
+        return nodes.some((node) => String(node.id) === String(targetFolderId) || containsTarget(node.children))
+    }
+
+    const walk = (nodes: SystemFileFolder[]): boolean => {
+        for (const node of nodes) {
+            if (String(node.id) === String(sourceFolderId)) {
+                return containsTarget(node.children)
+            }
+            if (Array.isArray(node.children) && walk(node.children)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    return walk(folders)
+}
+
+const canDropItemsToFolder = (folderId: number | string) => {
+    if (draggingItems.value.length === 0) return false
+    return !draggingItems.value.some((item) => {
+        if (item.item_type !== 'folder') return false
+        return String(item.id) === String(folderId) || isDescendantFolder(item.id, folderId, folderTree.value)
+    })
+}
+
+const isDropTargetFolderId = (folderId?: number | string | null) => dragOverFolderId.value !== null && folderId !== undefined && folderId !== null && String(dragOverFolderId.value) === String(folderId)
+
+const handleResourceDragStart = (items: FileOperationItem[]) => {
+    draggingItems.value = [...items]
+}
+
+const handleResourceDragEnd = () => {
+    draggingItems.value = []
+    dragOverFolderId.value = null
+}
+
+const handleListItemDragStart = (event: DragEvent, item: FileOperationItem) => {
+    const items = getDragItemsForItem(item)
+    draggingItems.value = items
+    dragOverFolderId.value = null
+    event.dataTransfer?.setData(RESOURCE_DRAG_MIME, JSON.stringify(items.map((dragItem) => ({ id: dragItem.id, item_type: dragItem.item_type === 'folder' ? 'folder' : 'file' }))))
+    event.dataTransfer?.setData('text/plain', item.item_type === 'folder' ? item.name : item.origin_name || item.name || '')
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+    }
+}
+
+const handleDropTargetEnter = (folder: SystemFileFolder) => {
+    dragOverFolderId.value = canDropItemsToFolder(folder.id) ? folder.id : null
+}
+
+const handleDropTargetLeave = (folder: SystemFileFolder) => {
+    if (String(dragOverFolderId.value) === String(folder.id)) {
+        dragOverFolderId.value = null
+    }
+}
+
+const moveDraggedItemsToFolder = async (folder: SystemFileFolder) => {
+    if (moveSubmitting.value || draggingItems.value.length === 0) return
+    if (!canDropItemsToFolder(folder.id)) {
+        ElMessage.warning(t('system.file.dragMoveSelfInvalid'))
+        return
+    }
+    await moveItemsToFolder(draggingItems.value, folder.id)
+    handleResourceDragEnd()
+}
+
+const handleGridFolderDrop = async (folder: SystemFileFolder, items: FileOperationItem[]) => {
+    draggingItems.value = [...items]
+    await moveDraggedItemsToFolder(folder)
+}
+
+const handleTreeFolderDrop = async (folder: SystemFileFolder) => {
+    await moveDraggedItemsToFolder(folder)
+}
+
+const handleListFolderDragEnter = (event: DragEvent, folder: Extract<FileListRow, { item_type: 'folder' }>) => {
+    if (!isResourceDragEvent(event)) return
+    handleDropTargetEnter(folder)
+}
+
+const handleListFolderDragOver = (event: DragEvent, folder: Extract<FileListRow, { item_type: 'folder' }>) => {
+    if (!isResourceDragEvent(event)) return
+    if (!canDropItemsToFolder(folder.id)) {
+        dragOverFolderId.value = null
+        return
+    }
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    dragOverFolderId.value = folder.id
+}
+
+const handleListFolderDragLeave = (event: DragEvent, folder: Extract<FileListRow, { item_type: 'folder' }>) => {
+    if (!isResourceDragEvent(event)) return
+    const current = event.currentTarget as HTMLElement | null
+    const related = event.relatedTarget as Node | null
+    if (current && related && current.contains(related)) return
+    handleDropTargetLeave(folder)
+}
+
+const handleListFolderDrop = async (event: DragEvent, folder: Extract<FileListRow, { item_type: 'folder' }>) => {
+    if (!isResourceDragEvent(event)) return
+    event.preventDefault()
+    event.stopPropagation()
+    await moveDraggedItemsToFolder(folder)
+}
 
 const isFolderLikeRow = (row?: { item_type?: string; file_type?: string } | null) => row?.item_type === 'folder' || row?.file_type === 'folder'
 const hasCellValue = (value: unknown) => value !== undefined && value !== null && value !== ''
@@ -987,6 +1141,18 @@ onMounted(() => {
     text-overflow: ellipsis;
     white-space: nowrap;
     transition: color 0.2s;
+    cursor: grab;
+
+    &.is-dragging {
+        opacity: 0.5;
+    }
+
+    &.is-drop-target {
+        color: var(--el-color-primary);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
 }
 
 .upload-drag-overlay {

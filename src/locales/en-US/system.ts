@@ -164,6 +164,7 @@ export default {
         moveFolder: 'Move Folder',
         moveFile: 'Move File',
         moveSuccess: 'Moved successfully',
+        dragMoveSelfInvalid: 'A folder cannot be dragged into itself',
         rename: 'Rename',
         folders: 'Folders',
         favorites: 'Favorites',

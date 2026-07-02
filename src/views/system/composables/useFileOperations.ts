@@ -123,6 +123,35 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         showMoveDialog.value = true
     }
 
+    const moveItemsToFolder = async (items: FileOperationItem[], targetFolderId?: number | string | null) => {
+        const { files, folders } = splitOperationItems(items)
+        if (files.length === 0 && folders.length === 0) {
+            ElMessage.warning(t('system.file.selectFileFirst'))
+            return false
+        }
+
+        moveSubmitting.value = true
+        try {
+            const normalizedTargetFolderId = normalizeFolderId(targetFolderId)
+            if (files.length > 0) {
+                await moveSystemFiles({ ids: files.map((item) => item.id), folder_id: normalizedTargetFolderId })
+            }
+            for (const folder of folders) {
+                await moveSystemFileFolder(folder.id, normalizedTargetFolderId)
+            }
+            ElMessage.success(t('system.file.moveSuccess'))
+            selectedFiles.value = []
+            await loadFolderTree()
+            await getList()
+            return true
+        } catch (error) {
+            Logger.error('移动文件资源失败:', error)
+            return false
+        } finally {
+            moveSubmitting.value = false
+        }
+    }
+
     const submitMoveDialog = async () => {
         moveSubmitting.value = true
         try {
@@ -134,23 +163,9 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
                 await loadFolderTree()
                 return
             }
-            const { files, folders } = splitOperationItems(selectedFiles.value)
-            if (files.length === 0 && folders.length === 0) {
-                ElMessage.warning(t('system.file.selectFileFirst'))
-                return
-            }
-            const targetFolderId = normalizeFolderId(moveTargetFolderId.value)
-            if (files.length > 0) {
-                await moveSystemFiles({ ids: files.map((item) => item.id), folder_id: targetFolderId })
-            }
-            for (const folder of folders) {
-                await moveSystemFileFolder(folder.id, targetFolderId)
-            }
-            ElMessage.success(t('system.file.moveSuccess'))
+            const moved = await moveItemsToFolder(selectedFiles.value, moveTargetFolderId.value)
+            if (!moved) return
             showMoveDialog.value = false
-            selectedFiles.value = []
-            await loadFolderTree()
-            await getList()
         } catch (error) {
             Logger.error('移动文件资源失败:', error)
         } finally {
@@ -557,6 +572,7 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         confirmForceDelete,
         handleSelectionChange,
         handleTrashSelectionChange,
+        moveItemsToFolder,
         openBatchMoveDialog,
         openFolderMoveDialog,
         submitMoveDialog,

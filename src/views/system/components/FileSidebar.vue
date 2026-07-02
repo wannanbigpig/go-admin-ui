@@ -51,7 +51,17 @@
                 @node-click="(data: FolderTreeNode) => emit('select-folder', data)"
             >
                 <template #default="{ node, data }">
-                    <div class="folder-node-custom">
+                    <div
+                        class="folder-node-custom"
+                        :class="{ 'is-drop-target': isDropTarget(data), 'is-dragging': isDraggedFolder(data) }"
+                        :draggable="!data.isRoot"
+                        @dragstart="handleFolderDragStart($event, data)"
+                        @dragend="handleDragEnd"
+                        @dragenter="handleFolderDragEnter($event, data)"
+                        @dragover="handleFolderDragOver($event, data)"
+                        @dragleave="handleFolderDragLeave($event, data)"
+                        @drop="handleFolderDrop($event, data)"
+                    >
                         <el-icon><Folder /></el-icon>
                         <span class="folder-name-label">{{ node.label }}</span>
                         <el-dropdown v-if="!data.isRoot" trigger="click" @command="(command: string) => emit('folder-command', { command, folder: data })">
@@ -82,10 +92,13 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Files, Picture, VideoCamera, Headset, Folder, Delete, MoreFilled, Plus, Document, More } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { SystemFileFolder } from '@/types/system'
 import { hasPermission } from '@/utils/auth'
+import { RESOURCE_DRAG_MIME, isResourceDragEvent } from '../composables/fileDragDrop'
+import type { FileOperationItem } from '../composables/useFileOperations'
 
 const { t } = useI18n()
 
@@ -95,9 +108,14 @@ interface Props {
     folderTree: SystemFileFolder[]
     selectedFolderId: number | string | null
     selectedCategory: string
+    draggingItems?: FileOperationItem[]
+    dropTargetFolderId?: number | string | null
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+    draggingItems: () => [],
+    dropTargetFolderId: null,
+})
 
 const emit = defineEmits<{
     (e: 'select-category', category: string): void
@@ -105,7 +123,77 @@ const emit = defineEmits<{
     (e: 'open-folder-dialog', mode: 'create' | 'rename', folder?: SystemFileFolder): void
     (e: 'open-trash-dialog'): void
     (e: 'folder-command', payload: { command: string; folder: SystemFileFolder }): void
+    (e: 'drag-start', items: FileOperationItem[]): void
+    (e: 'drag-end'): void
+    (e: 'folder-drop', folder: FolderTreeNode): void
+    (e: 'folder-drag-enter', folder: FolderTreeNode): void
+    (e: 'folder-drag-leave', folder: FolderTreeNode): void
 }>()
+
+const draggingFolderId = ref<number | string | null>(null)
+
+const toFolderOperationItem = (folder: FolderTreeNode): FileOperationItem => ({
+    ...folder,
+    item_type: 'folder',
+    origin_name: folder.name,
+})
+
+const isDraggedFolder = (folder: FolderTreeNode) => {
+    if (draggingFolderId.value !== null) {
+        return String(draggingFolderId.value) === String(folder.id)
+    }
+    return props.draggingItems.some((item) => item.item_type === 'folder' && String(item.id) === String(folder.id))
+}
+
+const isDropTarget = (folder: FolderTreeNode) => {
+    return props.dropTargetFolderId !== null && String(props.dropTargetFolderId) === String(folder.id)
+}
+
+const handleFolderDragStart = (event: DragEvent, folder: FolderTreeNode) => {
+    if (folder.isRoot) return
+    draggingFolderId.value = folder.id
+    const draggingItems = [toFolderOperationItem(folder)]
+    event.dataTransfer?.setData(RESOURCE_DRAG_MIME, JSON.stringify([{ id: folder.id, item_type: 'folder' }]))
+    event.dataTransfer?.setData('text/plain', folder.name)
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+    }
+    emit('drag-start', draggingItems)
+}
+
+const handleFolderDragEnter = (event: DragEvent, folder: FolderTreeNode) => {
+    if (!isResourceDragEvent(event) || folder.isRoot) return
+    emit('folder-drag-enter', folder)
+}
+
+const handleFolderDragOver = (event: DragEvent, folder: FolderTreeNode) => {
+    if (!isResourceDragEvent(event) || folder.isRoot) return
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    emit('folder-drag-enter', folder)
+}
+
+const handleFolderDragLeave = (event: DragEvent, folder: FolderTreeNode) => {
+    if (!isResourceDragEvent(event) || folder.isRoot) return
+    const current = event.currentTarget as HTMLElement | null
+    const related = event.relatedTarget as Node | null
+    if (current && related && current.contains(related)) return
+    emit('folder-drag-leave', folder)
+}
+
+const handleFolderDrop = (event: DragEvent, folder: FolderTreeNode) => {
+    if (!isResourceDragEvent(event) || folder.isRoot) return
+    event.preventDefault()
+    event.stopPropagation()
+    emit('folder-drop', folder)
+}
+
+const handleDragEnd = () => {
+    draggingFolderId.value = null
+    emit('drag-end')
+}
 </script>
 
 <style scoped lang="scss">
@@ -194,6 +282,21 @@ const emit = defineEmits<{
     gap: var(--xl-space-2);
     flex: 1;
     min-width: 0;
+    border-radius: var(--xl-radius-sm);
+    padding-right: var(--xl-space-1);
+    transition:
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+
+    &.is-drop-target {
+        background: var(--el-color-primary-light-8);
+        box-shadow: inset 0 0 0 1px var(--el-color-primary);
+    }
+
+    &.is-dragging {
+        opacity: 0.5;
+    }
 
     .el-icon {
         color: var(--el-color-primary);
