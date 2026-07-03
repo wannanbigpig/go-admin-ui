@@ -126,11 +126,11 @@ export function triggerTask(data: TaskTriggerPayload) {
 }
 
 export function updateTaskRecordPolicy(data: TaskRecordPolicyPayload) {
-    return request<TaskDefinition>('/v1/task/record-policy', 'PATCH', { data })
+    return request<TaskDefinition>('/v1/task/record-policy', 'POST', { data })
 }
 
 export function updateTaskOperationConfig(data: TaskOperationConfigPayload) {
-    return request<TaskDefinition>('/v1/task/operation-config', 'PATCH', { data })
+    return request<TaskDefinition>('/v1/task/operation-config', 'POST', { data })
 }
 
 export function getTaskRunList(params?: Record<string, unknown>) {
