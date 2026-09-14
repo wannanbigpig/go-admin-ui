@@ -10,6 +10,7 @@ import { ElMessageBox } from 'element-plus'
 import { Logger } from '@/utils/logger'
 import type { LoginPayload, UserInfo, UserPermission } from '@/types/auth'
 import { translate } from '@/locales'
+import { apiCache } from '@/utils/apiCache'
 
 // ==================== 常量定义 ====================
 /** 当前刷新用户信息的 Promise（用于并发控制） */
@@ -41,6 +42,7 @@ export const useAuthStore = defineStore(
         const token = computed(() => {
             return isTokenExpired.value ? '' : access_token.value
         })
+        const sessionVersion = computed(() => authSessionVersion.value)
 
         /**
          * 路由数据（转换为 Vue Router 格式）
@@ -180,14 +182,17 @@ export const useAuthStore = defineStore(
         const ensureTokenValid = async () => {
             if (!token.value) return false
             const currentKey = `${access_token.value}:${expires_at.value}`
+            const requestSessionVersion = authSessionVersion.value
             if (tokenCheckedKey.value === currentKey) return true
             if (!checkingTokenPromise) {
                 checkingTokenPromise = checkTokenApi()
                     .then(() => {
+                        if (requestSessionVersion !== authSessionVersion.value) return false
                         tokenCheckedKey.value = currentKey
                         return true
                     })
                     .catch(async (error) => {
+                        if (requestSessionVersion !== authSessionVersion.value) return false
                         Logger.warn('access token 校验失败，尝试静默刷新:', error)
                         await refreshAccessToken()
                         return Boolean(token.value)
@@ -203,7 +208,11 @@ export const useAuthStore = defineStore(
          * 通过 HttpOnly Cookie 静默刷新 access token
          */
         const refreshAccessToken = async () => {
+            const requestSessionVersion = authSessionVersion.value
             const result = await refreshAccessTokenApi()
+            if (requestSessionVersion !== authSessionVersion.value) {
+                throw new Error('认证会话已变化，已丢弃过期的 token 刷新结果')
+            }
             updateToken(result.access_token, result.expires_at)
             return result.access_token
         }
@@ -222,6 +231,7 @@ export const useAuthStore = defineStore(
             isTokenExpiredModalShown.value = false
             refreshingPromise = null
             checkingTokenPromise = null
+            apiCache.clear()
             localStorage.removeItem(AUTH_PERSIST_KEY)
             removeDynamicRoute()
         }
@@ -266,6 +276,7 @@ export const useAuthStore = defineStore(
             // Getters
             isTokenExpired,
             token,
+            sessionVersion,
             routerData,
             firstPath,
             buttonPermissions,
@@ -289,7 +300,7 @@ export const useAuthStore = defineStore(
         persist: {
             key: AUTH_PERSIST_KEY,
             storage: localStorage,
-            paths: ['access_token', 'expires_at', 'userInfo', 'menu'],
+            pick: ['access_token', 'expires_at', 'userInfo', 'menu'],
         },
     }
 )

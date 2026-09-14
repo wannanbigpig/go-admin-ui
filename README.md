@@ -2,10 +2,10 @@
 
 <div align="center">
 
-![Vue 3](https://img.shields.io/badge/Vue-3.4+-4FC08D?style=flat-square&logo=vue.js)
-![Vite](https://img.shields.io/badge/Vite-5.4+-646CFF?style=flat-square&logo=vite)
-![Element Plus](https://img.shields.io/badge/Element%20Plus-2.7+-409EFF?style=flat-square&logo=element)
-![Vitest](https://img.shields.io/badge/Vitest-2.x-6E9F18?style=flat-square&logo=vitest)
+![Vue 3](https://img.shields.io/badge/Vue-3.5.42-4FC08D?style=flat-square&logo=vue.js)
+![Vite](https://img.shields.io/badge/Vite-8.3.0-646CFF?style=flat-square&logo=vite)
+![Element Plus](https://img.shields.io/badge/Element%20Plus-2.14.5-409EFF?style=flat-square&logo=element)
+![Vitest](https://img.shields.io/badge/Vitest-5.0.0-6E9F18?style=flat-square&logo=vitest)
 
 基于 Vue 3 + Vite + Element Plus 的后台管理系统前端。
 
@@ -45,14 +45,14 @@
 
 ## 技术栈
 
-- `Vue 3` + `TypeScript`
-- `Vite 5`
-- `Vue Router 4`
-- `Pinia` + `pinia-plugin-persistedstate`
-- `Element Plus`
-- `Axios`
-- `Vue I18n`
-- `Vitest`
+- `Vue 3.5` + TypeScript 6
+- `Vite 8` + Rolldown / Oxc
+- `Vue Router 5`
+- `Pinia 4` + `pinia-plugin-persistedstate 4`
+- `Element Plus 2.14`
+- `Axios 1.20`
+- `Vue I18n 11`
+- `Vitest 5` + `jsdom 30`
 
 ## 目录结构
 
@@ -80,47 +80,50 @@ src
 
 ## 环境要求
 
-- `Node.js >= 18`
-- `npm >= 9`
+- `Node.js ^22.13.0、^24.0.0 或 >= 26.0.0`
+- `pnpm 12.4.1`（由 `packageManager` 固定）
+
+项目只维护 `pnpm-lock.yaml`，并统一使用 TypeScript 6 稳定版，确保与 Vue、`vue-tsc` 和 ESLint 工具链保持在同一条受支持链路上。
 
 ## 快速开始
 
 ### 1. 安装依赖
 
 ```bash
-npm install
+corepack pnpm install --frozen-lockfile
 ```
 
 ### 2. 启动开发环境
 
 ```bash
-npm run dev
+corepack pnpm run dev
 ```
 
 可选启动方式：
 
 ```bash
 # 读取 .env.location
-npm run local
+corepack pnpm run local
 
 # 使用 production mode 启动 Vite
-npm run prod
+corepack pnpm run prod
 ```
 
 ### 3. 构建
 
 ```bash
-npm run build:dev
-npm run build:production
-npm run preview
+corepack pnpm run build:dev
+corepack pnpm run build:production
+corepack pnpm run preview
 ```
 
 ### 4. 校验与测试
 
 ```bash
-npm run type-check
-npm run lint
-npm run test:run
+corepack pnpm run type-check
+corepack pnpm run lint
+corepack pnpm run test:run
+corepack pnpm run test:coverage
 ```
 
 ## 环境变量重点
@@ -153,9 +156,11 @@ npm run test:run
 
 - `src/router/guard.ts` 负责登录态校验、静默刷新 token、动态路由注入和页面标题更新。
 - `src/router/dynamicRoutes.ts` 负责把后端菜单树转换成前端路由，并过滤按钮节点。
-- `src/stores/auth.ts` 负责用户信息、菜单树、按钮权限和 token 生命周期。
+- `src/stores/auth.ts` 负责用户信息、菜单树、按钮权限和 token 生命周期；退出或切换账号时会同时失效 API 缓存与旧异步请求。
 - `src/utils/request.ts` 负责请求封装、响应标准化、401 刷新和开发期 Mock。
-- `src/stores/notification.ts` 负责通知列表、未读数、WebSocket 心跳和重连。
+- `src/stores/notification.ts` 负责通知列表、未读数、WebSocket 心跳和重连，并通过连接代次丢弃旧会话的异步结果。
+
+Vite 开发服务器会在启动期预构建当前 Element Plus 的组件样式入口，避免首次访问懒加载菜单时因补做 dependency optimization 触发整页刷新；生产环境使用预构建产物，不走该开发期优化器。
 
 ## 文档导航
 
@@ -167,8 +172,10 @@ npm run test:run
 文档更新后，建议至少执行：
 
 ```bash
-npm run lint
-npm run test:run
+corepack pnpm run lint
+corepack pnpm run type-check
+corepack pnpm run test:coverage
+corepack pnpm run build:production
 ```
 
 ## 许可证

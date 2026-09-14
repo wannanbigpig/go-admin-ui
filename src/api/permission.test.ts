@@ -24,7 +24,7 @@ vi.mock('@/locales', () => ({
     DEFAULT_LOCALE: 'zh-CN',
 }))
 
-import { getMenuList, refreshAllMenuPermissions } from '@/api/permission'
+import { createRole, getMenuList, getRoleOptions, refreshAllMenuPermissions } from '@/api/permission'
 
 describe('api/permission.ts', () => {
     beforeEach(() => {
@@ -58,6 +58,20 @@ describe('api/permission.ts', () => {
         hoisted.mockGet.mockResolvedValueOnce([{ id: 2, title: '菜单2' }])
         await expect(getMenuList({ status: 1 })).resolves.toEqual([{ id: 2, title: '菜单2' }])
         expect(hoisted.mockPost).toHaveBeenCalledWith('/v1/menu/update-all-menu-permissions')
+        expect(hoisted.mockGet).toHaveBeenCalledTimes(2)
+    })
+
+    it('角色变更后应同时清理角色下拉选项缓存', async () => {
+        hoisted.mockGet.mockResolvedValueOnce([{ id: 1, name: '旧角色', code: 'old' }])
+        await getRoleOptions()
+        await getRoleOptions()
+        expect(hoisted.mockGet).toHaveBeenCalledTimes(1)
+
+        hoisted.mockPost.mockResolvedValueOnce({})
+        await createRole({ name: '新角色', code: 'new' })
+
+        hoisted.mockGet.mockResolvedValueOnce([{ id: 2, name: '新角色', code: 'new' }])
+        await expect(getRoleOptions()).resolves.toEqual([{ id: 2, name: '新角色', code: 'new' }])
         expect(hoisted.mockGet).toHaveBeenCalledTimes(2)
     })
 })

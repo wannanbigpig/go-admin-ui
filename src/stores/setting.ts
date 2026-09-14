@@ -52,7 +52,7 @@ export const useSettingStore = defineStore(
         persist: {
             key: 'setting',
             storage: localStorage,
-            paths: ['isCollapse', 'watermarkEnabled', 'watermarkContent', 'theme', 'locale'],
+            pick: ['isCollapse', 'watermarkEnabled', 'watermarkContent', 'theme', 'locale'],
         },
     }
 )

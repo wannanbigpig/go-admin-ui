@@ -6,6 +6,7 @@ const hoisted = vi.hoisted(() => {
     const mockGetNotificationList = vi.fn()
     const mockGetNotificationUnreadCount = vi.fn()
     const mockMarkNotificationRead = vi.fn()
+    const mockGetWsTicket = vi.fn()
     const mockRouter = {
         push: vi.fn(),
     }
@@ -13,6 +14,7 @@ const hoisted = vi.hoisted(() => {
         mockGetNotificationList,
         mockGetNotificationUnreadCount,
         mockMarkNotificationRead,
+        mockGetWsTicket,
         mockRouter,
     }
 })
@@ -22,7 +24,7 @@ vi.mock('@/api/system', () => ({
     getNotificationUnreadCount: hoisted.mockGetNotificationUnreadCount,
     markNotificationRead: hoisted.mockMarkNotificationRead,
     markAllNotificationsRead: vi.fn(),
-    getWsTicket: vi.fn().mockResolvedValue({ ticket: 'mock-ticket' }),
+    getWsTicket: hoisted.mockGetWsTicket,
 }))
 
 vi.mock('@/router', () => ({
@@ -90,9 +92,11 @@ describe('stores/notification.ts', () => {
         hoisted.mockGetNotificationList.mockReset()
         hoisted.mockGetNotificationUnreadCount.mockReset()
         hoisted.mockMarkNotificationRead.mockReset()
+        hoisted.mockGetWsTicket.mockReset()
         hoisted.mockRouter.push.mockReset()
         hoisted.mockGetNotificationList.mockResolvedValue({ list: [], total: 0 })
         hoisted.mockGetNotificationUnreadCount.mockResolvedValue({ unread_count: 0 })
+        hoisted.mockGetWsTicket.mockResolvedValue({ ticket: 'mock-ticket' })
     })
 
     afterEach(() => {
@@ -244,6 +248,48 @@ describe('stores/notification.ts', () => {
         await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
         const socket = mockSockets[1] // 新创建的 socket 应该是第二个了
         expect(sentActions(socket, 'subscribe')).toEqual([])
+    })
+
+    it('stop 后应丢弃尚未返回的 WebSocket ticket', async () => {
+        let resolveTicket!: (value: { ticket: string }) => void
+        hoisted.mockGetWsTicket.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveTicket = resolve
+            })
+        )
+        const store = useNotificationStore()
+
+        store.start('old-token', 'zh-CN')
+        store.stop()
+        resolveTicket({ ticket: 'stale-ticket' })
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(mockSockets).toHaveLength(0)
+        expect(store.connectionStatus).toBe('idle')
+    })
+
+    it('重新 start 后旧 ticket 不应覆盖新连接', async () => {
+        let resolveOldTicket!: (value: { ticket: string }) => void
+        hoisted.mockGetWsTicket
+            .mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveOldTicket = resolve
+                })
+            )
+            .mockResolvedValueOnce({ ticket: 'new-ticket' })
+        const store = useNotificationStore()
+
+        store.start('old-token', 'zh-CN')
+        store.start('new-token', 'en-US')
+        await vi.waitFor(() => expect(mockSockets).toHaveLength(1))
+        resolveOldTicket({ ticket: 'old-ticket' })
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(mockSockets).toHaveLength(1)
+        expect(mockSockets[0].url).toContain('ticket=new-ticket')
+        expect(mockSockets[0].url).toContain('lang=en-US')
     })
 
     it('接收到 topic 为 export.finished 时应当拦截并更新 exportFinishedTime', async () => {

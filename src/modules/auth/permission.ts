@@ -62,7 +62,7 @@ export function buildButtonPermissionMap(menuTree: UserPermission[] = []): Map<s
 export function hasButtonPermission(permissionMap: Map<string, ButtonPermissionInfo>, permissionList: string[], permission: unknown, checkShow = false): boolean {
     if (permission === null || permission === undefined) return false
 
-    let targetPerms: string[] = []
+    let targetPerms: string[]
     if (typeof permission === 'string') {
         const trimmed = permission.trim()
         if (trimmed === '') return false

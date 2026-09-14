@@ -108,4 +108,63 @@ describe('dynamicRoutes', () => {
 
         expect(findFirstValidRoute(routes)).toBe('')
     })
+
+    it('不同父路由下相同相对 path 的子菜单都应保留', () => {
+        const child = (id: number, pid: number, name: string): UserPermission => ({
+            id,
+            pid,
+            title: name,
+            code: '',
+            name,
+            type: 2,
+            path: 'list',
+            component_key: 'home:index',
+            is_show: 1,
+            sort: 1,
+            children: [],
+        })
+        const parent = (id: number, path: string, childRoute: UserPermission): UserPermission => ({
+            id,
+            pid: 0,
+            title: path,
+            code: '',
+            name: `${path}Parent`,
+            type: 1,
+            path,
+            component_key: '',
+            is_show: 1,
+            sort: 1,
+            children: [childRoute],
+        })
+
+        const routes = convertRoute([parent(1, 'a', child(2, 1, 'AList')), parent(3, 'b', child(4, 3, 'BList'))])
+
+        expect(routes).toHaveLength(2)
+        expect(routes[0].children).toHaveLength(1)
+        expect(routes[1].children).toHaveLength(1)
+    })
+
+    it('合法 HTTP 外链叶子菜单应保留在菜单树中', () => {
+        const routes = convertRoute([
+            {
+                id: 1,
+                pid: 0,
+                title: '项目文档',
+                code: '',
+                name: 'Docs',
+                type: 2,
+                path: 'https://example.com/docs',
+                component_key: '',
+                is_show: 1,
+                is_external_links: 1,
+                is_new_window: 1,
+                sort: 1,
+                children: [],
+            },
+        ])
+
+        expect(routes).toHaveLength(1)
+        expect(routes[0].path).toBe('https://example.com/docs')
+        expect(routes[0].component).toBeUndefined()
+    })
 })

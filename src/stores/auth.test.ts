@@ -10,6 +10,7 @@ const hoisted = vi.hoisted(() => {
     const mockRemoveDynamicRoute = vi.fn()
     const mockFindFirstValidRoute = vi.fn()
     const mockRefreshAccessTokenApi = vi.fn()
+    const mockApiCacheClear = vi.fn()
 
     const localStorageStore: Record<string, string> = {}
     const mockLocalStorage = {
@@ -35,6 +36,7 @@ const hoisted = vi.hoisted(() => {
         mockFindFirstValidRoute,
         mockLocalStorage,
         mockRefreshAccessTokenApi,
+        mockApiCacheClear,
         mockRouter: {
             push: vi.fn(),
             currentRoute: {
@@ -58,7 +60,14 @@ vi.mock('@/modules/auth/service', () => ({
 }))
 
 vi.mock('@/api/auth', () => ({
+    checkToken: vi.fn(),
     refreshAccessToken: hoisted.mockRefreshAccessTokenApi,
+}))
+
+vi.mock('@/utils/apiCache', () => ({
+    apiCache: {
+        clear: hoisted.mockApiCacheClear,
+    },
 }))
 
 vi.mock('@/modules/auth/model', () => ({
@@ -114,6 +123,7 @@ describe('stores/auth.ts', () => {
         hoisted.mockFindFirstValidRoute.mockReset()
         hoisted.mockRouter.push.mockReset()
         hoisted.mockRefreshAccessTokenApi.mockReset()
+        hoisted.mockApiCacheClear.mockReset()
     })
 
     it('refreshUserInfo 应在菜单刷新后立即同步动态路由', async () => {
@@ -206,6 +216,35 @@ describe('stores/auth.ts', () => {
         await expect(store.refreshAccessToken()).resolves.toBe('new-access')
         expect(store.access_token).toBe('new-access')
         expect(hoisted.mockLocalStorage.setItem).not.toHaveBeenCalledWith('refresh_token', expect.any(String))
+    })
+
+    it('refreshAccessToken 不应在退出登录后恢复旧会话 token', async () => {
+        const store = useAuthStore()
+        let resolveRefresh!: (value: { access_token: string; token_type: 'Bearer'; expires_at: number }) => void
+        hoisted.mockRefreshAccessTokenApi.mockReturnValue(
+            new Promise((resolve) => {
+                resolveRefresh = resolve
+            })
+        )
+
+        const refreshPromise = store.refreshAccessToken()
+        store.resetAuthStore()
+        resolveRefresh({
+            access_token: 'stale-access',
+            token_type: 'Bearer',
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+        })
+
+        await expect(refreshPromise).rejects.toThrow('认证会话已变化')
+        expect(store.access_token).toBe('')
+    })
+
+    it('resetAuthStore 应清空跨账号 API 缓存', () => {
+        const store = useAuthStore()
+
+        store.resetAuthStore()
+
+        expect(hoisted.mockApiCacheClear).toHaveBeenCalledTimes(1)
     })
 
     it('handleTokenExpired 应触发弹窗并在确认时本地退出', async () => {

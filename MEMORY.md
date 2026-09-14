@@ -13,7 +13,9 @@
 先记住这些，不确定时再往下查细节：
 
 - **代码是唯一真相，文档只是辅助**；文档和代码冲突时，以源码和配置文件为准并顺手修正文档。
-- 项目是 `Vue 3 + Vite 5 + Element Plus + Pinia + Vue Router + Vue I18n + TypeScript` 的后台管理系统前端。
+- 项目是 `Vue 3.5 + Vite 8 + Element Plus 2.14 + Pinia 4 + Vue Router 5 + Vue I18n 11 + TypeScript 6` 的后台管理系统前端。
+- 包管理器固定为 `pnpm 12.4.1`，只维护 `pnpm-lock.yaml`；不要运行 `npm install` 或重新生成 `package-lock.json`。
+- TypeScript 统一使用标准包的 6.x 稳定版，直接配合 `typescript-eslint` 与 `vue-tsc`，不使用 TypeScript 7 或兼容别名。
 - 关联后端仓库是 [wannanbigpig/gin-layout](https://github.com/wannanbigpig/gin-layout)。
 - 动态菜单和动态路由标题都以后端返回的 `title` 原文为准，前端不根据 `name`、`path`、`component` 推断翻译。
 - 语言切换后，必须调用 `authStore.refreshUserInfo()` 重新拉取菜单并同步动态路由，否则侧边栏标题不会即时刷新。
@@ -36,8 +38,9 @@
 - 在 `vue-i18n` 文案里直接写未转义的 `@/views/...`。
 - 假设存在 `src/stores/routes.ts`；当前路由和按钮权限都由 `auth` store 持有。
 - 假设字典缓存无需按语言隔离；`useDictOptions` 的缓存 key 必须区分 `locale`。
-- 假设 `SortableJS` 是当前运行时依赖；现在只有类型包残留，没有实际运行时代码。
+- 为未使用的库保留直接依赖或类型包；依赖升级后应通过源码检索清理冗余包。
 - 忽略开发代理配置，直接把请求改成依赖浏览器直连后端。
+- 混用 npm 与 pnpm，或同时维护 `package-lock.json`、`pnpm-lock.yaml` 两套依赖真相。
 
 ---
 
@@ -47,7 +50,8 @@
 
 - 项目名：`x-l-admin-vue3`
 - 类型：后台管理系统前端
-- 技术栈：`Vue 3.4+`、`Vite 5`、`Element Plus`、`Pinia`、`Vue Router`、`Vue I18n`、`Axios`、`TypeScript`、`Vitest + jsdom`
+- 技术栈：`Vue 3.5`、`Vite 8 + Rolldown/Oxc`、`Element Plus 2.14`、`Pinia 4`、`Vue Router 5`、`Vue I18n 11`、`Axios 1.20`、`TypeScript 6`、`Vitest 5 + jsdom 30`
+- 运行与构建基线：Node.js `^22.13.0`、`^24.0.0` 或 `>=26.0.0`，pnpm `12.4.1`
 - 关联后端：[`wannanbigpig/gin-layout`](https://github.com/wannanbigpig/gin-layout)
 
 ### 2.2 已落地能力
@@ -104,7 +108,7 @@ x-l-admin-vue3/
 
 - 入口文件：`src/stores/auth.ts`、`src/router/guard.ts`、`src/router/dynamicRoutes.ts`
 - `authStore.refreshUserInfo()` 会并发拉取当前用户和菜单树，并立即调用 `syncDynamicRoutesFromMenu()` 同步动态路由。
-- `convertRoute()` 会过滤按钮节点（`type === 3` 或 `'button'`），并对 `name`、`path` 做去重保护。
+- `convertRoute()` 会过滤按钮节点（`type === 3` 或 `'button'`），并对 `name`、解析后的完整 `path` 做去重保护；HTTP(S) 外链只进入侧边栏数据，不注册到 Vue Router。
 - `normalizeComponentKey()` 会把后端 `component` 统一归一化到 `../views/**/*.vue` 规则。
 - 开发模式下 `validateRouteComponents()` 会在组件路径缺失时直接抛错，而不是等到访问页面时再白屏。
 
@@ -204,12 +208,13 @@ x-l-admin-vue3/
 
 ### 6.4 默认验证命令
 
-- 本地开发：`npm run dev` / `npm run local`
-- 类型检查：`npm run type-check`
-- 全量 Lint：`npm run lint`
-- 单文件 Lint：`npx eslint <修改的文件>`
-- 单元测试：`npm run test:run`
-- 覆盖率：`npm run test:coverage`
+- 安装依赖：`corepack pnpm install --frozen-lockfile`
+- 本地开发：`corepack pnpm run dev` / `corepack pnpm run local`
+- 类型检查：`corepack pnpm run type-check`
+- 全量 Lint：`corepack pnpm run lint`
+- 单文件 Lint：`corepack pnpm exec eslint <修改的文件>`
+- 单元测试：`corepack pnpm run test:run`
+- 覆盖率：`corepack pnpm run test:coverage`
 
 如果本次改动涉及源码文件，至少要对改动文件执行 ESLint；如果涉及公共逻辑、请求层、权限链路、动态路由或上传链路，应补充类型检查和对应测试验证。
 

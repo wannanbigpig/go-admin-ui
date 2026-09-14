@@ -2,7 +2,7 @@ import { computed, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { editPermission } from '@/api/permission'
-import { API_PERMISSION_AUTH_MODE, createApiPermissionForm, type ApiPermission } from '@/modules/apiPermission/model'
+import { API_PERMISSION_AUTH_MODE, createApiPermissionForm, toApiPermissionUpdatePayload, type ApiPermission } from '@/modules/apiPermission/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import { translate } from '@/locales'
 
@@ -24,10 +24,6 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
         name: [
             { required: true, message: translate('permission.api.form.nameRequired'), trigger: 'blur' },
             { min: 1, max: 60, message: translate('permission.api.form.nameMax'), trigger: 'blur' },
-        ],
-        is_auth: [
-            { required: true, message: translate('permission.api.form.authModeRequired'), trigger: 'change' },
-            { type: 'enum', enum: [API_PERMISSION_AUTH_MODE.NONE, API_PERMISSION_AUTH_MODE.LOGIN, API_PERMISSION_AUTH_MODE.AUTHZ], message: translate('permission.api.form.authModeInvalid'), trigger: 'change' },
         ],
         sort: [{ trigger: 'blur', type: 'number', message: translate('permission.api.form.sortInvalid') }],
         is_effective: [{ required: true, message: translate('permission.api.form.effectiveRequired'), trigger: 'change' }],
@@ -88,7 +84,7 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
 
         isSubmitting.value = true
         try {
-            await editPermission(formData)
+            await editPermission(toApiPermissionUpdatePayload(formData))
             await refreshList()
             showDrawer.value = false
             ElMessage.success(translate('common.result.operationSuccess'))

@@ -466,7 +466,7 @@ export async function calculateSystemFileSha256(file: File, onProgress?: (progre
         Logger.warn('Worker 计算 Hash 失败，降级为原生 Subtle Crypto 载入计算:', error)
         try {
             if (!globalThis.crypto?.subtle) {
-                throw new Error('Web Crypto is not available')
+                throw new Error('Web Crypto is not available', { cause: error })
             }
             const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer())
             return Array.from(new Uint8Array(hashBuffer))
@@ -474,7 +474,7 @@ export async function calculateSystemFileSha256(file: File, onProgress?: (progre
                 .join('')
         } catch (fallbackError) {
             Logger.error('降级原生 Web Crypto 计算 Hash 失败:', fallbackError)
-            throw new Error(`计算文件 Hash 失败: ${String(fallbackError)}`)
+            throw new Error(`计算文件 Hash 失败: ${String(fallbackError)}`, { cause: fallbackError })
         }
     }
 }

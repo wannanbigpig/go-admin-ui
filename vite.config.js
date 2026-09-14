@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync, readdirSync } from 'fs'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import ElementPlus from 'unplugin-element-plus/vite'
@@ -9,10 +9,13 @@ import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import eslintPlugin from 'vite-plugin-eslint'
 import viteCompression from 'vite-plugin-compression'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
+const elementPlusComponentsDir = resolve(import.meta.dirname, 'node_modules/element-plus/es/components')
+const elementPlusStyleEntries = readdirSync(elementPlusComponentsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(resolve(elementPlusComponentsDir, entry.name, 'style/css.mjs')))
+    .map((entry) => `element-plus/es/components/${entry.name}/style/css`)
 
 // ==================== 常量定义 ====================
 export default defineConfig(({ mode }) => {
@@ -27,6 +30,7 @@ export default defineConfig(({ mode }) => {
     const base = env.VITE_APP_BASE || '/'
     const proxyTarget = env.VITE_PROXY_TARGET || env.VITE_BASE_URL || 'http://127.0.0.1:9001'
 
+    /** @returns {import('vite').ProxyOptions} */
     const createProxyConfig = () => ({
         target: proxyTarget,
         changeOrigin: true,
@@ -53,8 +57,7 @@ export default defineConfig(({ mode }) => {
         // ==================== 路径解析配置 ====================
         resolve: {
             alias: {
-                '@': resolve(__dirname, './src'),
-                '~': resolve(__dirname, './node_modules'),
+                '@': resolve(import.meta.dirname, './src'),
             },
             extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
         },
@@ -69,7 +72,7 @@ export default defineConfig(({ mode }) => {
                 imports: ['vue'],
                 resolvers: [
                     ElementPlusResolver(),
-                    IconsResolver(), // 自动导入图标组件
+                    IconsResolver({}), // 自动导入图标组件
                 ],
                 eslintrc: {
                     enabled: true,
@@ -92,21 +95,14 @@ export default defineConfig(({ mode }) => {
             // 图标插件
             Icons({
                 compiler: 'vue3',
-                autoInstall: true,
+                autoInstall: false,
                 customCollections: {
                     custom: FileSystemIconLoader('./src/assets/svg'), // 自定义 SVG 图标
                 },
             }),
 
             // Element Plus 按需导入样式
-            ElementPlus(),
-
-            // ESLint 插件（仅开发模式运行，生产构建由 CI 独立执行）
-            mode !== 'production' &&
-                eslintPlugin({
-                    cache: true,
-                    cacheLocation: 'node_modules/.cache/.eslintcache',
-                }),
+            ElementPlus({}),
 
             // Gzip 压缩插件
             viteCompression({
@@ -118,13 +114,18 @@ export default defineConfig(({ mode }) => {
             }),
         ],
 
+        // 预扫描全部懒加载页面，避免首次点击菜单时才发现 Element Plus 深层样式依赖并触发整页重载。
+        optimizeDeps: {
+            entries: ['index.html', 'src/{views,layout,components,modules}/**/*.vue'],
+            include: elementPlusStyleEntries,
+        },
+
         // ==================== 开发服务器配置 ====================
         server: {
             open: autoOpenBrowser ? '/' : false, // 自动打开浏览器
             host: '127.0.0.1',
             port: 3000,
             strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
-            https: false,
             proxy, // 代理配置
         },
 
@@ -139,27 +140,20 @@ export default defineConfig(({ mode }) => {
 
         // ==================== 构建配置 ====================
         build: {
-            rollupOptions: {
+            rolldownOptions: {
                 input: {
-                    main: resolve(__dirname, './index.html'),
+                    main: resolve(import.meta.dirname, './index.html'),
                 },
                 output: {
-                    manualChunks(id) {
-                        if (!id.includes('node_modules')) return
-                        if (id.includes('/node_modules/element-plus/')) return 'element-plus'
-                        if (id.includes('/node_modules/vue/') || id.includes('/node_modules/vue-router/') || id.includes('/node_modules/pinia/') || id.includes('/node_modules/@vue/')) return 'vue-vendor'
-                        if (id.includes('/node_modules/axios/')) return 'axios'
-                        if (id.includes('/node_modules/echarts/') || id.includes('/node_modules/zrender/')) return 'echarts'
-                        return 'vendor'
+                    minify: {
+                        compress: {
+                            dropConsole: mode === 'production',
+                            dropDebugger: mode === 'production',
+                        },
                     },
                 },
             },
             outDir: 'dist',
-            // 生产环境移除 console 日志
-            minify: 'esbuild',
-        },
-        esbuild: {
-            drop: mode === 'production' ? ['console', 'debugger'] : [],
         },
 
         // ==================== CSS 配置 ====================

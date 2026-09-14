@@ -292,6 +292,7 @@ export const useNotificationStore = defineStore(
         let currentToken = ''
         let currentLocale = 'zh-CN'
         let isStopping = false
+        let connectionGeneration = 0
 
         const hasUnread = computed(() => unreadCount.value > 0)
 
@@ -364,21 +365,23 @@ export const useNotificationStore = defineStore(
             }
         }
 
-        const refreshUnreadCount = async () => {
+        const refreshUnreadCount = async (requestGeneration = connectionGeneration) => {
             if (!currentToken) return
             try {
                 const result = await systemApi.getNotificationUnreadCount()
+                if (requestGeneration !== connectionGeneration || isStopping) return
                 unreadCount.value = Math.max(0, Number(result?.unread_count ?? result?.count ?? 0))
             } catch (error) {
                 Logger.error('获取通知未读数失败:', error)
             }
         }
 
-        const loadNotifications = async () => {
+        const loadNotifications = async (requestGeneration = connectionGeneration) => {
             if (!currentToken) return
             listLoading.value = true
             try {
                 const response = await systemApi.getNotificationList({ page: 1, per_page: NOTIFICATION_PANEL_LIMIT })
+                if (requestGeneration !== connectionGeneration || isStopping) return
                 const normalized = normalizeListData<AppNotification>(response)
                 notifications.value = normalized.list
                     .map((item) => normalizeNotification(item as unknown as Record<string, unknown>))
@@ -387,7 +390,9 @@ export const useNotificationStore = defineStore(
             } catch (error) {
                 Logger.error('获取通知列表失败:', error)
             } finally {
-                listLoading.value = false
+                if (requestGeneration === connectionGeneration) {
+                    listLoading.value = false
+                }
             }
         }
 
@@ -496,15 +501,17 @@ export const useNotificationStore = defineStore(
             }
         }
 
-        const disconnect = () => {
-            resetHeartbeatTimer()
-            if (!socket) return
-            socket.onopen = null
-            socket.onmessage = null
-            socket.onclose = null
-            socket.onerror = null
-            socket.close()
-            socket = null
+        const disconnect = (targetSocket = socket) => {
+            if (!targetSocket) return
+            targetSocket.onopen = null
+            targetSocket.onmessage = null
+            targetSocket.onclose = null
+            targetSocket.onerror = null
+            targetSocket.close()
+            if (socket === targetSocket) {
+                socket = null
+                resetHeartbeatTimer()
+            }
         }
 
         const scheduleReconnect = () => {
@@ -527,6 +534,9 @@ export const useNotificationStore = defineStore(
 
             resetReconnectTimer()
             disconnect()
+            const requestGeneration = connectionGeneration
+            const requestToken = currentToken
+            const requestLocale = currentLocale
 
             if (import.meta.env.DEV && (import.meta.env.VITE_ENABLE_MOCK === 'true' || import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true')) {
                 connectionStatus.value = 'connected'
@@ -536,13 +546,19 @@ export const useNotificationStore = defineStore(
             try {
                 connectionStatus.value = reconnectAttempt.value > 0 ? 'reconnecting' : 'connecting'
                 const ticketResult = await systemApi.getWsTicket()
+                if (requestGeneration !== connectionGeneration || isStopping || requestToken !== currentToken) return
                 const ticket = ticketResult?.ticket || ''
                 if (!ticket) {
                     throw new Error('Get ws ticket failed')
                 }
 
-                socket = new WebSocket(resolveWebSocketURL(ticket, currentLocale))
-                socket.onopen = () => {
+                const nextSocket = new WebSocket(resolveWebSocketURL(ticket, requestLocale))
+                socket = nextSocket
+                nextSocket.onopen = () => {
+                    if (socket !== nextSocket || requestGeneration !== connectionGeneration || isStopping) {
+                        disconnect(nextSocket)
+                        return
+                    }
                     connectionStatus.value = 'connected'
                     lastError.value = ''
                     reconnectAttempt.value = 0
@@ -551,14 +567,20 @@ export const useNotificationStore = defineStore(
                     resubscribeAllChannels()
                     latestAnnouncement.value = translate('layout.notification.connected') || '通知服务已连接'
                 }
-                socket.onmessage = handleSocketMessage
-                socket.onerror = () => {
+                nextSocket.onmessage = (event) => {
+                    if (socket === nextSocket && requestGeneration === connectionGeneration) {
+                        handleSocketMessage(event)
+                    }
+                }
+                nextSocket.onerror = () => {
+                    if (socket !== nextSocket || requestGeneration !== connectionGeneration) return
                     connectionStatus.value = 'error'
                     lastError.value = translate('layout.notification.connectionError')
                     latestAnnouncement.value = translate('layout.notification.disconnected') || '通知服务连接已断开'
                 }
-                socket.onclose = (event: CloseEvent) => {
-                    disconnect()
+                nextSocket.onclose = (event: CloseEvent) => {
+                    if (socket !== nextSocket || requestGeneration !== connectionGeneration) return
+                    disconnect(nextSocket)
                     if (isStopping) {
                         connectionStatus.value = 'idle'
                         return
@@ -573,6 +595,7 @@ export const useNotificationStore = defineStore(
                     scheduleReconnect()
                 }
             } catch (error) {
+                if (requestGeneration !== connectionGeneration || isStopping) return
                 Logger.error('创建通知 WebSocket 连接失败:', error)
                 connectionStatus.value = 'error'
                 lastError.value = translate('layout.notification.connectionError')
@@ -581,6 +604,7 @@ export const useNotificationStore = defineStore(
         }
 
         const start = (token: string, locale: string) => {
+            connectionGeneration++
             currentToken = token
             currentLocale = locale
             initialized.value = true
@@ -591,11 +615,13 @@ export const useNotificationStore = defineStore(
                 return
             }
 
-            void Promise.all([loadNotifications(), refreshUnreadCount()])
+            const requestGeneration = connectionGeneration
+            void Promise.all([loadNotifications(requestGeneration), refreshUnreadCount(requestGeneration)])
             connectSocket()
         }
 
         const stop = () => {
+            connectionGeneration++
             isStopping = true
             currentToken = ''
             disconnect()
@@ -603,6 +629,7 @@ export const useNotificationStore = defineStore(
             resetHeartbeatTimer()
             reconnectAttempt.value = 0
             connectionStatus.value = 'idle'
+            listLoading.value = false
             lastError.value = ''
             unreadCount.value = 0
             channelHandlers.clear()
@@ -641,7 +668,7 @@ export const useNotificationStore = defineStore(
         persist: {
             key: NOTIFICATION_PERSIST_KEY,
             storage: localStorage,
-            paths: ['unreadCount'],
+            pick: ['unreadCount'],
         },
     }
 )

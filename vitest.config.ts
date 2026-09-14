@@ -10,6 +10,15 @@ export default defineConfig({
         include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
         coverage: {
             reporter: ['text', 'json', 'html'],
+            // 覆盖率门槛聚焦已有单元测试职责内的可复用逻辑；页面级覆盖由后续 E2E 单独衡量。
+            include: [
+                'src/composables/*.ts',
+                'src/directives/permission.ts',
+                'src/modules/shared/*.ts',
+                'src/router/{componentMap,dynamicRoutes}.ts',
+                'src/stores/{auth,notification}.ts',
+                'src/utils/{apiCache,env,helper,iframe,logger,notificationAction,redirect,request}.ts',
+            ],
             exclude: ['node_modules/', 'src/**/*.d.ts'],
             thresholds: {
                 statements: 60,
@@ -22,7 +31,7 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@': resolve(__dirname, './src'),
+            '@': resolve(import.meta.dirname, './src'),
         },
     },
 })

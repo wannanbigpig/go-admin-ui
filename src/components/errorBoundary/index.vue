@@ -41,7 +41,7 @@ const handleRetry = () => {
 }
 
 const handleGoHome = () => {
-    window.location.href = '/'
+    window.location.href = import.meta.env.BASE_URL || '/'
 }
 </script>
 

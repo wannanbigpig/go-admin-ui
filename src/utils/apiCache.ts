@@ -6,6 +6,7 @@ interface CacheItem<T> {
 class ApiCache {
     private cache = new Map<string, CacheItem<unknown>>()
     private pending = new Map<string, Promise<unknown>>()
+    private generation = 0
     private readonly maxLimit = 100
 
     /**
@@ -92,9 +93,40 @@ class ApiCache {
     }
 
     /**
+     * 读取缓存或合并同一代次内的并发请求。
+     * clear() 会推进代次，旧请求即使稍后完成也不会把上一会话数据写回缓存。
+     */
+    getOrSet<T>(key: string, loader: () => Promise<T>, ttl = 300000): Promise<T> {
+        const cached = this.get<T>(key)
+        if (cached !== null) return Promise.resolve(cached)
+
+        const pending = this.getPending<T>(key)
+        if (pending) return pending
+
+        const requestGeneration = this.generation
+        const promise = Promise.resolve()
+            .then(loader)
+            .then((data) => {
+                if (requestGeneration === this.generation) {
+                    this.set(key, data, ttl)
+                }
+                return data
+            })
+            .finally(() => {
+                if (requestGeneration === this.generation && this.pending.get(key) === promise) {
+                    this.pending.delete(key)
+                }
+            })
+
+        this.setPending(key, promise)
+        return promise
+    }
+
+    /**
      * 清空所有缓存与 Pending 队列
      */
     clear(): void {
+        this.generation++
         this.cache.clear()
         this.pending.clear()
     }

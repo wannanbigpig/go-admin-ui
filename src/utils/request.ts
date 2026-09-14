@@ -16,6 +16,8 @@ declare module 'axios' {
         _skipAuth?: boolean
         /** 401 刷新后重放标记 */
         _retry?: boolean
+        /** 请求发起时的认证会话代次，用于阻止旧账号响应在新会话中刷新和重放 */
+        _authSessionVersion?: number
         /** 静默错误提示 */
         silent?: boolean
         /** 指定静默业务码 */
@@ -45,7 +47,7 @@ const service = axios.create({
     withCredentials: true,
 })
 
-let refreshPromise: Promise<string> | null = null
+let refreshTask: { sessionVersion: number; promise: Promise<string> } | null = null
 
 const isJsonContentType = (contentType: unknown) => {
     return typeof contentType === 'string' && contentType.toLowerCase().includes('application/json')
@@ -186,21 +188,25 @@ const isRefreshAuthExpiredError = (error: unknown) => {
  * - 网络错误、超时、5xx 只让当前请求失败，保留本地状态，用户下次操作可重新尝试刷新。
  */
 const refreshAccessTokenOnce = async () => {
-    if (!refreshPromise) {
-        const authStore = useAuthStore()
-        refreshPromise = authStore
+    const authStore = useAuthStore()
+    const sessionVersion = authStore.sessionVersion
+    if (!refreshTask || refreshTask.sessionVersion !== sessionVersion) {
+        const promise = authStore
             .refreshAccessToken()
             .catch((error) => {
-                if (isRefreshAuthExpiredError(error)) {
+                if (isRefreshAuthExpiredError(error) && useAuthStore().sessionVersion === sessionVersion) {
                     markSessionExpired()
                 }
                 throw error
             })
             .finally(() => {
-                refreshPromise = null
+                if (refreshTask?.promise === promise) {
+                    refreshTask = null
+                }
             })
+        refreshTask = { sessionVersion, promise }
     }
-    return refreshPromise
+    return refreshTask.promise
 }
 
 const retryAfterRefresh = async (config: AxiosRequestConfig | undefined, rejectPayload: unknown) => {
@@ -211,12 +217,20 @@ const retryAfterRefresh = async (config: AxiosRequestConfig | undefined, rejectP
     if (config.authErrorMode === 'credential' || isRefreshRequest(config)) {
         return Promise.reject(rejectPayload)
     }
+
+    const authStore = useAuthStore()
+    const requestSessionVersion = config._authSessionVersion ?? authStore.sessionVersion
+    if (authStore.sessionVersion !== requestSessionVersion) {
+        return Promise.reject(new Error('认证会话已变化，已取消旧会话请求重放'))
+    }
     if (config._retry) {
         markSessionExpired()
         return Promise.reject(rejectPayload)
     }
-
     const nextToken = await refreshAccessTokenOnce()
+    if (authStore.sessionVersion !== requestSessionVersion) {
+        return Promise.reject(new Error('认证会话已变化，已取消旧会话请求重放'))
+    }
     // 用新 access token 覆盖原请求头并标记 _retry，防止重放后再次 401 形成递归刷新。
     const retryConfig = {
         ...config,
@@ -245,12 +259,14 @@ service.interceptors.request.use(
         config.headers[REQUESTED_WITH_HEADER] = REQUESTED_WITH_VALUE
         // 添加认证 token（_skipAuth 标记的请求跳过）
         if (!config._skipAuth) {
+            config._authSessionVersion = authStore.sessionVersion
             if (authStore.token) {
                 config.headers['Authorization'] = `Bearer ${authStore.token}`
             } else {
                 delete config.headers['Authorization']
             }
         } else {
+            delete config._authSessionVersion
             delete config.headers['Authorization']
         }
         // 仅在没有手动设置时才默认使用 application/json
@@ -419,11 +435,13 @@ export async function request<T = unknown>(url: string, method: string, options:
         return Promise.reject(mockErr)
     }
 
-    return service.request<ApiResponse<T>, T>({
+    // 响应拦截器会把 AxiosResponse<ApiResponse<T>> 解包为业务数据 T。
+    // Axios 1.20 使用条件类型计算自定义返回值，无法再通过第二泛型稳定表达该拦截器行为。
+    return service.request<ApiResponse<T>>({
         url,
         method: method.toUpperCase(),
         ...options,
-    })
+    }) as unknown as Promise<T>
 }
 
 const isEmptyQueryValue = (value: unknown) => {

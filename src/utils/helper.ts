@@ -1,3 +1,5 @@
+import { resolveBaseURL } from '@/utils/env'
+
 /**
  * 检查输入的数值是否符合指定的小数位数和正负性要求。
  *
@@ -25,7 +27,7 @@ export function checkNumber(value: number | string, decimal: number = 2, negativ
     }
 
     const valueStr = numValue.toString()
-    let realDecimals = 0
+    let realDecimals: number
     if (valueStr.toLowerCase().includes('e')) {
         const [base, expStr] = valueStr.toLowerCase().split('e')
         const exponent = parseInt(expStr, 10)
@@ -86,7 +88,18 @@ export function randomStr(length: number = 16): string {
  * @returns 如果是外部链接返回 true，否则返回 false
  */
 export function isExternal(path: string): boolean {
-    return /^(https?:|http?:)/.test(path)
+    return /^https?:\/\//i.test(path)
+}
+
+/** 仅接受可安全打开的绝对 HTTP(S) 外链，并返回标准化地址。 */
+export function normalizeExternalUrl(value: unknown): string {
+    if (typeof value !== 'string' || !value.trim()) return ''
+    try {
+        const url = new URL(value.trim())
+        return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : ''
+    } catch {
+        return ''
+    }
 }
 
 /**
@@ -243,8 +256,8 @@ export function getSystemFileUrl(value: string): string {
         return value
     }
 
-    const { VITE_BASE_URL } = import.meta.env
-    return `${VITE_BASE_URL}/admin/v1/file/${value}`
+    const baseURL = resolveBaseURL().replace(/\/+$/, '')
+    return `${baseURL}/v1/file/${encodeURIComponent(value)}`
 }
 
 export function getImageUrl(value: string): string {

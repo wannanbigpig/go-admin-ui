@@ -4,18 +4,23 @@
 
 ## 1. 启动模式
 
+运行环境以 `package.json` 为准：Node.js 支持 `^22.13.0`、`^24.0.0` 或 `>=26.0.0`，包管理器固定为 `pnpm 12.4.1`。仓库只维护 `pnpm-lock.yaml`，不要运行 `npm install` 重新生成 `package-lock.json`。
+
 `package.json` 当前提供以下脚本：
 
-| 命令                       | 说明                                           |
-| -------------------------- | ---------------------------------------------- |
-| `npm run dev`              | 使用 `development` 模式启动                    |
-| `npm run local`            | 使用 `location` 模式启动，读取 `.env.location` |
-| `npm run prod`             | 使用 `production` 模式启动 Vite 开发服务器     |
-| `npm run build:dev`        | 构建 `development` 产物                        |
-| `npm run build:production` | 构建 `production` 产物                         |
-| `npm run type-check`       | 执行 `vue-tsc --noEmit`                        |
-| `npm run lint`             | 对 `src/` 执行 ESLint                          |
-| `npm run test:run`         | 执行 Vitest 单测                               |
+| 命令                                 | 说明                                           |
+| ------------------------------------ | ---------------------------------------------- |
+| `corepack pnpm run dev`              | 使用 `development` 模式启动                    |
+| `corepack pnpm run local`            | 使用 `location` 模式启动，读取 `.env.location` |
+| `corepack pnpm run prod`             | 使用 `production` 模式启动 Vite 开发服务器     |
+| `corepack pnpm run build:dev`        | 构建 `development` 产物                        |
+| `corepack pnpm run build:production` | 构建 `production` 产物                         |
+| `corepack pnpm run type-check`       | 执行 TypeScript 6 `tsc` 和 `vue-tsc`           |
+| `corepack pnpm run lint`             | 对 `src/` 执行 ESLint                          |
+| `corepack pnpm run test:run`         | 执行 Vitest 单测                               |
+| `corepack pnpm run test:coverage`    | 执行单测并检查核心逻辑覆盖率门槛               |
+
+Vite 8 使用 Rolldown 打包并由 Oxc 完成转换和压缩。项目统一使用 TypeScript 6 稳定版，直接配合 Vue、`vue-tsc` 与 ESLint 工具链；日常执行统一的 `type-check` 脚本即可。
 
 ## 2. 认证与登录流程
 
@@ -34,7 +39,7 @@
 - 登录成功后保存 `access_token` 与 `expires_at`；
 - 通过 `refreshUserInfo()` 并发拉取当前用户信息与菜单树；
 - `ensureTokenValid()` 会优先校验当前 token，失败时尝试静默刷新；
-- `resetAuthStore()` 会清空本地认证状态并移除动态路由。
+- `resetAuthStore()` 会清空本地认证状态、跨账号 API 缓存并移除动态路由；旧会话中尚未完成的用户信息、token 刷新结果会按会话代次丢弃。
 
 ## 3. 路由生成机制
 
@@ -48,8 +53,9 @@
 
 - 过滤按钮节点（`type === 3`）；
 - 根据 `component_key` 通过 `componentMap` 解析组件；
-- 自动跳过重复的 `name` / `path`；
+- 自动跳过重复的 `name` / 完整路由 `path`，不同父级下相同相对路径不会互相误伤；
 - 目录无自有组件且没有有效子路由时会被过滤；
+- HTTP(S) 外链保留在侧边栏菜单树中，但不会注册成 Vue Router 路由；
 - 根路径 `/` 在只命中 `Layout` 时会跳转到第一个可访问菜单。
 
 ### 守卫
@@ -71,6 +77,7 @@
 - 注入 `Authorization` 和 `Accept-Language`；
 - 标准化后端响应结构；
 - 多个 401 场景共享一次刷新 token 请求，避免并发刷新；
+- 刷新请求仅在同一认证会话内共享，账号切换后不会复用或重放旧会话结果；
 - 支持上传与下载；
 - 业务异常统一消息提示。
 
@@ -96,6 +103,7 @@
 - 频道订阅 / 退订；
 - 心跳保活；
 - 断线重连；
+- 使用连接代次丢弃退出、切换账号或语言后才返回的旧 ticket 和通知列表；
 - 导出任务消息与普通消息统一归一化。
 
 关键常量：
@@ -106,7 +114,11 @@
 
 如后端返回会话终止 Close code `4001` 或 `4002`，前端会停止重连并回到登录流程。
 
-## 6. 环境变量
+## 6. Vite 开发期依赖预构建
+
+动态菜单页面采用懒加载，Element Plus 组件样式由按需导入插件生成。`vite.config.js` 会在启动时根据当前安装包枚举组件样式入口并交给 `optimizeDeps.include`，避免首次访问某个页面时才发现新依赖并触发 `full-reload`。该配置只影响 `pnpm run dev/local/prod`，不参与生产构建产物的运行时逻辑。
+
+## 7. 环境变量
 
 ### 必备变量
 
@@ -134,7 +146,7 @@
 | `VITE_DEV_USERNAME`           | 开发环境默认用户名             |
 | `VITE_DEV_PASSWORD`           | 开发环境默认密码               |
 
-## 7. 主题与国际化
+## 8. 主题与国际化
 
 `src/main.ts` 启动时会：
 
@@ -144,7 +156,7 @@
 - 监听系统主题变化；
 - 监听 locale 变化并同步更新 `vue-i18n`。
 
-## 8. 建议排查路径
+## 9. 建议排查路径
 
 遇到问题时，优先按下面顺序排查：
 

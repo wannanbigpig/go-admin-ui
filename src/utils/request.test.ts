@@ -4,6 +4,7 @@ import { MESSAGE_ERROR_DURATION } from '@/modules/shared/constants'
 const hoisted = vi.hoisted(() => {
     const mockAuthStore = {
         token: '',
+        sessionVersion: 0,
         updateToken: vi.fn(),
         handleTokenExpired: vi.fn(),
         resetAuthStore: vi.fn(),
@@ -105,6 +106,7 @@ describe('utils/request.ts', () => {
         vi.stubEnv('VITE_ENABLE_MOCK', 'false')
         vi.stubEnv('VITE_ENABLE_MOCK_FALLBACK', 'false')
         hoisted.mockAuthStore.token = ''
+        hoisted.mockAuthStore.sessionVersion = 0
         hoisted.mockSettingStore.locale = 'zh-CN'
         hoisted.mockService.request.mockReset()
         hoisted.mockAuthStore.updateToken.mockClear()
@@ -138,6 +140,7 @@ describe('utils/request.ts', () => {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/json',
         })
+        expect(config._authSessionVersion).toBe(0)
     })
 
     it('请求拦截器应自动注入当前语言标记头', async () => {
@@ -420,6 +423,57 @@ describe('utils/request.ts', () => {
         await expect(Promise.all([first, second])).resolves.toEqual([{ ok: true }, { ok: true }])
         expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(1)
         expect(hoisted.mockService.request).toHaveBeenCalledTimes(2)
+    })
+
+    it('账号会话变化后不应复用上一会话未完成的 refresh', async () => {
+        let resolveOldRefresh!: (value: string) => void
+        hoisted.mockAuthStore.sessionVersion = 1
+        hoisted.mockAuthStore.refreshAccessToken
+            .mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveOldRefresh = resolve
+                })
+            )
+            .mockResolvedValueOnce('new-session-token')
+        hoisted.mockService.request.mockResolvedValue({ ok: true })
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        const buildError = (url: string) => ({
+            response: { status: 401, data: { code: 401, msg: '登录已过期', data: null }, headers: {} },
+            config: { url, method: 'GET' },
+            message: 'Request failed with status code 401',
+        })
+
+        const oldRequest = onRejected(buildError('/v1/old-session'))
+        hoisted.mockAuthStore.sessionVersion = 2
+        const newRequest = onRejected(buildError('/v1/new-session'))
+
+        resolveOldRefresh('old-session-token')
+        await expect(oldRequest).rejects.toThrow('认证会话已变化')
+        await expect(newRequest).resolves.toEqual({ ok: true })
+
+        expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(2)
+        expect(hoisted.mockService.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                url: '/v1/new-session',
+                headers: expect.objectContaining({ Authorization: 'Bearer new-session-token' }),
+            })
+        )
+    })
+
+    it('旧会话请求在新会话才返回 401 时不应触发刷新或重放', async () => {
+        hoisted.mockAuthStore.sessionVersion = 2
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+
+        await expect(
+            onRejected({
+                response: { status: 401, data: { code: 401, msg: '登录已过期', data: null }, headers: {} },
+                config: { url: '/v1/old-session', method: 'GET', _authSessionVersion: 1 },
+                message: 'Request failed with status code 401',
+            })
+        ).rejects.toThrow('认证会话已变化')
+
+        expect(hoisted.mockAuthStore.refreshAccessToken).not.toHaveBeenCalled()
+        expect(hoisted.mockService.request).not.toHaveBeenCalled()
     })
 
     it('refresh 接口自身 401 不应递归刷新', async () => {

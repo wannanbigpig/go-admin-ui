@@ -1,7 +1,10 @@
-import { describe, it, expect } from 'vitest'
-import { checkNumber, isEmpty, isBlankOrFalsy, pick, filterNullUndefined, formatDate, isExternal, getSystemFileUrl, getImageUrl } from '@/utils/helper'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { checkNumber, isEmpty, isBlankOrFalsy, pick, filterNullUndefined, formatDate, formatFileSize, flattenTree, isExternal, normalizeExternalUrl, getSystemFileUrl, getImageUrl, parseUserIDs } from '@/utils/helper'
 
 describe('helper.ts', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs()
+    })
     describe('checkNumber', () => {
         it('应该验证整数', () => {
             expect(checkNumber(123)).toBe(true)
@@ -152,6 +155,13 @@ describe('helper.ts', () => {
             expect(isExternal('dashboard')).toBe(false)
             expect(isExternal('./dashboard')).toBe(false)
         })
+
+        it('仅允许绝对 HTTP(S) 外链', () => {
+            expect(normalizeExternalUrl(' HTTPS://example.com/docs ')).toBe('https://example.com/docs')
+            expect(normalizeExternalUrl('javascript:alert(1)')).toBe('')
+            expect(normalizeExternalUrl('//example.com')).toBe('')
+            expect(normalizeExternalUrl('/dashboard')).toBe('')
+        })
     })
 
     describe('getSystemFileUrl & getImageUrl', () => {
@@ -168,7 +178,37 @@ describe('helper.ts', () => {
         })
 
         it('本地相对文件名应拼接为完整的 API 地址', () => {
-            expect(getSystemFileUrl('some-file-id')).toContain('/admin/v1/file/some-file-id')
+            expect(getSystemFileUrl('some-file-id')).toBe('/admin/v1/file/some-file-id')
+        })
+
+        it('生产环境应按配置拼接且不会产生双斜杠', () => {
+            vi.stubEnv('DEV', false)
+            vi.stubEnv('VITE_BASE_URL', 'https://admin-api.example.com/')
+            vi.stubEnv('VITE_BASE_API', '/admin')
+
+            expect(getSystemFileUrl('some-file-id')).toBe('https://admin-api.example.com/admin/v1/file/some-file-id')
+        })
+    })
+
+    describe('通用数据格式化', () => {
+        it('应格式化文件大小边界值', () => {
+            expect(formatFileSize(0)).toBe('0 B')
+            expect(formatFileSize(1024)).toBe('1.00 KB')
+            expect(formatFileSize(1024 ** 2)).toBe('1.00 MB')
+        })
+
+        it('应解析、过滤并去重用户 ID', () => {
+            expect(parseUserIDs('1, 2;abc\n2\t3')).toEqual([1, 2, 3])
+            expect(parseUserIDs('')).toEqual([])
+        })
+
+        it('应按层级展平树形选项', () => {
+            const tree = [{ id: 1, name: '父级', children: [{ id: 2, name: '子级', children: [] }] }]
+
+            expect(flattenTree(tree)).toEqual([
+                { label: '父级', value: 1 },
+                { label: '父级 / 子级', value: 2 },
+            ])
         })
     })
 })

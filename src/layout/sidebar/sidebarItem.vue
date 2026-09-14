@@ -23,7 +23,7 @@ import { computed } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
 import router from '@/router'
 import IconItem from './iconItem.vue'
-import { isExternal } from '@/utils/helper'
+import { isExternal, normalizeExternalUrl } from '@/utils/helper'
 import { resolveRouteTitle } from '@/utils/routeTitle'
 
 defineOptions({
@@ -108,12 +108,14 @@ const handleMenuClick = () => {
     const isNewWindow = Number(meta.isNewWindow ?? 0) === 1
 
     if (isExternalLink) {
+        const externalUrl = normalizeExternalUrl(routePath)
+        if (!externalUrl) return
         if (isNewWindow) {
-            window.open(routePath, '_blank', 'noopener,noreferrer')
+            window.open(externalUrl, '_blank', 'noopener,noreferrer')
         } else {
             router.push({
                 path: '/iframe',
-                query: { to: routePath },
+                query: { to: externalUrl },
             })
         }
     } else {

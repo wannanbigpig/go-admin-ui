@@ -6,25 +6,7 @@ import type { Department, DepartmentPayload } from '@/types/department'
 // 获取部门列表
 export function getDepartmentList(params?: Record<string, unknown>) {
     const key = buildApiCacheKey(API_CACHE_PREFIX.DEPARTMENT_LIST, params)
-    const cached = apiCache.get<Department[]>(key)
-    if (cached) return Promise.resolve(cached)
-
-    const pending = apiCache.getPending<Department[]>(key)
-    if (pending) return pending
-
-    const promise = get<Department[]>('/v1/department/list', params)
-        .then((res) => {
-            apiCache.set(key, res)
-            apiCache.deletePending(key)
-            return res
-        })
-        .catch((err) => {
-            apiCache.deletePending(key)
-            throw err
-        })
-
-    apiCache.setPending(key, promise)
-    return promise
+    return apiCache.getOrSet(key, () => get<Department[]>('/v1/department/list', params))
 }
 
 // 获取部门详情

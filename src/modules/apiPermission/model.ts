@@ -15,6 +15,23 @@ export interface ApiPermission {
     [key: string]: unknown
 }
 
+export interface ApiPermissionUpdatePayload {
+    id: number | string
+    name: string
+    description: string
+    sort: number
+}
+
+// 接口鉴权模式由后端路由声明生成，普通编辑只提交可维护元数据。
+export function toApiPermissionUpdatePayload(permission: ApiPermission): ApiPermissionUpdatePayload {
+    return {
+        id: permission.id,
+        name: permission.name,
+        description: permission.description,
+        sort: permission.sort,
+    }
+}
+
 export function createApiPermissionForm(): Partial<ApiPermission> {
     return {
         id: 0,

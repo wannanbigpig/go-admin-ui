@@ -39,7 +39,7 @@
                 </el-form-item>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item :label="t('permission.api.authMode')" prop="is_auth" required for="api-edit-is-auth">
+                        <el-form-item :label="t('permission.api.authMode')" for="api-edit-is-auth">
                             <template #label>
                                 <span class="xl-label-with-icon">
                                     {{ t('permission.api.authMode') }}
@@ -50,7 +50,7 @@
                                     </el-tooltip>
                                 </span>
                             </template>
-                            <el-select id="api-edit-is-auth" v-model="currentRow.is_auth" :placeholder="t('permission.api.authModePlaceholder')" clearable>
+                            <el-select id="api-edit-is-auth" v-model="currentRow.is_auth" disabled>
                                 <el-option v-for="item in AUTH_MODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>

@@ -56,6 +56,36 @@ describe('utils/apiCache.ts', () => {
         expect(apiCache.getPending('key2')).toBeUndefined()
     })
 
+    it('clear 后不应让旧 pending 请求重新写回缓存', async () => {
+        let resolveRequest!: (value: string) => void
+        const request = vi.fn(
+            () =>
+                new Promise<string>((resolve) => {
+                    resolveRequest = resolve
+                })
+        )
+
+        const stalePromise = apiCache.getOrSet('session:data', request)
+        await Promise.resolve()
+        apiCache.clear()
+        resolveRequest('old-session-data')
+
+        await expect(stalePromise).resolves.toBe('old-session-data')
+        expect(apiCache.get('session:data')).toBeNull()
+        expect(apiCache.getPending('session:data')).toBeUndefined()
+    })
+
+    it('getOrSet 应合并同一代次内的并发请求', async () => {
+        const request = vi.fn().mockResolvedValue('shared-data')
+
+        const first = apiCache.getOrSet('shared:key', request)
+        const second = apiCache.getOrSet('shared:key', request)
+
+        await expect(Promise.all([first, second])).resolves.toEqual(['shared-data', 'shared-data'])
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(apiCache.get('shared:key')).toBe('shared-data')
+    })
+
     it('get 应刷新 LRU 活跃度并在超出 maxLimit 时淘汰最久未活跃的缓存', () => {
         // limit = 100
         // 我们写入 key_0 到 key_100 (共 101 个)

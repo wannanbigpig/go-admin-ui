@@ -16,13 +16,14 @@ import {
 import { normalizeArrayData, normalizeDetailData, normalizeListData } from '@/modules/shared/response'
 import type { Role } from '@/types/role'
 import type { Menu } from '@/types/menu'
+import type { ApiPermissionUpdatePayload } from '@/modules/apiPermission/model'
 
 export async function fetchPermissionPage(params?: Record<string, unknown>) {
     const response = await getPermissionList(params)
     return normalizeListData<unknown>(response)
 }
 
-export async function updatePermissionItem(data: Record<string, unknown>) {
+export async function updatePermissionItem(data: ApiPermissionUpdatePayload) {
     const response = await editPermission(data)
     return normalizeDetailData(response, {} as Record<string, unknown>)
 }

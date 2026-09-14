@@ -1,7 +1,7 @@
 import { RouterView, type RouteRecordRaw, type RouteLocationRaw } from 'vue-router'
 import { h } from 'vue'
 import router from './index'
-import { isEmpty } from '@/utils/helper'
+import { isEmpty, isExternal } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
 import type { UserPermission } from '@/types/auth'
 import componentMap from './componentMap'
@@ -65,22 +65,23 @@ export function validateRouteComponents(routesData: UserPermission[]): string[] 
 /**
  * 将后端返回的路由数据转换为 Vue Router 可用的路由配置
  */
-export function convertRoute(routesData: UserPermission[], seenNames = new Set<string>(), seenPaths = new Set<string>()): RouteRecordRaw[] {
+export function convertRoute(routesData: UserPermission[], seenNames = new Set<string>(), seenPaths = new Set<string>(), parentPath = ''): RouteRecordRaw[] {
     return routesData
         .filter((route) => !isButtonRouteNode(route))
         .flatMap((route) => {
             const routeName = route.name || route.code
             const routePath = route.path || ''
+            const resolvedPath = isExternal(routePath) ? routePath : resolveInternalPath(parentPath, routePath)
             if (routeName && seenNames.has(routeName)) {
                 Logger.warn(`动态路由名称重复，已跳过: ${routeName}，当前菜单为: ${route.title || route.name}`)
                 return []
             }
-            if (routePath && seenPaths.has(routePath)) {
-                Logger.warn(`动态路由路径重复，已跳过: ${routePath}，当前菜单为: ${route.title || route.name}`)
+            if (routePath && seenPaths.has(resolvedPath)) {
+                Logger.warn(`动态路由路径重复，已跳过: ${resolvedPath}，当前菜单为: ${route.title || route.name}`)
                 return []
             }
             if (routeName) seenNames.add(routeName)
-            if (routePath) seenPaths.add(routePath)
+            if (routePath) seenPaths.add(resolvedPath)
 
             const converted = {
                 path: routePath,
@@ -109,12 +110,13 @@ export function convertRoute(routesData: UserPermission[], seenNames = new Set<s
             if (route.children && route.children.length > 0) {
                 const validChildren = route.children.filter((child) => !isButtonRouteNode(child))
                 if (validChildren.length > 0) {
-                    converted.children = convertRoute(validChildren, seenNames, seenPaths)
+                    converted.children = convertRoute(validChildren, seenNames, seenPaths, resolvedPath)
                 }
             }
 
             // 过滤无效路由：无自有组件且无有效子路由的目录（子项全是按钮类型）应跳过
-            if (!hasOwnComponent && (!converted.children || converted.children.length === 0)) {
+            const isExternalLeaf = Number(route.is_external_links ?? 0) === 1 && isExternal(routePath)
+            if (!hasOwnComponent && !isExternalLeaf && (!converted.children || converted.children.length === 0)) {
                 return []
             }
 
@@ -167,8 +169,23 @@ export function addDynamicRoutes(routesData: RouteRecordRaw[]) {
     }
 
     routesData.forEach((route) => {
-        router.addRoute('Layout', route)
+        const registrableRoute = toRegistrableRoute(route)
+        if (registrableRoute) {
+            router.addRoute('Layout', registrableRoute)
+        }
     })
+}
+
+function toRegistrableRoute(route: RouteRecordRaw): RouteRecordRaw | null {
+    if (route.meta?.isExternalLinks === true || isExternal(route.path)) return null
+
+    const children = route.children?.map(toRegistrableRoute).filter((child): child is RouteRecordRaw => child !== null)
+    if (!route.component && (!children || children.length === 0)) return null
+
+    return {
+        ...route,
+        children,
+    } as RouteRecordRaw
 }
 
 export function removeDynamicRoute() {

@@ -6,7 +6,7 @@ import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_
 import { createMenu, updateMenu, getMenuDetail, deleteMenu, getMenuList, getApiOptions, type ApiOption } from '@/api/permission'
 import { createEmptyTitleI18n, createMenuForm, MENU_OPERATION_TYPE, MENU_STEP, MENU_SUBMIT_DEBOUNCE_TIME, MENU_SWITCH_VALUE, MENU_TITLE_LOCALES, MENU_TYPE } from '@/modules/menu/model'
 import { normalizeDetailData, normalizeListData } from '@/modules/shared/response'
-import { checkNumber, pick } from '@/utils/helper'
+import { checkNumber, normalizeExternalUrl, pick } from '@/utils/helper'
 import type { Menu } from '@/types/menu'
 import { translate } from '@/locales'
 
@@ -257,7 +257,17 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
         is_auth: [{ required: true, message: translate('permission.menu.form.authRequired'), trigger: 'blur' }],
         is_show: [{ required: true, message: translate('permission.menu.form.showRequired'), trigger: 'blur' }],
         sort: [{ trigger: 'blur', type: 'integer', message: translate('permission.menu.form.sortInteger') }],
-        path: [{ trigger: 'blur', validator: (_rule: unknown, _value: unknown, callback: (error?: string | Error) => void) => callback() }],
+        path: [
+            {
+                trigger: 'blur',
+                validator: (_rule: unknown, value: unknown, callback: (error?: string | Error) => void) => {
+                    if (formData.is_external_links === MENU_SWITCH_VALUE.YES && !normalizeExternalUrl(value)) {
+                        return callback(new Error(translate('permission.menu.form.externalUrlInvalid')))
+                    }
+                    return callback()
+                },
+            },
+        ],
         name: [
             {
                 trigger: 'blur',
