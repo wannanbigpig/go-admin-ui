@@ -165,6 +165,7 @@ const formData = reactive({
 
 const isEditMode = computed(() => currentId.value !== null)
 const formTitle = computed(() => (isEditMode.value ? t('system.config.editTitle') : t('system.config.addTitle')))
+const isDedicatedManagedConfig = (row: Pick<SystemConfig, 'is_system' | 'manage_tab'>) => Number(row.is_system) === 1 && Boolean(row.manage_tab)
 
 const formRules = computed(() => ({
     config_key: [{ required: true, message: t('system.config.form.keyRequired'), trigger: 'blur' }],
@@ -304,6 +305,7 @@ const actionButtons = computed(() => [
         permission: 'sysConfig:update',
         buttonInfo: updateButtonInfo || undefined,
         showIcon: false,
+        visible: (row: SystemConfig) => !isDedicatedManagedConfig(row),
         click: (row: SystemConfig) => openEditDrawer(row),
     },
     {

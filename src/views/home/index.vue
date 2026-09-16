@@ -226,26 +226,16 @@
 
         <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
             <el-col :span="24">
-                <el-card shadow="never">
-                    <template #header>
-                        <div class="card-header">
-                            <span>{{ t('home.dashboard.activityTitle') }}</span>
-                        </div>
-                    </template>
-                    <el-timeline v-if="activities.length > 0" class="activity-timeline">
-                        <el-timeline-item v-for="item in activities" :key="item.key" :timestamp="item.time" :type="item.type">
-                            <div class="activity-title">{{ item.title }}</div>
-                            <div class="activity-desc">{{ item.desc }}</div>
-                        </el-timeline-item>
-                    </el-timeline>
-                    <el-empty v-else :description="t('home.dashboard.empty')">
-                        <template #image>
-                            <el-icon size="60" color="var(--el-text-color-placeholder)">
-                                <i-lucide-inbox />
-                            </el-icon>
-                        </template>
-                    </el-empty>
-                </el-card>
+                <recent-activity-panel
+                    :items="activities"
+                    :loading="dashboardLoading"
+                    :error="dashboardOverviewFailed"
+                    :can-view-list="canViewRequestLogList"
+                    :can-view-detail="canViewRequestLogDetail"
+                    @view="openActivity"
+                    @view-all="openActivityList"
+                    @retry="refreshDashboard"
+                />
             </el-col>
         </el-row>
     </div>
@@ -256,8 +246,9 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
+import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardActivityItem, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
 import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
+import RecentActivityPanel from '@/views/home/components/RecentActivityPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingStore } from '@/stores/setting'
 import { hasPermission } from '@/utils/auth'
@@ -277,6 +268,7 @@ const username = ref('')
 const loginTime = ref('')
 const lastLoginIP = ref('')
 const dashboardLoading = ref(false)
+const dashboardOverviewFailed = ref(false)
 const dashboardOverview = ref<DashboardOverview | null>(null)
 const dashboardStatistics = ref<DashboardStatistics | null>(null)
 const dashboardMonitor = ref<DashboardMonitor | null>(null)
@@ -316,6 +308,8 @@ const shortcuts = computed(() => [
 ])
 
 const activities = computed(() => dashboardOverview.value?.activities || [])
+const canViewRequestLogList = computed(() => hasPermission('requestLog:list'))
+const canViewRequestLogDetail = computed(() => hasPermission('requestLog:detail'))
 const trendSeriesNames = computed(() => ({
     requests: t('home.dashboard.trend.series.requests'),
     errors: t('home.dashboard.trend.series.errors'),
@@ -444,8 +438,10 @@ const refreshDashboard = async () => {
 
         if (canViewOverview && overviewResult.status === 'fulfilled') {
             dashboardOverview.value = overviewResult.value
+            dashboardOverviewFailed.value = false
         } else {
             dashboardOverview.value = null
+            dashboardOverviewFailed.value = canViewOverview
             if (canViewOverview && overviewResult.status === 'rejected') {
                 Logger.warn('获取仪表盘概览失败', overviewResult.reason)
             }
@@ -461,6 +457,7 @@ const refreshDashboard = async () => {
         }
     } catch (error) {
         dashboardOverview.value = null
+        dashboardOverviewFailed.value = hasPermission('dashboard:overview')
         dashboardStatistics.value = null
         Logger.warn('获取仪表盘数据失败', error)
     } finally {
@@ -483,6 +480,26 @@ const refreshDashboard = async () => {
 
 const goShortcut = (path: string) => {
     router.push(path)
+}
+
+const openActivityList = () => {
+    if (canViewRequestLogList.value) router.push('/log/request-log')
+}
+
+const openActivity = (item: DashboardActivityItem) => {
+    const detailId = Number(item.request_log_id || item.key)
+    if (canViewRequestLogDetail.value && Number.isInteger(detailId) && detailId > 0) {
+        router.push({ path: '/log/request-log', query: { detail: String(detailId) } })
+        return
+    }
+    if (!canViewRequestLogList.value) return
+
+    const query = item.request_id?.trim()
+        ? { request_id: item.request_id.trim() }
+        : item.operator_account?.trim()
+          ? { operator_account: item.operator_account.trim() }
+          : undefined
+    router.push({ path: '/log/request-log', query })
 }
 
 const gridWithAxisLabelBounds = {
@@ -773,24 +790,6 @@ h1 {
 
 .dashboard-table {
     width: 100%;
-}
-
-.activity-timeline {
-    min-height: 292px;
-    padding: var(--xl-space-1) var(--xl-space-1) 0;
-}
-
-.activity-title {
-    color: var(--el-text-color-primary);
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.activity-desc {
-    margin-top: var(--xl-space-1);
-    color: var(--el-text-color-secondary);
-    font-size: var(--xl-font-md);
-    line-height: 1.5;
 }
 
 .stat-card {

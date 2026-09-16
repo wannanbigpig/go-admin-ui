@@ -203,7 +203,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onActivated, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, onDeactivated, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
@@ -223,6 +223,7 @@ import type { TaskRun, TaskRunEvent } from '@/types/system'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 
 const props = defineProps<{ active: boolean }>()
+let hasActivated = false
 
 const { t } = useI18n()
 const { options: taskKindOptions, tagMap: taskKindTagMap, load: loadTaskKindOptions } = useDictOptions(SYSTEM_DICT_TYPES.taskKind, taskKindFallbackOptions)
@@ -499,7 +500,20 @@ onMounted(async () => {
 })
 
 onActivated(() => {
+    if (!hasActivated) {
+        hasActivated = true
+        return
+    }
     void getRunList()
+    if (props.active) runListPolling.resume()
+    if (showRunDetailDrawer.value && currentRunDetail.value && ['pending', 'running', 'retrying'].includes(currentRunDetail.value.status)) {
+        detailPolling.resume()
+    }
+})
+
+onDeactivated(() => {
+    runListPolling.pause()
+    detailPolling.pause()
 })
 </script>
 

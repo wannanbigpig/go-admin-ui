@@ -16,6 +16,18 @@ export interface DashboardActivityItem {
     desc: string
     time: string
     type: 'success' | 'warning' | 'info' | 'primary' | 'danger'
+    request_log_id?: number | string
+    request_id?: string
+    operation_name?: string
+    method?: string
+    base_url?: string
+    operator_id?: number | string
+    operator_account?: string
+    operator_name?: string
+    operation_status?: number
+    is_high_risk?: number
+    has_change_diff?: boolean
+    created_at?: string
 }
 
 export interface TrendData {

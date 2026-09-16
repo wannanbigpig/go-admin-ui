@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onActivated, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, onDeactivated, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notification'
@@ -109,6 +109,7 @@ import type { ExportRecord } from '@/types/exportCenter'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 
 const props = defineProps<{ active: boolean }>()
+let hasActivated = false
 
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
@@ -365,7 +366,16 @@ onMounted(async () => {
 })
 
 onActivated(() => {
+    if (!hasActivated) {
+        hasActivated = true
+        return
+    }
     void getExportList()
+    if (shouldPollExportList.value) exportListPolling.resume()
+})
+
+onDeactivated(() => {
+    exportListPolling.pause()
 })
 </script>
 

@@ -412,6 +412,15 @@ export interface SystemFileUploadOptions {
     signal?: AbortSignal
 }
 
+export interface SystemFileUploadCapabilities {
+    active_driver: StorageDriver
+    max_file_size_mb: number
+    allowed_extensions: string[]
+    allowed_mime_types: string[]
+    supports_direct_upload: boolean
+    supports_multipart_upload: boolean
+}
+
 export type StorageDriver = 'local' | 'aliyun_oss' | (string & {})
 
 export type FileStorageStatus = 'stored' | 'delete_failed' | (string & {})
@@ -687,8 +696,5 @@ export interface MultipartCompletePayload {
 }
 
 export interface MultipartAbortPayload {
-    upload_id: string
-    bucket: string
-    object_key: string
-    driver?: StorageDriver
+    complete_token: string
 }

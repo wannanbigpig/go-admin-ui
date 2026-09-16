@@ -31,7 +31,10 @@ export function getPermissionList(params?: Record<string, unknown>) {
 
 // 编辑权限
 export function editPermission(data: ApiPermissionUpdatePayload) {
-    return post<unknown>('/v1/permission/update', data)
+    return post<unknown>('/v1/permission/update', data).then((res) => {
+        apiCache.deleteByPrefix(API_CACHE_PREFIX.API_OPTIONS)
+        return res
+    })
 }
 
 // 获取菜单列表

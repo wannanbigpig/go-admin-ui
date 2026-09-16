@@ -7,7 +7,14 @@ class ApiCache {
     private cache = new Map<string, CacheItem<unknown>>()
     private pending = new Map<string, Promise<unknown>>()
     private generation = 0
+    private keyGenerations = new Map<string, number>()
     private readonly maxLimit = 100
+
+    private invalidateKey(key: string): void {
+        this.keyGenerations.set(key, (this.keyGenerations.get(key) || 0) + 1)
+        this.cache.delete(key)
+        this.pending.delete(key)
+    }
 
     /**
      * 获取缓存数据并刷新 LRU 状态
@@ -52,7 +59,7 @@ class ApiCache {
      * @param key 缓存键
      */
     delete(key: string): void {
-        this.cache.delete(key)
+        this.invalidateKey(key)
     }
 
     /**
@@ -60,11 +67,18 @@ class ApiCache {
      * @param prefix 前缀标识
      */
     deleteByPrefix(prefix: string): void {
+        const matchedKeys = new Set<string>()
         for (const key of this.cache.keys()) {
             if (key.startsWith(prefix)) {
-                this.cache.delete(key)
+                matchedKeys.add(key)
             }
         }
+        for (const key of this.pending.keys()) {
+            if (key.startsWith(prefix)) {
+                matchedKeys.add(key)
+            }
+        }
+        matchedKeys.forEach((key) => this.invalidateKey(key))
     }
 
     /**
@@ -104,16 +118,21 @@ class ApiCache {
         if (pending) return pending
 
         const requestGeneration = this.generation
+        const requestKeyGeneration = this.keyGenerations.get(key) || 0
         const promise = Promise.resolve()
             .then(loader)
             .then((data) => {
-                if (requestGeneration === this.generation) {
+                if (requestGeneration === this.generation && requestKeyGeneration === (this.keyGenerations.get(key) || 0)) {
                     this.set(key, data, ttl)
                 }
                 return data
             })
             .finally(() => {
-                if (requestGeneration === this.generation && this.pending.get(key) === promise) {
+                if (
+                    requestGeneration === this.generation &&
+                    requestKeyGeneration === (this.keyGenerations.get(key) || 0) &&
+                    this.pending.get(key) === promise
+                ) {
                     this.pending.delete(key)
                 }
             })
@@ -129,6 +148,7 @@ class ApiCache {
         this.generation++
         this.cache.clear()
         this.pending.clear()
+        this.keyGenerations.clear()
     }
 }
 

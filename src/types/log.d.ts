@@ -91,6 +91,7 @@ export interface RequestLogQuery extends LogQuery {
     base_url?: string | null
     operation_status?: number | null
     is_high_risk?: number | null
+    has_change_diff?: number | null
     operator_account?: string | null
     ip?: string | null
     request_kind?: RequestKind | null

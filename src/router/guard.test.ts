@@ -6,6 +6,16 @@ const hoisted = vi.hoisted(() => ({
     progressDone: vi.fn(),
     resetAuthStore: vi.fn(),
     ensureTokenValid: vi.fn(),
+    refreshAccessToken: vi.fn(),
+    refreshUserInfo: vi.fn(),
+    addDynamicRoutes: vi.fn(),
+    checkDynamicRouteExists: vi.fn(),
+    authStore: {
+        token: 'access-token',
+        firstPath: '/dashboard',
+        userInfo: { id: 1 } as Record<string, unknown>,
+        routerData: [{ path: '/dashboard' }] as unknown[],
+    },
 }))
 
 vi.mock('nprogress', () => ({
@@ -18,18 +28,28 @@ vi.mock('nprogress', () => ({
 
 vi.mock('@/stores/auth', () => ({
     useAuthStore: () => ({
-        token: 'access-token',
-        firstPath: '/dashboard',
-        userInfo: { id: 1 },
-        routerData: [{ path: '/dashboard' }],
+        get token() {
+            return hoisted.authStore.token
+        },
+        get firstPath() {
+            return hoisted.authStore.firstPath
+        },
+        get userInfo() {
+            return hoisted.authStore.userInfo
+        },
+        get routerData() {
+            return hoisted.authStore.routerData
+        },
         ensureTokenValid: hoisted.ensureTokenValid,
         resetAuthStore: hoisted.resetAuthStore,
+        refreshAccessToken: hoisted.refreshAccessToken,
+        refreshUserInfo: hoisted.refreshUserInfo,
     }),
 }))
 
 vi.mock('./dynamicRoutes', () => ({
-    addDynamicRoutes: vi.fn(),
-    checkDynamicRouteExists: vi.fn(() => true),
+    addDynamicRoutes: hoisted.addDynamicRoutes,
+    checkDynamicRouteExists: hoisted.checkDynamicRouteExists,
 }))
 
 vi.mock('@/utils/helper', () => ({
@@ -49,6 +69,14 @@ import { beforeEach as beforeNavigation } from './guard'
 describe('router/guard', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        Object.assign(hoisted.authStore, {
+            token: 'access-token',
+            firstPath: '/dashboard',
+            userInfo: { id: 1 },
+            routerData: [{ path: '/dashboard' }],
+        })
+        hoisted.ensureTokenValid.mockResolvedValue(true)
+        hoisted.checkDynamicRouteExists.mockReturnValue(true)
     })
 
     it('鉴权接口临时失败时应中止导航但保留登录态', async () => {
@@ -86,5 +114,43 @@ describe('router/guard', () => {
         expect(hoisted.progressStart).toHaveBeenCalledTimes(1)
         expect(hoisted.progressDone).toHaveBeenCalledTimes(1)
         expect(hoisted.resetAuthStore).toHaveBeenCalledTimes(1)
+    })
+
+    it('整页刷新根路径时应在恢复动态首页后重新匹配当前地址', async () => {
+        Object.assign(hoisted.authStore, { token: '', firstPath: '', userInfo: {}, routerData: [] })
+        hoisted.refreshAccessToken.mockImplementation(async () => {
+            hoisted.authStore.token = 'refreshed-access-token'
+            return 'refreshed-access-token'
+        })
+        hoisted.refreshUserInfo.mockImplementation(async () => {
+            hoisted.authStore.userInfo = { id: 1 }
+            hoisted.authStore.routerData = [{ path: '', name: 'Home' }]
+        })
+        const to = {
+            name: 'Layout',
+            path: '/',
+            fullPath: '/',
+            query: {},
+            matched: [{ name: 'Layout', path: '/', meta: {} }],
+            meta: {},
+        } as unknown as RouteLocationNormalized
+
+        await expect(beforeNavigation(to)).resolves.toEqual({ path: '/', query: {}, replace: true })
+        expect(hoisted.refreshAccessToken).toHaveBeenCalledTimes(1)
+        expect(hoisted.refreshUserInfo).toHaveBeenCalledTimes(1)
+    })
+
+    it('已匹配普通动态路由时应继续导航', async () => {
+        const to = {
+            name: 'Dashboard',
+            path: '/dashboard',
+            fullPath: '/dashboard',
+            query: {},
+            matched: [{ name: 'Dashboard', path: '/dashboard', meta: { isDynamic: true } }],
+            meta: { isDynamic: true },
+        } as unknown as RouteLocationNormalized
+
+        await expect(beforeNavigation(to)).resolves.toBeUndefined()
+        expect(hoisted.ensureTokenValid).toHaveBeenCalledTimes(1)
     })
 })

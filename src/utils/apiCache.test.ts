@@ -75,6 +75,56 @@ describe('utils/apiCache.ts', () => {
         expect(apiCache.getPending('session:data')).toBeUndefined()
     })
 
+    it('delete 后应启动新请求且旧 pending 不得回填缓存', async () => {
+        let resolveOldRequest!: (value: string) => void
+        const oldRequest = vi.fn(
+            () =>
+                new Promise<string>((resolve) => {
+                    resolveOldRequest = resolve
+                })
+        )
+        const newRequest = vi.fn().mockResolvedValue('new-data')
+
+        const stalePromise = apiCache.getOrSet('department:list', oldRequest)
+        await Promise.resolve()
+        apiCache.delete('department:list')
+        const freshPromise = apiCache.getOrSet('department:list', newRequest)
+
+        await expect(freshPromise).resolves.toBe('new-data')
+        resolveOldRequest('old-data')
+        await expect(stalePromise).resolves.toBe('old-data')
+
+        expect(newRequest).toHaveBeenCalledTimes(1)
+        expect(apiCache.get('department:list')).toBe('new-data')
+    })
+
+    it('deleteByPrefix 后应让匹配前缀的 pending 失效且不影响其他请求', async () => {
+        let resolveRoleRequest!: (value: string) => void
+        const roleRequest = vi.fn(
+            () =>
+                new Promise<string>((resolve) => {
+                    resolveRoleRequest = resolve
+                })
+        )
+        const menuRequest = vi.fn().mockResolvedValue('menu-data')
+        const freshRoleRequest = vi.fn().mockResolvedValue('fresh-role-data')
+
+        const staleRolePromise = apiCache.getOrSet('role:list:page=1', roleRequest)
+        const menuPromise = apiCache.getOrSet('menu:list', menuRequest)
+        await Promise.resolve()
+
+        apiCache.deleteByPrefix('role:list:')
+        const freshRolePromise = apiCache.getOrSet('role:list:page=1', freshRoleRequest)
+
+        await expect(Promise.all([menuPromise, freshRolePromise])).resolves.toEqual(['menu-data', 'fresh-role-data'])
+        resolveRoleRequest('stale-role-data')
+        await expect(staleRolePromise).resolves.toBe('stale-role-data')
+
+        expect(menuRequest).toHaveBeenCalledTimes(1)
+        expect(apiCache.get('role:list:page=1')).toBe('fresh-role-data')
+        expect(apiCache.get('menu:list')).toBe('menu-data')
+    })
+
     it('getOrSet 应合并同一代次内的并发请求', async () => {
         const request = vi.fn().mockResolvedValue('shared-data')
 

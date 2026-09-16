@@ -10,6 +10,16 @@ on:
     branches: [ "master" ]
 
 jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 12.4.1
+    - name: Audit production dependencies
+      run: pnpm audit --prod --audit-level high --registry=https://registry.npmjs.org
+
   build:
 
     runs-on: ubuntu-latest

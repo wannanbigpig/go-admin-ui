@@ -38,6 +38,7 @@ import type {
     SystemFileUploadCredentialBatchPayload,
     SystemFileUploadCredentialBatchResult,
     SystemFileUploadBatchFailure,
+    SystemFileUploadCapabilities,
     SystemFileUploadOptions,
     SystemFileExportPayload,
     SystemFileExportResult,
@@ -506,18 +507,38 @@ function buildDirectCompletePayload(credential: SystemFileUploadCredential, uplo
     }
 }
 
-let cachedSystemFileUploadDriver: SystemFileUploadOptions['driver']
+let cachedSystemFileUploadOptions: SystemFileUploadCapabilities | undefined
 
 export function invalidateSystemFileUploadDriverCache() {
-    cachedSystemFileUploadDriver = undefined
+    cachedSystemFileUploadOptions = undefined
+}
+
+export async function fetchSystemFileUploadOptions() {
+    if (cachedSystemFileUploadOptions) return cachedSystemFileUploadOptions
+    const response = await systemApi.getSystemFileUploadOptions()
+    const options = normalizeDetailData<SystemFileUploadCapabilities>(response, {
+        active_driver: 'local',
+        max_file_size_mb: 0,
+        allowed_extensions: [],
+        allowed_mime_types: [],
+        supports_direct_upload: false,
+        supports_multipart_upload: false,
+    })
+    cachedSystemFileUploadOptions = {
+        active_driver: options.active_driver || 'local',
+        max_file_size_mb: Number(options.max_file_size_mb || 0),
+        allowed_extensions: Array.isArray(options.allowed_extensions) ? options.allowed_extensions : [],
+        allowed_mime_types: Array.isArray(options.allowed_mime_types) ? options.allowed_mime_types : [],
+        supports_direct_upload: Boolean(options.supports_direct_upload),
+        supports_multipart_upload: Boolean(options.supports_multipart_upload),
+    }
+    return cachedSystemFileUploadOptions
 }
 
 export async function resolveSystemFileUploadDriver(options: SystemFileUploadOptions = {}) {
     if (options.driver) return options.driver
-    if (cachedSystemFileUploadDriver) return cachedSystemFileUploadDriver
-    const storage = await fetchStorageConfig()
-    cachedSystemFileUploadDriver = storage.active_driver || 'local'
-    return cachedSystemFileUploadDriver
+    const uploadOptions = await fetchSystemFileUploadOptions()
+    return uploadOptions.active_driver
 }
 
 async function uploadSystemFilesLocal(files: File[], options: SystemFileUploadOptions = {}): Promise<LocalUploadBatchResolvedResult> {
@@ -531,6 +552,7 @@ async function uploadSystemFilesLocal(files: File[], options: SystemFileUploadOp
             },
             {
                 onUploadProgress: (event) => options.onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
+                signal: options.signal,
             }
         )
         return normalizeLocalUploadBatchPayload(response)
@@ -567,6 +589,7 @@ async function uploadSystemFileDirect(file: File, options: SystemFileUploadOptio
         formData.append('file', file)
         await axios.post(credential.upload_url, formData, {
             headers: credential.headers,
+            signal: options.signal,
             onUploadProgress: (event) => options.onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
         })
     } else {
@@ -575,6 +598,7 @@ async function uploadSystemFileDirect(file: File, options: SystemFileUploadOptio
             method,
             data: file,
             headers: credential.headers,
+            signal: options.signal,
             onUploadProgress: (event) => options.onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
         })
     }
@@ -599,6 +623,7 @@ export async function uploadSystemFile(file: File, options: SystemFileUploadOpti
             },
             {
                 onUploadProgress: (event) => options.onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
+                signal: options.signal,
             }
         )
         return normalizeDetailData(response, {} as SystemFile)
@@ -625,6 +650,7 @@ export async function uploadSystemFile(file: File, options: SystemFileUploadOpti
                 },
                 {
                     onUploadProgress: (event) => options.onProgress?.(event.total ? Math.round((event.loaded * 100) / event.total) : 0),
+                    signal: options.signal,
                 }
             )
             return normalizeDetailData(response, {} as SystemFile)

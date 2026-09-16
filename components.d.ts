@@ -111,6 +111,7 @@ declare module 'vue' {
     IEpDataAnalysis: typeof import('~icons/ep/data-analysis')['default']
     IEpDocument: typeof import('~icons/ep/document')['default']
     IEpHomeFilled: typeof import('~icons/ep/home-filled')['default']
+    IEpLink: typeof import('~icons/ep/link')['default']
     IEpLoading: typeof import('~icons/ep/loading')['default']
     IEpLock: typeof import('~icons/ep/lock')['default']
     IEpMenu: typeof import('~icons/ep/menu')['default']

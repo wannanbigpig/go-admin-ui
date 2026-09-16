@@ -24,7 +24,7 @@ vi.mock('@/locales', () => ({
     DEFAULT_LOCALE: 'zh-CN',
 }))
 
-import { createRole, getMenuList, getRoleOptions, refreshAllMenuPermissions } from '@/api/permission'
+import { createRole, editPermission, getApiOptions, getMenuList, getRoleOptions, refreshAllMenuPermissions } from '@/api/permission'
 
 describe('api/permission.ts', () => {
     beforeEach(() => {
@@ -72,6 +72,20 @@ describe('api/permission.ts', () => {
 
         hoisted.mockGet.mockResolvedValueOnce([{ id: 2, name: '新角色', code: 'new' }])
         await expect(getRoleOptions()).resolves.toEqual([{ id: 2, name: '新角色', code: 'new' }])
+        expect(hoisted.mockGet).toHaveBeenCalledTimes(2)
+    })
+
+    it('接口权限编辑后应清理菜单绑定使用的接口选项缓存', async () => {
+        hoisted.mockGet.mockResolvedValueOnce([{ id: 1, name: '旧名称' }])
+        await getApiOptions({ is_auth: 2 })
+        await getApiOptions({ is_auth: 2 })
+        expect(hoisted.mockGet).toHaveBeenCalledTimes(1)
+
+        hoisted.mockPost.mockResolvedValueOnce({})
+        await editPermission({ id: 1, name: '新名称', description: '', sort: 0 })
+
+        hoisted.mockGet.mockResolvedValueOnce([{ id: 1, name: '新名称' }])
+        await expect(getApiOptions({ is_auth: 2 })).resolves.toEqual([{ id: 1, name: '新名称' }])
         expect(hoisted.mockGet).toHaveBeenCalledTimes(2)
     })
 })

@@ -22,6 +22,9 @@ const normalizeFolderIndexParentId = (parentId: number | string | null | undefin
 
 export const buildFolderIndexKey = (parentId: number | string | null | undefined, name: string) => `${String(normalizeFolderIndexParentId(parentId) ?? ROOT_FOLDER_KEY)}::${name}`
 
+export const isSameUploadTaskBatch = (currentTasks: UploadTask[], expectedTasks: UploadTask[]) =>
+    currentTasks.length === expectedTasks.length && expectedTasks.every((task, index) => currentTasks[index]?.id === task.id)
+
 const isExternalFileDragEvent = (event?: DragEvent) => {
     const types = Array.from(event?.dataTransfer?.types || [])
     return types.includes('Files')
@@ -57,6 +60,8 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const openUploadPicker = () => uploadInputRef.value?.click()
     const openUploadDirectoryPicker = () => uploadDirectoryInputRef.value?.click()
 
+    const isCurrentTaskBatch = (tasks: UploadTask[]) => isSameUploadTaskBatch(uploadTasks.value, tasks)
+
     const uploadFilesInQueue = async (files: File[]) => {
         if (files.length === 0) return
         const uploadOptions = { folderId: options.selectedFolderId.value, enableMultipart: true }
@@ -64,13 +69,14 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         uploadTasks.value = currentTasks
         uploadQueueExpanded.value = false
         await runUploadQueue(uploadTasks.value, uploadOptions)
-        showUploadSummary(uploadTasks.value)
-        if (uploadTasks.value.some((task) => task.status === 'success' || task.status === 'reuse')) {
+        if (!isCurrentTaskBatch(currentTasks)) return
+        showUploadSummary(currentTasks)
+        if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
             await options.getList()
         }
-        if (uploadTasks.value.every((task) => task.status === 'success' || task.status === 'reuse')) {
+        if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
             window.setTimeout(() => {
-                if (uploadTasks.value === currentTasks && !uploading.value) clearTasks()
+                if (isCurrentTaskBatch(currentTasks) && !uploading.value) clearTasks()
             }, 1200)
         }
     }
@@ -78,6 +84,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const retryUploadTask = async (task: UploadTask) => {
         if (task.status !== 'error') return
         await uploadOneTask(task, task.uploadOptions)
+        if (!uploadTasks.value.some((item) => item.id === task.id)) return
         await options.getList()
         if (uploadTasks.value.length > 0 && uploadTasks.value.every((item) => item.status === 'success' || item.status === 'reuse')) {
             showUploadSummary(uploadTasks.value)
@@ -221,6 +228,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         uploadTasks.value = currentTasks
         uploadQueueExpanded.value = false
         await runUploadQueue(currentTasks, uploadOptions)
+        if (!isCurrentTaskBatch(currentTasks)) return
         await options.loadFolderTree()
         showUploadSummary(currentTasks)
         if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
@@ -228,7 +236,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         }
         if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
             window.setTimeout(() => {
-                if (uploadTasks.value === currentTasks && !uploading.value) clearTasks()
+                if (isCurrentTaskBatch(currentTasks) && !uploading.value) clearTasks()
             }, 1200)
         }
     }

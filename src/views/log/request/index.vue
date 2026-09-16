@@ -63,6 +63,13 @@
                             </el-form-item>
                         </el-col>
                         <el-col :span="4">
+                            <el-form-item :label="t('log.request.dataChange')" prop="has_change_diff">
+                                <el-select name="has_change_diff" v-model="queryWhere.has_change_diff" clearable :placeholder="t('log.request.selectDataChange')">
+                                    <el-option :label="t('log.request.onlyDataChange')" :value="1" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="4">
                             <el-form-item :label="t('log.request.method')" prop="method">
                                 <el-select name="method" v-model="queryWhere.method" clearable :placeholder="t('log.request.selectMethod')">
                                     <el-option v-for="item in methodOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -211,6 +218,7 @@ import xlProTable from '@/components/proTable/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
 import { useRequestLogPage } from '@/modules/log/useRequestLogPage'
@@ -218,14 +226,16 @@ import { getAdminUserOptions, type AdminUserOption } from '@/api/adminUser'
 import { normalizeArrayData } from '@/modules/shared/response'
 import { Logger } from '@/utils/logger'
 import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, LOG_METHOD_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
+import { parseRequestLogRouteQuery } from '@/modules/dashboard/activity'
 import type { TableColumn } from '@/types/common'
 import type { ExecutionTimeScope, RequestKind, RequestLog } from '@/types/log'
 import { useI18n } from 'vue-i18n'
 
-const { getButtonInfoFull } = usePermission()
+const { getButtonInfoFull, checkPermission } = usePermission()
 const { copyText } = useClipboard()
 const detailButtonInfo = getButtonInfoFull('requestLog:detail')
 const { t } = useI18n()
+const route = useRoute()
 const requestKindOptions = REQUEST_KIND_FILTER_OPTIONS
 const executionTimeScopeOptions = EXECUTION_TIME_SCOPE_FILTER_OPTIONS
 const methodOptions = LOG_METHOD_OPTIONS
@@ -258,9 +268,15 @@ const {
     exportCsv,
 } = useRequestLogPage()
 
-onMounted(() => {
-    getList()
-    remoteSearchOperators('')
+onMounted(async () => {
+    const initialQuery = parseRequestLogRouteQuery(route.query)
+    if (initialQuery.requestId) queryWhere.request_id = initialQuery.requestId
+    if (initialQuery.operatorAccount) queryWhere.operator_account = initialQuery.operatorAccount
+
+    await Promise.all([getList(), remoteSearchOperators('')])
+    if (initialQuery.detailId && checkPermission('requestLog:detail')) {
+        await openDetailDrawer({ id: initialQuery.detailId } as RequestLog)
+    }
 })
 
 const requestKindValue = computed<string>({

@@ -2,13 +2,12 @@
     <div>
         <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="productList" :pagination="pagination" @search="onSearch" @reset="handleReset">
             <template #actions>
-                <el-button type="primary" @click="openCreateDrawer">{{ t('product.addTitle') }}</el-button>
+                <xl-action-button v-permission="'product:create'" code="product:create" type="primary" :show-icon="false" @click="openCreateDrawer" />
             </template>
             <template #operation>
                 <el-table-column width="200" :label="t('common.labels.operation')" align="center" fixed="right">
                     <template #default="scope">
-                        <el-button link type="primary" @click="openEditDrawer(scope.row)">{{ t('common.actions.edit') }}</el-button>
-                        <el-button link type="danger" @click="handleDelete(scope.row)">{{ t('common.actions.delete') }}</el-button>
+                        <xl-action-buttons :buttons="actionButtons" :scope="scope" />
                     </template>
                 </el-table-column>
             </template>
@@ -45,13 +44,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
+import xlActionButton from '@/components/actionButton/index.vue'
+import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
 import DeptTreeSelect from '@/components/DeptTreeSelect.vue'
-import { getProductList, createProduct, updateProduct, deleteProduct, type Product } from '@/api/product'
+import { getProductList, deleteProduct, type Product } from '@/api/product'
 import { useListPage } from '@/composables/useListPage'
 import { normalizeListData } from '@/modules/shared/response'
+import { useProductForm } from '@/modules/product/useProductForm'
 import { Logger } from '@/utils/logger'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
@@ -87,17 +89,9 @@ const {
 })
 
 // 表单相关
-const showDrawer = ref(false)
-const isEditMode = ref(false)
-const submitting = ref(false)
-const formRef = ref<FormInstance>()
-const formData = reactive({
-    id: 0,
-    name: '',
-    description: '',
-    price: 0,
-    status: 1,
-    dept_id: 0,
+const { showDrawer, isEditMode, isSubmitting: submitting, formDataRef: formRef, formData, openCreateDrawer, openEditDrawer, handleSubmit } = useProductForm({
+    getDefaultDepartmentId: () => authStore.userInfo?.dept_id || 0,
+    refreshList: getList,
 })
 
 const formRules: FormRules = {
@@ -115,6 +109,22 @@ const columns = [
     { prop: 'created_at', h_label: t('common.labels.createdAt'), width: 180 },
 ]
 
+const actionButtons: ActionButtonConfig<Product>[] = [
+    {
+        permission: 'product:update',
+        text: t('common.actions.edit'),
+        showIcon: false,
+        click: (row) => openEditDrawer(row),
+    },
+    {
+        permission: 'product:delete',
+        text: t('common.actions.delete'),
+        showIcon: false,
+        type: 'danger',
+        click: (row) => handleDelete(row),
+    },
+]
+
 // 搜索
 const onSearch = async (model: Record<string, unknown>) => {
     Object.assign(queryWhere, model)
@@ -124,69 +134,6 @@ const onSearch = async (model: Record<string, unknown>) => {
 // 重置
 const handleReset = async () => {
     await resetProductList()
-}
-
-// 打开新增抽屉
-const openCreateDrawer = () => {
-    isEditMode.value = false
-    resetForm()
-    // 设置默认部门为用户的默认部门
-    formData.dept_id = authStore.userInfo?.dept_id || 0
-    showDrawer.value = true
-}
-
-// 打开编辑抽屉
-const openEditDrawer = (row: Product) => {
-    isEditMode.value = true
-    formData.id = row.id
-    formData.name = row.name
-    formData.description = row.description
-    formData.price = row.price
-    formData.status = row.status
-    formData.dept_id = row.dept_id
-    showDrawer.value = true
-}
-
-// 重置表单
-const resetForm = () => {
-    formData.id = 0
-    formData.name = ''
-    formData.description = ''
-    formData.price = 0
-    formData.status = 1
-    formData.dept_id = 0
-    formRef.value?.clearValidate()
-}
-
-// 提交表单
-const handleSubmit = async () => {
-    const valid = await formRef.value?.validate().catch(() => false)
-    if (!valid) return
-
-    submitting.value = true
-    try {
-        const data = {
-            name: formData.name,
-            description: formData.description,
-            price: formData.price,
-            status: formData.status,
-            dept_id: formData.dept_id,
-        }
-
-        if (isEditMode.value) {
-            await updateProduct({ id: formData.id, ...data })
-            ElMessage.success(t('product.updateSuccess'))
-        } else {
-            await createProduct(data)
-            ElMessage.success(t('product.createSuccess'))
-        }
-        showDrawer.value = false
-        await getList()
-    } catch (error) {
-        Logger.error('提交失败:', error)
-    } finally {
-        submitting.value = false
-    }
 }
 
 // 删除

@@ -10,7 +10,7 @@ import {
     initMultipartUpload,
     completeMultipartUpload,
     abortMultipartUpload,
-    fetchStorageConfig,
+    fetchSystemFileUploadOptions,
 } from '@/modules/system/service'
 import { Logger } from '@/utils/logger'
 import type { MultipartInitResult, MultipartCompletePart, StorageDriver, SystemFileUploadCredential, SystemFileUploadCompleteBatchItemPayload } from '@/types/system'
@@ -30,7 +30,7 @@ export interface UploadOptions {
     signal?: AbortSignal
     onReuse?: () => void
     onResult?: (result: unknown) => void
-    storageConfig?: Awaited<ReturnType<typeof fetchStorageConfig>>
+    capabilities?: Awaited<ReturnType<typeof fetchSystemFileUploadOptions>>
 }
 
 export type UploadTaskStatus = 'hashing' | 'pending' | 'uploading' | 'reuse' | 'success' | 'error'
@@ -114,6 +114,10 @@ function hasDirectCompletePayload(item: SystemFileUploadCompleteBatchItemPayload
     return Boolean(item.complete_token)
 }
 
+function isUploadCanceled(options?: UploadOptions, error?: unknown) {
+    return Boolean(options?.signal?.aborted || axios.isCancel(error) || (error as { code?: string } | null)?.code === 'ERR_CANCELED')
+}
+
 export function useFileUpload() {
     const uploadTasks = ref<UploadTask[]>([])
     let uploadAbortController: AbortController | null = null
@@ -148,8 +152,16 @@ export function useFileUpload() {
     }
 
     const uploadOneTask = async (rawTask: UploadTask, options?: UploadOptions) => {
+        const ownedController = options?.signal ? null : new AbortController()
+        if (ownedController) {
+            uploadAbortController?.abort()
+            uploadAbortController = ownedController
+            options = { ...options, signal: ownedController.signal }
+        }
         const task = uploadTasks.value.find((item) => item.id === rawTask.id) || rawTask
         task.error = ''
+        task.result = undefined
+        task.progress = 0
         const targetFolderId = task.folderId ?? options?.folderId
 
         const doNormalUpload = async () => {
@@ -165,15 +177,18 @@ export function useFileUpload() {
                 hash: task.hash,
                 signal: options?.signal,
                 onProgress: (percent) => {
+                    if (isUploadCanceled(options)) return
                     task.progress = Math.min(99, Math.max(0, percent))
                 },
                 onReuse: () => {
+                    if (isUploadCanceled(options)) return
                     reused = true
                     task.status = 'reuse'
                     task.progress = 100
                     options?.onReuse?.()
                 },
             })
+            if (isUploadCanceled(options)) return
             task.progress = 100
             task.status = reused ? 'reuse' : 'success'
             if (result) {
@@ -183,27 +198,30 @@ export function useFileUpload() {
         }
 
         try {
-            const storageConfig = options?.storageConfig || await fetchStorageConfig()
+            const capabilities = options?.capabilities || (await fetchSystemFileUploadOptions())
+            if (isUploadCanceled(options)) return
             if (!task.file) {
                 task.status = 'error'
                 task.error = 'File is released'
                 return
             }
-            const maxBytes = (storageConfig?.config?.max_file_size_mb || 0) * 1024 * 1024
+            const maxBytes = (capabilities.max_file_size_mb || 0) * 1024 * 1024
             if (maxBytes > 0 && task.file.size > maxBytes) {
                 task.status = 'error'
                 task.progress = 0
-                task.error = i18n.global.t('system.file.sizeExceedsLimit', { size: storageConfig.config.max_file_size_mb })
+                task.error = i18n.global.t('system.file.sizeExceedsLimit', { size: capabilities.max_file_size_mb })
                 return
             }
 
             task.status = 'hashing'
             task.progress = 0
             task.hash = await calculateSystemFileSha256(task.file, (progress) => {
+                if (isUploadCanceled(options)) return
                 task.progress = progress
             })
+            if (isUploadCanceled(options)) return
             task.status = 'uploading'
-            if (options?.enableMultipart && task.file!.size > MULTIPART_THRESHOLD) {
+            if (options?.enableMultipart && capabilities.supports_multipart_upload && task.file!.size > MULTIPART_THRESHOLD) {
                 try {
                     const result = await uploadMultipart(task, {
                         ...options,
@@ -225,11 +243,15 @@ export function useFileUpload() {
                 await doNormalUpload()
             }
         } catch (error) {
+            if (isUploadCanceled(options, error)) return
             task.status = 'error'
             task.error = getErrorMessage(error)
             Logger.error('上传文件资源失败:', error)
         } finally {
             releaseCompletedTaskFile(task)
+            if (ownedController && uploadAbortController === ownedController) {
+                uploadAbortController = null
+            }
         }
     }
 
@@ -258,14 +280,18 @@ export function useFileUpload() {
                     folder_id: getTaskTargetFolderId(tasks[0], options),
                     driver: resolvedDriver,
                     onProgress: (percent) => {
+                        if (isUploadCanceled(options)) return
                         tasks.forEach((task) => {
                             if (task.status === 'uploading') {
                                 task.progress = Math.min(99, Math.max(0, percent))
                             }
                         })
                     },
+                    signal: options?.signal,
                 }
             )
+
+            if (isUploadCanceled(options)) return true
 
             results.forEach((result, index) => {
                 const task = tasks[index]
@@ -277,6 +303,7 @@ export function useFileUpload() {
             })
             return true
         } catch (error) {
+            if (isUploadCanceled(options, error)) return true
             const failures = extractBatchFailureList(error)
             const unassignedTasks = [...tasks]
             const partialData = asRecord(asRecord(error)?.data)
@@ -351,6 +378,7 @@ export function useFileUpload() {
         if (resolvedDriver === 'local') return false
 
         for (const task of tasks) {
+            if (isUploadCanceled(options)) return true
             task.error = ''
             task.result = undefined
             task.progress = 0
@@ -362,8 +390,10 @@ export function useFileUpload() {
                 continue
             }
             task.hash = await calculateSystemFileSha256(task.file, (progress) => {
+                if (isUploadCanceled(options)) return
                 task.progress = progress
             })
+            if (isUploadCanceled(options)) return true
             task.status = 'uploading'
         }
 
@@ -383,14 +413,17 @@ export function useFileUpload() {
                     hash: task.hash!,
                 })),
             })
+            if (isUploadCanceled(options)) return true
 
             const completeItems: SystemFileUploadCompleteBatchItemPayload[] = []
             const reuseClientIds = new Set<string>()
             const pendingUploads: Array<{ task: UploadTask; file: File; credential: SystemFileUploadCredential }> = []
 
+            const handledCredentialClientIds = new Set<string>()
             for (const item of credentialResult.items || []) {
                 const task = tasks.find((current) => current.id === item.client_id)
                 if (!task) continue
+                if (item.client_id) handledCredentialClientIds.add(item.client_id)
                 if (!item.success || !item.data) {
                     task.status = 'error'
                     task.progress = 0
@@ -446,6 +479,12 @@ export function useFileUpload() {
 
                 completeItems.push(completeItem)
             }
+            for (const task of tasks) {
+                if (handledCredentialClientIds.has(task.id) || task.status === 'error') continue
+                task.status = 'error'
+                task.progress = 0
+                task.error = i18n.global.t('system.file.getUploadTokenFailed')
+            }
 
             if (pendingUploads.length > 0) {
                 let cursor = 0
@@ -473,6 +512,8 @@ export function useFileUpload() {
                 await Promise.all(workers)
             }
 
+            if (isUploadCanceled(options)) return true
+
             const validCompleteItems = completeItems.filter((item) => {
                 const cid = item.client_id
                 if (!cid) return true
@@ -487,6 +528,7 @@ export function useFileUpload() {
                 driver: resolvedDriver,
                 items: validCompleteItems,
             })
+            if (isUploadCanceled(options)) return true
 
             const handledClientIds = new Set<string>()
             for (const item of completeResult.items || []) {
@@ -518,6 +560,7 @@ export function useFileUpload() {
 
             return true
         } catch (error) {
+            if (isUploadCanceled(options, error)) return true
             tasks.forEach((task) => {
                 if (task.status === 'success' || task.status === 'reuse') return
                 task.status = 'error'
@@ -534,23 +577,25 @@ export function useFileUpload() {
     }
 
     const runUploadQueue = async (tasks: UploadTask[], options?: UploadOptions) => {
+        uploadAbortController?.abort()
         uploadAbortController = new AbortController()
         const signal = options?.signal ?? uploadAbortController.signal
 
         const reactiveTasks = tasks.map((t) => uploadTasks.value.find((item) => item.id === t.id) || t)
 
         let validTasks = reactiveTasks
-        let storageConfig: Awaited<ReturnType<typeof fetchStorageConfig>> | undefined
+        let capabilities: Awaited<ReturnType<typeof fetchSystemFileUploadOptions>> | undefined
         try {
-            storageConfig = await fetchStorageConfig()
-            const maxBytes = (storageConfig?.config?.max_file_size_mb || 0) * 1024 * 1024
+            capabilities = await fetchSystemFileUploadOptions()
+            if (signal.aborted) return
+            const maxBytes = (capabilities.max_file_size_mb || 0) * 1024 * 1024
 
             validTasks = []
             for (const task of reactiveTasks) {
                 if (maxBytes > 0 && task.file && task.file.size > maxBytes) {
                     task.status = 'error'
                     task.progress = 0
-                    task.error = i18n.global.t('system.file.sizeExceedsLimit', { size: storageConfig.config.max_file_size_mb })
+                    task.error = i18n.global.t('system.file.sizeExceedsLimit', { size: capabilities.max_file_size_mb })
                 } else {
                     validTasks.push(task)
                 }
@@ -562,7 +607,7 @@ export function useFileUpload() {
 
         if (validTasks.length === 0) return
 
-        const nextOptions = { ...options, signal, storageConfig }
+        const nextOptions = { ...options, signal, capabilities }
 
         if (await runLocalBatchUpload(validTasks, nextOptions)) {
             return
@@ -628,42 +673,46 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
     }
 
-    if (!initResult.upload_id) {
-        task.status = 'reuse'
-        task.progress = 100
-        options?.onReuse?.()
-        return await completeMultipartUpload({
-            complete_token: completeToken,
-            reuse: true,
-            origin_name: task.name,
-            size: task.size,
-            hash: task.hash,
-            mime_type: task.file.type,
-            folder_id: options?.folderId,
-            driver: options?.driver as StorageDriver,
-            parts: [],
-        })
-    }
-
-    const { upload_id, bucket, object_key, parts: presignedParts = [] } = initResult
-    if (!upload_id || !bucket || !object_key || presignedParts.length === 0) {
-        throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
-    }
-    const completedParts: MultipartCompletePart[] = []
-    const totalSize = Math.max(task.size, 1)
-    let completedBytes = 0
-    const inflightLoaded = new Map<number, number>()
-
-    const refreshProgress = () => {
-        let inflight = 0
-        inflightLoaded.forEach((value) => {
-            inflight += value
-        })
-        const ratio = (completedBytes + inflight) / totalSize
-        task.progress = Math.min(99, Math.max(0, Math.round(ratio * 100)))
-    }
-
     try {
+        if (isUploadCanceled(options)) throw new axios.CanceledError()
+
+        if (!initResult.upload_id) {
+            task.status = 'reuse'
+            task.progress = 100
+            options?.onReuse?.()
+            const result = await completeMultipartUpload({
+                complete_token: completeToken,
+                reuse: true,
+                origin_name: task.name,
+                size: task.size,
+                hash: task.hash,
+                mime_type: task.file.type,
+                folder_id: options?.folderId,
+                driver: options?.driver as StorageDriver,
+                parts: [],
+            })
+            if (isUploadCanceled(options)) throw new axios.CanceledError()
+            return result
+        }
+
+        const { upload_id, parts: presignedParts = [] } = initResult
+        if (!upload_id || presignedParts.length === 0) {
+            throw new Error(i18n.global.t('system.file.getUploadTokenFailed'))
+        }
+        const completedParts: MultipartCompletePart[] = []
+        const totalSize = Math.max(task.size, 1)
+        let completedBytes = 0
+        const inflightLoaded = new Map<number, number>()
+
+        const refreshProgress = () => {
+            let inflight = 0
+            inflightLoaded.forEach((value) => {
+                inflight += value
+            })
+            const ratio = (completedBytes + inflight) / totalSize
+            task.progress = Math.min(99, Math.max(0, Math.round(ratio * 100)))
+        }
+
         const partChunks: { index: number; start: number; end: number }[] = []
         for (let i = 0; i < presignedParts.length; i++) {
             const start = i * chunkSize
@@ -713,6 +762,8 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
         })
         await Promise.all(workers)
 
+        if (isUploadCanceled(options)) throw new axios.CanceledError()
+
         completedParts.sort((a, b) => a.part_number - b.part_number)
 
         const result = await completeMultipartUpload({
@@ -725,6 +776,7 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
             driver: options?.driver as StorageDriver,
             parts: completedParts,
         })
+        if (isUploadCanceled(options)) throw new axios.CanceledError()
         task.progress = 100
         task.status = 'success'
         return result
@@ -734,10 +786,7 @@ async function uploadMultipart(task: UploadTask, options?: UploadOptions) {
             while (abortRetries > 0) {
                 try {
                     await abortMultipartUpload({
-                        upload_id,
-                        bucket,
-                        object_key,
-                        driver: options?.driver as StorageDriver,
+                        complete_token: completeToken,
                     })
                     break
                 } catch (abortError) {

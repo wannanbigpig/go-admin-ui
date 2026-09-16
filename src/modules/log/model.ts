@@ -41,6 +41,7 @@ export function createRequestLogQuery() {
         base_url: null,
         operation_status: null,
         is_high_risk: null,
+        has_change_diff: null,
         operator_account: null,
         ip: null,
         request_kind: null,

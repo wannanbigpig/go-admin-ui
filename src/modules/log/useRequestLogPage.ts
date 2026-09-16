@@ -13,6 +13,12 @@ import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogQuery } fro
 
 type SortOrder = 'ascending' | 'descending' | null
 
+export function buildRequestLogQueryParams(query: RequestLogQuery, dateRange: [string, string] | [] | null) {
+    const params = { ...query }
+    applyDateRangeToQuery(params, dateRange?.length === 2 ? dateRange : null)
+    return params
+}
+
 export function useRequestLogPage() {
     const router = useRouter()
     const { t } = useI18n()
@@ -29,10 +35,7 @@ export function useRequestLogPage() {
     const exporting = ref(false)
 
     const buildQueryParams = (query: typeof queryWhere) => {
-        const params = { ...query }
-        const selectedDateRange = dateRange.value.length === 2 ? dateRange.value : null
-        applyDateRangeToQuery(params, selectedDateRange)
-        return params
+        return buildRequestLogQueryParams(query, dateRange.value)
     }
 
     const buildOrderBy = (prop: string, order: SortOrder) => {

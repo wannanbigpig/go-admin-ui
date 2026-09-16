@@ -75,7 +75,8 @@ export async function beforeEach(to: RouteLocationNormalized) {
         // 动态添加路由（如果需要）
         if (checkDynamicRouteExists()) {
             const matchedNotFound = to.name === ROUTE_NAME.NOT_FOUND || to.matched.some((route) => route.name === ROUTE_NAME.NOT_FOUND)
-            if (refreshedUserInfo && matchedNotFound) {
+            const rootOnlyMatchedLayout = to.path === ROUTE_PATH.HOME && to.matched.length <= 1
+            if (refreshedUserInfo && (matchedNotFound || rootOnlyMatchedLayout)) {
                 return { path: to.path, query: to.query, replace: true }
             }
         } else if (isEmpty(authStore.routerData)) {

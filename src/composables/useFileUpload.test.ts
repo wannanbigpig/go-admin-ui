@@ -1,12 +1,17 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useFileUpload, type UploadTask } from '@/composables/useFileUpload'
+import type { SystemFile } from '@/types/system'
 
 const hoisted = vi.hoisted(() => ({
     mockCalculateHash: vi.fn(),
     mockResolveDriver: vi.fn(),
     mockFetchCredentialBatch: vi.fn(),
     mockCompleteBatch: vi.fn(),
-    mockFetchStorageConfig: vi.fn(),
+    mockFetchUploadOptions: vi.fn(),
+    mockUploadSystemFile: vi.fn(),
+    mockUploadSystemFiles: vi.fn(),
+    mockInitMultipartUpload: vi.fn(),
+    mockAbortMultipartUpload: vi.fn(),
 }))
 
 vi.mock('@/modules/system/service', () => ({
@@ -14,12 +19,12 @@ vi.mock('@/modules/system/service', () => ({
     resolveSystemFileUploadDriver: hoisted.mockResolveDriver,
     fetchSystemFileUploadCredentialBatch: hoisted.mockFetchCredentialBatch,
     completeSystemFileUploadBatch: hoisted.mockCompleteBatch,
-    fetchStorageConfig: hoisted.mockFetchStorageConfig,
-    uploadSystemFile: vi.fn(),
-    uploadSystemFiles: vi.fn(),
-    initMultipartUpload: vi.fn(),
+    fetchSystemFileUploadOptions: hoisted.mockFetchUploadOptions,
+    uploadSystemFile: hoisted.mockUploadSystemFile,
+    uploadSystemFiles: hoisted.mockUploadSystemFiles,
+    initMultipartUpload: hoisted.mockInitMultipartUpload,
     completeMultipartUpload: vi.fn(),
-    abortMultipartUpload: vi.fn(),
+    abortMultipartUpload: hoisted.mockAbortMultipartUpload,
 }))
 
 vi.mock('@/utils/logger', () => ({
@@ -38,8 +43,22 @@ vi.mock('@/locales', () => ({
 }))
 
 describe('composables/useFileUpload.ts', () => {
+    beforeEach(() => {
+        vi.resetAllMocks()
+        hoisted.mockFetchUploadOptions.mockResolvedValue({
+            active_driver: 'local',
+            max_file_size_mb: 10,
+            allowed_extensions: [],
+            allowed_mime_types: [],
+            supports_direct_upload: false,
+            supports_multipart_upload: false,
+        })
+        hoisted.mockCalculateHash.mockResolvedValue('hash-code')
+        hoisted.mockUploadSystemFile.mockResolvedValue({ id: 1 } as SystemFile)
+    })
+
     it('批量直传 complete 漏项时应将对应任务标记为 error', async () => {
-        hoisted.mockFetchStorageConfig.mockResolvedValue({ config: { max_file_size_mb: 0 } })
+        hoisted.mockFetchUploadOptions.mockResolvedValue({ active_driver: 'aliyun_oss', max_file_size_mb: 0, supports_direct_upload: true, supports_multipart_upload: true })
         hoisted.mockResolveDriver.mockResolvedValue('aliyun_oss')
         hoisted.mockCalculateHash.mockResolvedValueOnce('a'.repeat(64)).mockResolvedValueOnce('b'.repeat(64))
         hoisted.mockFetchCredentialBatch.mockResolvedValue({
@@ -75,9 +94,7 @@ describe('composables/useFileUpload.ts', () => {
         expect(tasks[1].file).not.toBeNull()
     })
 
-    it('runUploadQueue 批量上传时，fetchStorageConfig 调用次数不超过 1 次', async () => {
-        hoisted.mockFetchStorageConfig.mockClear()
-        hoisted.mockFetchStorageConfig.mockResolvedValue({ config: { max_file_size_mb: 10 } })
+    it('runUploadQueue 批量上传时，fetchSystemFileUploadOptions 调用次数不超过 1 次', async () => {
 
         const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,12 +110,10 @@ describe('composables/useFileUpload.ts', () => {
 
         await runUploadQueue(tasks, { enableMultipart: true })
 
-        expect(hoisted.mockFetchStorageConfig).toHaveBeenCalledTimes(1)
+        expect(hoisted.mockFetchUploadOptions).toHaveBeenCalledTimes(1)
     })
 
     it('clearTasks 应取消进行中的 axios 请求', async () => {
-        hoisted.mockFetchStorageConfig.mockResolvedValue({ config: { max_file_size_mb: 10 } })
-
         const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
 
         let capturedSignal: AbortSignal | undefined
@@ -126,9 +141,126 @@ describe('composables/useFileUpload.ts', () => {
         })
     })
 
+    it('multipart init 已创建会话后发生取消应使用 complete_token 清理服务端会话', async () => {
+        let resolveInit!: (value: { complete_token: string; upload_id: string; parts: Array<{ part_number: number; upload_url: string }> }) => void
+        hoisted.mockInitMultipartUpload.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolveInit = resolve
+                })
+        )
+        hoisted.mockAbortMultipartUpload.mockResolvedValue(undefined)
+        const controller = new AbortController()
+        const file = new File(['content'], 'large.bin', { type: 'application/octet-stream' })
+        Object.defineProperty(file, 'size', { value: 21 * 1024 * 1024 })
+        const task: UploadTask = { id: 'task-1', file, name: file.name, size: file.size, progress: 0, status: 'pending' }
+        const { uploadOneTask } = useFileUpload()
+
+        const uploadPromise = uploadOneTask(task, {
+            enableMultipart: true,
+            signal: controller.signal,
+            capabilities: {
+                active_driver: 'aliyun_oss',
+                max_file_size_mb: 0,
+                allowed_extensions: [],
+                allowed_mime_types: [],
+                supports_direct_upload: true,
+                supports_multipart_upload: true,
+            },
+        })
+        await vi.waitFor(() => expect(hoisted.mockInitMultipartUpload).toHaveBeenCalledTimes(1))
+
+        resolveInit({
+            complete_token: 'multipart-session-token',
+            upload_id: 'upload-id',
+            parts: [{ part_number: 1, upload_url: 'https://upload.example/part-1' }],
+        })
+        controller.abort()
+        await uploadPromise
+
+        expect(hoisted.mockAbortMultipartUpload).toHaveBeenCalledWith({ complete_token: 'multipart-session-token' })
+    })
+
+    it('本地批量上传应把取消信号传给底层请求', async () => {
+        hoisted.mockResolveDriver.mockResolvedValue('local')
+        const { uploadSystemFiles: mockUploadSystemFiles } = await import('@/modules/system/service')
+        let resolveUpload!: (value: SystemFile[]) => void
+        let capturedSignal: AbortSignal | undefined
+        vi.mocked(mockUploadSystemFiles).mockImplementation(async (_files, options) => {
+            capturedSignal = options?.signal
+            return new Promise((resolve) => {
+                resolveUpload = resolve
+            })
+        })
+
+        const { runUploadQueue, clearTasks } = useFileUpload()
+        const tasks: UploadTask[] = [
+            { id: 'task-1', file: new File(['a'], 'a.txt'), name: 'a.txt', size: 1, progress: 0, status: 'pending' },
+            { id: 'task-2', file: new File(['b'], 'b.txt'), name: 'b.txt', size: 1, progress: 0, status: 'pending' },
+        ]
+        const uploadPromise = runUploadQueue(tasks)
+
+        await vi.waitFor(() => expect(capturedSignal).toBeDefined())
+        clearTasks()
+        expect(capturedSignal?.aborted).toBe(true)
+        resolveUpload([{ id: 1 } as SystemFile, { id: 2 } as SystemFile])
+        await uploadPromise
+
+        expect(tasks.every((task) => task.status !== 'success')).toBe(true)
+    })
+
+    it('clearTasks 后迟到的上传响应不得改写成功状态或触发结果回调', async () => {
+        const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
+        let resolveUpload!: (value: SystemFile) => void
+        vi.mocked(mockUploadSystemFile).mockImplementation(
+            async () =>
+                new Promise((resolve) => {
+                    resolveUpload = resolve
+                })
+        )
+        hoisted.mockCalculateHash.mockResolvedValue('hash-code')
+        const onResult = vi.fn()
+        const { runUploadQueue, clearTasks } = useFileUpload()
+        const task: UploadTask = { id: 'task-1', file: new File(['a'], 'a.txt'), name: 'a.txt', size: 1, progress: 0, status: 'pending' }
+        const uploadPromise = runUploadQueue([task], { enableMultipart: true, onResult })
+
+        await vi.waitFor(() => expect(mockUploadSystemFile).toHaveBeenCalledTimes(1))
+        clearTasks()
+        resolveUpload({ id: 1 } as SystemFile)
+        await uploadPromise
+
+        expect(task.status).not.toBe('success')
+        expect(onResult).not.toHaveBeenCalled()
+    })
+
+    it('单任务 retry 应创建可由 clearTasks 取消的信号', async () => {
+        const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
+        let resolveUpload!: (value: SystemFile) => void
+        let capturedSignal: AbortSignal | undefined
+        vi.mocked(mockUploadSystemFile).mockImplementation(
+            async (_file, options) =>
+                new Promise((resolve) => {
+                    capturedSignal = options?.signal
+                    resolveUpload = resolve
+                })
+        )
+        hoisted.mockCalculateHash.mockResolvedValue('hash-code')
+        const { uploadOneTask, clearTasks } = useFileUpload()
+        const task: UploadTask = { id: 'task-1', file: new File(['a'], 'a.txt'), name: 'a.txt', size: 1, progress: 0, status: 'error' }
+        const retryPromise = uploadOneTask(task, task.uploadOptions)
+
+        await vi.waitFor(() => expect(capturedSignal).toBeDefined())
+        clearTasks()
+        expect(capturedSignal?.aborted).toBe(true)
+        resolveUpload({ id: 1 } as SystemFile)
+        await retryPromise
+
+        expect(task.status).not.toBe('success')
+    })
+
     it('retry 时 uploadOneTask 应使用 task 自身固化的 uploadOptions', async () => {
         const { uploadSystemFile: mockUploadSystemFile } = await import('@/modules/system/service')
-        vi.mocked(mockUploadSystemFile).mockClear()
+        vi.mocked(mockUploadSystemFile).mockReset().mockResolvedValue({ id: 1 } as SystemFile)
 
         const { uploadOneTask } = useFileUpload()
 

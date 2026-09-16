@@ -22,17 +22,29 @@ export interface ProductQuery {
     per_page?: number
 }
 
-export type ProductPayload = Partial<Pick<Product, 'id' | 'name' | 'description' | 'price' | 'status' | 'dept_id'>> & Record<string, unknown>
+export interface ProductPayload {
+    name: string
+    description: string
+    price: number
+    status: number
+    dept_id?: number
+}
+
+export type ProductUpdatePayload = ProductPayload & Pick<Product, 'id'>
 
 export function getProductList(params: Partial<ProductQuery>) {
     return get<PageData<Product>>('/v1/product/list', { ...params })
+}
+
+export function getProductDetail(params: Pick<Product, 'id'>) {
+    return get<Product>('/v1/product/detail', params)
 }
 
 export function createProduct(data: ProductPayload) {
     return post<unknown>('/v1/product/create', data)
 }
 
-export function updateProduct(data: ProductPayload) {
+export function updateProduct(data: ProductUpdatePayload) {
     return post<unknown>('/v1/product/update', data)
 }
 

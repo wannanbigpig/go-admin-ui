@@ -33,6 +33,7 @@ import type {
     SystemFileUploadCredentialPayload,
     SystemFileUploadCredentialBatchPayload,
     SystemFileUploadCredentialBatchResult,
+    SystemFileUploadCapabilities,
     SystemFileExportPayload,
     TaskRunEvent,
     TaskTriggerPayload,
@@ -267,6 +268,10 @@ export function uploadSystemFileLocal(files: File | File[], extra: Record<string
 
 export function getSystemFileUploadCredential(data: SystemFileUploadCredentialPayload) {
     return post<SystemFileUploadCredential>('/v1/system/file/upload/credential', data)
+}
+
+export function getSystemFileUploadOptions() {
+    return get<SystemFileUploadCapabilities>('/v1/system/file/upload/options')
 }
 
 export function getSystemFileUploadCredentialBatch(data: SystemFileUploadCredentialBatchPayload) {
