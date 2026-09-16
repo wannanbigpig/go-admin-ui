@@ -49,7 +49,7 @@
                     </el-form-item>
 
                     <div class="notification-manage-form__actions">
-                        <el-button type="primary" :loading="submitting" native-type="submit">
+                        <el-button v-permission="'notification:send'" type="primary" :loading="submitting" native-type="submit">
                             {{ t('common.actions.submit') }}
                         </el-button>
                         <el-button @click="handleReset">

@@ -34,11 +34,6 @@ export async function fetchRequestLogMaskConfig() {
     } as RequestLogMaskConfig)
 }
 
-export async function saveRequestLogMaskConfig(data: RequestLogMaskConfig) {
-    const response = await logApi.updateRequestLogMaskConfig(data)
-    return normalizeDetailData(response, data)
-}
-
 export async function fetchOnlineSessionList(params?: Record<string, unknown>) {
     const response = await logApi.getOnlineSessionList(params)
     return normalizeListData<OnlineSession>(response)

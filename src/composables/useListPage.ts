@@ -32,6 +32,8 @@ interface UseListPageOptions<T, Q extends Record<string, unknown> & PaginationQu
      * 业务层无需再写 try/catch。仅当需要额外提示/上报时使用。
      */
     onError?: (err: unknown) => void
+    /** 仅在当前请求结果被接收时执行，用于网格分页累积等状态更新。 */
+    onSuccess?: (result: ListPageResult<T>, params: Q) => void
     /**
      * 是否在首次加载时避让路由切换渲染帧，默认为 true。
      * 开启后首次请求会等待两个 animation frame，避免接口缓存同步 resolved 抢占首屏渲染。
@@ -51,8 +53,6 @@ const EMPTY_RESULT = <T>(query: PaginationQuery): ListPageResult<T> => ({
     pageSize: query.per_page ?? 10,
 })
 
-const waitForRenderFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-
 /**
  * 通用列表页组合式函数，统一处理加载状态、分页、查询与重置逻辑。
  *
@@ -70,6 +70,7 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
     queryFormRef,
     defaultQuery,
     onError,
+    onSuccess,
     delayFirstFetch = true,
 }: UseListPageOptions<T, Q>) {
     const initialQuery = JSON.parse(JSON.stringify(query))
@@ -99,7 +100,7 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
             // 首次请求且启用了动画避让，则等待浏览器完成首屏渲染帧。
             if (delayFirstFetch && isFirstFetch.value) {
                 isFirstFetch.value = false
-                await waitForRenderFrame()
+                await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
             } else {
                 isFirstFetch.value = false
             }
@@ -114,6 +115,7 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
             }
             items.value = result.list
             applyPaginationResult(pagination, result)
+            onSuccess?.(result, params)
             return result
         } catch (error) {
             if (currentVersion !== requestVersion) {

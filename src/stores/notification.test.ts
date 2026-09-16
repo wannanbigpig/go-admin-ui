@@ -369,4 +369,25 @@ describe('stores/notification.ts', () => {
             vi.useRealTimers()
         }
     })
+    it('stop 清除私有通知，旧的全部已读失败不得恢复上一账号列表', async () => {
+        const store = useNotificationStore()
+        hoisted.mockGetNotificationList.mockResolvedValue({ list: [{ id: 1, title: 'account A private', message: 'secret', created_at: '2026-09-16' }], total: 1 })
+        store.start('account-a', 'zh-CN')
+        await store.loadNotifications()
+        expect(store.notifications).toHaveLength(1)
+        const { markAllNotificationsRead } = await import('@/api/system')
+        let rejectMark!: (error: Error) => void
+        vi.mocked(markAllNotificationsRead).mockReturnValue(
+            new Promise((_, reject) => {
+                rejectMark = reject
+            })
+        )
+        const pending = store.markAllRead()
+        store.stop()
+        expect(store.notifications).toEqual([])
+        rejectMark(new Error('old account request failed'))
+        await pending
+        expect(store.notifications).toEqual([])
+        expect(store.unreadCount).toBe(0)
+    })
 })

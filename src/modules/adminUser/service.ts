@@ -12,11 +12,11 @@ export async function fetchAdminUserDetail(id: number | string) {
     return normalizeDetailData(response, {} as AdminUser)
 }
 
-export async function addAdminUser(data: Record<string, unknown>) {
+export async function createAdminUserItem(data: Record<string, unknown>) {
     return await adminUserApi.createAdminUser(data)
 }
 
-export async function modifyAdminUser(data: Record<string, unknown>) {
+export async function updateAdminUserItem(data: Record<string, unknown>) {
     return await adminUserApi.updateAdminUser(data)
 }
 
@@ -41,8 +41,3 @@ export async function fetchAdminUserFullEmail(id: number | string) {
     const response = await adminUserApi.getFullEmail({ id })
     return normalizeDetailData(response, { email: '' })
 }
-
-// 原有 JS 版本的别名（保持兼容性）
-export const createAdminUserItem = addAdminUser
-export const updateAdminUserItem = modifyAdminUser
-export const deleteAdminUserItem = removeAdminUser

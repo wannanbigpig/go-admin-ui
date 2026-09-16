@@ -296,6 +296,12 @@ export default {
     },
     task: {
         baseInfo: 'Basic Info',
+        triggerInfo: 'Trigger Info',
+        executionInfo: 'Execution Info',
+        retryInfo: 'Retry Info',
+        errorInfo: 'Error Info',
+        triggerAccount: 'Operator',
+        canRetryHint: '(only failed, timed-out, or interrupted tasks can be retried)',
         title: 'Task Center',
         definitionTab: 'Definitions',
         runTab: 'Runs',

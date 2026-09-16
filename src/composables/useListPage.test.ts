@@ -262,4 +262,31 @@ describe('composables/useListPage.ts', () => {
 
         expect(items.value).toEqual([{ id: 2, name: 'new' }])
     })
+    it('ignores stale folder results and accumulates current pages', async () => {
+        const query = reactive({ page: 1, per_page: 10, folder_id: 1 })
+        const pending: ((value: { list: TestItem[]; total: number }) => void)[] = []
+        const grid: TestItem[] = []
+        const page = useListPage<TestItem, typeof query>({
+            query,
+            delayFirstFetch: false,
+            fetcher: () => new Promise((resolve) => pending.push(resolve)),
+            onSuccess: (result, params) => {
+                if (params.page === 1) grid.length = 0
+                grid.push(...result.list)
+            },
+        })
+        const oldRequest = page.getList()
+        query.folder_id = 2
+        const newRequest = page.handleSearch()
+        pending[1]({ list: [{ id: 2, name: 'new folder' }], total: 2 })
+        await newRequest
+        pending[0]({ list: [{ id: 1, name: 'old folder' }], total: 1 })
+        await oldRequest
+        expect(grid.map((item) => item.id)).toEqual([2])
+        page.pagination.page = 2
+        const more = page.getList()
+        pending[2]({ list: [{ id: 3, name: 'next page' }], total: 2 })
+        await more
+        expect(grid.map((item) => item.id)).toEqual([2, 3])
+    })
 })

@@ -18,7 +18,7 @@ export default {
         usernameLength: 'Username length must be between 3 and 20',
         usernamePattern: 'Only letters, numbers and underscores are allowed',
         passwordRequired: 'Password is required',
-        passwordLength: 'Password length must be between 6 and 20',
+        passwordLength: 'Password length must be between 6 and 32',
         confirmPasswordRequired: 'Please confirm password',
         passwordNotMatch: 'Passwords do not match',
     },
@@ -45,7 +45,7 @@ export default {
         formName: 'Role Form',
         invalidRow: 'Invalid row data',
         readonlySuperAdmin: 'Super admin role is read-only and cannot be edited',
-        fetchMenuFailed: 'Failed to load menu list',
+        customDeptRequired: 'Select at least one department for custom data scope',
     },
     menu: {
         formName: 'Menu Form',

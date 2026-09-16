@@ -1,5 +1,5 @@
 import { login, getCaptcha } from '@/api/login'
-import { getUserInfo, getUserMenuList, updateProfile } from '@/api/auth'
+import { getUserInfo, getUserMenuList } from '@/api/auth'
 import { createEmptyLoginResult, createEmptyUserInfo } from '@/modules/auth/model'
 import { normalizeArrayData, normalizeDetailData } from '@/modules/shared/response'
 import type { CaptchaResult, LoginPayload, LoginResult, UserInfo, UserPermission } from '@/types/auth'
@@ -22,9 +22,4 @@ export async function fetchCurrentUser(): Promise<UserInfo> {
 export async function fetchUserMenuTree(): Promise<UserPermission[]> {
     const response = await getUserMenuList()
     return normalizeArrayData(response)
-}
-
-export async function saveProfile(data: Record<string, unknown>) {
-    const response = await updateProfile(data)
-    return normalizeDetailData(response, {} as Record<string, unknown>)
 }

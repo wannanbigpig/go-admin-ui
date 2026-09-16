@@ -220,8 +220,3 @@ export function buildDictTagMap(options: DictOption[]) {
         return result
     }, {})
 }
-
-export function getDictOptionLabel(options: DictOption[], value?: string | number | null) {
-    if (value === undefined || value === null || value === '') return '-'
-    return options.find((item) => String(item.value) === String(value))?.label || String(value)
-}

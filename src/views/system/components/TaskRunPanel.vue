@@ -375,7 +375,6 @@ const handleRetry = async (row: TaskRun) => {
         await getRunList()
     } catch (error) {
         if (error === 'cancel' || error === 'close') return
-        ElMessage.error(t('common.result.operationFailed'))
         Logger.error('重试任务失败:', error)
     } finally {
         operatingRunId.value = null
@@ -394,7 +393,6 @@ const handleCancel = async (row: TaskRun) => {
         await getRunList()
     } catch (error) {
         if (error === 'cancel' || error === 'close') return
-        ElMessage.error(t('common.result.operationFailed'))
         Logger.error('取消任务失败:', error)
     } finally {
         operatingRunId.value = null

@@ -312,9 +312,8 @@ import { useI18n } from 'vue-i18n'
 import { useListPage } from '@/composables/useListPage'
 import { createSystemFileQuery } from '@/modules/system/model'
 import { fetchSystemFileList } from '@/modules/system/service'
-import { applyDateRangeToQuery } from '@/modules/log/helpers'
+import { buildFileQueryParams } from '../composables/fileQuery'
 import { debounce, formatFileSize, getImageUrl } from '@/utils/helper'
-import { Logger } from '@/utils/logger'
 import type { ProTableColumns } from '@/components/proTable/types'
 import type { SystemFile, SystemFileFolder } from '@/types/system'
 
@@ -419,43 +418,15 @@ const {
 } = useListPage<SystemFile, typeof queryWhere>({
     query: queryWhere,
     queryFormRef,
-    transformParams: (query) => {
-        const params = { ...query }
-        const isAllCategory = selectedCategory.value === 'all'
-        const hasSearch = !!params.origin_name
-
-        if (isAllCategory) {
-            params.folder_id = selectedFolderId.value ?? 0
-            params.include_subfolder = hasSearch ? 1 : 0
-        } else {
-            params.folder_id = selectedFolderId.value || undefined
-            params.include_subfolder = 1
+    transformParams: (query) => buildFileQueryParams(query, selectedCategory.value, selectedFolderId.value, dateRange.value),
+    fetcher: fetchSystemFileList,
+    onSuccess: (result, params) => {
+        if (viewMode.value === 'grid') {
+            allFilesList.value = params.page === 1 || !params.page ? result.list : [...allFilesList.value, ...result.list]
         }
-
-        const selectedDateRange = dateRange.value.length === 2 ? dateRange.value : null
-        applyDateRangeToQuery(params, selectedDateRange)
-        return params
     },
-    fetcher: async (params) => {
-        try {
-            const result = await fetchSystemFileList(params)
-            if (viewMode.value === 'grid') {
-                if (params.page === 1 || !params.page) {
-                    allFilesList.value = result.list
-                } else {
-                    allFilesList.value = [...allFilesList.value, ...result.list]
-                }
-            }
-            return result
-        } catch (error) {
-            Logger.error('获取文件资源列表失败:', error)
-            return {
-                list: [],
-                total: 0,
-                page: params.page ?? 1,
-                pageSize: params.per_page ?? 10,
-            }
-        }
+    onError: () => {
+        allFilesList.value = []
     },
 })
 

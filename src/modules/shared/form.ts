@@ -13,8 +13,7 @@ export async function validateFormSafely(formRef: FormInstance | undefined | nul
     }
 
     try {
-        await formRef.validate()
-        return true
+        return (await formRef.validate()) === true
     } catch (error) {
         // 校验失败属于预期分支，统一在此处收敛处理，避免业务层使用空 catch。
         Logger.warn(`[${formName}] 表单校验未通过`, error)

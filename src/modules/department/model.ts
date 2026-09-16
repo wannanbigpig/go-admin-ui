@@ -1,5 +1,4 @@
-import { DEFAULT_SUBMIT_DELAY } from '@/modules/shared/constants'
-import type { Department, DepartmentQuery } from '@/types/department'
+import type { Department } from '@/types/department'
 import { translate } from '@/locales'
 
 export const DEPARTMENT_EDIT_TYPE = {
@@ -7,7 +6,6 @@ export const DEPARTMENT_EDIT_TYPE = {
     EDIT: 2,
 }
 
-export const DEPARTMENT_SUBMIT_DELAY = DEFAULT_SUBMIT_DELAY
 export const DEFAULT_DEPARTMENT_CODE = 'default_department'
 
 export function createDepartmentForm(): Partial<Department> {
@@ -22,12 +20,6 @@ export function createDepartmentForm(): Partial<Department> {
 
 export function isProtectedDepartment(department: Department): boolean {
     return department?.code === DEFAULT_DEPARTMENT_CODE && Number(department?.is_system) === 1
-}
-
-export function createDepartmentQuery(): DepartmentQuery {
-    return {
-        name: undefined,
-    }
 }
 
 export function createDepartmentRules() {

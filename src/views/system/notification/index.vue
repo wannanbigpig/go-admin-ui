@@ -379,7 +379,6 @@ const handleMarkAllRead = async () => {
         }
         ElMessage.success(translate('common.result.operationSuccess'))
     } catch (error) {
-        ElMessage.error(translate('common.result.operationFailed'))
         Logger.error('标记全部已读失败:', error)
     }
 }

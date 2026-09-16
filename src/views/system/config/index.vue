@@ -244,7 +244,6 @@ const openEditDrawer = async (row: SystemConfig) => {
         showDrawer.value = true
     } catch (error) {
         Logger.error('获取系统参数详情失败:', error)
-        ElMessage.error(t('common.result.operationFailed'))
     }
 }
 
@@ -268,7 +267,6 @@ const submitForm = async () => {
         showDrawer.value = false
         await getList()
     } catch (error) {
-        ElMessage.error(t('common.result.operationFailed'))
         Logger.error('提交系统参数失败:', error)
     } finally {
         submitting.value = false
@@ -283,7 +281,6 @@ const handleDelete = async (row: SystemConfig) => {
         await getList()
     } catch (error) {
         if (error === 'cancel' || error === 'close') return
-        ElMessage.error(t('common.result.operationFailed'))
         Logger.error('删除系统参数失败:', error)
     }
 }

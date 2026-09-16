@@ -3,7 +3,7 @@ import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createDepartmentItem, fetchDepartmentDetail, updateDepartmentItem } from '@/modules/department/service'
-import { createDepartmentForm, createDepartmentRules, DEPARTMENT_EDIT_TYPE, DEPARTMENT_SUBMIT_DELAY, isProtectedDepartment } from '@/modules/department/model'
+import { createDepartmentForm, createDepartmentRules, DEPARTMENT_EDIT_TYPE, isProtectedDepartment } from '@/modules/department/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { Department } from '@/types/department'
 import { translate } from '@/locales'
@@ -19,7 +19,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
-    const { isSubmitting, runWithSubmitLock } = useSubmitLock(DEPARTMENT_SUBMIT_DELAY)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock()
 
     const initialFormData = createDepartmentForm()
     const formData = reactive({ ...initialFormData }) as Department
@@ -111,7 +111,6 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
             ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
             await refreshList()
         }).catch((error) => {
-            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
         })
     }

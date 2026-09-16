@@ -1,4 +1,4 @@
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
@@ -9,9 +9,16 @@ import { createProfileForm } from '@/modules/profile/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { UserInfo } from '@/types/auth'
 import { translate } from '@/locales'
+import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
 
 export function useProfilePage() {
     const authStore = useAuthStore()
+    const sessionVersion = authStore.sessionVersion
+    let disposed = false
+    const isCurrentSession = () => !disposed && sessionVersion === authStore.sessionVersion
+    onBeforeUnmount(() => {
+        disposed = true
+    })
     const userInfo = ref<UserInfo>({ ...createEmptyUserInfo(), ...authStore.userInfo })
     const loading = ref(false)
     const showDrawer = ref(false)
@@ -23,6 +30,19 @@ export function useProfilePage() {
     const formData = reactive(createProfileForm())
 
     const formRules = {
+        password: [{ min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: translate('validation.adminUser.passwordLength'), trigger: ['blur', 'change'] }],
+        confirm_password: [
+            {
+                validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
+                    if (formData.password && value !== formData.password) {
+                        callback(new Error(translate(value ? 'validation.adminUser.passwordNotMatch' : 'validation.adminUser.confirmPasswordRequired')))
+                    } else {
+                        callback()
+                    }
+                },
+                trigger: ['blur', 'change'],
+            },
+        ],
         nickname: [
             { required: true, message: translate('validation.profile.nicknameRequired'), trigger: 'blur' },
             { min: 2, max: 20, message: translate('validation.profile.nicknameLength'), trigger: 'blur' },
@@ -69,9 +89,11 @@ export function useProfilePage() {
     }
 
     const getProfile = async () => {
+        if (!isCurrentSession()) return
         loading.value = true
         try {
             const data = await fetchProfile()
+            if (!isCurrentSession()) return
             userInfo.value = data
             // 直接用本次结果同步 Store，避免重复请求 admin-user/get 与无谓的菜单刷新（资料修改不影响菜单/权限）。
             authStore.userInfo = data
@@ -98,9 +120,9 @@ export function useProfilePage() {
     }
 
     const editConfirmSubmit = async () => {
-        if (isSubmitting.value) return
+        if (isSubmitting.value || !isCurrentSession()) return
         const valid = await validateFormSafely(formDataRef.value, translate('validation.profileForm.formName'))
-        if (!valid) return
+        if (!valid || !isCurrentSession()) return
 
         const submitData: Record<string, unknown> = {
             id: formData.id,
@@ -121,7 +143,7 @@ export function useProfilePage() {
             return false
         })
 
-        if (!succeeded) return
+        if (!succeeded || !isCurrentSession()) return
 
         ElMessage.success(translate('common.result.updateSuccess'))
         showDrawer.value = false

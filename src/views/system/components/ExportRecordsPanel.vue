@@ -35,11 +35,16 @@
                     </el-tag>
                     <div v-else-if="item.prop === 'progress'" class="task-export-progress">
                         <div class="task-export-progress-bar">
-                            <el-progress v-if="row.status !== 'pending' && getExportProgress(row) !== null" :percentage="getExportProgress(row) || 0" :status="getExportProgressStatus(row.status)" :stroke-width="8" />
+                            <el-progress
+                                v-if="row.status !== 'pending' && getExportRecordProgress(row) !== null"
+                                :percentage="getExportRecordProgress(row) || 0"
+                                :status="getExportProgressStatus(row.status)"
+                                :stroke-width="8"
+                            />
                             <span v-if="getExportProgressDescription(row)" class="task-export-progress-desc">{{ getExportProgressDescription(row) }}</span>
                         </div>
                     </div>
-                    <span v-else-if="item.prop === 'export_count'">{{ getExportCountText(row) }}</span>
+                    <span v-else-if="item.prop === 'export_count'">{{ getExportRecordProgressText(row) || '-' }}</span>
                     <span v-else>{{ getExportCellValue(item.prop, row) }}</span>
                 </template>
                 <template #operation>
@@ -211,29 +216,22 @@ const getExportProgressStatus = (status?: string) => {
     return undefined
 }
 
-const getExportProgress = (row: ExportRecord) => getExportRecordProgress(row)
 const getExportProgressDescription = (row: ExportRecord) => {
     if (row.stage_name) return row.stage_name
     if (row.status === 'pending') return '-'
     return ''
 }
-const getExportCountText = (row: ExportRecord) => getExportRecordProgressText(row) || '-'
-
 const exportSceneNameMap = computed<Record<string, string>>(() => ({
     request_log: t('system.task.exportSceneFallback.request_log'),
     file_list: t('system.task.exportSceneFallback.file_list'),
 }))
 
-const getExportDisplayName = (row: ExportRecord) => row.export_name || row.scene_name || exportSceneNameMap.value[row.scene || ''] || row.scene || '-'
-const getExportDisplayScene = (row: ExportRecord) => row.scene || '-'
-const getExportFailureReason = (row: ExportRecord) => row.fail_reason || row.error_message || '-'
-
 const getExportCellValue = (prop: string, row: ExportRecord) => {
     switch (prop) {
         case 'export_name':
-            return getExportDisplayName(row)
+            return row.export_name || row.scene_name || exportSceneNameMap.value[row.scene || ''] || row.scene || '-'
         case 'scene':
-            return getExportDisplayScene(row)
+            return row.scene || '-'
         case 'file_name':
             return row.file_name || '-'
         case 'file_size':
@@ -241,7 +239,7 @@ const getExportCellValue = (prop: string, row: ExportRecord) => {
         case 'format':
             return row.format ? String(row.format).toUpperCase() : '-'
         case 'fail_reason':
-            return getExportFailureReason(row)
+            return row.fail_reason || row.error_message || '-'
         case 'finished_at':
             return row.finished_at || '-'
         default:

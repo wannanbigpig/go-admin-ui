@@ -29,10 +29,6 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
         is_effective: [{ required: true, message: translate('permission.api.form.effectiveRequired'), trigger: 'change' }],
     }))
 
-    const resetFormData = () => {
-        Object.assign(formData, createApiPermissionForm())
-    }
-
     const handleSortNumberChange = (value: string | number) => {
         if (value === '') {
             formData.sort = 0
@@ -41,12 +37,8 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
         sortNumericValue.value = Number(value)
     }
 
-    const setSortNumericValue = (value: number) => {
-        sortNumericValue.value = value
-    }
-
     const openEditDrawer = (type: number, row?: ApiPermission, index?: number) => {
-        resetFormData()
+        Object.assign(formData, createApiPermissionForm())
         currentIndex.value = index ?? null
 
         if (type === 2 && row) {
@@ -103,7 +95,6 @@ export function useApiPermissionForm({ refreshList }: UseApiPermissionFormOption
         isSubmitting,
         currentRow: formData,
         sortNumericValue,
-        setSortNumericValue,
         editFormRules,
         handleSortNumberChange,
         openEditDrawer,

@@ -313,8 +313,6 @@ const formatFileSize = (size?: number) => {
     return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 2)} ${units[index]}`
 }
 
-const normalizeFolderId = (value?: number | string | null) => (value === ROOT_FOLDER_KEY || value === undefined ? null : value)
-
 const openDialog = () => {
     showDialog.value = true
 }
@@ -368,7 +366,7 @@ const reloadList = () => {
 }
 
 const handleFolderSelect = (folder: FolderTreeNode) => {
-    selectedFolderId.value = normalizeFolderId(folder.id)
+    selectedFolderId.value = folder.id === ROOT_FOLDER_KEY || folder.id === undefined ? null : folder.id
     selectedRows.value = []
     reloadList()
 }

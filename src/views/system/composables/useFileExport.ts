@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { submitSystemFileExportTask } from '@/modules/exportCenter/service'
 import { useExportTaskSubmitter } from '@/modules/exportCenter/useExportTaskSubmitter'
-import { applyDateRangeToQuery } from '@/modules/log/helpers'
+import { buildFileQueryParams } from './fileQuery'
 import { Logger } from '@/utils/logger'
 import type { SystemFileExportPayload } from '@/types/system'
 
@@ -19,14 +19,7 @@ export function useFileExport(options: UseFileExportOptions) {
     const exporting = ref(false)
 
     const handleExportList = async () => {
-        const params = { ...options.queryWhere }
-        if (options.selectedCategory.value === 'all') {
-            params.folder_id = options.selectedFolderId.value
-        } else {
-            params.folder_id = undefined
-        }
-        const selectedDateRange = options.dateRange.value.length === 2 ? options.dateRange.value : null
-        applyDateRangeToQuery(params, selectedDateRange)
+        const params = buildFileQueryParams(options.queryWhere, options.selectedCategory.value, options.selectedFolderId.value, options.dateRange.value)
         const payload = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page' && key !== 'per_page')) as SystemFileExportPayload
 
         await submitExportTask({

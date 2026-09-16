@@ -30,7 +30,8 @@
         "prepare": "husky",
         "test": "vitest",
         "test:run": "vitest run",
-        "test:coverage": "vitest run --coverage"
+        "test:coverage": "vitest run --coverage",
+        "test:e2e": "playwright test"
     },
     "dependencies": {
         "@element-plus/icons-vue": "^2.3.2",
@@ -53,6 +54,7 @@
         "@iconify-json/carbon": "^1.2.27",
         "@iconify-json/ep": "^1.2.4",
         "@iconify-json/lucide": "^1.2.131",
+        "@playwright/test": "^1.63.0",
         "@types/node": "^22.20.2",
         "@types/nprogress": "^0.2.3",
         "@vitejs/plugin-vue": "^6.0.8",

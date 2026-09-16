@@ -1,0 +1,23 @@
+name: Feature request
+description: 提议后台脚手架能力
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 最小方案与兼容影响
+      description: 说明是否影响后端 API、菜单权限、浏览器存储或路由。
+    validations:
+      required: true
+  - type: textarea
+    id: navigation
+    attributes:
+      label: 可读性与导航成本
+      description: 如增加抽象，请说明完整业务流程需要跳转多少函数和文件。

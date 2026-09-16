@@ -58,8 +58,8 @@
                     <el-col :span="12">
                         <el-form-item :label="t('permission.api.effective')" required for="api-edit-is-effective">
                             <el-select id="api-edit-is-effective" v-model="currentRow.is_effective" disabled>
-                                <el-option :label="t('common.yes')" :value="SWITCH_VALUE.YES" />
-                                <el-option :label="t('common.no')" :value="SWITCH_VALUE.NO" />
+                                <el-option :label="t('common.yes')" :value="API_PERMISSION_SWITCH_VALUE.YES" />
+                                <el-option :label="t('common.no')" :value="API_PERMISSION_SWITCH_VALUE.NO" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -83,7 +83,7 @@
                                 clearable
                                 :placeholder="t('permission.api.weightPlaceholder')"
                                 @input="handleSortNumberChange"
-                                @focus="setSortNumericValue(currentRow.sort)"
+                                @focus="sortNumericValue = currentRow.sort"
                             ></el-input>
                         </el-form-item>
                     </el-col>
@@ -128,7 +128,7 @@ import {
     useApiPermissionForm,
     API_PERMISSION_AUTH_MODE,
     API_PERMISSION_AUTH_MODE_OPTIONS,
-    API_PERMISSION_METHOD_OPTIONS,
+    API_PERMISSION_METHOD_OPTIONS as METHOD_OPTIONS,
     API_PERMISSION_SWITCH_VALUE,
     type ApiPermission,
 } from '@/modules/apiPermission'
@@ -151,7 +151,6 @@ const actionButtons = computed(() => {
     ]
 })
 
-const METHOD_OPTIONS = API_PERMISSION_METHOD_OPTIONS
 const AUTH_MODE_OPTIONS = computed(() => {
     return API_PERMISSION_AUTH_MODE_OPTIONS.map((item) => {
         if (item.value === API_PERMISSION_AUTH_MODE.NONE) {
@@ -163,7 +162,6 @@ const AUTH_MODE_OPTIONS = computed(() => {
         return { ...item, label: t('permission.api.authAuthz') }
     })
 })
-const SWITCH_VALUE = API_PERMISSION_SWITCH_VALUE
 
 const onSearch = (model: Record<string, unknown>) => {
     Object.assign(queryWhere, model)
@@ -173,7 +171,7 @@ const onSearch = (model: Record<string, unknown>) => {
 /* eslint-disable prefer-const */
 let { loading, permissionList, pagination, queryWhere, handleSearch, handleReset, getList } = useApiPermissionList()
 /* eslint-enable prefer-const */
-const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, editFormRules, handleSortNumberChange, setSortNumericValue, openEditDrawer, editConfirmSubmit } = useApiPermissionForm({ refreshList: getList })
+const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, sortNumericValue, editFormRules, handleSortNumberChange, openEditDrawer, editConfirmSubmit } = useApiPermissionForm({ refreshList: getList })
 
 onMounted(() => {
     getList()
@@ -209,8 +207,8 @@ const searchSchema = computed<ProTableSearchSchema>(() => [
         type: 'select',
         placeholder: t('permission.api.effectivePlaceholder'),
         options: [
-            { label: t('common.yes'), value: SWITCH_VALUE.YES },
-            { label: t('common.no'), value: SWITCH_VALUE.NO },
+            { label: t('common.yes'), value: API_PERMISSION_SWITCH_VALUE.YES },
+            { label: t('common.no'), value: API_PERMISSION_SWITCH_VALUE.NO },
         ],
         span: 4,
     },

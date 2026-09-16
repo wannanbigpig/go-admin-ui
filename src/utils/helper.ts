@@ -59,30 +59,6 @@ export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pi
 }
 
 /**
- * 异步函数：暂停指定时长
- * @param duration - 暂停的时长，以毫秒为单位。
- */
-export async function pauseSync(duration: number = 2000): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, duration))
-}
-
-/**
- * 生成一个安全的随机字符串。
- * @param length - 字符串长度，默认为 16
- * @returns 随机字符串
- */
-export function randomStr(length: number = 16): string {
-    const str = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    let result = ''
-    const randomValues = new Uint8Array(length)
-    window.crypto.getRandomValues(randomValues)
-    for (let i = 0; i < length; i++) {
-        result += str[randomValues[i] % str.length]
-    }
-    return result
-}
-
-/**
  * 判断路径是否为外部链接
  * @param path - 需要检查的路径
  * @returns 如果是外部链接返回 true，否则返回 false

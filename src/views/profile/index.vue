@@ -20,8 +20,8 @@
                                 <span class="profile-username">@{{ userInfo.username }}</span>
                                 <div class="profile-tag-list">
                                     <el-tag size="small" type="primary" class="role-tag" effect="light">{{ t('common.labels.status') }}</el-tag>
-                                    <el-tag :type="userInfo.status === STATUS.NORMAL ? 'success' : 'danger'" size="small" effect="dark" class="status-tag">
-                                        {{ userInfo.status === STATUS.NORMAL ? t('common.status.enabled') : t('common.status.disabled') }}
+                                    <el-tag :type="userInfo.status === PROFILE_STATUS.NORMAL ? 'success' : 'danger'" size="small" effect="dark" class="status-tag">
+                                        {{ userInfo.status === PROFILE_STATUS.NORMAL ? t('common.status.enabled') : t('common.status.disabled') }}
                                     </el-tag>
                                 </div>
                             </div>
@@ -179,12 +179,12 @@
                 <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item :label="t('profile.newPassword')" prop="password">
-                            <el-input v-model.trim="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password></el-input>
+                            <el-input v-model="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.confirmPassword')" prop="confirm_password">
-                            <el-input v-model.trim="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password></el-input>
+                            <el-input v-model="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -203,7 +203,6 @@ import { useProfilePage } from '@/modules/profile/useProfilePage'
 import { useI18n } from 'vue-i18n'
 import { User, Phone, Message, OfficeBuilding, Calendar, Location, Clock, Edit, Cpu, View, Hide } from '@element-plus/icons-vue'
 
-const STATUS = PROFILE_STATUS
 const { t } = useI18n()
 const { userInfo, showDrawer, formDataRef, formTitle, isSubmitting, formKey, formData, formRules, formatDepartments, formatDateTime, openEditDrawer, editConfirmSubmit } = useProfilePage()
 

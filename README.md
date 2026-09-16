@@ -166,6 +166,11 @@ Vite 开发服务器会在启动期预构建当前 Element Plus 的组件样式�
 
 - [项目总览](docs/project-overview.md)
 - [运行机制说明](docs/runtime-guide.md)
+- [前后端兼容与版本策略](docs/compatibility.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)
+- [变更记录](CHANGELOG.md)
+- [路线图](ROADMAP.md)
 
 ## 验证命令
 

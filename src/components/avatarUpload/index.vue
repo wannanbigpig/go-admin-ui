@@ -35,8 +35,6 @@ const { t } = useI18n()
 const loading = ref(false)
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-const formatSizeMB = (size: number) => Number((size / 1024 / 1024).toFixed(2))
-
 const beforeUpload = (file: UploadRawFile) => {
     if (!allowedMimeTypes.has(file.type)) {
         ElMessage.error(t('common.messages.invalidImageType'))
@@ -44,7 +42,7 @@ const beforeUpload = (file: UploadRawFile) => {
     }
     const maxSize = props.maxSize
     if (file.size > maxSize) {
-        ElMessage.error(t('common.messages.imageTooLarge', { size: formatSizeMB(maxSize) }))
+        ElMessage.error(t('common.messages.imageTooLarge', { size: Number((maxSize / 1024 / 1024).toFixed(2)) }))
         return false
     }
     return true

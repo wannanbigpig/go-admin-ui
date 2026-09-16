@@ -62,7 +62,7 @@
                             </el-input>
                         </el-form-item>
                         <el-form-item prop="password" :label="t('login.password')">
-                            <el-input v-model.trim="loginForm.password" class="custom-input" :placeholder="t('login.placeholders.password')" type="password" show-password @keyup.enter="handleLogin(loginFormRef)">
+                            <el-input v-model="loginForm.password" class="custom-input" :placeholder="t('login.placeholders.password')" type="password" show-password @keyup.enter="handleLogin(loginFormRef)">
                                 <template #prefix>
                                     <i-ep-lock class="input-icon" />
                                 </template>
@@ -83,7 +83,16 @@
                                         <i-ant-design-safety-outlined class="input-icon" />
                                     </template>
                                 </el-input>
-                                <div class="captcha-img" @click="refreshCaptcha" :title="t('login.placeholders.captcha')" role="button" tabindex="0" :aria-label="t('login.placeholders.captcha')" @keydown.enter="refreshCaptcha" @keydown.space.prevent="refreshCaptcha">
+                                <div
+                                    class="captcha-img"
+                                    @click="refreshCaptcha"
+                                    :title="t('login.placeholders.captcha')"
+                                    role="button"
+                                    tabindex="0"
+                                    :aria-label="t('login.placeholders.captcha')"
+                                    @keydown.enter="refreshCaptcha"
+                                    @keydown.space.prevent="refreshCaptcha"
+                                >
                                     <img :src="captchaSrc" alt="captcha" v-if="captchaSrc" />
                                     <div class="captcha-loading" v-else aria-live="polite">...</div>
                                 </div>
@@ -103,6 +112,7 @@
 </template>
 
 <script setup lang="ts">
+import { USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_PATTERN, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
 import { fetchCaptcha } from '@/modules/auth/service'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, type FormInstance } from 'element-plus'
@@ -156,11 +166,12 @@ const loginForm = reactive({
 const validateRules = computed(() => ({
     username: [
         { required: true, message: t('login.usernameRequired') },
-        { pattern: /^[a-zA-Z0-9_]{3,16}$/, message: t('login.usernameInvalid') },
+        { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH, message: t('login.usernameInvalid') },
+        { pattern: USERNAME_PATTERN, message: t('login.usernameInvalid') },
     ],
     password: [
         { required: true, message: t('login.passwordRequired') },
-        { pattern: /^[a-zA-Z0-9!@#$%^&*()_+\-=\\[\]{};':"\\|,.<>\\/?]{6,18}$/, message: t('login.passwordInvalid') },
+        { min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: t('login.passwordInvalid') },
     ],
     captcha: [
         { required: true, message: t('login.captchaRequired') },
@@ -259,7 +270,6 @@ const initCanvasBg = () => {
     resize()
     window.addEventListener('resize', resize)
 
-    const isDark = () => document.documentElement.classList.contains('dark')
     const rand = (min: number, max: number) => Math.random() * (max - min) + min
 
     const lightColors = [
@@ -305,7 +315,7 @@ const initCanvasBg = () => {
         const dt = Math.min((now - lastTime) / 1000, 0.05)
         lastTime = now
 
-        const dark = isDark()
+        const dark = document.documentElement.classList.contains('dark')
         const blobs = dark ? darkBlobs : lightBlobs
 
         ctx.clearRect(0, 0, w, h)
@@ -419,7 +429,7 @@ const initCanvasBg = () => {
 
 // ==================== 生命周期 ====================
 const triggerClick = (e: Event) => {
-    (e.currentTarget as HTMLElement)?.click()
+    ;(e.currentTarget as HTMLElement)?.click()
 }
 
 onBeforeMount(refreshCaptcha)

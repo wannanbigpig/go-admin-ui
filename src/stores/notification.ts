@@ -144,10 +144,6 @@ function toNotificationLevel(value: unknown): NotificationLevel {
     }
 }
 
-function buildNotificationId(prefix: string, seed: string) {
-    return `${prefix}:${seed || Date.now().toString()}`
-}
-
 function toPositiveInteger(value: unknown) {
     const normalized = typeof value === 'string' ? value.trim() : value
     const numeric = Number(normalized)
@@ -207,7 +203,7 @@ export function normalizeNotification(input: Partial<AppNotification> & Record<s
     actionURL = normalizeNotificationActionUrl(actionURL)
 
     return {
-        id: String(input.id || input.message_id || buildNotificationId(exportMessage ? 'export' : 'ws', `${titleStr}:${input.created_at || Date.now()}`)),
+        id: String(input.id || input.message_id || `${exportMessage ? 'export' : 'ws'}:${titleStr}:${input.created_at || Date.now()}`),
         title: titleStr,
         message: msg,
         level: toNotificationLevel(input.level || input.severity || input.status),
@@ -397,6 +393,7 @@ export const useNotificationStore = defineStore(
         }
 
         const markRead = async (id: string) => {
+            const requestGeneration = connectionGeneration
             const target = notifications.value.find((item) => item.id === id)
             if (target?.read) return true
             const persistedID = toPositiveInteger(id)
@@ -412,12 +409,14 @@ export const useNotificationStore = defineStore(
             }
             try {
                 const result = await systemApi.markNotificationRead({ id: persistedID })
+                if (requestGeneration !== connectionGeneration || isStopping) return false
                 const nextUnreadCount = Number(result?.unread_count ?? result?.count)
                 if (Number.isFinite(nextUnreadCount)) {
                     unreadCount.value = Math.max(0, nextUnreadCount)
                 }
                 return true
             } catch (error) {
+                if (requestGeneration !== connectionGeneration || isStopping) return false
                 Logger.error('标记通知已读失败:', error)
                 if (target) {
                     target.read = false
@@ -428,6 +427,7 @@ export const useNotificationStore = defineStore(
         }
 
         const markAllRead = async () => {
+            const requestGeneration = connectionGeneration
             const previous = notifications.value.map((item) => ({ ...item }))
             const previousUnread = unreadCount.value
             notifications.value = notifications.value.map((item) => ({ ...item, read: true }))
@@ -435,6 +435,7 @@ export const useNotificationStore = defineStore(
             try {
                 await systemApi.markAllNotificationsRead()
             } catch (error) {
+                if (requestGeneration !== connectionGeneration || isStopping) return
                 Logger.error('全部标记已读失败:', error)
                 notifications.value = previous
                 unreadCount.value = previousUnread
@@ -632,6 +633,9 @@ export const useNotificationStore = defineStore(
             listLoading.value = false
             lastError.value = ''
             unreadCount.value = 0
+            notifications.value = []
+            latestAnnouncement.value = ''
+            initialized.value = false
             channelHandlers.clear()
             subscribedChannels.clear()
             exportFinishedTime.value = 0

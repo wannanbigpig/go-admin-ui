@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { createApp, nextTick } from 'vue'
+import { createPersistedState } from 'pinia-plugin-persistedstate'
 
 const hoisted = vi.hoisted(() => {
     const mockFetchCurrentUser = vi.fn()
@@ -218,6 +220,26 @@ describe('stores/auth.ts', () => {
         expect(hoisted.mockLocalStorage.setItem).not.toHaveBeenCalledWith('refresh_token', expect.any(String))
     })
 
+    it('认证 token、用户信息和菜单不应持久化到 localStorage', async () => {
+        const pinia = createPinia()
+        pinia.use(
+            createPersistedState({
+                storage: hoisted.mockLocalStorage,
+                key: (id) => id,
+            })
+        )
+        createApp({}).use(pinia)
+        setActivePinia(pinia)
+
+        const store = useAuthStore()
+        expect((store as typeof store & { $persist?: () => void }).$persist).toBeUndefined()
+        store.updateToken('memory-only-token', Math.floor(Date.now() / 1000) + 3600)
+        await nextTick()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(hoisted.mockLocalStorage.setItem).not.toHaveBeenCalled()
+    })
+
     it('refreshAccessToken 不应在退出登录后恢复旧会话 token', async () => {
         const store = useAuthStore()
         let resolveRefresh!: (value: { access_token: string; token_type: 'Bearer'; expires_at: number }) => void
@@ -268,5 +290,61 @@ describe('stores/auth.ts', () => {
             name: 'Login',
             query: { redirect: '/system/user' },
         })
+    })
+    it('同秒刷新应保存新 token，并合并同会话的并发刷新', async () => {
+        const store = useAuthStore()
+        const exp = Math.floor(Date.now() / 1000) + 3600
+        store.updateToken('old-access', exp)
+        let resolveRefresh!: (value: { access_token: string; expires_at: number }) => void
+        hoisted.mockRefreshAccessTokenApi.mockReturnValue(
+            new Promise((resolve) => {
+                resolveRefresh = resolve
+            })
+        )
+        const first = store.refreshAccessToken()
+        const second = store.refreshAccessToken()
+        expect(hoisted.mockRefreshAccessTokenApi).toHaveBeenCalledTimes(1)
+        resolveRefresh({ access_token: 'new-access', expires_at: exp })
+        await expect(first).resolves.toBe('new-access')
+        await expect(second).resolves.toBe('new-access')
+        expect(store.access_token).toBe('new-access')
+        store.updateToken('older-access', exp - 1)
+        expect(store.access_token).toBe('new-access')
+    })
+
+    it('在途刷新不得覆盖同一会话已安装的新 token', async () => {
+        const store = useAuthStore()
+        const exp = Math.floor(Date.now() / 1000) + 3600
+        store.updateToken('old-access', exp)
+        let resolveRefresh!: (value: { access_token: string; expires_at: number }) => void
+        hoisted.mockRefreshAccessTokenApi.mockReturnValue(
+            new Promise((resolve) => {
+                resolveRefresh = resolve
+            })
+        )
+        const pending = store.refreshAccessToken()
+        store.updateToken('newer-access', exp + 1)
+        resolveRefresh({ access_token: 'stale-access', expires_at: exp + 2 })
+        await expect(pending).resolves.toBe('newer-access')
+        expect(store.access_token).toBe('newer-access')
+    })
+    it('旧会话刷新结束不得清除新会话正在共享的刷新', async () => {
+        const store = useAuthStore()
+        const exp = Math.floor(Date.now() / 1000) + 3600
+        const pending: ((value: { access_token: string; expires_at: number }) => void)[] = []
+        hoisted.mockRefreshAccessTokenApi.mockImplementation(() => new Promise((resolve) => pending.push(resolve)))
+        store.updateToken('account-a', exp)
+        const oldResult = store.refreshAccessToken().catch((error: Error) => error.message)
+        store.resetAuthStore()
+        store.updateToken('account-b', exp)
+        const next = store.refreshAccessToken()
+        pending[0]({ access_token: 'stale-a', expires_at: exp })
+        expect(await oldResult).toContain('认证会话已变化')
+        const shared = store.refreshAccessToken()
+        expect(hoisted.mockRefreshAccessTokenApi).toHaveBeenCalledTimes(2)
+        pending[1]({ access_token: 'fresh-b', expires_at: exp })
+        await expect(next).resolves.toBe('fresh-b')
+        await expect(shared).resolves.toBe('fresh-b')
+        expect(store.access_token).toBe('fresh-b')
     })
 })

@@ -4,7 +4,7 @@ import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createRole, getRoleDetail, updateRole } from '@/api/permission'
 import { fetchMenuTree } from '@/modules/permission/service'
-import { createRoleForm, createRoleRules, isSuperAdminRole, ROLE_STATUS, ROLE_SUBMIT_DELAY, DATA_SCOPE } from '@/modules/role/model'
+import { createRoleForm, isSuperAdminRole, ROLE_STATUS, DATA_SCOPE } from '@/modules/role/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import { normalizeDetailData } from '@/modules/shared/response'
 import type { Menu } from '@/types/menu'
@@ -25,7 +25,7 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
-    const { isSubmitting, runWithSubmitLock } = useSubmitLock(ROLE_SUBMIT_DELAY)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock()
     const menuTreeRef = ref()
     const menuTreeData = ref<Menu[]>([])
     const menuTreeDataLoaded = ref(false)
@@ -36,8 +36,6 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
 
     const isEditMode = ref(false)
     const isSuperAdminEditing = ref(false)
-    const getDynamicRules = createRoleRules
-
     const getMenuId = (menu: Pick<Menu, 'id'>) => {
         return typeof menu.id === 'number' ? menu.id : Number(menu.id)
     }
@@ -221,17 +219,11 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     }
 
     const getMenuTreeData = async () => {
-        try {
-            const menuData = await fetchMenuTree({ status: ROLE_STATUS.NORMAL })
-            const clonedData = cloneMenuTree(menuData)
-            updateMenuTreeDisabled(clonedData)
-            menuTreeData.value = clonedData
-            return clonedData
-        } catch (error) {
-            Logger.error('获取菜单树数据失败:', error)
-            menuTreeData.value = []
-            return []
-        }
+        const menuData = await fetchMenuTree({ status: ROLE_STATUS.NORMAL })
+        const clonedData = cloneMenuTree(menuData)
+        updateMenuTreeDisabled(clonedData)
+        menuTreeData.value = clonedData
+        return clonedData
     }
 
     const loadRoleIntoForm = async (roleId: number) => {
@@ -317,7 +309,7 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
             await setMenuTreeChecked()
         } catch (error) {
             Logger.error('获取菜单列表失败:', error)
-            ElMessage.error(translate('validation.role.fetchMenuFailed'))
+            menuTreeDataLoaded.value = false
         } finally {
             menuTreeLoading.value = false
         }
@@ -348,7 +340,6 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
             ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
             await refreshRoleList()
         }).catch((error) => {
-            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
         })
     }
@@ -363,7 +354,6 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         formData,
         isEditMode,
         isSuperAdminEditing,
-        getDynamicRules,
         menuTreeData,
         menuTreeLoading,
         handleMenuCheck,

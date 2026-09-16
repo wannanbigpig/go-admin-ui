@@ -73,8 +73,8 @@
                     <el-col :span="12">
                         <el-form-item prop="status" :label="t('common.labels.status')">
                             <el-select v-model="formData.status" :placeholder="t('common.placeholders.selectStatus')" clearable :disabled="isRootAdminEditing">
-                                <el-option :label="t('common.status.enabled')" :value="STATUS.ENABLED" />
-                                <el-option :label="t('common.status.disabled')" :value="STATUS.DISABLED" />
+                                <el-option :label="t('common.status.enabled')" :value="ADMIN_USER_STATUS.NORMAL" />
+                                <el-option :label="t('common.status.disabled')" :value="ADMIN_USER_STATUS.DISABLED" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -83,12 +83,12 @@
                 <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.password')" prop="password">
-                            <el-input v-model.trim="formData.password" :placeholder="t('common.placeholders.inputPassword')" type="password" show-password></el-input>
+                            <el-input v-model="formData.password" :placeholder="t('common.placeholders.inputPassword')" type="password" show-password></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.confirmPassword')" prop="confirm_password">
-                            <el-input v-model.trim="formData.confirm_password" :placeholder="t('common.placeholders.inputConfirmPassword')" type="password" show-password></el-input>
+                            <el-input v-model="formData.confirm_password" :placeholder="t('common.placeholders.inputConfirmPassword')" type="password" show-password></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -166,8 +166,6 @@ const updateButtonInfo = getButtonInfoFull('adminUser:update')
 const bindRoleButtonInfo = getButtonInfoFull('adminUser:bindRole')
 const deleteButtonInfo = getButtonInfoFull('adminUser:delete')
 const { t } = useI18n()
-
-const STATUS = ADMIN_USER_STATUS
 
 const onSearch = (model: Record<string, unknown>) => {
     Object.assign(queryWhere, model)
@@ -264,8 +262,8 @@ onMounted(() => {
 })
 
 const statusOptions = computed(() => [
-    { label: t('common.status.enabled'), value: STATUS.ENABLED },
-    { label: t('common.status.disabled'), value: STATUS.DISABLED },
+    { label: t('common.status.enabled'), value: ADMIN_USER_STATUS.NORMAL },
+    { label: t('common.status.disabled'), value: ADMIN_USER_STATUS.DISABLED },
 ])
 
 const searchSchema = computed(() => [
@@ -357,8 +355,8 @@ const columns = computed<ProTableColumns<AdminUser>>(() => [
         width: 120,
         type: 'tag',
         tag: {
-            [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
-            [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
+            [ADMIN_USER_STATUS.NORMAL]: { type: 'success', text: t('common.status.enabled') },
+            [ADMIN_USER_STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
         } as TagMap,
         h_tip: t('permission.adminUser.statusTip'),
     },

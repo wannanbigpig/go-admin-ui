@@ -3,10 +3,10 @@ import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { bindDepartmentRoles, fetchDepartmentDetail } from '@/modules/department/service'
-import { DEPARTMENT_SUBMIT_DELAY } from '@/modules/department/model'
 import { getRoleOptions, type RoleOption } from '@/api/permission'
 import type { Department } from '@/types/department'
 import { translate } from '@/locales'
+import { validateFormSafely } from '@/modules/shared/form'
 
 interface UseDepartmentRoleBindingOptions {
     refreshList: () => Promise<void>
@@ -15,11 +15,13 @@ interface UseDepartmentRoleBindingOptions {
 export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindingOptions) {
     const showBindRoleDrawer = ref(false)
     const bindRoleFormRef = ref<FormInstance>()
-    const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock(DEPARTMENT_SUBMIT_DELAY)
+    const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock()
     const currentDeptName = ref('')
     const roleOptions = ref<RoleOption[]>([])
     const roleOptionsLoading = ref(false)
     const roleOptionsLoaded = ref(false)
+    let detailLoaded = false
+    let loadVersion = 0
     const bindRoleData = reactive({
         id: 0 as string | number,
         role_ids: [] as number[],
@@ -71,28 +73,26 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
         bindRoleData.role_ids = []
         showBindRoleDrawer.value = true
 
-        if (!roleOptionsLoaded.value || roleOptions.value.length === 0) {
-            roleOptionsLoading.value = true
-            fetchRoleOptions()
-                .then(() => {
-                    roleOptionsLoaded.value = true
-                })
-                .catch((error) => {
-                    Logger.error('获取角色列表失败:', error)
-                    roleOptionsLoaded.value = false
-                })
-                .finally(() => {
-                    roleOptionsLoading.value = false
-                })
-        }
-
+        const requestVersion = ++loadVersion
+        detailLoaded = false
+        roleOptionsLoading.value = true
         try {
-            const deptData = await fetchDepartmentDetail(row.id)
-            bindRoleData.role_ids = normalizeRoleIds(
-                (deptData as Department & { role_list?: unknown; roles?: unknown }).role_list ?? deptData.role_ids ?? (deptData as Department & { role_list?: unknown; roles?: unknown }).roles
-            )
+            const [data] = await Promise.all([
+                fetchDepartmentDetail(row.id),
+                roleOptionsLoaded.value
+                    ? Promise.resolve()
+                    : fetchRoleOptions().then(() => {
+                          roleOptionsLoaded.value = true
+                      }),
+            ])
+            if (requestVersion !== loadVersion || !showBindRoleDrawer.value) return
+            bindRoleData.role_ids = normalizeRoleIds((data as Department & { role_list?: unknown; roles?: unknown }).role_list ?? data.role_ids ?? (data as Department & { role_list?: unknown; roles?: unknown }).roles)
+            detailLoaded = true
         } catch (error) {
-            Logger.error('获取部门详情失败:', error)
+            if (requestVersion === loadVersion) showBindRoleDrawer.value = false
+            Logger.error('获取部门角色绑定数据失败:', error)
+        } finally {
+            if (requestVersion === loadVersion) roleOptionsLoading.value = false
         }
     }
 
@@ -101,16 +101,16 @@ export function useDepartmentRoleBinding({ refreshList }: UseDepartmentRoleBindi
     }
 
     const bindRoleConfirmSubmit = async () => {
-        await bindRoleFormRef.value?.validate().catch(() => {
-            /* 校验不通过时静默中断 */
-        })
+        if (isBindingRole.value || roleOptionsLoading.value || !detailLoaded || !showBindRoleDrawer.value) return
+        const requestVersion = loadVersion
+        const valid = await validateFormSafely(bindRoleFormRef.value, translate('common.placeholders.selectRole'))
+        if (!valid || requestVersion !== loadVersion || !showBindRoleDrawer.value) return
         await runWithSubmitLock(async () => {
             await bindDepartmentRoles(bindRoleData.id, normalizeRoleIds(bindRoleData.role_ids))
             ElMessage.success(translate('common.result.bindRoleSuccess'))
             showBindRoleDrawer.value = false
             await refreshList()
         }).catch((error) => {
-            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('绑定角色失败:', error)
         })
     }

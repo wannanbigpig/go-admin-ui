@@ -37,22 +37,13 @@ const explicitMap: Record<string, () => Promise<Component>> = {
 // 自动扫描 views 下的 index.vue 文件
 const globModules: Record<string, () => Promise<Component>> = import.meta.glob('../views/**/index.vue', { import: 'default' })
 
-// 从 glob 路径推导语义化 key
-function deriveKeyFromPath(path: string): string | null {
-    // 兼容 Vite 可能返回的 ../views、/src/views 或 @/views 路径形式。
-    const match = path.match(/(?:\.\.\/views\/|\/src\/views\/|@\/views\/)(.+)\/index\.vue$/)
-    if (!match) return null
-    // 将路径分隔符 / 替换为冒号 :
-    return match[1].replace(/\//g, ':')
-}
-
 // 构建自动映射
 const autoMap: Record<string, () => Promise<Component>> = {}
 for (const [path, loader] of Object.entries(globModules)) {
-    const key = deriveKeyFromPath(path)
-    if (key) {
-        autoMap[key] = loader
-    }
+    // 兼容 Vite 可能返回的 ../views、/src/views 或 @/views 路径形式。
+    const match = path.match(/(?:\.\.\/views\/|\/src\/views\/|@\/views\/)(.+)\/index\.vue$/)
+    if (!match) continue
+    autoMap[match[1].replace(/\//g, ':')] = loader
 }
 
 // 合并映射：显式映射优先级高于自动推导

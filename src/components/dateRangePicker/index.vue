@@ -49,7 +49,7 @@ const currentSelectingRange = ref<DateRangeValue>(null) // 当前正在选择的
 // ==================== 计算属性 ====================
 const dateRange = computed<DateRangeValue>({
     get: () => props.modelValue,
-    set: (val) => emit('update:modelValue', val),
+    set: (val) => emit('update:modelValue', val ?? []),
 })
 
 // ==================== 快速选择选项 ====================

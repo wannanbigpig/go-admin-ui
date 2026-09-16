@@ -26,7 +26,7 @@
                 @drop="handleFolderDrop($event, folder)"
                 @keydown.enter="emit('folder-click', folder)"
                 @keydown.space.prevent="toggleFolderSelection(folder)"
-                @contextmenu.prevent="openContextMenu($event, 'folder', folder)"
+                @contextmenu.prevent.stop="openContextMenu($event, 'folder', folder)"
             >
                 <div class="item-checkbox" @click.stop>
                     <el-checkbox :model-value="isFolderSelected(folder)" @change="toggleFolderSelection(folder)" />
@@ -76,7 +76,7 @@
             @dragend="handleDragEnd"
             @keydown.enter="handleFileClick($event, file)"
             @keydown.space.prevent="toggleFileSelection(file)"
-            @contextmenu.prevent="openContextMenu($event, 'file', file)"
+            @contextmenu.prevent.stop="openContextMenu($event, 'file', file)"
         >
             <!-- Checkbox -->
             <div class="item-checkbox" @click.stop>

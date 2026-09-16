@@ -1,0 +1,28 @@
+name: Bug report
+description: 报告可复现的前端缺陷
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与影响
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 前后端版本或 Commit
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 控制台、网络请求与截图
+      description: 请移除 Token、Cookie 和个人数据。

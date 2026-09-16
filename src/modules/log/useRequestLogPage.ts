@@ -8,7 +8,7 @@ import { fetchRequestLogList, fetchRequestLogDetail } from '@/modules/log/servic
 import { submitRequestLogExportTask } from '@/modules/exportCenter/service'
 import { useExportTaskSubmitter } from '@/modules/exportCenter/useExportTaskSubmitter'
 import { createRequestLogQuery, DEFAULT_REQUEST_LOG_ORDER_BY, EXECUTION_TIME_SCOPE_OPTIONS, REQUEST_KIND_OPTIONS } from '@/modules/log/model'
-import { applyDateRangeToQuery, formatIpAddress, formatJsonContent } from '@/modules/log/helpers'
+import { applyDateRangeToQuery, formatIpAddress, formatJson } from '@/modules/log/helpers'
 import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogQuery } from '@/types/log'
 
 type SortOrder = 'ascending' | 'descending' | null
@@ -160,7 +160,7 @@ export function useRequestLogPage() {
         detailLoading,
         activeCollapse,
         exporting,
-        formatJson: formatJsonContent,
+        formatJson,
         formatIpAddress,
         getMethodTagType,
         getRequestKindTagType,

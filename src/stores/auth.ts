@@ -30,6 +30,7 @@ export const useAuthStore = defineStore(
         const authStateVersion = ref(0)
         const authSessionVersion = ref(0)
         const tokenCheckedKey = ref('')
+        let tokenRefreshPromise: Promise<string> | null = null
 
         // ==================== Getters ====================
         /**
@@ -170,8 +171,8 @@ export const useAuthStore = defineStore(
          * 更新 access token
          */
         const updateToken = (token: string, exp: number) => {
-            // 单调递增校验，防止并发响应旧的刷新 token 覆盖了更新的版本
-            if (exp > expires_at.value) {
+            // 同秒轮换的 token 过期时间相同；在途刷新由 refreshAccessToken 校验请求身份。
+            if (exp >= expires_at.value) {
                 access_token.value = token
                 expires_at.value = exp
                 tokenCheckedKey.value = ''
@@ -207,14 +208,25 @@ export const useAuthStore = defineStore(
         /**
          * 通过 HttpOnly Cookie 静默刷新 access token
          */
-        const refreshAccessToken = async () => {
+        const refreshAccessToken = () => {
+            if (tokenRefreshPromise) return tokenRefreshPromise
             const requestSessionVersion = authSessionVersion.value
-            const result = await refreshAccessTokenApi()
-            if (requestSessionVersion !== authSessionVersion.value) {
-                throw new Error('认证会话已变化，已丢弃过期的 token 刷新结果')
-            }
-            updateToken(result.access_token, result.expires_at)
-            return result.access_token
+            const requestToken = access_token.value
+            const promise = refreshAccessTokenApi()
+                .then((result) => {
+                    if (requestSessionVersion !== authSessionVersion.value) {
+                        throw new Error('认证会话已变化，已丢弃过期的 token 刷新结果')
+                    }
+                    if (requestToken === access_token.value) {
+                        updateToken(result.access_token, result.expires_at)
+                    }
+                    return access_token.value
+                })
+                .finally(() => {
+                    if (tokenRefreshPromise === promise) tokenRefreshPromise = null
+                })
+            tokenRefreshPromise = promise
+            return promise
         }
 
         /**
@@ -231,6 +243,7 @@ export const useAuthStore = defineStore(
             isTokenExpiredModalShown.value = false
             refreshingPromise = null
             checkingTokenPromise = null
+            tokenRefreshPromise = null
             apiCache.clear()
             localStorage.removeItem(AUTH_PERSIST_KEY)
             removeDynamicRoute()
@@ -297,10 +310,6 @@ export const useAuthStore = defineStore(
         }
     },
     {
-        persist: {
-            key: AUTH_PERSIST_KEY,
-            storage: localStorage,
-            pick: ['access_token', 'expires_at', 'userInfo', 'menu'],
-        },
+        persist: false,
     }
 )

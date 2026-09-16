@@ -403,9 +403,10 @@ const getProgressColor = (percentage: number): string => {
 }
 
 const fetchMonitor = async () => {
+    if (!isMounted) return
     try {
         const res = await getDashboardMonitor()
-        dashboardMonitor.value = res
+        if (isMounted) dashboardMonitor.value = res
     } catch {
         // 获取监控数据失败
     }
@@ -597,7 +598,9 @@ onMounted(async () => {
     isMounted = true
     initResizeObserver()
     await ensureEcharts()
+    if (!isMounted) return
     await Promise.all([refreshDashboard(), fetchMonitor()])
+    if (!isMounted) return
     // 每 30 秒刷新一次监控数据
     monitorTimer = setInterval(fetchMonitor, 30000)
 })

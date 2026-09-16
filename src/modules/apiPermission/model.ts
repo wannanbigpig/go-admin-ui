@@ -47,7 +47,7 @@ export function createApiPermissionForm(): Partial<ApiPermission> {
     }
 }
 
-export const API_PERMISSION_METHODS = [
+export const API_PERMISSION_METHOD_OPTIONS = [
     { label: 'GET', value: 'GET' },
     { label: 'POST', value: 'POST' },
     { label: 'PUT', value: 'PUT' },
@@ -56,9 +56,6 @@ export const API_PERMISSION_METHODS = [
     { label: 'HEAD', value: 'HEAD' },
     { label: 'PATCH', value: 'PATCH' },
 ]
-
-// 别名，兼容旧代码
-export const API_PERMISSION_METHOD_OPTIONS = API_PERMISSION_METHODS
 
 export const API_PERMISSION_AUTH_MODE = {
     NONE: 0,

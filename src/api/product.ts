@@ -28,10 +28,6 @@ export function getProductList(params: Partial<ProductQuery>) {
     return get<PageData<Product>>('/v1/product/list', { ...params })
 }
 
-export function getProductDetail(params: { id: number | string }) {
-    return get<Product>('/v1/product/detail', params)
-}
-
 export function createProduct(data: ProductPayload) {
     return post<unknown>('/v1/product/create', data)
 }

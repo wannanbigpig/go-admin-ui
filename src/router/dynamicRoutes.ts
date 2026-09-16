@@ -37,32 +37,6 @@ const resolveComponent = (componentKey?: string) => {
 }
 
 /**
- * 开发模式启动期预校验：递归遍历后端菜单，所有 component_key 字段必须能命中映射表，
- * 否则抛错让开发者立即修复，而不是访问路由时才 warn。
- */
-export function validateRouteComponents(routesData: UserPermission[]): string[] {
-    const missing: string[] = []
-    const walk = (nodes: UserPermission[]) => {
-        for (const node of nodes) {
-            if (isButtonRouteNode(node)) continue
-            if (node.component_key && !componentMap[node.component_key]) {
-                missing.push(node.component_key)
-            }
-            if (node.children && node.children.length > 0) {
-                walk(node.children)
-            }
-        }
-    }
-    walk(routesData)
-
-    if (missing.length > 0 && import.meta.env.DEV) {
-        const message = `[dynamicRoutes] 以下组件 key 未在 componentMap 中找到：\n${missing.map((m) => `  - ${m}`).join('\n')}`
-        throw new Error(message)
-    }
-    return missing
-}
-
-/**
  * 将后端返回的路由数据转换为 Vue Router 可用的路由配置
  */
 export function convertRoute(routesData: UserPermission[], seenNames = new Set<string>(), seenPaths = new Set<string>(), parentPath = ''): RouteRecordRaw[] {

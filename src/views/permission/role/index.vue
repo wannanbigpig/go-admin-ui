@@ -32,8 +32,8 @@
                     <el-col :span="12">
                         <el-form-item prop="status" :label="t('common.labels.status')">
                             <el-select v-model="formData.status" :placeholder="t('permission.role.statusPlaceholder')" clearable :disabled="isSuperAdminEditing">
-                                <el-option :label="t('common.status.enabled')" :value="STATUS.ENABLED" />
-                                <el-option :label="t('common.status.disabled')" :value="STATUS.DISABLED" />
+                                <el-option :label="t('common.status.enabled')" :value="ROLE_STATUS.NORMAL" />
+                                <el-option :label="t('common.status.disabled')" :value="ROLE_STATUS.DISABLED" />
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -46,7 +46,12 @@
                         <el-option v-for="item in DATA_SCOPE_OPTIONS" :key="item.value" :label="t(item.label)" :value="item.value" />
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="formData.data_scope === 5" :label="t('permission.role.customDept')" prop="dept_ids">
+                <el-form-item
+                    v-if="formData.data_scope === 5"
+                    :label="t('permission.role.customDept')"
+                    prop="dept_ids"
+                    :rules="[{ required: true, type: 'array', min: 1, message: t('validation.role.customDeptRequired'), trigger: 'change' }]"
+                >
                     <DeptTreeSelect v-model="formData.dept_ids" :disabled="isSuperAdminEditing" :placeholder="t('common.placeholders.selectDepartment')" />
                 </el-form-item>
                 <el-form-item :label="t('permission.role.menuPermission')" prop="menu_list">
@@ -92,8 +97,6 @@ const updateButtonInfo = getButtonInfoFull('role:update')
 const deleteButtonInfo = getButtonInfoFull('role:delete')
 const { t } = useI18n()
 
-const STATUS = ROLE_STATUS
-
 const onSearch = (model: Record<string, unknown>) => {
     Object.assign(queryWhere, model)
     handleSearch()
@@ -103,10 +106,6 @@ const onSearch = (model: Record<string, unknown>) => {
 let { loading, roleList, queryWhere, pagination, getList, handleSearch, handleReset } = useRoleList()
 
 /* eslint-enable prefer-const */
-
-const refreshRoleList = async () => {
-    await getList()
-}
 
 const {
     showDrawer,
@@ -125,7 +124,7 @@ const {
     openEditDrawer,
     editConfirmSubmit,
 } = useRoleForm({
-    refreshRoleList,
+    refreshRoleList: getList,
 })
 
 type RoleActionScope = { row?: Role } | Role
@@ -202,8 +201,8 @@ const columns = computed<ProTableColumns<Role>>(() => [
         width: 120,
         type: 'tag',
         tag: {
-            [STATUS.ENABLED]: { type: 'success', text: t('common.status.enabled') },
-            [STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
+            [ROLE_STATUS.NORMAL]: { type: 'success', text: t('common.status.enabled') },
+            [ROLE_STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
         },
     },
     { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },

@@ -8,6 +8,7 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+        exclude: ['e2e/**', 'node_modules/**'],
         coverage: {
             reporter: ['text', 'json', 'html'],
             // 覆盖率门槛聚焦已有单元测试职责内的可复用逻辑；页面级覆盖由后续 E2E 单独衡量。

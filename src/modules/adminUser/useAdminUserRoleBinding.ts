@@ -3,10 +3,10 @@ import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { updateAdminUserRoles, fetchAdminUserDetail } from '@/modules/adminUser/service'
-import { ADMIN_USER_SUBMIT_DELAY } from '@/modules/adminUser/model'
 import { getRoleOptions, type RoleOption } from '@/api/permission'
 import type { AdminUser } from '@/types/adminUser'
 import { translate } from '@/locales'
+import { validateFormSafely } from '@/modules/shared/form'
 
 interface UseAdminUserRoleBindingOptions {
     refreshList: () => Promise<void>
@@ -15,11 +15,13 @@ interface UseAdminUserRoleBindingOptions {
 export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBindingOptions) {
     const showBindRoleDrawer = ref(false)
     const bindRoleFormRef = ref<FormInstance>()
-    const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock(ADMIN_USER_SUBMIT_DELAY)
+    const { isSubmitting: isBindingRole, runWithSubmitLock } = useSubmitLock()
     const currentAdminUserName = ref('')
     const roleOptions = ref<RoleOption[]>([])
     const roleOptionsLoading = ref(false)
     const roleOptionsLoaded = ref(false)
+    let detailLoaded = false
+    let loadVersion = 0
     const bindRoleData = reactive({
         id: 0 as string | number,
         role_ids: [] as number[],
@@ -76,24 +78,20 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
         bindRoleData.role_ids = []
         showBindRoleDrawer.value = true
 
-        if (!roleOptionsLoaded.value || roleOptions.value.length === 0) {
-            roleOptionsLoading.value = true
-            fetchRoleOptions()
-                .then(() => {
-                    roleOptionsLoaded.value = true
-                })
-                .catch((error) => {
-                    Logger.error('获取角色列表失败:', error)
-                    roleOptionsLoaded.value = false
-                })
-                .finally(() => {
-                    roleOptionsLoading.value = false
-                })
-        }
-
+        const requestVersion = ++loadVersion
+        detailLoaded = false
+        roleOptionsLoading.value = true
         try {
-            const userData = await fetchAdminUserDetail(row.id)
-            const detailData = userData as AdminUser & {
+            const [data] = await Promise.all([
+                fetchAdminUserDetail(row.id),
+                roleOptionsLoaded.value
+                    ? Promise.resolve()
+                    : fetchRoleOptions().then(() => {
+                          roleOptionsLoaded.value = true
+                      }),
+            ])
+            if (requestVersion !== loadVersion || !showBindRoleDrawer.value) return
+            const detailData = data as AdminUser & {
                 role_list?: unknown
                 roles?: unknown
             }
@@ -102,8 +100,12 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
             if (currentUserIsRootAdmin.value && superAdminRoleId.value && !bindRoleData.role_ids.includes(superAdminRoleId.value)) {
                 bindRoleData.role_ids = [...bindRoleData.role_ids, superAdminRoleId.value]
             }
+            detailLoaded = true
         } catch (error) {
-            Logger.error('获取管理员详情失败:', error)
+            if (requestVersion === loadVersion) showBindRoleDrawer.value = false
+            Logger.error('获取管理员角色绑定数据失败:', error)
+        } finally {
+            if (requestVersion === loadVersion) roleOptionsLoading.value = false
         }
     }
 
@@ -112,13 +114,10 @@ export function useAdminUserRoleBinding({ refreshList }: UseAdminUserRoleBinding
     }
 
     const bindRoleConfirmSubmit = async () => {
-        if (roleOptionsLoading.value) {
-            ElMessage.warning(translate('common.result.loading'))
-            return
-        }
-        await bindRoleFormRef.value?.validate().catch(() => {
-            /* 校验不通过时静默中断 */
-        })
+        if (isBindingRole.value || roleOptionsLoading.value || !detailLoaded || !showBindRoleDrawer.value) return
+        const requestVersion = loadVersion
+        const valid = await validateFormSafely(bindRoleFormRef.value, translate('common.placeholders.selectRole'))
+        if (!valid || requestVersion !== loadVersion || !showBindRoleDrawer.value) return
         await runWithSubmitLock(async () => {
             const roleIds = normalizeRoleIds(bindRoleData.role_ids)
             if (currentUserIsRootAdmin.value && superAdminRoleId.value && !roleIds.includes(superAdminRoleId.value)) {

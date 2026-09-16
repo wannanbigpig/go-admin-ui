@@ -4,7 +4,7 @@ import { ElLoading, ElMessage, ElMessageBox, type FormInstance } from 'element-p
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { CANCEL_BUTTON_TEXT, CONFIRM_BUTTON_TEXT, CONFIRM_DIALOG_TITLE, CONFIRM_MESSAGES, DRAWER_EXIT_CONFIRM_MESSAGE_KEY, RESULT_MESSAGES } from '@/constants/messages'
 import { createMenu, updateMenu, getMenuDetail, deleteMenu, getMenuList, getApiOptions, type ApiOption } from '@/api/permission'
-import { createEmptyTitleI18n, createMenuForm, MENU_OPERATION_TYPE, MENU_STEP, MENU_SUBMIT_DEBOUNCE_TIME, MENU_SWITCH_VALUE, MENU_TITLE_LOCALES, MENU_TYPE } from '@/modules/menu/model'
+import { createEmptyTitleI18n, createMenuForm, MENU_OPERATION_TYPE, MENU_STEP, MENU_SWITCH_VALUE, MENU_TITLE_LOCALES, MENU_TYPE } from '@/modules/menu/model'
 import { normalizeDetailData, normalizeListData } from '@/modules/shared/response'
 import { checkNumber, normalizeExternalUrl, pick } from '@/utils/helper'
 import type { Menu } from '@/types/menu'
@@ -21,7 +21,7 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
     const formDataRef = ref<FormInstance>()
     const isParentFixed = ref(false)
     const currentIndex = ref<number | null>(null)
-    const { isSubmitting, runWithSubmitLock } = useSubmitLock(MENU_SUBMIT_DEBOUNCE_TIME)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock()
     const initialFormData = createMenuForm()
     const formData = reactive(createMenuForm()) as Menu & { title_i18n: Record<string, string> }
     const formDataKeys = Object.keys(initialFormData) as Array<keyof typeof initialFormData>
@@ -373,7 +373,6 @@ export function useMenuForm({ getList }: UseMenuFormOptions) {
             showDrawer.value = false
             await getList()
         }).catch((error) => {
-            ElMessage.error(translate('common.result.operationFailed'))
             Logger.error('提交失败:', error)
         })
     }

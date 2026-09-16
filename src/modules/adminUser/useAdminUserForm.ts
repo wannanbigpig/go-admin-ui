@@ -1,9 +1,10 @@
+import { USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_PATTERN, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
 import { computed, reactive, ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { createAdminUserItem, updateAdminUserItem, fetchAdminUserDetail } from '@/modules/adminUser/service'
-import { ADMIN_USER_STATUS, ADMIN_USER_SUBMIT_DELAY, createAdminUserForm, isRootAdminUser } from '@/modules/adminUser/model'
+import { ADMIN_USER_STATUS, createAdminUserForm, isRootAdminUser } from '@/modules/adminUser/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { AdminUser } from '@/types/adminUser'
 import { translate } from '@/locales'
@@ -17,7 +18,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     const formDataRef = ref<FormInstance>()
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
-    const { isSubmitting, runWithSubmitLock } = useSubmitLock(ADMIN_USER_SUBMIT_DELAY)
+    const { isSubmitting, runWithSubmitLock } = useSubmitLock()
     const initialFormData = createAdminUserForm()
     const formData = reactive({ ...initialFormData })
     const originalFormData = ref<Partial<AdminUser> | null>(null)
@@ -32,12 +33,13 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
             nickname: [{ required: true, message: translate('validation.adminUser.nicknameRequired'), trigger }],
             username: [
                 { required: true, message: translate('validation.adminUser.usernameRequired'), trigger },
-                { min: 3, max: 20, message: translate('validation.adminUser.usernameLength'), trigger },
-                { pattern: /^[a-zA-Z0-9_]+$/, message: translate('validation.adminUser.usernamePattern'), trigger },
+                { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH, message: translate('validation.adminUser.usernameLength'), trigger },
+                { pattern: USERNAME_PATTERN, message: translate('validation.adminUser.usernamePattern'), trigger },
             ],
-            password: [!isEdit && { required: true, message: translate('validation.adminUser.passwordRequired'), trigger }, { min: 6, max: 20, message: translate('validation.adminUser.passwordLength'), trigger }].filter(
-                Boolean
-            ),
+            password: [
+                !isEdit && { required: true, message: translate('validation.adminUser.passwordRequired'), trigger },
+                { min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: translate('validation.adminUser.passwordLength'), trigger },
+            ].filter(Boolean),
             confirm_password: [
                 (!isEdit || formData.password) && { required: true, message: translate('validation.adminUser.confirmPasswordRequired'), trigger },
                 {

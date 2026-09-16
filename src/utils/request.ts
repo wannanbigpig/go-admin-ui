@@ -7,6 +7,7 @@ import { MESSAGE_ERROR_DURATION, REQUEST_TIMEOUT } from '@/modules/shared/consta
 import { Logger } from '@/utils/logger'
 import { DEFAULT_LOCALE, translate } from '@/locales'
 import { resolveBaseURL } from '@/utils/env'
+import { isAuthExpiredError } from '@/modules/auth/error'
 
 declare module 'axios' {
     interface AxiosRequestConfig {
@@ -28,7 +29,6 @@ declare module 'axios' {
 const LANGUAGE_HEADER = 'Accept-Language'
 const REQUESTED_WITH_HEADER = 'X-Requested-With'
 const REQUESTED_WITH_VALUE = 'XMLHttpRequest'
-const REFRESH_TOKEN_INVALID_CODE = 20048
 
 /**
  * 静默业务码：响应 code 命中后不弹 ElMessage，由业务侧自行处理。
@@ -164,21 +164,6 @@ const markSessionExpired = () => {
     authStore.handleTokenExpired()
 }
 
-const isRefreshAuthExpiredError = (error: unknown) => {
-    if (error && typeof error === 'object') {
-        const maybeAxios = error as AxiosError<ApiResponse<unknown>>
-        if (maybeAxios.response?.status === 401) return true
-        const responseData = maybeAxios.response?.data
-        if (responseData && isApiPayload(responseData)) {
-            return responseData.code === 401 || responseData.code === REFRESH_TOKEN_INVALID_CODE
-        }
-        if (isApiPayload(error)) {
-            return error.code === 401 || error.code === REFRESH_TOKEN_INVALID_CODE
-        }
-    }
-    return false
-}
-
 /**
  * access token 续期入口。
  *
@@ -194,7 +179,7 @@ const refreshAccessTokenOnce = async () => {
         const promise = authStore
             .refreshAccessToken()
             .catch((error) => {
-                if (isRefreshAuthExpiredError(error) && useAuthStore().sessionVersion === sessionVersion) {
+                if (isAuthExpiredError(error) && useAuthStore().sessionVersion === sessionVersion) {
                     markSessionExpired()
                 }
                 throw error

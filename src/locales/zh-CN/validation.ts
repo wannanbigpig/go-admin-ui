@@ -18,7 +18,7 @@ export default {
         usernameLength: '用户名长度 3-20 个字符',
         usernamePattern: '由字母、数字和下划线组成',
         passwordRequired: '密码不能为空',
-        passwordLength: '密码长度 6-20 个字符',
+        passwordLength: '密码长度 6-32 个字符',
         confirmPasswordRequired: '请确认密码',
         passwordNotMatch: '两次输入密码不一致',
     },
@@ -45,7 +45,7 @@ export default {
         formName: '角色表单',
         invalidRow: '无效的行数据',
         readonlySuperAdmin: '超级管理员角色为只读，不允许编辑',
-        fetchMenuFailed: '获取菜单列表失败',
+        customDeptRequired: '自定义数据权限至少选择一个部门',
     },
     menu: {
         formName: '菜单表单',

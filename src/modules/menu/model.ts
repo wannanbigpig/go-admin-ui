@@ -1,5 +1,5 @@
 import type { Menu } from '@/types/menu'
-import { LOCALE_OPTIONS, translate } from '@/locales'
+import { LOCALE_OPTIONS } from '@/locales'
 
 export const MENU_TITLE_LOCALES = LOCALE_OPTIONS.map((option) => option.value)
 
@@ -44,20 +44,6 @@ export const MENU_TYPE = {
     BUTTON: 3,
 }
 
-export const MENU_TYPE_OPTIONS = [
-    { label: 'permission.menu.typeDirectory', value: MENU_TYPE.DIRECTORY, type: 'info' as const },
-    { label: 'permission.menu.typeMenu', value: MENU_TYPE.MENU, type: 'success' as const },
-    { label: 'permission.menu.typeButton', value: MENU_TYPE.BUTTON, type: 'warning' as const },
-]
-
-export function getMenuTypeLabel(type: number) {
-    return translate(MENU_TYPE_OPTIONS.find((opt) => opt.value === type)?.label || 'common.unknown')
-}
-
-export function getMenuTypeTag(type: number) {
-    return MENU_TYPE_OPTIONS.find((opt) => opt.value === type)?.type || 'info'
-}
-
 export const MENU_OPERATION_TYPE = {
     ADD: 1,
     EDIT: 2,
@@ -74,21 +60,10 @@ export const MENU_STATUS = {
     ALL: '' as const,
 }
 
-export const MENU_STATUS_OPTIONS = [
-    { label: 'common.status.disabled', value: MENU_STATUS.DISABLED, type: 'danger' as const },
-    { label: 'common.status.enabled', value: MENU_STATUS.ENABLED, type: 'success' as const },
-]
-
-export function getMenuStatusLabel(status: number) {
-    return translate(MENU_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || 'common.unknown')
-}
-
 export const MENU_SWITCH_VALUE = {
     NO: 0,
     YES: 1,
 }
-
-export const MENU_SUBMIT_DEBOUNCE_TIME = 3000
 
 export const MENU_CASCADER_PROPS = {
     checkStrictly: true,
@@ -97,12 +72,4 @@ export const MENU_CASCADER_PROPS = {
     value: 'id',
     emitPath: false,
     disabled: 'disabled',
-}
-
-export function createMenuQuery() {
-    return {
-        keyword: null,
-        is_auth: null,
-        status: MENU_STATUS.ALL,
-    }
 }

@@ -2416,6 +2416,11 @@ export const authMock: MockRoute[] = [
         }),
     },
     {
+        pattern: /^\/v1\/auth\/check-token$/,
+        method: 'GET',
+        handler: () => ({}),
+    },
+    {
         pattern: /^\/v1\/admin-user\/get$/,
         method: 'GET',
         handler: () => ({

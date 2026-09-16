@@ -57,10 +57,6 @@ export function getSystemConfigDetail(params: { id: number | string }) {
     return get<SystemConfig>('/v1/system/config/detail', params)
 }
 
-export function getSystemConfigValue(params: { config_key: string }) {
-    return get<Record<string, unknown>>('/v1/system/config/value', params)
-}
-
 export function createSystemConfig(data: SystemConfigPayload) {
     return post<unknown>('/v1/system/config/create', data)
 }
