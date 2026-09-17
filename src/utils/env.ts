@@ -6,7 +6,7 @@ export const normalizeEnvValue = (value: unknown): string => (typeof value === '
 /**
  * 解析 API 请求 baseURL
  * - 开发环境默认走同源代理（/admin），避免浏览器跨域限制
- * - 生产环境按 VITE_BASE_URL + VITE_BASE_API 组合
+ * - 生产环境默认使用同源 VITE_BASE_API；配置 VITE_BASE_URL 时再组合独立 API 主机
  */
 export const resolveBaseURL = (): string => {
     const apiPrefixRaw = normalizeEnvValue(import.meta.env.VITE_BASE_API)

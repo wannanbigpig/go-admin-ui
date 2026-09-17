@@ -53,16 +53,6 @@
                             <el-tag v-if="item.isHighRisk" size="small" effect="plain" type="danger">{{ t('home.dashboard.activity.highRisk') }}</el-tag>
                             <el-tag v-if="item.hasChangeDiff" size="small" effect="plain" type="warning">{{ t('home.dashboard.activity.dataChange') }}</el-tag>
                         </span>
-                        <span class="activity-meta">
-                            <span v-if="item.operator" class="activity-meta-item">
-                                <i-ep-user />
-                                {{ item.operator }}
-                            </span>
-                            <span v-if="item.source" class="activity-meta-item activity-source">
-                                <i-ep-link />
-                                <span class="activity-source-text">{{ item.source }}</span>
-                            </span>
-                        </span>
                     </span>
                     <time class="activity-time" :datetime="item.created_at || item.time" :title="item.fullTime">
                         {{ item.relativeTime }}
@@ -124,8 +114,6 @@ const openActivity = (item: DashboardActivityView) => {
 
 .activity-card-header,
 .activity-title-row,
-.activity-meta,
-.activity-meta-item,
 .activity-entry,
 .activity-skeleton-row,
 .activity-error {
@@ -220,30 +208,6 @@ const openActivity = (item: DashboardActivityView) => {
     line-height: 1.5;
 }
 
-.activity-meta {
-    flex-wrap: wrap;
-    gap: var(--xl-space-2) var(--xl-space-4);
-    margin-top: var(--xl-space-1);
-    color: var(--el-text-color-secondary);
-    font-size: var(--xl-font-sm);
-}
-
-.activity-meta-item {
-    min-width: 0;
-    gap: 5px;
-}
-
-.activity-source {
-    max-width: 100%;
-}
-
-.activity-source-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .activity-time {
     flex: 0 0 auto;
     color: var(--el-text-color-secondary);
@@ -303,16 +267,6 @@ const openActivity = (item: DashboardActivityView) => {
 
     .activity-time {
         margin-left: 22px;
-    }
-
-    .activity-meta {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: var(--xl-space-1);
-    }
-
-    .activity-source {
-        width: 100%;
     }
 
     .activity-arrow {

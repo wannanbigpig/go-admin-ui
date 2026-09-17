@@ -23,8 +23,20 @@ jobs:
       - name: Verify tag version
         shell: bash
         run: |
+          set -euo pipefail
           package_version="$(node -p "require('./package.json').version")"
           test "${GITHUB_REF_NAME#v}" = "$package_version"
+          grep -Fq "## [${package_version}]" CHANGELOG.md
+          awk -v marker="## [${package_version}]" '
+            index($0, marker) == 1 { found=1 }
+            found && /^## \[/ && index($0, marker) != 1 { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
+          {
+            printf '\n## Compatibility, upgrade, and rollback\n\n'
+            cat docs/compatibility.md
+          } >> release-notes.md
       - run: pnpm run lint --no-cache
       - run: pnpm run type-check
       - run: pnpm run test:run
@@ -35,5 +47,5 @@ jobs:
         run: tar -czf "x-l-admin-vue3_${GITHUB_REF_NAME#v}.tar.gz" dist
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: release-notes.md
           files: x-l-admin-vue3_*.tar.gz

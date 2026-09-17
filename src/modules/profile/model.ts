@@ -17,6 +17,7 @@ export function createProfileForm() {
         phone_number: '',
         email: '',
         avatar: '',
+        current_password: '',
         password: '',
         confirm_password: '',
     }

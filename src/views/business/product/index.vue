@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
+import { computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
@@ -94,12 +94,12 @@ const { showDrawer, isEditMode, isSubmitting: submitting, formDataRef: formRef, 
     refreshList: getList,
 })
 
-const formRules: FormRules = {
+const formRules = computed<FormRules>(() => ({
     name: [{ required: true, message: t('product.nameRequired'), trigger: 'blur' }],
-}
+}))
 
 // 表格列定义
-const columns = [
+const columns = computed(() => [
     { prop: 'id', h_label: 'ID', width: 80 },
     { prop: 'name', h_label: t('product.name'), label: t('product.name'), search: { type: 'input' as const, placeholder: t('product.namePlaceholder'), span: 6 } },
     { prop: 'description', h_label: t('common.labels.description'), overflow: true },
@@ -107,9 +107,9 @@ const columns = [
     { prop: 'status_name', h_label: t('common.labels.status'), width: 80 },
     { prop: 'dept_name', h_label: t('product.ownerDepartment'), width: 120 },
     { prop: 'created_at', h_label: t('common.labels.createdAt'), width: 180 },
-]
+])
 
-const actionButtons: ActionButtonConfig<Product>[] = [
+const actionButtons = computed<ActionButtonConfig<Product>[]>(() => [
     {
         permission: 'product:update',
         text: t('common.actions.edit'),
@@ -123,7 +123,7 @@ const actionButtons: ActionButtonConfig<Product>[] = [
         type: 'danger',
         click: (row) => handleDelete(row),
     },
-]
+])
 
 // 搜索
 const onSearch = async (model: Record<string, unknown>) => {

@@ -1,4 +1,4 @@
-import { getDashboardOverview, getDashboardStatistics } from '@/api/dashboard'
+import { getDashboardOverview, getDashboardPersonal, getDashboardStatistics } from '@/api/dashboard'
 import { normalizeDetailData } from '@/modules/shared/response'
 
 export interface DashboardMetric {
@@ -100,15 +100,24 @@ export interface ErrorDistribution {
 
 export interface DashboardOverview {
     metrics: DashboardMetric[]
-    activities: DashboardActivityItem[]
-    user_login?: {
-        last_login?: string
-        last_ip?: string
-    }
     trend?: TrendData
     response_time?: ResponseTimeStats
     error_codes?: ErrorCodeStat[]
     storage?: StorageStats
+}
+
+export interface DashboardPersonal {
+    activities: DashboardActivityItem[]
+    summary?: {
+        today_operations: number
+        today_failures: number
+        today_changes: number
+        unread_notifications: number
+    }
+    user_login?: {
+        last_login?: string
+        last_ip?: string
+    }
 }
 
 export interface DashboardStatistics {
@@ -127,7 +136,19 @@ export async function fetchDashboardOverview() {
     const response = await getDashboardOverview()
     return normalizeDetailData<DashboardOverview>(response, {
         metrics: [],
+    })
+}
+
+export async function fetchDashboardPersonal() {
+    const response = await getDashboardPersonal()
+    return normalizeDetailData<DashboardPersonal>(response, {
         activities: [],
+        summary: {
+            today_operations: 0,
+            today_failures: 0,
+            today_changes: 0,
+            unread_notifications: 0,
+        },
     })
 }
 

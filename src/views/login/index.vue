@@ -1,7 +1,6 @@
 <template>
     <div class="login-container">
-        <!-- canvas 动画背景 -->
-        <canvas ref="canvasRef" class="bg-canvas"></canvas>
+        <canvas ref="canvasRef" class="bg-canvas" aria-hidden="true"></canvas>
 
         <!-- 右上角工具栏 -->
         <div class="login-toolbar">
@@ -37,77 +36,101 @@
             </el-dropdown>
         </div>
 
-        <!-- 作者链接 -->
-        <a class="author-link" href="https://github.com/wannanbigpig" target="_blank" rel="noopener noreferrer" :title="t('login.authorGithub')">
-            <img src="@/assets/images/bigpig.jpg" class="avatar" alt="Author" />
-        </a>
-
         <transition appear enter-active-class="animate__animated animate__fadeInUp">
-            <div class="login-card">
-                <div class="login-header">
-                    <div class="logo-wrapper">
-                        <img src="@/assets/images/logo-frontend.png" alt="Logo" />
+            <div class="login-shell">
+                <main class="login-card">
+                    <div class="login-header">
+                        <span class="logo-wrapper">
+                            <img src="@/assets/images/gin-layout-mark.svg" :alt="t('login.appTitle')" />
+                        </span>
+                        <h1 class="app-title">{{ t('login.appTitle') }}</h1>
+                        <p class="app-subtitle">{{ t('login.title') }}</p>
                     </div>
-                    <h1 class="app-title">{{ t('login.appTitle') }}</h1>
-                    <p class="app-subtitle">{{ t('login.title') }}</p>
-                </div>
 
-                <div class="login-form">
-                    <el-form :model="loginForm" ref="loginFormRef" :rules="validateRules" size="large">
-                        <el-form-item prop="username" :label="t('login.username')">
-                            <el-input v-model.trim="loginForm.username" class="custom-input" :placeholder="t('login.placeholders.username')" @keyup.enter="handleLogin(loginFormRef)">
-                                <template #prefix>
-                                    <i-ep-user class="input-icon" />
-                                </template>
-                            </el-input>
-                        </el-form-item>
-                        <el-form-item prop="password" :label="t('login.password')">
-                            <el-input v-model="loginForm.password" class="custom-input" :placeholder="t('login.placeholders.password')" type="password" show-password @keyup.enter="handleLogin(loginFormRef)">
-                                <template #prefix>
-                                    <i-ep-lock class="input-icon" />
-                                </template>
-                            </el-input>
-                        </el-form-item>
-                        <el-form-item prop="captcha" :label="t('login.captcha')">
-                            <div class="captcha-wrapper">
+                    <div class="login-form">
+                        <el-alert v-if="loginError" class="login-error" type="error" :title="loginError" :closable="false" show-icon />
+                        <el-form :model="loginForm" ref="loginFormRef" :rules="validateRules" size="large">
+                            <el-form-item prop="username" :label="t('login.username')">
                                 <el-input
-                                    v-model.trim="loginForm.captcha"
-                                    class="custom-input captcha-input"
-                                    :placeholder="t('login.placeholders.captcha')"
-                                    maxlength="4"
-                                    name="captcha"
-                                    autocomplete="off"
+                                    v-model.trim="loginForm.username"
+                                    class="custom-input"
+                                    name="username"
+                                    autocomplete="username"
+                                    :placeholder="t('login.placeholders.username')"
                                     @keyup.enter="handleLogin(loginFormRef)"
                                 >
                                     <template #prefix>
-                                        <i-ant-design-safety-outlined class="input-icon" />
+                                        <i-ep-user class="input-icon" />
                                     </template>
                                 </el-input>
-                                <div
-                                    class="captcha-img"
-                                    @click="refreshCaptcha"
-                                    :title="t('login.placeholders.captcha')"
-                                    role="button"
-                                    tabindex="0"
-                                    :aria-label="t('login.placeholders.captcha')"
-                                    @keydown.enter="refreshCaptcha"
-                                    @keydown.space.prevent="refreshCaptcha"
+                            </el-form-item>
+                            <el-form-item prop="password" :label="t('login.password')">
+                                <el-input
+                                    v-model="loginForm.password"
+                                    class="custom-input"
+                                    name="password"
+                                    autocomplete="current-password"
+                                    :placeholder="t('login.placeholders.password')"
+                                    type="password"
+                                    show-password
+                                    @keyup.enter="handleLogin(loginFormRef)"
                                 >
-                                    <img :src="captchaSrc" alt="captcha" v-if="captchaSrc" />
-                                    <div class="captcha-loading" v-else aria-live="polite">...</div>
+                                    <template #prefix>
+                                        <i-ep-lock class="input-icon" />
+                                    </template>
+                                </el-input>
+                            </el-form-item>
+                            <el-form-item prop="captcha" :label="t('login.captcha')">
+                                <div class="captcha-wrapper">
+                                    <el-input
+                                        v-model.trim="loginForm.captcha"
+                                        class="custom-input captcha-input"
+                                        :placeholder="t('login.placeholders.captcha')"
+                                        maxlength="4"
+                                        name="captcha"
+                                        autocomplete="off"
+                                        @keyup.enter="handleLogin(loginFormRef)"
+                                    >
+                                        <template #prefix>
+                                            <i-ant-design-safety-outlined class="input-icon" />
+                                        </template>
+                                    </el-input>
+                                    <div
+                                        class="captcha-img"
+                                        :class="{ 'is-loading': captchaLoading, 'is-error': captchaFailed }"
+                                        @click="refreshCaptcha"
+                                        :title="t('login.captchaImageAlt')"
+                                        role="button"
+                                        tabindex="0"
+                                        :aria-label="t('login.captchaImageAlt')"
+                                        :aria-busy="captchaLoading"
+                                        @keydown.enter="refreshCaptcha"
+                                        @keydown.space.prevent="refreshCaptcha"
+                                    >
+                                        <img v-if="captchaSrc" :src="captchaSrc" :alt="t('login.captchaImageAlt')" />
+                                        <div v-else class="captcha-loading" aria-live="polite">
+                                            {{ captchaFailed ? t('login.retryCaptcha') : t('login.loadingCaptcha') }}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </el-form-item>
+                            </el-form-item>
 
-                        <el-form-item class="submit-item">
-                            <el-button class="submit-btn" type="primary" :loading="loginLoading" @click="handleLogin(loginFormRef)">
-                                {{ !loginLoading ? t('login.login') : t('login.loggingIn') }}
-                            </el-button>
-                        </el-form-item>
-                    </el-form>
-                </div>
+                            <el-form-item class="submit-item">
+                                <el-button class="submit-btn" type="primary" :loading="loginLoading" @click="handleLogin(loginFormRef)">
+                                    {{ !loginLoading ? t('login.login') : t('login.loggingIn') }}
+                                </el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+                    <p class="security-hint"><i-ep-lock /> {{ t('login.securityHint') }}</p>
+                </main>
             </div>
         </transition>
+
+        <a class="project-link" href="https://github.com/wannanbigpig" target="_blank" rel="noopener noreferrer" :title="t('login.authorGithub')">
+            <i-lucide-github />
+            <span>{{ t('login.openSourceProject') }}</span>
+        </a>
     </div>
 </template>
 
@@ -135,6 +158,9 @@ const DEFAULT_PASSWORD = import.meta.env.DEV ? (import.meta.env.VITE_DEV_PASSWOR
 // ==================== 响应式数据 ====================
 const loginLoading = ref(false)
 const captchaSrc = ref('')
+const captchaLoading = ref(false)
+const captchaFailed = ref(false)
+const loginError = ref('')
 const loginFormRef = ref<FormInstance>()
 const authStore = useAuthStore()
 const settingStore = useSettingStore()
@@ -184,13 +210,18 @@ const validateRules = computed(() => ({
  * 刷新验证码
  */
 const refreshCaptcha = async () => {
+    captchaLoading.value = true
+    captchaFailed.value = false
     try {
         const captcha = await fetchCaptcha()
         captchaSrc.value = captcha.b64s
         loginForm.captchaId = captcha.id
     } catch (error) {
+        captchaFailed.value = true
         Logger.error('获取验证码失败:', error)
         ElMessage.error(t('login.fetchCaptchaFailed'))
+    } finally {
+        captchaLoading.value = false
     }
 }
 
@@ -200,10 +231,13 @@ const refreshCaptcha = async () => {
 const handleLogin = async (formEl: FormInstance | undefined) => {
     if (!formEl) return
 
+    let credentialsSubmitted = false
     try {
         loginLoading.value = true
+        loginError.value = ''
         await formEl.validate()
 
+        credentialsSubmitted = true
         await authStore.loginWithCredentials({
             username: loginForm.username,
             password: loginForm.password,
@@ -224,6 +258,7 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
         const targetPath = normalizeRedirectPath(redirectQuery, authStore.firstPath || '/')
         await router.push(targetPath)
     } catch (error) {
+        if (credentialsSubmitted) loginError.value = t('login.loginFailed')
         Logger.error('登录失败:', error)
         await refreshCaptcha()
         loginForm.captcha = ''
@@ -246,13 +281,16 @@ interface Blob {
     phase: number
     maxSpeed: number
     minSpeed: number
+    depth: number
 }
 
 const initCanvasBg = () => {
     const canvas = canvasRef.value
     if (!canvas) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    const stage = canvas.parentElement
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     let w = 0
@@ -271,27 +309,65 @@ const initCanvasBg = () => {
     window.addEventListener('resize', resize)
 
     const rand = (min: number, max: number) => Math.random() * (max - min) + min
+    const pointer = {
+        x: 0,
+        y: 0,
+        targetX: 0,
+        targetY: 0,
+        clientX: w / 2,
+        clientY: h / 2,
+        active: false,
+    }
+    let pointerStyleFrame = 0
+
+    const supportsPointerMotion = window.matchMedia?.('(pointer: fine)').matches ?? false
+    const updatePointer = (event: PointerEvent) => {
+        pointer.clientX = event.clientX
+        pointer.clientY = event.clientY
+        pointer.targetX = (event.clientX / Math.max(w, 1) - 0.5) * 2
+        pointer.targetY = (event.clientY / Math.max(h, 1) - 0.5) * 2
+        pointer.active = true
+        if (pointerStyleFrame) return
+        pointerStyleFrame = requestAnimationFrame(() => {
+            const xRatio = pointer.clientX / Math.max(w, 1)
+            const yRatio = pointer.clientY / Math.max(h, 1)
+            stage?.style.setProperty('--parallax-x', `${((xRatio - 0.5) * 42).toFixed(2)}px`)
+            stage?.style.setProperty('--parallax-y', `${((yRatio - 0.5) * 32).toFixed(2)}px`)
+            pointerStyleFrame = 0
+        })
+    }
+    const resetPointer = () => {
+        pointer.targetX = 0
+        pointer.targetY = 0
+        pointer.active = false
+        stage?.style.setProperty('--parallax-x', '0px')
+        stage?.style.setProperty('--parallax-y', '0px')
+    }
+
+    if (supportsPointerMotion) {
+        window.addEventListener('pointermove', updatePointer, { passive: true })
+        window.addEventListener('pointerleave', resetPointer)
+        window.addEventListener('blur', resetPointer)
+    }
 
     const lightColors = [
         { r: 96, g: 165, b: 250 },
-        { r: 52, g: 211, b: 153 },
-        { r: 167, g: 139, b: 250 },
-        { r: 251, g: 146, b: 60 },
         { r: 56, g: 189, b: 248 },
+        { r: 129, g: 140, b: 248 },
+        { r: 147, g: 197, b: 253 },
     ]
 
     const darkColors = [
-        { r: 59, g: 130, b: 246 },
-        { r: 139, g: 92, b: 246 },
-        { r: 236, g: 72, b: 153 },
-        { r: 34, g: 197, b: 94 },
-        { r: 99, g: 102, b: 241 },
+        { r: 37, g: 99, b: 235 },
+        { r: 79, g: 70, b: 229 },
+        { r: 14, g: 165, b: 233 },
+        { r: 124, g: 58, b: 237 },
     ]
 
     const createBlobs = (colors: typeof lightColors): Blob[] =>
         colors.map((color) => {
-            const minSpeed = rand(60, 120)
-            const maxSpeed = rand(180, 350)
+            const minSpeed = rand(12, 24)
+            const maxSpeed = rand(30, 58)
             const angle = rand(0, Math.PI * 2)
             const initSpeed = rand(minSpeed, maxSpeed)
             return {
@@ -304,6 +380,7 @@ const initCanvasBg = () => {
                 phase: rand(0, Math.PI * 2),
                 maxSpeed,
                 minSpeed,
+                depth: rand(0.35, 1),
             }
         })
 
@@ -317,6 +394,8 @@ const initCanvasBg = () => {
 
         const dark = document.documentElement.classList.contains('dark')
         const blobs = dark ? darkBlobs : lightBlobs
+        pointer.x += (pointer.targetX - pointer.x) * 0.085
+        pointer.y += (pointer.targetY - pointer.y) * 0.085
 
         ctx.clearRect(0, 0, w, h)
 
@@ -396,22 +475,32 @@ const initCanvasBg = () => {
             }
         }
 
-        // ==================== 3. 绘制渲染阶段 ====================
         for (const blob of blobs) {
-            // 更新相位用于半径呼吸
             blob.phase += dt * 0.5
-
-            // 半径呼吸
             const r = blob.radius * (1 + Math.sin(elapsed * 0.4 + blob.phase) * 0.08)
+            let renderX = blob.cx + pointer.x * 88 * blob.depth
+            let renderY = blob.cy + pointer.y * 66 * blob.depth
 
-            const alpha = dark ? 0.2 : 0.5
-            const grad = ctx.createRadialGradient(blob.cx, blob.cy, 0, blob.cx, blob.cy, r)
+            if (pointer.active) {
+                const dx = renderX - pointer.clientX
+                const dy = renderY - pointer.clientY
+                const distance = Math.hypot(dx, dy)
+                const influenceRadius = 320
+                if (distance > 0 && distance < influenceRadius) {
+                    const force = (1 - distance / influenceRadius) * 36 * blob.depth
+                    renderX += (dx / distance) * force
+                    renderY += (dy / distance) * force
+                }
+            }
+
+            const alpha = dark ? 0.2 : 0.34
+            const grad = ctx.createRadialGradient(renderX, renderY, 0, renderX, renderY, r)
             grad.addColorStop(0, `rgba(${blob.color.r},${blob.color.g},${blob.color.b},${alpha})`)
             grad.addColorStop(0.45, `rgba(${blob.color.r},${blob.color.g},${blob.color.b},${alpha * 0.35})`)
             grad.addColorStop(1, `rgba(${blob.color.r},${blob.color.g},${blob.color.b},0)`)
 
             ctx.beginPath()
-            ctx.arc(blob.cx, blob.cy, r, 0, Math.PI * 2)
+            ctx.arc(renderX, renderY, r, 0, Math.PI * 2)
             ctx.fillStyle = grad
             ctx.fill()
         }
@@ -421,10 +510,16 @@ const initCanvasBg = () => {
 
     animId = requestAnimationFrame(draw)
 
-    onBeforeUnmount(() => {
+    return () => {
         cancelAnimationFrame(animId)
+        cancelAnimationFrame(pointerStyleFrame)
         window.removeEventListener('resize', resize)
-    })
+        if (supportsPointerMotion) {
+            window.removeEventListener('pointermove', updatePointer)
+            window.removeEventListener('pointerleave', resetPointer)
+            window.removeEventListener('blur', resetPointer)
+        }
+    }
 }
 
 // ==================== 生命周期 ====================
@@ -432,9 +527,11 @@ const triggerClick = (e: Event) => {
     ;(e.currentTarget as HTMLElement)?.click()
 }
 
+let disposeCanvasBg: (() => void) | undefined
+
 onBeforeMount(refreshCaptcha)
 onMounted(() => {
-    initCanvasBg()
+    disposeCanvasBg = initCanvasBg()
 
     // 预加载首页路由组件，图表库由首页按需加载，避免登录页提前拉取大包。
     const prefetch = () => {
@@ -447,169 +544,181 @@ onMounted(() => {
         setTimeout(prefetch, 2000)
     }
 })
+onBeforeUnmount(() => disposeCanvasBg?.())
 </script>
 
 <style scoped lang="scss">
+/* 登录页保持单一任务焦点，动态效果只放在背景层，避免表单跟随鼠标晃动。 */
 .login-container {
+    --parallax-x: 0px;
+    --parallax-y: 0px;
     position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
+    isolation: isolate;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100vh;
+    padding: 72px 24px 48px;
+    overflow: hidden auto;
     background: #f4f7fb;
     background-image:
-        radial-gradient(at 0% 0%, hsla(210, 100%, 95%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(200, 100%, 90%, 1) 0, transparent 50%),
-        radial-gradient(at 50% 100%, hsla(220, 100%, 95%, 1) 0, transparent 50%);
+        radial-gradient(circle at 8% 8%, rgba(125, 211, 252, 0.24), transparent 32%), radial-gradient(circle at 90% 18%, rgba(167, 139, 250, 0.17), transparent 30%),
+        radial-gradient(circle at 48% 100%, rgba(110, 231, 183, 0.18), transparent 34%);
 }
 
-/* canvas 动画背景 */
 .bg-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
     width: 100%;
     height: 100%;
-    z-index: 0;
+    pointer-events: none;
 }
 
-/* 右上角工具栏 */
+.login-container::before {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    content: '';
+    pointer-events: none;
+}
+
+/* 与项目文档站首页保持同一套细网格和视差语言，不设置追随光标的独立光斑。 */
+.login-container::before {
+    opacity: 0.3;
+    background-image: linear-gradient(rgba(147, 197, 253, 0.36) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 197, 253, 0.36) 1px, transparent 1px);
+    background-position: var(--parallax-x) var(--parallax-y);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, #000 0, transparent 70%);
+    transition: background-position 0.18s ease-out;
+}
+
 .login-toolbar {
-    position: absolute;
-    top: 24px;
+    position: fixed;
+    top: 22px;
     right: 24px;
     z-index: 10;
     display: flex;
-    gap: 8px;
+    gap: var(--xl-space-2);
+}
 
-    .toolbar-btn {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        cursor: pointer;
-        color: #64748b;
-        background: rgba(255, 255, 255, 0.6);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        transition: all 0.25s ease;
+.login-toolbar .toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    border-radius: 11px;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: 0 6px 18px rgba(30, 64, 175, 0.08);
+    cursor: pointer;
+    backdrop-filter: blur(16px);
+    transition:
+        color 0.2s,
+        border-color 0.2s,
+        background-color 0.2s;
 
-        &:hover {
-            color: var(--el-color-primary);
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transform: translateY(-1px);
-        }
+    &:hover,
+    &:focus-visible {
+        outline: none;
+        color: var(--el-color-primary);
+        border-color: rgba(64, 158, 255, 0.4);
+        background: rgba(255, 255, 255, 0.92);
     }
 }
 
-.author-link {
+.login-shell {
+    position: relative;
+    z-index: 2;
+    width: min(420px, 100%);
+}
+
+.login-shell::before {
     position: absolute;
-    bottom: 30px;
-    right: 40px;
-    z-index: 10;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-    &:hover {
-        transform: scale(1.15);
-
-        .avatar {
-            animation-play-state: paused;
-        }
-    }
-
-    .avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        border: 3px solid rgba(255, 255, 255, 0.8);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        object-fit: cover;
-        animation: spin-avatar 6s linear infinite;
-    }
-}
-
-@keyframes spin-avatar {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(-360deg);
-    }
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: 500px;
+    height: 500px;
+    border: 1px solid rgba(22, 119, 255, 0.12);
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 76px rgba(22, 119, 255, 0.024),
+        0 0 0 152px rgba(22, 119, 255, 0.014);
+    content: '';
+    pointer-events: none;
+    transform: translate(calc(-50% + var(--parallax-x)), calc(-50% + var(--parallax-y)));
+    transition: transform 0.22s ease-out;
 }
 
 .login-card {
-    position: relative;
-    z-index: 1;
-    width: 420px;
-    padding: 50px 40px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: 28px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 44px 38px 28px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.78);
     box-shadow:
-        0 25px 50px rgba(0, 0, 0, 0.08),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-    transition:
-        transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-        box-shadow 0.4s ease;
-
-    &:hover {
-        transform: translateY(-5px);
-        box-shadow:
-            0 35px 60px rgba(0, 0, 0, 0.1),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-    }
+        0 26px 70px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(24px) saturate(1.12);
 }
 
 .login-header {
+    margin-bottom: 32px;
     text-align: center;
-    margin-bottom: 36px;
 
     .logo-wrapper {
-        width: 72px;
-        height: 72px;
-        margin: 0 auto 24px;
-        background: #ffffff;
-        border-radius: 20px;
-        padding: 12px;
-        box-shadow: 0 10px 24px rgba(0, 102, 255, 0.1);
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.3s ease;
-
-        &:hover {
-            transform: scale(1.05) rotate(-5deg);
-        }
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 18px;
+        padding: 11px;
+        border: 1px solid rgba(255, 255, 255, 0.82);
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 12px 28px rgba(37, 99, 235, 0.13);
 
         img {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
         }
     }
 
-    .app-title {
-        font-size: 26px;
-        font-weight: 800;
-        color: #1e293b;
+    h1 {
         margin: 0 0 6px;
-        letter-spacing: 0.5px;
+        color: #172033;
+        font-size: 26px;
+        font-weight: 750;
+        line-height: 1.35;
+        letter-spacing: 0.02em;
     }
 
     .app-subtitle {
-        font-size: 14px;
-        color: #64748b;
         margin: 0;
-        letter-spacing: 1px;
+        color: #64748b;
+        font-size: var(--xl-font-sm);
+        line-height: 1.6;
+        letter-spacing: 0.08em;
     }
 }
 
+.login-error {
+    margin-bottom: var(--xl-space-4);
+}
+
 .login-form {
+    :deep(.el-form-item) {
+        margin-bottom: 20px;
+    }
+
     :deep(.el-form-item__label) {
         position: absolute;
         width: 1px;
@@ -619,64 +728,53 @@ onMounted(() => {
         overflow: hidden;
         clip: rect(0, 0, 0, 0);
         white-space: nowrap;
-        border-width: 0;
+        border: 0;
     }
 
     :deep(.el-input__wrapper) {
-        background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-        border-radius: 14px;
-        padding: 0 18px;
-        height: 52px;
-        transition: all 0.3s ease;
-        border: 1px solid transparent;
+        height: 50px;
+        padding: 0 16px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.035);
+        transition:
+            border-color 0.2s,
+            box-shadow 0.2s;
 
         &.is-focus,
         &:hover {
-            box-shadow: 0 8px 20px rgba(58, 163, 255, 0.1);
-            border-color: rgba(58, 163, 255, 0.4);
-            background: #ffffff;
+            border-color: rgba(64, 158, 255, 0.55);
+            box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
         }
     }
 
     .input-icon {
-        font-size: 18px;
-        color: #94a3b8;
-        transition: color 0.3s;
-    }
-
-    :deep(.el-input__wrapper.is-focus) .input-icon {
-        color: var(--el-color-primary);
+        color: var(--el-text-color-placeholder);
     }
 
     .captcha-wrapper {
         display: flex;
-        gap: 16px;
         width: 100%;
+        gap: var(--xl-space-3);
 
         .captcha-input {
+            min-width: 0;
             flex: 1;
         }
 
         .captcha-img {
-            width: 140px;
-            height: 52px;
-            background: #ffffff;
-            border-radius: 14px;
-            overflow: hidden;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid transparent;
-
-            &:hover {
-                opacity: 0.9;
-                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-                transform: translateY(-1px);
-            }
+            flex: 0 0 auto;
+            width: 132px;
+            height: 50px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 13px;
+            background: rgba(255, 255, 255, 0.78);
+            cursor: pointer;
 
             img {
                 width: 100%;
@@ -684,107 +782,235 @@ onMounted(() => {
                 object-fit: fill;
             }
 
+            &:hover,
+            &:focus-visible {
+                outline: none;
+                border-color: rgba(64, 158, 255, 0.55);
+                box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+            }
+
+            &.is-error {
+                border-color: var(--el-color-danger-light-5);
+                color: var(--el-color-danger);
+            }
+
             .captcha-loading {
-                font-size: 12px;
-                color: #94a3b8;
-                letter-spacing: 2px;
+                padding: 0 var(--xl-space-2);
+                color: inherit;
+                font-size: var(--xl-font-xs);
+                text-align: center;
             }
         }
     }
 
     .submit-item {
-        margin-top: 36px;
+        margin-top: 30px;
         margin-bottom: 0;
     }
 
     .submit-btn {
         width: 100%;
-        height: 52px;
-        font-size: 16px;
+        height: 50px;
+        border: 0;
+        border-radius: 13px;
+        background: linear-gradient(135deg, #4ca8ff, #1677ff);
         font-weight: 600;
-        letter-spacing: 2px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, #3aa3ff, #005ce6);
-        border: none;
-        box-shadow: 0 10px 24px rgba(0, 102, 255, 0.25);
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        letter-spacing: 0.08em;
+        box-shadow: 0 12px 24px rgba(22, 119, 255, 0.22);
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
 
         &:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 102, 255, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 15px 28px rgba(22, 119, 255, 0.28);
         }
 
         &:active {
             transform: translateY(0);
-            box-shadow: 0 5px 15px rgba(0, 102, 255, 0.2);
         }
     }
 }
 
-/* 暗色模式适配 */
-html.dark {
+.security-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--xl-space-1);
+    margin: 18px 0 0;
+    color: #94a3b8;
+    font-size: var(--xl-font-xs);
+}
+
+.project-link {
+    position: fixed;
+    right: 28px;
+    bottom: 24px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.46);
+    font-size: var(--xl-font-xs);
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+
+    &:hover,
+    &:focus-visible {
+        outline: none;
+        color: var(--el-color-primary);
+    }
+}
+
+:global(html.dark .login-container) {
+    background: #0b1220;
+    background-image:
+        radial-gradient(circle at 8% 8%, rgba(37, 99, 235, 0.2), transparent 34%), radial-gradient(circle at 90% 18%, rgba(124, 58, 237, 0.16), transparent 31%),
+        radial-gradient(circle at 48% 100%, rgba(5, 150, 105, 0.12), transparent 36%);
+}
+
+:global(html.dark .login-container::before) {
+    opacity: 0.16;
+    background-image: linear-gradient(rgba(96, 165, 250, 0.28) 1px, transparent 1px), linear-gradient(90deg, rgba(96, 165, 250, 0.28) 1px, transparent 1px);
+}
+
+:global(html.dark .login-shell::before) {
+    border-color: rgba(96, 165, 250, 0.1);
+    box-shadow:
+        0 0 0 76px rgba(59, 130, 246, 0.018),
+        0 0 0 152px rgba(59, 130, 246, 0.01);
+}
+
+:global(html.dark .login-toolbar .toolbar-btn) {
+    color: #a8b2c3;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(20, 30, 48, 0.64);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+:global(html.dark .login-toolbar .toolbar-btn:hover),
+:global(html.dark .login-toolbar .toolbar-btn:focus-visible) {
+    color: #70b7ff;
+    border-color: rgba(96, 165, 250, 0.38);
+    background: rgba(26, 39, 62, 0.88);
+}
+
+:global(html.dark .login-card) {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(17, 25, 40, 0.72);
+    box-shadow:
+        0 28px 80px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(26px) saturate(1.05);
+}
+
+:global(html.dark .login-header h1) {
+    color: #eef3fa;
+}
+
+:global(html.dark .login-header .app-subtitle) {
+    color: #9aa8bc;
+}
+
+:global(html.dark .login-header .logo-wrapper) {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+:global(html.dark .login-form .el-input__wrapper) {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(9, 16, 29, 0.7);
+    box-shadow: none;
+}
+
+:global(html.dark .login-form .el-input__wrapper.is-focus),
+:global(html.dark .login-form .el-input__wrapper:hover) {
+    border-color: rgba(96, 165, 250, 0.66);
+    background: rgba(10, 20, 36, 0.88);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.13);
+}
+
+:global(html.dark .login-form .el-input__inner) {
+    color: #e8eef8;
+}
+
+:global(html.dark .login-form .captcha-wrapper .captcha-img) {
+    color: #a8b2c3;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(9, 16, 29, 0.7);
+}
+
+:global(html.dark .security-hint) {
+    color: #75839a;
+}
+
+:global(html.dark .project-link) {
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.46);
+}
+
+@media (max-width: 520px) {
     .login-container {
-        background: #0f172a;
-        background-image:
-            radial-gradient(at 0% 0%, hsla(220, 100%, 15%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(250, 100%, 15%, 1) 0, transparent 50%),
-            radial-gradient(at 50% 100%, hsla(200, 100%, 10%, 1) 0, transparent 50%);
+        align-items: flex-start;
+        padding: 74px 16px 24px;
     }
 
-    .login-toolbar .toolbar-btn {
-        color: #94a3b8;
-        background: rgba(30, 41, 59, 0.6);
-        border-color: rgba(255, 255, 255, 0.08);
-
-        &:hover {
-            color: var(--el-color-primary);
-            background: rgba(30, 41, 59, 0.9);
-        }
+    .login-toolbar {
+        top: 16px;
+        right: 16px;
     }
 
     .login-card {
-        background: rgba(30, 41, 59, 0.6);
-        border-color: rgba(255, 255, 255, 0.05);
-        box-shadow:
-            0 25px 50px rgba(0, 0, 0, 0.4),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        padding: 30px 24px 24px;
+        border-radius: 20px;
     }
 
     .login-header {
+        margin-bottom: 26px;
+
+        h1 {
+            font-size: 24px;
+        }
+
         .logo-wrapper {
-            background: rgba(15, 23, 42, 0.5);
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
-        }
-        .app-title {
-            color: #f8fafc;
-        }
-        .app-subtitle {
-            color: #94a3b8;
+            width: 58px;
+            height: 58px;
+            margin-bottom: 16px;
+            border-radius: 16px;
         }
     }
 
-    .login-form {
-        :deep(.el-input__wrapper) {
-            background: rgba(15, 23, 42, 0.6);
-            box-shadow: none;
-            border-color: rgba(255, 255, 255, 0.05);
+    .login-form .captcha-wrapper {
+        gap: var(--xl-space-2);
 
-            input {
-                color: #f8fafc;
-            }
-
-            &.is-focus,
-            &:hover {
-                background: rgba(15, 23, 42, 0.8);
-                border-color: var(--el-color-primary);
-                box-shadow: 0 0 0 1px var(--el-color-primary);
-            }
+        .captcha-img {
+            width: 108px;
         }
+    }
 
-        .captcha-wrapper .captcha-img {
-            background: rgba(15, 23, 42, 0.6);
-            border-color: rgba(255, 255, 255, 0.05);
-            box-shadow: none;
-        }
+    .project-link {
+        right: auto;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg-canvas {
+        display: none;
+    }
+
+    .login-shell {
+        animation: none !important;
+    }
+
+    .login-toolbar .toolbar-btn,
+    .login-form :deep(.el-input__wrapper) {
+        transition: none;
     }
 }
 </style>

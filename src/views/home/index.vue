@@ -12,8 +12,20 @@
                                 <el-tag type="info" effect="plain">{{ t('home.loginTime') }}: {{ loginTime }}</el-tag>
                                 <el-tag type="info" effect="plain">{{ t('home.lastLoginIp') }}: {{ lastLoginIP }}</el-tag>
                             </div>
+                            <el-alert v-if="personalFailed && !personalLoading" class="welcome-state" type="error" :title="t('home.dashboard.personalLoadFailed')" :closable="false" show-icon>
+                                <template #default>
+                                    <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
+                                </template>
+                            </el-alert>
+                            <div v-else class="personal-summary">
+                                <div v-for="item in personalSummaryItems" :key="item.key" class="personal-summary__item">
+                                    <span>{{ item.label }}</span>
+                                    <el-skeleton-item v-if="personalLoading" variant="text" class="summary-skeleton" />
+                                    <strong v-else>{{ item.value }}</strong>
+                                </div>
+                            </div>
                         </div>
-                        <el-button v-permission:or="['dashboard:overview', 'dashboard:statistics']" type="primary" :loading="dashboardLoading" @click="refreshDashboard">
+                        <el-button type="primary" :loading="dashboardLoading || personalLoading" @click="refreshDashboard">
                             <template #icon>
                                 <i-ep-refresh-right />
                             </template>
@@ -24,147 +36,206 @@
             </el-col>
         </el-row>
 
-        <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
-            <el-col v-for="item in metricCards" :key="item.key" :xs="24" :sm="12" :lg="6">
-                <el-card shadow="never" class="metric-card">
-                    <div class="metric-main">
-                        <div class="metric-icon" :class="item.tone">
-                            <i-ep-user-filled v-if="item.key === 'users'" />
-                            <i-ep-data-analysis v-else-if="item.key === 'requests'" />
-                            <i-ep-warning-filled v-else-if="item.key === 'errors'" />
-                            <i-ep-circle-check-filled v-else-if="item.key === 'tasks'" />
-                        </div>
-                        <el-statistic :title="item.title" :value="item.value" :suffix="item.suffix" />
-                    </div>
-                    <div class="metric-footer">
-                        <span>{{ item.compare }}</span>
-                        <el-tag :type="item.tagType" size="small">{{ item.change }}</el-tag>
-                    </div>
-                </el-card>
+        <el-row :gutter="16" class="dashboard-row personal-work-row">
+            <el-col :xs="24" :lg="16">
+                <recent-activity-panel
+                    :items="activities"
+                    :loading="personalLoading"
+                    :error="personalFailed"
+                    :can-view-list="true"
+                    :can-view-detail="true"
+                    @view="openActivity"
+                    @view-all="openActivityList"
+                    @retry="refreshDashboard"
+                />
             </el-col>
-        </el-row>
-
-        <el-row v-if="hasPermission('dashboard:statistics') && dashboardStatistics?.trend.days.length" :gutter="16" class="dashboard-row">
-            <el-col :span="24">
-                <el-card shadow="never">
-                    <template #header>
-                        <span>{{ t('home.dashboard.trend.title') }}</span>
-                    </template>
-                    <div ref="trendChartRef" style="height: 300px"></div>
-                </el-card>
-            </el-col>
-        </el-row>
-
-        <el-row v-if="hasPermission('dashboard:statistics') && hasAdvancedStats" :gutter="16" class="dashboard-row">
-            <el-col :xs="24" :md="12" :lg="8">
-                <el-card shadow="never" class="stat-card">
-                    <template #header>
-                        <div class="card-header">
-                            <span>{{ t('home.dashboard.responseTime.title') }}</span>
-                            <span v-if="responseTimeAvgText" class="card-header-extra">{{ responseTimeAvgText }}</span>
-                        </div>
-                    </template>
-                    <div v-if="hasResponseTime" ref="responseTimeChartRef" style="height: 280px"></div>
-                    <el-empty v-else :description="t('home.dashboard.responseTime.empty')">
-                        <template #image>
-                            <el-icon size="60" color="var(--el-text-color-placeholder)">
-                                <i-lucide-activity />
-                            </el-icon>
-                        </template>
-                    </el-empty>
-                </el-card>
-            </el-col>
-            <el-col :xs="24" :md="12" :lg="8">
-                <el-card shadow="never" class="stat-card">
-                    <template #header>
-                        <span>{{ t('home.dashboard.errorCodes.title') }}</span>
-                    </template>
-                    <div v-if="hasErrorCodes" ref="errorCodesChartRef" style="height: 280px"></div>
-                    <el-empty v-else :description="t('home.dashboard.errorCodes.empty')">
-                        <template #image>
-                            <el-icon size="60" color="var(--el-text-color-placeholder)">
-                                <i-lucide-server-crash />
-                            </el-icon>
-                        </template>
-                    </el-empty>
-                </el-card>
-            </el-col>
-            <el-col :xs="24" :md="24" :lg="8">
-                <el-card shadow="never" class="stat-card">
-                    <template #header>
-                        <span>{{ t('home.dashboard.storage.title') }}</span>
-                    </template>
-                    <div v-if="hasStorage" class="storage-block">
-                        <div class="storage-summary">
-                            <div class="storage-summary-row">
-                                <span class="storage-summary-label">{{ t('home.dashboard.storage.totalCount') }}</span>
-                                <span class="storage-summary-value">{{ storageStats!.total_count }}</span>
-                            </div>
-                            <div class="storage-summary-row">
-                                <span class="storage-summary-label">{{ t('home.dashboard.storage.totalSize') }}</span>
-                                <span class="storage-summary-value">{{ formatFileSize(storageStats!.total_size_bytes) }}</span>
-                            </div>
-                        </div>
-                        <div class="storage-bytype">
-                            <div class="storage-bytype-title">{{ t('home.dashboard.storage.byType') }}</div>
-                            <div v-for="item in storageByType" :key="item.file_type" class="storage-bytype-row">
-                                <div class="storage-bytype-label">
-                                    <el-tag size="small" type="info">{{ item.label }}</el-tag>
-                                    <span class="storage-bytype-count">{{ item.count }}</span>
-                                </div>
-                                <el-progress class="storage-bytype-bar" :percentage="item.percentage" :stroke-width="8" :show-text="false" />
-                                <span class="storage-bytype-size">{{ formatFileSize(item.size_bytes) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <el-empty v-else :description="t('home.dashboard.storage.empty')">
-                        <template #image>
-                            <el-icon size="60" color="var(--el-text-color-placeholder)">
-                                <i-lucide-hard-drive />
-                            </el-icon>
-                        </template>
-                    </el-empty>
-                </el-card>
+            <el-col :xs="24" :lg="8" class="todo-column">
+                <todo-card />
             </el-col>
         </el-row>
 
         <el-row :gutter="16" class="dashboard-row">
             <el-col :span="24">
-                <el-card shadow="never">
+                <el-card shadow="never" class="shortcut-card">
                     <template #header>
                         <div class="card-header">
-                            <span>{{ t('home.dashboard.shortcuts') }}</span>
+                            <div>
+                                <div class="card-title">{{ t('home.dashboard.shortcuts') }}</div>
+                                <div class="card-subtitle">{{ t('home.dashboard.shortcutSubtitle') }}</div>
+                            </div>
                         </div>
                     </template>
                     <div class="shortcut-grid">
-                        <el-button v-for="item in shortcuts" :key="item.key" plain class="shortcut-btn" @click="goShortcut(item.path)">
-                            <template #icon>
+                        <button v-for="item in shortcuts" :key="item.key" type="button" class="shortcut-btn" @click="goShortcut(item.path)">
+                            <span class="shortcut-icon">
                                 <i-ep-user v-if="item.key === 'users'" />
                                 <i-ep-lock v-else-if="item.key === 'roles'" />
                                 <i-ep-menu v-else-if="item.key === 'menus'" />
                                 <i-ep-document v-else-if="item.key === 'logs'" />
+                                <i-ep-list v-else-if="item.key === 'todo'" />
                                 <i-ep-setting v-else-if="item.key === 'config'" />
                                 <i-ep-tickets v-else-if="item.key === 'tasks'" />
                                 <i-ep-user-filled v-else-if="item.key === 'profile'" />
-                            </template>
+                            </span>
                             <span>{{ item.label }}</span>
-                        </el-button>
+                            <i-ep-arrow-right class="shortcut-arrow" />
+                        </button>
                     </div>
                 </el-card>
             </el-col>
         </el-row>
 
-        <el-row v-if="hasPermission('dashboard:monitor') && dashboardMonitor" :gutter="16" class="dashboard-row">
+        <div v-if="hasPermission('dashboard:overview') || hasPermission('dashboard:statistics')" class="section-heading">
+            <div>
+                <h2>{{ t('home.dashboard.globalTitle') }}</h2>
+                <p>{{ t('home.dashboard.globalSubtitle') }}</p>
+            </div>
+        </div>
+
+        <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
+            <el-col v-if="overviewFailed" :span="24">
+                <el-alert type="error" :title="t('home.dashboard.overviewLoadFailed')" :closable="false" show-icon>
+                    <template #default>
+                        <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
+                    </template>
+                </el-alert>
+            </el-col>
+            <template v-else-if="dashboardLoading && !dashboardOverview">
+                <el-col v-for="item in metricSkeletons" :key="item" :xs="24" :sm="12" :lg="6">
+                    <el-card shadow="never" class="metric-card">
+                        <el-skeleton :rows="2" animated />
+                    </el-card>
+                </el-col>
+            </template>
+            <template v-else>
+                <el-col v-for="item in metricCards" :key="item.key" :xs="24" :sm="12" :lg="6">
+                    <el-card shadow="never" class="metric-card">
+                        <div class="metric-main">
+                            <div class="metric-icon" :class="item.tone">
+                                <i-ep-user-filled v-if="item.key === 'users'" />
+                                <i-ep-data-analysis v-else-if="item.key === 'requests'" />
+                                <i-ep-warning-filled v-else-if="item.key === 'errors'" />
+                                <i-ep-circle-check-filled v-else-if="item.key === 'tasks'" />
+                            </div>
+                            <el-statistic :title="item.title" :value="item.value" :suffix="item.suffix" />
+                        </div>
+                        <div class="metric-footer">
+                            <span>{{ item.compare }}</span>
+                            <el-tag :type="item.tagType" size="small">{{ item.change }}</el-tag>
+                        </div>
+                    </el-card>
+                </el-col>
+            </template>
+            <el-col v-if="!dashboardLoading && !overviewFailed && metricCards.length === 0" :span="24">
+                <el-card shadow="never" class="empty-state-card">
+                    <el-empty :description="t('home.dashboard.noMetrics')" :image-size="72" />
+                </el-card>
+            </el-col>
+        </el-row>
+
+        <el-row v-if="hasPermission('dashboard:statistics') && statisticsFailed" :gutter="16" class="dashboard-row">
             <el-col :span="24">
-                <el-card shadow="never">
+                <el-alert type="error" :title="t('home.dashboard.statisticsLoadFailed')" :closable="false" show-icon>
+                    <template #default>
+                        <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
+                    </template>
+                </el-alert>
+            </el-col>
+        </el-row>
+
+        <template v-if="hasPermission('dashboard:statistics') && !statisticsFailed">
+            <el-row :gutter="16" class="dashboard-row statistics-primary-row">
+                <el-col :xs="24" :lg="16">
+                    <el-card shadow="never" class="stat-card stat-card--primary">
+                        <template #header>
+                            <div class="card-header">
+                                <span>{{ t('home.dashboard.trend.title') }}</span>
+                                <span class="card-header-extra">{{ t('home.dashboard.trend.subtitle') }}</span>
+                            </div>
+                        </template>
+                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="6" animated />
+                        <div v-else-if="statisticsTrendDays.length" ref="trendChartRef" class="chart chart--large"></div>
+                        <el-empty v-else :description="t('home.dashboard.trend.empty')" :image-size="72" />
+                    </el-card>
+                </el-col>
+                <el-col :xs="24" :lg="8" class="responsive-column">
+                    <el-card shadow="never" class="stat-card stat-card--primary">
+                        <template #header>
+                            <div class="card-header">
+                                <span>{{ t('home.dashboard.responseTime.title') }}</span>
+                                <span v-if="responseTimeAvgText" class="card-header-extra">{{ responseTimeAvgText }}</span>
+                            </div>
+                        </template>
+                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="6" animated />
+                        <div v-else-if="hasResponseTime" ref="responseTimeChartRef" class="chart chart--large"></div>
+                        <el-empty v-else :description="t('home.dashboard.responseTime.empty')" :image-size="72" />
+                    </el-card>
+                </el-col>
+            </el-row>
+
+            <el-row :gutter="16" class="dashboard-row">
+                <el-col :xs="24" :md="12">
+                    <el-card shadow="never" class="stat-card">
+                        <template #header>
+                            <span>{{ t('home.dashboard.errorCodes.title') }}</span>
+                        </template>
+                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="5" animated />
+                        <div v-else-if="hasErrorCodes" ref="errorCodesChartRef" class="chart"></div>
+                        <el-empty v-else :description="t('home.dashboard.errorCodes.empty')" :image-size="72" />
+                    </el-card>
+                </el-col>
+                <el-col :xs="24" :md="12" class="responsive-column">
+                    <el-card shadow="never" class="stat-card">
+                        <template #header>
+                            <span>{{ t('home.dashboard.storage.title') }}</span>
+                        </template>
+                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="5" animated />
+                        <div v-else-if="hasStorage" class="storage-block">
+                            <div class="storage-summary">
+                                <div class="storage-summary-row">
+                                    <span class="storage-summary-label">{{ t('home.dashboard.storage.totalCount') }}</span>
+                                    <span class="storage-summary-value">{{ storageStats!.total_count }}</span>
+                                </div>
+                                <div class="storage-summary-row">
+                                    <span class="storage-summary-label">{{ t('home.dashboard.storage.totalSize') }}</span>
+                                    <span class="storage-summary-value">{{ formatFileSize(storageStats!.total_size_bytes) }}</span>
+                                </div>
+                            </div>
+                            <div class="storage-bytype">
+                                <div class="storage-bytype-title">{{ t('home.dashboard.storage.byType') }}</div>
+                                <div v-for="item in storageByType" :key="item.file_type" class="storage-bytype-row">
+                                    <div class="storage-bytype-label">
+                                        <el-tag size="small" type="info">{{ item.label }}</el-tag>
+                                        <span class="storage-bytype-count">{{ item.count }}</span>
+                                    </div>
+                                    <el-progress class="storage-bytype-bar" :percentage="item.percentage" :stroke-width="8" :show-text="false" />
+                                    <span class="storage-bytype-size">{{ formatFileSize(item.size_bytes) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <el-empty v-else :description="t('home.dashboard.storage.empty')" :image-size="72" />
+                    </el-card>
+                </el-col>
+            </el-row>
+        </template>
+
+        <el-row v-if="hasPermission('dashboard:monitor')" :gutter="16" class="dashboard-row">
+            <el-col :span="24">
+                <el-card shadow="never" class="monitor-card">
                     <template #header>
                         <div class="card-header">
                             <span>{{ t('home.dashboard.serverMonitor') }}</span>
-                            <el-tag type="info" size="small">{{ formatUptime(dashboardMonitor.host?.uptime || 0) }}</el-tag>
+                            <el-tag v-if="dashboardMonitor" type="info" size="small">{{ formatUptime(dashboardMonitor.host?.uptime || 0) }}</el-tag>
                         </div>
                     </template>
-                    <el-row :gutter="16">
-                        <el-col :span="6">
+                    <el-skeleton v-if="monitorLoading && !dashboardMonitor" :rows="4" animated />
+                    <el-alert v-else-if="monitorFailed" type="error" :title="t('home.dashboard.monitorLoadFailed')" :closable="false" show-icon>
+                        <template #default>
+                            <el-button link type="primary" @click="fetchMonitor">{{ t('home.dashboard.retry') }}</el-button>
+                        </template>
+                    </el-alert>
+                    <el-row v-else-if="dashboardMonitor" :gutter="16">
+                        <el-col :xs="12" :md="6">
                             <div class="monitor-stat">
                                 <div class="monitor-stat-label">{{ t('system.monitor.cpu') }}</div>
                                 <el-progress
@@ -176,7 +247,7 @@
                                 <div class="monitor-stat-info">{{ t('system.monitor.cpuCores', { cores: dashboardMonitor.host?.cpu?.cores || 0 }) }}</div>
                             </div>
                         </el-col>
-                        <el-col :span="6">
+                        <el-col :xs="12" :md="6">
                             <div class="monitor-stat">
                                 <div class="monitor-stat-label">{{ t('system.monitor.memory') }}</div>
                                 <el-progress
@@ -188,7 +259,7 @@
                                 <div class="monitor-stat-info">{{ formatBytes(dashboardMonitor.host?.memory?.used || 0) }} / {{ formatBytes(dashboardMonitor.host?.memory?.total || 0) }}</div>
                             </div>
                         </el-col>
-                        <el-col :span="6">
+                        <el-col :xs="12" :md="6">
                             <div class="monitor-stat">
                                 <div class="monitor-stat-label">{{ t('system.monitor.disk') }}</div>
                                 <el-progress
@@ -200,7 +271,7 @@
                                 <div class="monitor-stat-info">{{ formatBytes(dashboardMonitor.host?.disk?.used || 0) }} / {{ formatBytes(dashboardMonitor.host?.disk?.total || 0) }}</div>
                             </div>
                         </el-col>
-                        <el-col :span="6">
+                        <el-col :xs="12" :md="6">
                             <div class="monitor-stat">
                                 <div class="monitor-stat-label">{{ t('system.monitor.load') }}</div>
                                 <div class="monitor-load-grid">
@@ -220,22 +291,8 @@
                             </div>
                         </el-col>
                     </el-row>
+                    <el-empty v-else :description="t('home.dashboard.monitorEmpty')" :image-size="72" />
                 </el-card>
-            </el-col>
-        </el-row>
-
-        <el-row v-if="hasPermission('dashboard:overview')" :gutter="16" class="dashboard-row">
-            <el-col :span="24">
-                <recent-activity-panel
-                    :items="activities"
-                    :loading="dashboardLoading"
-                    :error="dashboardOverviewFailed"
-                    :can-view-list="canViewRequestLogList"
-                    :can-view-detail="canViewRequestLogDetail"
-                    @view="openActivity"
-                    @view-all="openActivityList"
-                    @retry="refreshDashboard"
-                />
             </el-col>
         </el-row>
     </div>
@@ -246,9 +303,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-import { fetchDashboardOverview, fetchDashboardStatistics, type DashboardActivityItem, type DashboardOverview, type DashboardStatistics } from '@/modules/dashboard/service'
+import { fetchDashboardOverview, fetchDashboardPersonal, fetchDashboardStatistics, type DashboardActivityItem, type DashboardOverview, type DashboardPersonal, type DashboardStatistics } from '@/modules/dashboard/service'
 import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
 import RecentActivityPanel from '@/views/home/components/RecentActivityPanel.vue'
+import TodoCard from '@/views/home/components/TodoCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingStore } from '@/stores/setting'
 import { hasPermission } from '@/utils/auth'
@@ -268,7 +326,13 @@ const username = ref('')
 const loginTime = ref('')
 const lastLoginIP = ref('')
 const dashboardLoading = ref(false)
-const dashboardOverviewFailed = ref(false)
+const personalLoading = ref(false)
+const personalFailed = ref(false)
+const overviewFailed = ref(false)
+const statisticsFailed = ref(false)
+const monitorLoading = ref(false)
+const monitorFailed = ref(false)
+const dashboardPersonal = ref<DashboardPersonal | null>(null)
 const dashboardOverview = ref<DashboardOverview | null>(null)
 const dashboardStatistics = ref<DashboardStatistics | null>(null)
 const dashboardMonitor = ref<DashboardMonitor | null>(null)
@@ -278,6 +342,7 @@ const errorCodesChartRef = ref<HTMLDivElement>()
 let trendChart: DashboardChart | null = null
 let responseTimeChart: DashboardChart | null = null
 let errorCodesChart: DashboardChart | null = null
+const metricSkeletons = [1, 2, 3, 4]
 
 const metricMeta = computed<Record<string, { tone: string; title: string }>>(() => ({
     users: { tone: 'is-blue', title: t('home.dashboard.metrics.users') },
@@ -297,19 +362,29 @@ const metricCards = computed(() => {
         }))
 })
 
-const shortcuts = computed(() => [
-    { key: 'users', label: t('home.dashboard.shortcut.users'), path: '/permission/admin-user-list' },
-    { key: 'roles', label: t('home.dashboard.shortcut.roles'), path: '/permission/role-list' },
-    { key: 'menus', label: t('home.dashboard.shortcut.menus'), path: '/permission/menu-list' },
-    { key: 'logs', label: t('home.dashboard.shortcut.logs'), path: '/log/request-log' },
-    { key: 'config', label: t('home.dashboard.shortcut.config'), path: '/system/config' },
-    { key: 'tasks', label: t('home.dashboard.shortcut.tasks'), path: '/task/center' },
-    { key: 'profile', label: t('home.dashboard.shortcut.profile'), path: '/profile' },
-])
+const shortcuts = computed(() =>
+    [
+        { key: 'users', label: t('home.dashboard.shortcut.users'), path: '/permission/admin-user-list', permissions: ['adminUser:list'] },
+        { key: 'roles', label: t('home.dashboard.shortcut.roles'), path: '/permission/role-list', permissions: ['role:list'] },
+        { key: 'menus', label: t('home.dashboard.shortcut.menus'), path: '/permission/menu-list', permissions: ['menu:list'] },
+        { key: 'logs', label: t('home.dashboard.shortcut.logs'), path: '/my-request-log' },
+        { key: 'todo', label: t('home.dashboard.shortcut.todo'), path: '/todo/list' },
+        { key: 'config', label: t('home.dashboard.shortcut.config'), path: '/system/config', permissions: ['sysConfig:list', 'storage:config', 'requestLog:maskConfig'] },
+        { key: 'tasks', label: t('home.dashboard.shortcut.tasks'), path: '/task/center', permissions: ['task:list'] },
+        { key: 'profile', label: t('home.dashboard.shortcut.profile'), path: '/profile' },
+    ].filter((item) => !item.permissions || item.permissions.some((permission) => hasPermission(permission)))
+)
 
-const activities = computed(() => dashboardOverview.value?.activities || [])
-const canViewRequestLogList = computed(() => hasPermission('requestLog:list'))
-const canViewRequestLogDetail = computed(() => hasPermission('requestLog:detail'))
+const activities = computed(() => (dashboardPersonal.value?.activities || []).slice(0, 5))
+const personalSummaryItems = computed(() => {
+    const summary = dashboardPersonal.value?.summary
+    return [
+        { key: 'operations', label: t('home.dashboard.personal.operations'), value: summary ? summary.today_operations : '-' },
+        { key: 'failures', label: t('home.dashboard.personal.failures'), value: summary ? summary.today_failures : '-' },
+        { key: 'changes', label: t('home.dashboard.personal.changes'), value: summary ? summary.today_changes : '-' },
+        { key: 'notifications', label: t('home.dashboard.personal.notifications'), value: summary ? summary.unread_notifications : '-' },
+    ]
+})
 const trendSeriesNames = computed(() => ({
     requests: t('home.dashboard.trend.series.requests'),
     errors: t('home.dashboard.trend.series.errors'),
@@ -337,8 +412,6 @@ const hasStorage = computed(() => {
     const s = storageStats.value
     return !!s && (Number(s.total_count) > 0 || Number(s.total_size_bytes) > 0)
 })
-const hasAdvancedStats = computed(() => hasResponseTime.value || hasErrorCodes.value || hasStorage.value || !!responseTimeStats.value || !!storageStats.value || errorCodeStats.value.length > 0)
-
 const responseTimeAvgText = computed(() => {
     const avg = responseTimeStats.value?.avg_ms
     if (avg === undefined || avg === null) return ''
@@ -397,12 +470,19 @@ const getProgressColor = (percentage: number): string => {
 }
 
 const fetchMonitor = async () => {
-    if (!isMounted) return
+    if (!isMounted || !hasPermission('dashboard:monitor')) return
+    monitorLoading.value = true
     try {
         const res = await getDashboardMonitor()
-        if (isMounted) dashboardMonitor.value = res
-    } catch {
-        // 获取监控数据失败
+        if (isMounted) {
+            dashboardMonitor.value = res
+            monitorFailed.value = false
+        }
+    } catch (error) {
+        if (isMounted) monitorFailed.value = true
+        Logger.warn('获取服务器监控数据失败', error)
+    } finally {
+        if (isMounted) monitorLoading.value = false
     }
 }
 
@@ -411,7 +491,7 @@ const toDisplayText = (value: unknown, fallback: string) => {
 }
 
 const resolveLoginTime = (value: unknown) => {
-    const fallback = loginTime.value || new Date().toLocaleString()
+    const fallback = loginTime.value || t('home.unknown')
     return toDisplayText(value, fallback)
 }
 
@@ -420,51 +500,73 @@ const syncUserInfo = () => {
     const userInfo = authStore.userInfo || {}
 
     username.value = toDisplayText(userInfo.nickname, toDisplayText(userInfo.username, t('home.unknownUser')))
-    loginTime.value = resolveLoginTime(dashboardOverview.value?.user_login?.last_login || userInfo.last_login)
-    lastLoginIP.value = toDisplayText(dashboardOverview.value?.user_login?.last_ip || userInfo.last_ip, t('home.unknown'))
+    loginTime.value = resolveLoginTime(dashboardPersonal.value?.user_login?.last_login || userInfo.last_login)
+    lastLoginIP.value = toDisplayText(dashboardPersonal.value?.user_login?.last_ip || userInfo.last_ip, t('home.unknown'))
 }
 
 const refreshDashboard = async () => {
     dashboardLoading.value = true
+    personalLoading.value = true
+    overviewFailed.value = false
+    statisticsFailed.value = false
     try {
         const canViewOverview = hasPermission('dashboard:overview')
         const canViewStatistics = hasPermission('dashboard:statistics')
 
-        const overviewPromise = canViewOverview ? fetchDashboardOverview() : Promise.reject(new Error('No overview permission'))
+        const personalPromise = fetchDashboardPersonal()
+        const overviewPromise = canViewOverview ? fetchDashboardOverview() : Promise.resolve(null)
+        const statisticsPromise = canViewStatistics ? fetchDashboardStatistics() : Promise.resolve(null)
 
-        const statisticsPromise = canViewStatistics ? fetchDashboardStatistics() : Promise.reject(new Error('No statistics permission'))
+        const [personalResult, overviewResult, statisticsResult] = await Promise.allSettled([personalPromise, overviewPromise, statisticsPromise])
 
-        const [overviewResult, statisticsResult] = await Promise.allSettled([overviewPromise, statisticsPromise])
+        if (personalResult.status === 'fulfilled') {
+            dashboardPersonal.value = personalResult.value
+            personalFailed.value = false
+        } else {
+            dashboardPersonal.value = null
+            personalFailed.value = true
+            Logger.warn('获取个人仪表盘数据失败', personalResult.reason)
+        }
 
         if (canViewOverview && overviewResult.status === 'fulfilled') {
             dashboardOverview.value = overviewResult.value
-            dashboardOverviewFailed.value = false
+            overviewFailed.value = false
         } else {
             dashboardOverview.value = null
-            dashboardOverviewFailed.value = canViewOverview
             if (canViewOverview && overviewResult.status === 'rejected') {
+                overviewFailed.value = true
                 Logger.warn('获取仪表盘概览失败', overviewResult.reason)
             }
         }
 
         if (canViewStatistics && statisticsResult.status === 'fulfilled') {
             dashboardStatistics.value = statisticsResult.value
+            statisticsFailed.value = false
         } else {
             dashboardStatistics.value = null
             if (canViewStatistics && statisticsResult.status === 'rejected') {
+                statisticsFailed.value = true
                 Logger.warn('获取仪表盘统计失败', statisticsResult.reason)
             }
         }
     } catch (error) {
+        dashboardPersonal.value = null
+        personalFailed.value = true
         dashboardOverview.value = null
-        dashboardOverviewFailed.value = hasPermission('dashboard:overview')
         dashboardStatistics.value = null
+        overviewFailed.value = hasPermission('dashboard:overview')
+        statisticsFailed.value = hasPermission('dashboard:statistics')
         Logger.warn('获取仪表盘数据失败', error)
     } finally {
         dashboardLoading.value = false
+        personalLoading.value = false
     }
     syncUserInfo()
     if (!isMounted) return
+    await rebuildCharts()
+}
+
+const rebuildCharts = async () => {
     trendChart?.dispose()
     trendChart = null
     responseTimeChart?.dispose()
@@ -483,28 +585,49 @@ const goShortcut = (path: string) => {
 }
 
 const openActivityList = () => {
-    if (canViewRequestLogList.value) router.push('/log/request-log')
+    router.push('/my-request-log')
 }
 
 const openActivity = (item: DashboardActivityItem) => {
     const detailId = Number(item.request_log_id || item.key)
-    if (canViewRequestLogDetail.value && Number.isInteger(detailId) && detailId > 0) {
-        router.push({ path: '/log/request-log', query: { detail: String(detailId) } })
+    if (Number.isInteger(detailId) && detailId > 0) {
+        router.push({ path: '/my-request-log', query: { detail: String(detailId) } })
         return
     }
-    if (!canViewRequestLogList.value) return
 
-    const query = item.request_id?.trim()
-        ? { request_id: item.request_id.trim() }
-        : item.operator_account?.trim()
-          ? { operator_account: item.operator_account.trim() }
-          : undefined
-    router.push({ path: '/log/request-log', query })
+    const query = item.request_id?.trim() ? { request_id: item.request_id.trim() } : undefined
+    router.push({ path: '/my-request-log', query })
 }
 
 const gridWithAxisLabelBounds = {
     outerBoundsMode: 'same' as const,
     outerBoundsContain: 'axisLabel' as const,
+}
+
+const chartTheme = () => {
+    const styles = typeof window === 'undefined' ? null : window.getComputedStyle(document.documentElement)
+    const color = (name: string, fallback: string) => styles?.getPropertyValue(name).trim() || fallback
+    return {
+        primary: color('--el-color-primary', '#409eff'),
+        success: color('--el-color-success', '#67c23a'),
+        danger: color('--el-color-danger', '#f56c6c'),
+        warning: color('--el-color-warning', '#e6a23c'),
+        text: color('--el-text-color-regular', '#606266'),
+        muted: color('--el-text-color-secondary', '#909399'),
+        split: color('--el-border-color-lighter', '#ebeef5'),
+        surface: color('--el-bg-color-overlay', '#ffffff'),
+    }
+}
+
+const chartTooltip = () => {
+    const theme = chartTheme()
+    return {
+        confine: true,
+        backgroundColor: theme.surface,
+        borderColor: theme.split,
+        textStyle: { color: theme.text },
+        extraCssText: 'box-shadow: var(--el-box-shadow-light); border-radius: 8px;',
+    }
 }
 
 let resizeObserver: ResizeObserver | null = null
@@ -537,19 +660,43 @@ const initTrendChart = () => {
     if (!initChart || !trendChartRef.value || statisticsTrendDays.value.length === 0) return
     trendChart = initChart(trendChartRef.value)
     const seriesNames = trendSeriesNames.value
+    const theme = chartTheme()
     trendChart.setOption({
-        tooltip: { trigger: 'axis' },
+        color: [theme.primary, theme.danger, theme.success],
+        tooltip: { trigger: 'axis', ...chartTooltip() },
         legend: {
             data: [seriesNames.requests, seriesNames.errors, seriesNames.logins],
             top: 0,
+            textStyle: { color: theme.text },
         },
         grid: { top: 40, left: '3%', right: '4%', bottom: '3%', ...gridWithAxisLabelBounds },
-        xAxis: { type: 'category', boundaryGap: false, data: statisticsTrendDays.value.map((day) => day.date) },
-        yAxis: { type: 'value' },
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: statisticsTrendDays.value.map((day) => day.date),
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: { color: theme.muted },
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: { show: false },
+            axisLabel: { color: theme.muted },
+            splitLine: { lineStyle: { color: theme.split, type: 'dashed' } },
+        },
         series: [
-            { name: seriesNames.requests, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.request_count) },
-            { name: seriesNames.errors, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.error_count) },
-            { name: seriesNames.logins, type: 'line', smooth: true, data: statisticsTrendDays.value.map((day) => day.login_count) },
+            {
+                name: seriesNames.requests,
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                lineStyle: { width: 3 },
+                areaStyle: { opacity: 0.08 },
+                emphasis: { focus: 'series' },
+                data: statisticsTrendDays.value.map((day) => day.request_count),
+            },
+            { name: seriesNames.errors, type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 2 }, emphasis: { focus: 'series' }, data: statisticsTrendDays.value.map((day) => day.error_count) },
+            { name: seriesNames.logins, type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 2 }, emphasis: { focus: 'series' }, data: statisticsTrendDays.value.map((day) => day.login_count) },
         ],
     })
     observeElement(trendChartRef.value)
@@ -562,11 +709,25 @@ const initResponseTimeChart = () => {
     responseTimeChart = initChart(responseTimeChartRef.value)
     const labels = stats.buckets.map((b) => localizeBucketLabel(b.label))
     const counts = stats.buckets.map((b) => b.count)
+    const theme = chartTheme()
     responseTimeChart.setOption({
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        color: [theme.primary],
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip() },
         grid: { left: '3%', right: '4%', bottom: '3%', ...gridWithAxisLabelBounds },
-        xAxis: { type: 'category', data: labels, axisLabel: { interval: 0, rotate: labels.length > 4 ? 20 : 0 } },
-        yAxis: { type: 'value', name: t('home.dashboard.responseTime.count') },
+        xAxis: {
+            type: 'category',
+            data: labels,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: { color: theme.muted, interval: 0, rotate: labels.length > 4 ? 20 : 0 },
+        },
+        yAxis: {
+            type: 'value',
+            name: t('home.dashboard.responseTime.count'),
+            nameTextStyle: { color: theme.muted },
+            axisLabel: { color: theme.muted },
+            splitLine: { lineStyle: { color: theme.split, type: 'dashed' } },
+        },
         series: [
             {
                 name: t('home.dashboard.responseTime.count'),
@@ -587,9 +748,11 @@ const initErrorCodesChart = () => {
         name: `${item.status_code}`,
         value: item.count,
     }))
+    const theme = chartTheme()
     errorCodesChart.setOption({
-        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-        legend: { type: 'scroll', orient: 'horizontal', bottom: 0 },
+        color: [theme.primary, theme.warning, theme.danger, theme.success],
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...chartTooltip() },
+        legend: { type: 'scroll', orient: 'horizontal', bottom: 0, textStyle: { color: theme.text } },
         series: [
             {
                 name: t('home.dashboard.errorCodes.title'),
@@ -597,7 +760,8 @@ const initErrorCodesChart = () => {
                 radius: ['45%', '70%'],
                 center: ['50%', '45%'],
                 avoidLabelOverlap: true,
-                label: { show: true, formatter: '{b}\n{c}' },
+                itemStyle: { borderColor: theme.surface, borderWidth: 2, borderRadius: 4 },
+                label: { show: true, color: theme.text, formatter: '{b}\n{c}' },
                 data,
             },
         ],
@@ -616,10 +780,13 @@ onMounted(async () => {
     initResizeObserver()
     await ensureEcharts()
     if (!isMounted) return
-    await Promise.all([refreshDashboard(), fetchMonitor()])
+    const canViewMonitor = hasPermission('dashboard:monitor')
+    await Promise.all([refreshDashboard(), canViewMonitor ? fetchMonitor() : Promise.resolve()])
     if (!isMounted) return
-    // 每 30 秒刷新一次监控数据
-    monitorTimer = setInterval(fetchMonitor, 30000)
+    if (canViewMonitor) {
+        // 每 30 秒刷新一次监控数据
+        monitorTimer = setInterval(fetchMonitor, 30000)
+    }
 })
 
 onUnmounted(() => {
@@ -643,6 +810,13 @@ watch(
         }
     }
 )
+
+watch(
+    () => settingStore.theme,
+    async () => {
+        if (isMounted) await rebuildCharts()
+    }
+)
 </script>
 
 <style scoped lang="scss">
@@ -652,6 +826,13 @@ watch(
 
 .dashboard-row {
     margin-bottom: var(--xl-space-4);
+}
+
+@media (max-width: 1199px) {
+    .todo-column,
+    .responsive-column {
+        margin-top: var(--xl-space-4);
+    }
 }
 
 .card-header,
@@ -666,10 +847,17 @@ watch(
 
 .welcome-card {
     height: 100%;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--el-bg-color) 50%, var(--el-color-primary-light-9));
 }
 
 .welcome-content {
     gap: 18px;
+
+    > div:first-child {
+        min-width: 0;
+        flex: 1;
+    }
 }
 
 .eyebrow {
@@ -701,8 +889,67 @@ h1 {
     gap: var(--xl-space-2);
 }
 
+.personal-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(96px, 1fr));
+    gap: var(--xl-space-3);
+    margin-top: var(--xl-space-4);
+    max-width: 720px;
+}
+
+.personal-summary__item {
+    min-width: 0;
+    padding: var(--xl-space-2) var(--xl-space-3);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: var(--xl-radius-sm);
+    background: var(--el-bg-color-overlay);
+    display: flex;
+    flex-direction: column;
+    gap: var(--xl-space-1);
+
+    span {
+        color: var(--el-text-color-secondary);
+        font-size: var(--xl-font-xs);
+    }
+
+    strong {
+        color: var(--el-text-color-primary);
+        font-size: var(--xl-font-lg);
+    }
+}
+
+.welcome-state {
+    max-width: 560px;
+    margin-top: var(--xl-space-4);
+}
+
+.summary-skeleton {
+    width: 44px;
+    height: 22px;
+}
+
+.section-heading {
+    margin: calc(var(--xl-space-4) + var(--xl-space-1)) 0 var(--xl-space-3);
+
+    h2 {
+        margin: 0;
+        font-size: var(--xl-font-lg);
+        line-height: 1.5;
+    }
+
+    p {
+        margin: var(--xl-space-1) 0 0;
+        color: var(--el-text-color-secondary);
+        font-size: var(--xl-font-sm);
+    }
+}
+
 .metric-card {
     height: 100%;
+
+    :deep(.el-card__body) {
+        min-height: 104px;
+    }
 }
 
 .metric-icon {
@@ -740,13 +987,58 @@ h1 {
 .shortcut-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
+    gap: var(--xl-space-3);
 }
 
 .shortcut-btn {
-    justify-content: flex-start;
-    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: var(--xl-space-2);
+    min-width: 0;
+    height: 52px;
     margin: 0;
+    padding: 0 var(--xl-space-3);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: var(--xl-radius-sm);
+    color: var(--el-text-color-regular);
+    background: var(--el-bg-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.2s,
+        color 0.2s,
+        background-color 0.2s;
+
+    &:hover,
+    &:focus-visible {
+        outline: none;
+        color: var(--el-color-primary);
+        border-color: var(--el-color-primary-light-5);
+        background: var(--el-color-primary-light-9);
+    }
+}
+
+.shortcut-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 18px;
+}
+
+.shortcut-arrow {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--el-text-color-placeholder);
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+.card-subtitle {
+    margin-top: var(--xl-space-1);
+    color: var(--el-text-color-secondary);
+    font-size: var(--xl-font-sm);
 }
 
 .monitor-stat {
@@ -798,6 +1090,23 @@ h1 {
     :deep(.el-card__header) {
         padding: var(--xl-space-3) 18px;
     }
+}
+
+.stat-card--primary {
+    min-height: 390px;
+}
+
+.chart {
+    width: 100%;
+    height: 280px;
+}
+
+.chart--large {
+    height: 300px;
+}
+
+.empty-state-card :deep(.el-card__body) {
+    padding: var(--xl-space-4);
 }
 
 .card-header-extra {
@@ -893,6 +1202,29 @@ h1 {
         width: 100%;
     }
 
+    .shortcut-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .personal-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .card-header-extra {
+        display: none;
+    }
+
+    .monitor-load-grid {
+        gap: var(--xl-space-2);
+    }
+
+    .monitor-load-value {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
     .shortcut-grid {
         grid-template-columns: 1fr;
     }

@@ -48,6 +48,7 @@ export function createRequestLogQuery() {
         execution_time_scope: null,
         start_time: null,
         end_time: null,
+        scope: null,
     }
 }
 

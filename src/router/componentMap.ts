@@ -31,6 +31,7 @@ const explicitMap: Record<string, () => Promise<Component>> = {
     'system:task': () => import('@/views/system/task/index.vue'),
     'system:taskStats': () => import('@/views/system/taskStats/index.vue'),
     'product:index': () => import('@/views/business/product/index.vue'),
+    'todo:index': () => import('@/views/todo/index.vue'),
     'other:notFound': () => import('@/views/other/notFound/index.vue'),
 }
 

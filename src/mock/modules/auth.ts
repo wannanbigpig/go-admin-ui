@@ -2040,7 +2040,7 @@ const menuList = [
             {
                 id: 84,
                 icon: 'ep:box',
-                title: '产品管理',
+                title: '产品示例',
                 name: 'Product',
                 code: '',
                 path: 'product',

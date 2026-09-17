@@ -54,6 +54,7 @@ describe('profile session and password boundaries', () => {
         setup()
         await flushPromises()
         page.openEditDrawer()
+        page.formData.current_password = 'current-password'
         page.formData.password = 'new-password'
         page.formData.confirm_password = confirm
         await page.editConfirmSubmit()
@@ -65,17 +66,33 @@ describe('profile session and password boundaries', () => {
         await flushPromises()
         page.openEditDrawer()
         await page.editConfirmSubmit()
-        expect(mocks.modify).toHaveBeenCalledWith(expect.not.objectContaining({ password: expect.anything() }))
+        expect(mocks.modify).toHaveBeenCalledWith(expect.not.objectContaining({ current_password: expect.anything(), password: expect.anything() }))
         mocks.modify.mockClear()
         page.openEditDrawer()
+        page.formData.current_password = 'current-password'
         page.formData.password = '密'.repeat(32)
         page.formData.confirm_password = page.formData.password
         await page.editConfirmSubmit()
-        expect(mocks.modify).toHaveBeenCalledWith(expect.objectContaining({ password: '密'.repeat(32) }))
+        expect(mocks.modify).toHaveBeenCalledWith(expect.objectContaining({ current_password: 'current-password', password: '密'.repeat(32) }))
         mocks.modify.mockClear()
         page.formData.password += 'x'
         page.formData.confirm_password = page.formData.password
         await page.editConfirmSubmit()
         expect(mocks.modify).not.toHaveBeenCalled()
+    })
+
+    it('requires the current password only when a new password is submitted', async () => {
+        setup()
+        await flushPromises()
+        page.openEditDrawer()
+        page.formData.password = 'new-password'
+        page.formData.confirm_password = 'new-password'
+
+        await page.editConfirmSubmit()
+        expect(mocks.modify).not.toHaveBeenCalled()
+
+        page.formData.current_password = 'current-password'
+        await page.editConfirmSubmit()
+        expect(mocks.modify).toHaveBeenCalledWith(expect.objectContaining({ current_password: 'current-password', password: 'new-password' }))
     })
 })

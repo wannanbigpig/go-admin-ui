@@ -20,7 +20,7 @@
                 </div>
             </div>
             <div class="request-mask-actions">
-                <xl-action-button type="primary" :show-icon="false" :text="t('system.requestMask.save')" :loading="saving" @click="handleSave" />
+                <xl-action-button v-permission="'requestLog:maskConfig'" code="requestLog:maskConfig" type="primary" :show-icon="false" :text="t('system.requestMask.save')" :loading="saving" @click="handleSave" />
             </div>
         </div>
 
@@ -71,7 +71,7 @@
             </div>
 
             <div class="request-mask-actions request-mask-actions-bottom" :class="{ 'is-embedded': embedded }">
-                <xl-action-button type="primary" :show-icon="false" :text="t('system.requestMask.save')" :loading="saving" @click="handleSave" />
+                <xl-action-button v-permission="'requestLog:maskConfig'" code="requestLog:maskConfig" type="primary" :show-icon="false" :text="t('system.requestMask.save')" :loading="saving" @click="handleSave" />
             </div>
         </el-form>
 

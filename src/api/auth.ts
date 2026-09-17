@@ -1,5 +1,5 @@
 import { post, get, request } from '@/utils/request'
-import type { TokenResult, UserInfo, UserPermission } from '@/types/auth'
+import type { TokenResult, UpdateProfilePayload, UserInfo, UserPermission } from '@/types/auth'
 
 // 退出登录
 export function logout() {
@@ -31,7 +31,7 @@ export function getUserMenuList() {
 }
 
 // 更新个人信息
-export function updateProfile(data: Record<string, unknown>) {
+export function updateProfile(data: UpdateProfilePayload) {
     return post<unknown>('/v1/admin-user/update-profile', data)
 }
 

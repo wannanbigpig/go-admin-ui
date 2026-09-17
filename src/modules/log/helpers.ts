@@ -16,7 +16,7 @@ export function applyDateRangeToQuery(query: Record<string, unknown>, dateRange:
     }
 }
 
-export function formatIpAddress(ip: string, ipLocation: string) {
+export function formatIpAddress(ip: string, ipLocation?: string) {
     if (!ip) return '-'
     return ipLocation ? `${ip} (${ipLocation})` : ip
 }

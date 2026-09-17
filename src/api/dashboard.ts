@@ -82,6 +82,10 @@ export function getDashboardOverview() {
     return get<DashboardOverview>('/v1/dashboard/overview')
 }
 
+export function getDashboardPersonal() {
+    return get('/v1/dashboard/personal')
+}
+
 export function getDashboardStatistics() {
     return get<DashboardStatistics>('/v1/dashboard/statistics')
 }

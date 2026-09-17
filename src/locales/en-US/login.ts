@@ -1,6 +1,13 @@
 export default {
     title: 'User Login',
     appTitle: 'X-L-Admin Admin System',
+    subtitle: 'Sign in securely with your administration account',
+    openSourceProject: 'View open-source project',
+    securityHint: 'Your sign-in details are submitted over a secure connection',
+    captchaImageAlt: 'Visual captcha; click to refresh',
+    loadingCaptcha: 'Loading',
+    retryCaptcha: 'Load failed. Click to retry',
+    loginFailed: 'Login failed. Check your account, password, and captcha, then try again.',
     login: 'Login',
     loggingIn: 'Logging in...',
     authorGithub: 'Author GitHub',

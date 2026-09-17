@@ -1,5 +1,5 @@
 export default {
-    title: 'Product Management',
+    title: 'Reference Products',
     addTitle: 'Add Product',
     editTitle: 'Edit Product',
     name: 'Product Name',

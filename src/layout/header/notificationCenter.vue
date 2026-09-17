@@ -73,7 +73,7 @@
             </div>
 
             <div class="notification-panel__footer">
-                <el-button link @click="openNotificationManage">
+                <el-button v-if="hasPermission('notification:send')" link @click="openNotificationManage">
                     {{ t('system.notification.manageEntry') }}
                 </el-button>
                 <el-button link type="primary" @click="openNotificationCenter">
@@ -93,6 +93,7 @@ import { useSettingStore } from '@/stores/setting'
 import { useNotificationStore } from '@/stores/notification'
 import type { AppNotification } from '@/types/notification'
 import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
+import { hasPermission } from '@/utils/auth'
 
 const authStore = useAuthStore()
 const settingStore = useSettingStore()

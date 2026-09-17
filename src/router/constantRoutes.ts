@@ -47,6 +47,17 @@ const constantRoutes: RouteRecordRaw[] = [
                     show: false,
                 },
             },
+            {
+                path: '/my-request-log',
+                name: 'MyRequestLog',
+                component: () => import('@/views/log/request/index.vue'),
+                props: { mode: 'self' },
+                meta: {
+                    title: 'My Request Log',
+                    titleKey: 'log.request.myTitle',
+                    show: false,
+                },
+            },
         ],
     },
     {

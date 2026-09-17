@@ -57,6 +57,15 @@ export interface LoginPayload {
     [key: string]: unknown
 }
 
+export interface UpdateProfilePayload {
+    nickname?: string
+    phone_number?: string
+    email?: string
+    avatar?: string
+    current_password?: string
+    password?: string
+}
+
 export interface CaptchaResult {
     b64s: string
     id: string

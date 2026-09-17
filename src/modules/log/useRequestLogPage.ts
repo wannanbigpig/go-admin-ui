@@ -1,15 +1,15 @@
-import { reactive, ref } from 'vue'
+import { reactive, ref, unref, type MaybeRef } from 'vue'
 import { type FormInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Logger } from '@/utils/logger'
 import { useListPage } from '@/composables/useListPage'
-import { fetchRequestLogList, fetchRequestLogDetail } from '@/modules/log/service'
+import { fetchRequestLogList, fetchRequestLogDetail, fetchSelfRequestLogList, fetchSelfRequestLogDetail } from '@/modules/log/service'
 import { submitRequestLogExportTask } from '@/modules/exportCenter/service'
 import { useExportTaskSubmitter } from '@/modules/exportCenter/useExportTaskSubmitter'
 import { createRequestLogQuery, DEFAULT_REQUEST_LOG_ORDER_BY, EXECUTION_TIME_SCOPE_OPTIONS, REQUEST_KIND_OPTIONS } from '@/modules/log/model'
 import { applyDateRangeToQuery, formatIpAddress, formatJson } from '@/modules/log/helpers'
-import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogQuery } from '@/types/log'
+import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogQuery, RequestLogSelfDetail } from '@/types/log'
 
 type SortOrder = 'ascending' | 'descending' | null
 
@@ -19,7 +19,9 @@ export function buildRequestLogQueryParams(query: RequestLogQuery, dateRange: [s
     return params
 }
 
-export function useRequestLogPage() {
+export type RequestLogPageMode = 'admin' | 'self'
+
+export function useRequestLogPage({ mode = 'admin' }: { mode?: MaybeRef<RequestLogPageMode> } = {}) {
     const router = useRouter()
     const { t } = useI18n()
     const { submitExportTask } = useExportTaskSubmitter()
@@ -28,14 +30,18 @@ export function useRequestLogPage() {
     const dateRange = ref<[string, string] | []>([])
 
     const showDetailDrawer = ref(false)
-    const currentDetail = ref<RequestLog | null>(null)
+    const currentDetail = ref<RequestLog | RequestLogSelfDetail | null>(null)
     const detailLoading = ref(false)
     const activeCollapse = ref(['requestBody', 'responseBody'])
 
     const exporting = ref(false)
 
     const buildQueryParams = (query: typeof queryWhere) => {
-        return buildRequestLogQueryParams(query, dateRange.value)
+        const params = buildRequestLogQueryParams(query, dateRange.value)
+        if (unref(mode) !== 'self') return params
+
+        const { page, per_page, order_by, operation_name, operation_status, ip, scope, start_time, end_time } = params
+        return { page, per_page, order_by, operation_name, operation_status, ip, scope: scope || 'regular', start_time, end_time }
     }
 
     const buildOrderBy = (prop: string, order: SortOrder) => {
@@ -57,7 +63,7 @@ export function useRequestLogPage() {
         transformParams: buildQueryParams,
         fetcher: async (params) => {
             try {
-                return await fetchRequestLogList(params)
+                return await (unref(mode) === 'self' ? fetchSelfRequestLogList(params) : fetchRequestLogList(params))
             } catch (error) {
                 Logger.error('获取请求日志失败:', error)
                 return {
@@ -79,7 +85,7 @@ export function useRequestLogPage() {
         showDetailDrawer.value = true
         detailLoading.value = true
         try {
-            currentDetail.value = await fetchRequestLogDetail(row.id)
+            currentDetail.value = await (unref(mode) === 'self' ? fetchSelfRequestLogDetail(row.id) : fetchRequestLogDetail(row.id))
         } catch (error) {
             Logger.error('获取详情失败:', error)
         } finally {

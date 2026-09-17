@@ -1,4 +1,4 @@
-export function normalizeNotificationActionUrl(value?: string): string | undefined {
+export function normalizeInternalActionUrl(value?: string): string | undefined {
     if (!value) return undefined
     const trimmed = value.trim()
     if (!trimmed.startsWith('/')) return undefined
@@ -6,3 +6,5 @@ export function normalizeNotificationActionUrl(value?: string): string | undefin
     if (trimmed.includes('\\')) return undefined
     return trimmed
 }
+
+export const normalizeNotificationActionUrl = normalizeInternalActionUrl

@@ -12,6 +12,7 @@ import system from './system'
 import about from './about'
 import filePicker from './filePicker'
 import product from './product'
+import todo from './todo'
 
 export default {
     common,
@@ -28,4 +29,5 @@ export default {
     product,
     request,
     validation,
+    todo,
 }

@@ -1,5 +1,5 @@
 export default {
-    title: '产品管理',
+    title: '产品示例',
     addTitle: '新增产品',
     editTitle: '编辑产品',
     name: '产品名称',

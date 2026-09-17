@@ -177,14 +177,19 @@
                 </el-row>
                 <el-divider />
                 <el-row :gutter="20">
-                    <el-col :span="12">
-                        <el-form-item :label="t('profile.newPassword')" prop="password">
-                            <el-input v-model="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password></el-input>
+                    <el-col :xs="24" :md="8">
+                        <el-form-item :label="t('profile.currentPassword')" prop="current_password">
+                            <el-input v-model="formData.current_password" :placeholder="t('profile.currentPasswordPlaceholder')" type="password" show-password autocomplete="current-password"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="12">
+                    <el-col :xs="24" :md="8">
+                        <el-form-item :label="t('profile.newPassword')" prop="password">
+                            <el-input v-model="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password autocomplete="new-password"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :xs="24" :md="8">
                         <el-form-item :label="t('common.labels.confirmPassword')" prop="confirm_password">
-                            <el-input v-model="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password></el-input>
+                            <el-input v-model="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password autocomplete="new-password"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>

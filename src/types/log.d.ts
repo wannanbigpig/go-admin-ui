@@ -2,8 +2,23 @@ import type { WithId } from './common'
 
 export type RequestKind = 'http' | 'websocket'
 export type ExecutionTimeScope = 'request' | 'connection' | 'none'
+export type RequestLogSelfScope = 'regular' | 'all' | 'important' | 'changes' | 'failed' | 'high_risk' | 'self_reads'
+export type RequestLogChangeType = 'created' | 'updated' | 'removed' | 'changed' | 'action'
 
-export interface RequestLog extends WithId {
+export interface RequestLogChangeSummaryItem {
+    label: string
+    change_type: RequestLogChangeType
+    before_text?: string
+    after_text?: string
+}
+
+export interface RequestLogChangeSummary {
+    has_changes: boolean
+    items: RequestLogChangeSummaryItem[]
+    omitted_count: number
+}
+
+export interface RequestLogBase extends WithId {
     request_id: string
     request_kind?: RequestKind
     operator_id?: number | string
@@ -15,13 +30,17 @@ export interface RequestLog extends WithId {
     is_high_risk?: number
     operator_account: string
     operator_name: string
-    operator_ip: string
     ip: string
-    ip_location: string
-    jwt_id?: string
+    ip_location?: string
     execution_time_us: number
     execution_time_scope?: ExecutionTimeScope
     response_status: number
+    created_at: string
+    change_summary?: RequestLogChangeSummary | null
+}
+
+export interface RequestLog extends RequestLogBase {
+    jwt_id?: string
     browser?: string
     os?: string
     user_agent?: string
@@ -31,8 +50,14 @@ export interface RequestLog extends WithId {
     change_diff?: string
     response_header?: string
     response_body?: string
-    created_at: string
     updated_at?: string
+}
+
+export interface RequestLogSelfDetail extends RequestLogBase {
+    browser?: string
+    os?: string
+    user_agent?: string
+    change_summary?: RequestLogChangeSummary | null
 }
 
 export interface LoginLog extends WithId {
@@ -98,6 +123,7 @@ export interface RequestLogQuery extends LogQuery {
     execution_time_scope?: ExecutionTimeScope | null
     start_time?: string | null
     end_time?: string | null
+    scope?: RequestLogSelfScope | null
 }
 
 export interface OnlineSessionQuery extends LogQuery {

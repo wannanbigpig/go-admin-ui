@@ -19,6 +19,7 @@ const backendMenuComponentKeys = [
     'system:task',
     'system:taskStats',
     'product:index',
+    'todo:index',
     'other:notFound',
 ]
 

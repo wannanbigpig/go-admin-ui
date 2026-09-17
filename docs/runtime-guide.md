@@ -28,8 +28,10 @@ Vite 8 使用 Rolldown 打包并由 Oxc 完成转换和压缩。项目统一使�
 
 `src/views/login/index.vue` 当前包含：
 
+- 聚焦登录动作的响应式单卡片布局；
 - 用户名、密码、验证码三项输入；
 - 启动时请求 `/v1/login-captcha` 获取验证码；
+- 验证码加载/失败、登录失败、暗色主题和 `prefers-reduced-motion` 状态；
 - 开发环境下可通过 `VITE_DEV_USERNAME`、`VITE_DEV_PASSWORD` 自动填充默认账号密码。
 
 ### Token 生命周期
@@ -128,7 +130,7 @@ Vite 8 使用 Rolldown 打包并由 Oxc 完成转换和压缩。项目统一使�
 | `VITE_ENABLE_I18N`    | 是否启用国际化           |
 | `VITE_DEFAULT_LOCALE` | 默认语言                 |
 | `VITE_APP_BASE`       | 前端路由 base            |
-| `VITE_BASE_URL`       | API 主机地址             |
+| `VITE_BASE_URL`       | API 主机地址；默认留空并使用同源地址，跨域部署时显式配置 |
 | `VITE_BASE_API`       | API 前缀                 |
 | `VITE_BASE_STATIC`    | 静态资源前缀             |
 | `VITE_PROXY_TARGET`   | 开发代理目标地址         |

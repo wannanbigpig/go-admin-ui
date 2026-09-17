@@ -1,7 +1,7 @@
 <template>
     <div class="sidebar-logo-container" :class="{ collapse: settingStore.isCollapse }">
         <router-link class="sidebar-logo-link" to="/">
-            <img src="@/assets/images/logo-frontend.png" class="sidebar-logo" alt="Logo" />
+            <img src="@/assets/images/gin-layout-mark.svg" class="sidebar-logo" alt="Gin Layout" />
             <span class="sidebar-title animate__animated" :class="{ animate__bounceInLeft: !settingStore.isCollapse }"> X-L-Admin </span>
         </router-link>
     </div>
@@ -36,8 +36,13 @@ const settingStore = useSettingStore()
         .sidebar-logo {
             width: 32px;
             height: 32px;
+            box-sizing: border-box;
             display: block;
             margin: 0;
+            padding: 4px;
+            border: 1px solid var(--el-border-color-lighter);
+            border-radius: 8px;
+            background: #fff;
             align-self: center;
         }
 

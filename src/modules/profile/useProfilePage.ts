@@ -7,7 +7,7 @@ import { createEmptyUserInfo } from '@/modules/auth/model'
 import { fetchProfile, modifyProfile } from '@/modules/profile/service'
 import { createProfileForm } from '@/modules/profile/model'
 import { validateFormSafely } from '@/modules/shared/form'
-import type { UserInfo } from '@/types/auth'
+import type { UpdateProfilePayload, UserInfo } from '@/types/auth'
 import { translate } from '@/locales'
 import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
 
@@ -30,6 +30,22 @@ export function useProfilePage() {
     const formData = reactive(createProfileForm())
 
     const formRules = {
+        current_password: [
+            {
+                validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
+                    if (formData.password && !value) {
+                        callback(new Error(translate('validation.profile.currentPasswordRequired')))
+                        return
+                    }
+                    if (value && (value.length < PASSWORD_MIN_LENGTH || value.length > PASSWORD_MAX_LENGTH)) {
+                        callback(new Error(translate('validation.adminUser.passwordLength')))
+                        return
+                    }
+                    callback()
+                },
+                trigger: ['blur', 'change'],
+            },
+        ],
         password: [{ min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: translate('validation.adminUser.passwordLength'), trigger: ['blur', 'change'] }],
         confirm_password: [
             {
@@ -112,6 +128,7 @@ export function useProfilePage() {
         formData.phone_number = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number : ''
         formData.email = typeof userInfo.value.email === 'string' ? userInfo.value.email : ''
         formData.avatar = userInfo.value.avatar || ''
+        formData.current_password = ''
         formData.password = ''
         formData.confirm_password = ''
 
@@ -124,15 +141,17 @@ export function useProfilePage() {
         const valid = await validateFormSafely(formDataRef.value, translate('validation.profileForm.formName'))
         if (!valid || !isCurrentSession()) return
 
-        const submitData: Record<string, unknown> = {
-            id: formData.id,
+        const submitData: UpdateProfilePayload = {
             nickname: formData.nickname,
         }
 
         if (formData.phone_number) submitData.phone_number = formData.phone_number
         if (formData.email) submitData.email = formData.email
         if (formData.avatar) submitData.avatar = formData.avatar
-        if (formData.password) submitData.password = formData.password
+        if (formData.password) {
+            submitData.current_password = formData.current_password
+            submitData.password = formData.password
+        }
 
         // 提交锁只包裹真正的写请求，避免成功后还把刷新/延时算进"提交中"，导致按钮卡几秒。
         const succeeded = await runWithSubmitLock(async () => {

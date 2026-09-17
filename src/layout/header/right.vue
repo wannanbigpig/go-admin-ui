@@ -4,7 +4,7 @@
             <notification-center />
         </div>
 
-        <div class="xl-action-item" @click="openExportCenter">
+        <div v-if="canOpenExportCenter" class="xl-action-item" @click="openExportCenter">
             <div class="xl-theme-trigger xl-cursor-pointer" role="button" tabindex="0" :aria-label="t('layout.exportCenter')" @keydown.enter="openExportCenter">
                 <el-tooltip :content="t('layout.exportCenter')" placement="bottom" :show-after="200">
                     <div class="tooltip-trigger-area">
@@ -110,6 +110,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingStore, type ThemeMode } from '@/stores/setting'
@@ -124,6 +125,7 @@ import { LOCALE_OPTIONS, ENABLE_I18N } from '@/locales'
 import { addDynamicRoutes } from '@/router/dynamicRoutes'
 import { resolveRouteTitle } from '@/utils/routeTitle'
 import NotificationCenter from './notificationCenter.vue'
+import { hasPermission } from '@/utils/auth'
 
 enum COMMAND {
     USER_DETAIL = 'user-detail',
@@ -145,6 +147,7 @@ const THEME_MODE = {
 const authStore = useAuthStore()
 const settingStore = useSettingStore()
 const { t } = useI18n()
+const canOpenExportCenter = computed(() => hasPermission('task:list'))
 
 const localeOptions = LOCALE_OPTIONS
 

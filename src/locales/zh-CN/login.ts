@@ -1,6 +1,13 @@
 export default {
     title: '用户登录',
     appTitle: 'X-L-Admin 后台管理系统',
+    subtitle: '使用你的管理账号安全进入工作台',
+    openSourceProject: '查看开源项目',
+    securityHint: '登录信息将通过安全连接提交',
+    captchaImageAlt: '图形验证码，点击可刷新',
+    loadingCaptcha: '加载中',
+    retryCaptcha: '加载失败，点击重试',
+    loginFailed: '登录失败，请核对账号、密码和验证码后重试',
     login: '登录',
     loggingIn: '登录中...',
     authorGithub: '作者 GitHub',

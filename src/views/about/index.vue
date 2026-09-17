@@ -71,7 +71,7 @@ import { Icon } from '@iconify/vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import logoSrc from '@/assets/images/logo-frontend.png'
+import logoSrc from '@/assets/images/gin-layout-mark.svg'
 
 const { t } = useI18n()
 const version = __APP_VERSION__
@@ -345,7 +345,7 @@ const linkCards = computed(() => [
 }
 
 .about-page.is-dark .logo-wrap {
-    background: rgb(30 41 59 / 70%);
+    background: rgb(255 255 255 / 94%);
     box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 10%),
         0 18px 40px rgb(37 99 235 / 14%);

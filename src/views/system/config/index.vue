@@ -1,12 +1,10 @@
 <template>
     <div>
-        <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-10">
-            <el-tab-pane :label="t('system.config.tabs.normal')" name="normal" />
-            <el-tab-pane :label="t('system.config.tabs.storage')" name="storage" />
-            <el-tab-pane :label="t('system.config.tabs.auditMask')" name="audit_mask" />
+        <el-tabs v-if="visibleTabs.length" v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-10">
+            <el-tab-pane v-for="tab in visibleTabs" :key="tab.name" :label="tab.label" :name="tab.name" />
         </el-tabs>
 
-        <div v-if="activeTab === 'normal'">
+        <div v-if="activeTab === 'normal' && checkPermission('sysConfig:list')">
             <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="configList" :pagination="pagination" :search-max-show="4" @search="onSearch" @reset="handleReset">
                 <template #actions>
                     <xl-action-button v-permission="'sysConfig:add'" code="sysConfig:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
@@ -70,11 +68,11 @@
             </xl-drawer>
         </div>
 
-        <div v-if="activeTab === 'storage'">
+        <div v-if="activeTab === 'storage' && checkPermission('storage:config')">
             <system-storage-config-panel />
         </div>
 
-        <div v-if="activeTab === 'audit_mask'">
+        <div v-if="activeTab === 'audit_mask' && checkPermission('requestLog:maskConfig')">
             <request-log-mask-config-panel />
         </div>
     </div>
@@ -106,11 +104,20 @@ import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 import { useRoute, useRouter } from 'vue-router'
 
 const { t } = useI18n()
-const { getButtonInfoFull } = usePermission()
+const { checkPermission, getButtonInfoFull } = usePermission()
 const route = useRoute()
 const router = useRouter()
 
-const activeTab = ref<'normal' | 'storage' | 'audit_mask'>('normal')
+type ConfigTabName = 'normal' | 'storage' | 'audit_mask'
+
+const activeTab = ref<ConfigTabName>('normal')
+const visibleTabs = computed(() =>
+    [
+        { name: 'normal' as const, label: t('system.config.tabs.normal'), permission: 'sysConfig:list' },
+        { name: 'storage' as const, label: t('system.config.tabs.storage'), permission: 'storage:config' },
+        { name: 'audit_mask' as const, label: t('system.config.tabs.auditMask'), permission: 'requestLog:maskConfig' },
+    ].filter((tab) => checkPermission(tab.permission))
+)
 const updateButtonInfo = getButtonInfoFull('sysConfig:update')
 const deleteButtonInfo = getButtonInfoFull('sysConfig:delete')
 const { options: commonStatusOptions, tagMap: commonStatusTagMap, load: loadCommonStatusOptions } = useDictOptions(SYSTEM_DICT_TYPES.commonStatus, commonStatusFallbackOptions)
@@ -312,6 +319,7 @@ const actionButtons = computed(() => [
         permission: 'sysConfig:delete',
         buttonInfo: deleteButtonInfo || undefined,
         showIcon: false,
+        visible: (row: SystemConfig) => Number(row.is_system) !== 1,
         click: (row: SystemConfig) => handleDelete(row),
     },
 ])
@@ -371,15 +379,19 @@ const columns = computed<ProTableColumns<SystemConfig>>(() => [
     { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
 ])
 
-onMounted(async () => {
-    const queryTab = String(route.query.tab || '')
-    if (queryTab === 'storage' || queryTab === 'audit_mask' || queryTab === 'normal') {
-        activeTab.value = queryTab
+let normalTabLoaded = false
+const loadNormalTab = async () => {
+    if (normalTabLoaded || !checkPermission('sysConfig:list')) return
+    normalTabLoaded = true
+    try {
+        await Promise.all([loadCommonStatusOptions(), loadYesNoOptions(), getList()])
+    } catch (error) {
+        normalTabLoaded = false
+        throw error
     }
-    await Promise.all([loadCommonStatusOptions(), loadYesNoOptions(), getList()])
-})
+}
 
-watch(activeTab, (tab) => {
+const syncTabQuery = (tab: ConfigTabName) => {
     const nextQuery = { ...route.query }
     if (tab === 'normal') {
         delete nextQuery.tab
@@ -389,5 +401,22 @@ watch(activeTab, (tab) => {
     if (String(route.query.tab || '') !== String(nextQuery.tab || '')) {
         router.replace({ path: route.path, query: nextQuery })
     }
+}
+
+onMounted(async () => {
+    const queryTab = String(route.query.tab || '') as ConfigTabName
+    const requestedTab = visibleTabs.value.find((tab) => tab.name === queryTab)?.name
+    const fallbackTab = visibleTabs.value[0]?.name
+    if (!fallbackTab) return
+
+    const nextTab = requestedTab || fallbackTab
+    if (activeTab.value === nextTab) syncTabQuery(nextTab)
+    activeTab.value = nextTab
+    if (activeTab.value === 'normal') await loadNormalTab()
+})
+
+watch(activeTab, async (tab) => {
+    if (tab === 'normal') await loadNormalTab()
+    syncTabQuery(tab)
 })
 </script>

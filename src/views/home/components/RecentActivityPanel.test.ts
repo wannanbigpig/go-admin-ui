@@ -63,8 +63,8 @@ describe('RecentActivityPanel', () => {
         const wrapper = mountPanel({ items: [activity], loading: false, canViewList: true, canViewDetail: true })
 
         expect(wrapper.text()).toContain('更新系统配置')
-        expect(wrapper.text()).toContain('super_admin')
-        expect(wrapper.text()).toContain('POST /admin/v1/system/config/update')
+        expect(wrapper.text()).not.toContain('super_admin')
+        expect(wrapper.text()).not.toContain('POST /admin/v1/system/config/update')
         expect(wrapper.text()).toContain('home.dashboard.activity.failed')
         expect(wrapper.find('time').attributes('datetime')).toBe('2026-09-16 10:00:00')
 

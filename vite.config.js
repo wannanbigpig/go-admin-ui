@@ -17,6 +17,30 @@ const elementPlusStyleEntries = readdirSync(elementPlusComponentsDir, { withFile
     .filter((entry) => entry.isDirectory() && existsSync(resolve(elementPlusComponentsDir, entry.name, 'style/css.mjs')))
     .map((entry) => `element-plus/es/components/${entry.name}/style/css`)
 
+/** @param {string} id */
+const manualChunks = (id) => {
+    const moduleId = id.replaceAll('\\', '/')
+    if (!moduleId.includes('/node_modules/')) return
+
+    if (moduleId.includes('/echarts/lib/chart/')) return 'vendor-echarts-charts'
+    if (moduleId.includes('/echarts/lib/component/')) return 'vendor-echarts-components'
+    if (moduleId.includes('/node_modules/echarts/')) return 'vendor-echarts-core'
+    if (moduleId.includes('/node_modules/zrender/')) return 'vendor-zrender'
+    if (
+        moduleId.includes('/node_modules/vue/') ||
+        moduleId.includes('/node_modules/@vue/') ||
+        moduleId.includes('/node_modules/vue-router/') ||
+        moduleId.includes('/node_modules/vue-i18n/') ||
+        moduleId.includes('/node_modules/pinia/') ||
+        moduleId.includes('/node_modules/pinia-plugin-persistedstate/')
+    ) {
+        return 'vendor-vue'
+    }
+    if (moduleId.includes('/node_modules/axios/') || moduleId.includes('/node_modules/nprogress/')) {
+        return 'vendor-network'
+    }
+}
+
 // ==================== 常量定义 ====================
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
@@ -145,6 +169,7 @@ export default defineConfig(({ mode }) => {
                     main: resolve(import.meta.dirname, './index.html'),
                 },
                 output: {
+                    manualChunks,
                     minify: {
                         compress: {
                             dropConsole: mode === 'production',

@@ -4,7 +4,7 @@
             <template #search>
                 <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                     <el-row id="searchForm" :gutter="20">
-                        <el-col :span="5">
+                        <el-col v-if="!isSelfMode" :span="5">
                             <el-form-item :label="t('log.request.requestId')" prop="request_id">
                                 <el-input name="request_id" :placeholder="t('log.request.inputRequestId')" v-model.trim="queryWhere.request_id" clearable></el-input>
                             </el-form-item>
@@ -14,17 +14,24 @@
                                 <el-input name="operation_name" :placeholder="t('log.request.inputOperationName')" v-model.trim="queryWhere.operation_name" clearable></el-input>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="5">
+                        <el-col v-if="isSelfMode" :span="5">
+                            <el-form-item :label="t('log.request.scope')" prop="scope">
+                                <el-select name="scope" v-model="queryWhere.scope" :placeholder="t('log.request.selectScope')">
+                                    <el-option v-for="item in selfScopeOptions" :key="item.value" :label="t(item.label)" :value="item.value" />
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col v-if="!isSelfMode" :span="5">
                             <el-form-item :label="t('log.request.route')" prop="base_url">
                                 <el-input name="base_url" :placeholder="t('log.request.inputRoute')" v-model.trim="queryWhere.base_url" clearable></el-input>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="5">
+                        <el-col v-if="!isSelfMode" :span="5">
                             <el-form-item :label="t('log.request.operatorAccount')" prop="operator_account">
                                 <el-input name="operator_account" :placeholder="t('log.request.inputAccount')" v-model.trim="queryWhere.operator_account" clearable></el-input>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="5">
+                        <el-col v-if="!isSelfMode" :span="5">
                             <el-form-item :label="t('log.request.operatorId')" prop="operator_id">
                                 <el-select
                                     name="operator_id"
@@ -54,7 +61,7 @@
                                 </el-select>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="4">
+                        <el-col v-if="!isSelfMode" :span="4">
                             <el-form-item :label="t('log.request.highRisk')" prop="is_high_risk">
                                 <el-select name="is_high_risk" v-model="queryWhere.is_high_risk" clearable :placeholder="t('log.request.selectHighRisk')">
                                     <el-option :label="t('common.yes')" :value="1" />
@@ -62,28 +69,28 @@
                                 </el-select>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="4">
+                        <el-col v-if="!isSelfMode" :span="4">
                             <el-form-item :label="t('log.request.dataChange')" prop="has_change_diff">
                                 <el-select name="has_change_diff" v-model="queryWhere.has_change_diff" clearable :placeholder="t('log.request.selectDataChange')">
                                     <el-option :label="t('log.request.onlyDataChange')" :value="1" />
                                 </el-select>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="4">
+                        <el-col v-if="!isSelfMode" :span="4">
                             <el-form-item :label="t('log.request.method')" prop="method">
                                 <el-select name="method" v-model="queryWhere.method" clearable :placeholder="t('log.request.selectMethod')">
                                     <el-option v-for="item in methodOptions" :key="item.value" :label="item.label" :value="item.value" />
                                 </el-select>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="4">
+                        <el-col v-if="!isSelfMode" :span="4">
                             <el-form-item :label="t('log.request.requestKind')" prop="request_kind">
                                 <el-select name="request_kind" v-model="requestKindValue" clearable :placeholder="t('log.request.selectRequestKind')">
                                     <el-option v-for="item in requestKindOptions" :key="item.value" :label="t(item.label)" :value="item.value" />
                                 </el-select>
                             </el-form-item>
                         </el-col>
-                        <el-col :span="4">
+                        <el-col v-if="!isSelfMode" :span="4">
                             <el-form-item :label="t('log.request.executionTimeScope')" prop="execution_time_scope">
                                 <el-select name="execution_time_scope" v-model="executionTimeScopeValue" clearable :placeholder="t('log.request.selectExecutionTimeScope')">
                                     <el-option v-for="item in executionTimeScopeOptions" :key="item.value" :label="t(item.label)" :value="item.value" />
@@ -101,12 +108,26 @@
             </template>
 
             <template #actions>
-                <xl-action-button type="primary" :show-icon="false" :text="t('log.request.export')" :loading="exporting" @click="exportCsv" />
-                <xl-action-button type="primary" :show-icon="false" :text="t('log.request.maskConfig')" @click="openMaskConfigDialog" />
+                <template v-if="!isSelfMode">
+                    <xl-action-button v-permission="'requestLog:export'" type="primary" :show-icon="false" :text="t('log.request.export')" :loading="exporting" @click="exportCsv" />
+                    <xl-action-button v-permission="'requestLog:maskConfig'" type="primary" :show-icon="false" :text="t('log.request.maskConfig')" @click="openMaskConfigDialog" />
+                </template>
             </template>
 
             <template #td="{ item, val, row }">
-                <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
+                <span v-if="item.prop === 'change_summary'" class="self-list-summary" data-testid="self-list-summary">
+                    {{ formatSelfOperationSummary(row) }}
+                </span>
+                <div v-else-if="item.prop === 'self_terminal'" class="self-terminal">
+                    <span>{{ formatIpAddress(row.ip, row.ip_location) }}</span>
+                    <small>{{ [row.os, row.browser].filter(Boolean).join(' / ') || '-' }}</small>
+                </div>
+                <div v-else-if="item.prop === 'self_tags'" class="self-tags">
+                    <el-tag v-if="row.is_high_risk" size="small" type="danger">{{ t('log.request.highRisk') }}</el-tag>
+                    <el-tag v-if="row.change_summary?.has_changes" size="small" type="warning">{{ t('log.request.dataChange') }}</el-tag>
+                    <span v-if="!row.is_high_risk && !row.change_summary?.has_changes">-</span>
+                </div>
+                <el-tag v-else-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
                     {{ item.tag[val as keyof typeof item.tag]?.text || val }}
                 </el-tag>
                 <template v-else-if="item.prop === 'operation_status'">
@@ -121,7 +142,7 @@
                 <template v-else-if="item.prop === 'execution_time_us'">
                     <div class="request-log-duration">
                         <span>{{ formatExecutionTimeDisplay(row) }}</span>
-                        <el-tag size="small" effect="plain" :type="getExecutionTimeScopeTagType(row.execution_time_scope)">
+                        <el-tag v-if="!isSelfMode" size="small" effect="plain" :type="getExecutionTimeScopeTagType(row.execution_time_scope)">
                             {{ getExecutionTimeScopeText(row.execution_time_scope) }}
                         </el-tag>
                     </div>
@@ -136,7 +157,8 @@
             <template #operation>
                 <el-table-column width="100" :label="t('common.labels.operation')" align="center" fixed="right">
                     <template #default="scope">
-                        <xl-action-button v-permission="'requestLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
+                        <xl-action-button v-if="isSelfMode" type="primary" link :show-icon="false" :text="t('common.actions.detail')" @click="openDetailDrawer(scope.row)" />
+                        <xl-action-button v-else v-permission="'requestLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
                     </template>
                 </el-table-column>
             </template>
@@ -148,12 +170,12 @@
                 <template v-if="currentDetail">
                     <el-descriptions :column="2" border>
                         <el-descriptions-item :label="t('log.request.operationName')" :span="2">{{ currentDetail.operation_name || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.requestId')" :span="2">{{ currentDetail.request_id || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.operationApi')" :span="2">
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.requestId')" :span="2">{{ currentDetail.request_id || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.operationApi')" :span="2">
                             <el-tag :type="getMethodTagType(currentDetail.method)" class="xl-m-right-10">{{ currentDetail.method || '-' }}</el-tag>
                             {{ currentDetail.base_url || '-' }}
                         </el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.requestKind')">
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.requestKind')">
                             <el-tag v-if="currentDetail.request_kind" :type="getRequestKindTagType(currentDetail.request_kind)">
                                 {{ getRequestKindText(currentDetail.request_kind) }}
                             </el-tag>
@@ -165,45 +187,50 @@
                             </el-tag>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('log.request.duration')">{{ formatExecutionTimeDisplay(currentDetail) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.executionTimeScope')">
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.executionTimeScope')">
                             <el-tag v-if="currentDetail.execution_time_scope" size="small" effect="plain" :type="getExecutionTimeScopeTagType(currentDetail.execution_time_scope)">
                                 {{ getExecutionTimeScopeText(currentDetail.execution_time_scope) }}
                             </el-tag>
                             <span v-else>-</span>
                         </el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.responseCode')">
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.responseCode')">
                             <el-tag :type="getResponseStatusTagType(currentDetail.response_status)">{{ currentDetail.response_status || '-' }}</el-tag>
                         </el-descriptions-item>
                         <el-descriptions-item :label="t('common.labels.ipAddress')" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.operatorAccount')">{{ currentDetail.operator_account || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.operatorName')">{{ currentDetail.operator_name || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.jwtId')" :span="2">{{ currentDetail.jwt_id || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.operatorAccount')">{{ currentDetail.operator_account || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.operatorName')">{{ currentDetail.operator_name || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.jwtId')" :span="2">{{ adminDetail.jwt_id || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('log.login.os')">{{ currentDetail.os || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('log.login.browser')">{{ currentDetail.browser || '-' }}</el-descriptions-item>
                         <el-descriptions-item :label="t('log.request.createdAt')" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.userAgent')" :span="2">{{ currentDetail.user_agent || '-' }}</el-descriptions-item>
+                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.userAgent')" :span="2">{{ currentDetail.user_agent || '-' }}</el-descriptions-item>
                     </el-descriptions>
 
-                    <el-divider />
+                    <section v-if="selfDetail?.change_summary?.has_changes" class="self-change-summary">
+                        <div class="self-change-summary__title">{{ t('log.request.changeSummary') }}</div>
+                        <p data-testid="self-change-summary">{{ formatSelfChangeSummary(selfDetail) }}</p>
+                    </section>
 
-                    <el-collapse v-model="activeCollapse">
-                        <el-collapse-item v-if="currentDetail.request_headers" name="requestHeaders" :title="t('log.request.requestHeaders')">
-                            <pre class="json-content">{{ formatJson(currentDetail.request_headers) }}</pre>
+                    <el-divider v-if="adminDetail" />
+
+                    <el-collapse v-if="adminDetail" v-model="activeCollapse">
+                        <el-collapse-item v-if="adminDetail.request_headers" name="requestHeaders" :title="t('log.request.requestHeaders')">
+                            <pre class="json-content">{{ formatJson(adminDetail.request_headers) }}</pre>
                         </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.request_query" name="requestQuery" :title="t('log.request.requestQuery')">
-                            <pre class="json-content">{{ formatJson(currentDetail.request_query) }}</pre>
+                        <el-collapse-item v-if="adminDetail.request_query" name="requestQuery" :title="t('log.request.requestQuery')">
+                            <pre class="json-content">{{ formatJson(adminDetail.request_query) }}</pre>
                         </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.request_body" name="requestBody" :title="t('log.request.requestBody')">
-                            <pre class="json-content">{{ formatJson(currentDetail.request_body) }}</pre>
+                        <el-collapse-item v-if="adminDetail.request_body" name="requestBody" :title="t('log.request.requestBody')">
+                            <pre class="json-content">{{ formatJson(adminDetail.request_body) }}</pre>
                         </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.response_header" name="responseHeader" :title="t('log.request.responseHeader')">
-                            <pre class="json-content">{{ formatJson(currentDetail.response_header) }}</pre>
+                        <el-collapse-item v-if="adminDetail.response_header" name="responseHeader" :title="t('log.request.responseHeader')">
+                            <pre class="json-content">{{ formatJson(adminDetail.response_header) }}</pre>
                         </el-collapse-item>
                         <el-collapse-item name="responseBody" :title="t('log.request.responseBody')">
-                            <pre class="json-content">{{ formatJson(currentDetail.response_body || '') }}</pre>
+                            <pre class="json-content">{{ formatJson(adminDetail.response_body || '') }}</pre>
                         </el-collapse-item>
-                        <el-collapse-item v-if="currentDetail.change_diff" name="changeDiff" :title="t('log.request.changeDiff')">
-                            <pre class="json-content">{{ formatJson(currentDetail.change_diff) }}</pre>
+                        <el-collapse-item v-if="adminDetail.change_diff" name="changeDiff" :title="t('log.request.changeDiff')">
+                            <pre class="json-content">{{ formatJson(adminDetail.change_diff) }}</pre>
                         </el-collapse-item>
                     </el-collapse>
                 </template>
@@ -217,7 +244,7 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, toRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
@@ -228,8 +255,17 @@ import { Logger } from '@/utils/logger'
 import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, LOG_METHOD_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
 import { parseRequestLogRouteQuery } from '@/modules/dashboard/activity'
 import type { TableColumn } from '@/types/common'
-import type { ExecutionTimeScope, RequestKind, RequestLog } from '@/types/log'
+import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogSelfDetail, RequestLogSelfScope } from '@/types/log'
 import { useI18n } from 'vue-i18n'
+
+const props = withDefaults(
+    defineProps<{
+        mode?: 'admin' | 'self'
+    }>(),
+    { mode: 'admin' }
+)
+const mode = toRef(props, 'mode')
+const isSelfMode = computed(() => mode.value === 'self')
 
 const { getButtonInfoFull, checkPermission } = usePermission()
 const { copyText } = useClipboard()
@@ -239,6 +275,15 @@ const route = useRoute()
 const requestKindOptions = REQUEST_KIND_FILTER_OPTIONS
 const executionTimeScopeOptions = EXECUTION_TIME_SCOPE_FILTER_OPTIONS
 const methodOptions = LOG_METHOD_OPTIONS
+const selfScopeOptions: Array<{ value: RequestLogSelfScope; label: string }> = [
+    { value: 'regular', label: 'log.request.scopeRegular' },
+    { value: 'all', label: 'log.request.scopeAll' },
+    { value: 'important', label: 'log.request.scopeImportant' },
+    { value: 'changes', label: 'log.request.scopeChanges' },
+    { value: 'failed', label: 'log.request.scopeFailed' },
+    { value: 'high_risk', label: 'log.request.scopeHighRisk' },
+    { value: 'self_reads', label: 'log.request.scopeSelfReads' },
+]
 
 const {
     loading,
@@ -261,22 +306,42 @@ const {
     formatExecutionTimeDisplay,
     handleSortChange,
     handleSearch,
-    handleReset,
+    handleReset: resetRequestLogPage,
     getList,
     openDetailDrawer,
     openMaskConfigDialog,
     exportCsv,
-} = useRequestLogPage()
+} = useRequestLogPage({ mode })
+if (isSelfMode.value) queryWhere.scope = 'regular'
+
+const handleReset = async () => {
+    await resetRequestLogPage()
+    queryWhere.scope = isSelfMode.value ? 'regular' : null
+}
+const adminDetail = computed(() => (!isSelfMode.value ? (currentDetail.value as RequestLog | null) : null))
+const selfDetail = computed(() => (isSelfMode.value ? (currentDetail.value as RequestLogSelfDetail | null) : null))
 
 onMounted(async () => {
     const initialQuery = parseRequestLogRouteQuery(route.query)
     if (initialQuery.requestId) queryWhere.request_id = initialQuery.requestId
-    if (initialQuery.operatorAccount) queryWhere.operator_account = initialQuery.operatorAccount
+    if (!isSelfMode.value && initialQuery.operatorAccount) queryWhere.operator_account = initialQuery.operatorAccount
 
-    await Promise.all([getList(), remoteSearchOperators('')])
-    if (initialQuery.detailId && checkPermission('requestLog:detail')) {
+    const initialRequests = [getList()]
+    if (!isSelfMode.value) initialRequests.push(remoteSearchOperators(''))
+    await Promise.all(initialRequests)
+    if (initialQuery.detailId && (isSelfMode.value || checkPermission('requestLog:detail'))) {
         await openDetailDrawer({ id: initialQuery.detailId } as RequestLog)
     }
+})
+
+watch(mode, async () => {
+    // 同一组件在管理员日志与个人日志路由间复用时，先清掉旧权限域数据再重新查询。
+    showDetailDrawer.value = false
+    currentDetail.value = null
+    logList.value = []
+    operatorOptions.value = []
+    await handleReset()
+    if (!isSelfMode.value) await remoteSearchOperators('')
 })
 
 const requestKindValue = computed<string>({
@@ -332,66 +397,125 @@ const getExecutionTimeScopeText = (scope?: ExecutionTimeScope) => {
     }
 }
 
-const tableTitle = computed(
-    () =>
-        [
-            { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80, sortable: 'custom' },
-            { prop: 'operation_name', h_label: t('log.request.operationName'), minWidth: 150, overflow: true },
-            { prop: 'operator_account', h_label: t('log.request.account'), width: 120, overflow: true },
-            {
-                prop: 'request_kind',
-                h_label: t('log.request.requestKind'),
-                align: 'center',
-                width: 120,
-                customRow: true,
-                tag: {
-                    http: { type: getRequestKindTagType('http'), text: t('log.request.requestKindHttp') },
-                    websocket: { type: getRequestKindTagType('websocket'), text: t('log.request.requestKindWebsocket') },
-                },
-            },
-            {
-                prop: 'method',
-                h_label: t('log.request.method'),
-                align: 'center',
-                width: 100,
-                customRow: true,
-                tag: {
-                    GET: { type: 'success', text: 'GET' },
-                    POST: { type: 'primary', text: 'POST' },
-                    PUT: { type: 'warning', text: 'PUT' },
-                    DELETE: { type: 'danger', text: 'DELETE' },
-                },
-            },
-            { prop: 'base_url', h_label: t('log.request.route'), minWidth: 200, overflow: true, copy: true, customRow: true },
+const normalizeChangeText = (value?: string) => value?.trim() || t('log.request.changeUnset')
+
+const formatSelfChangeSummary = (detail: Pick<RequestLogSelfDetail, 'change_summary' | 'created_at'>, includeTime = true) => {
+    const summary = detail.change_summary
+    if (!summary?.has_changes) return ''
+
+    const changes = summary.items.map((item) => {
+        const label = item.label.trim() || t('log.request.changeUnknownField')
+        switch (item.change_type) {
+            case 'created':
+                return t('log.request.changeCreated', { label, after: normalizeChangeText(item.after_text) })
+            case 'updated':
+                return t('log.request.changeUpdated', {
+                    label,
+                    before: normalizeChangeText(item.before_text),
+                    after: normalizeChangeText(item.after_text),
+                })
+            case 'removed':
+                return t('log.request.changeRemoved', { label, before: normalizeChangeText(item.before_text) })
+            case 'action':
+                return label
+            default:
+                return t('log.request.changeProtected', { label })
+        }
+    })
+
+    if (summary.omitted_count > 0) {
+        changes.push(t('log.request.changeOmitted', { count: summary.omitted_count }))
+    }
+    if (changes.length === 0) {
+        changes.push(t('log.request.changeUnknown'))
+    }
+    const text = changes.join(t('log.request.changeSeparator'))
+    return includeTime ? t('log.request.changeSummaryAt', { time: detail.created_at || '-', changes: text }) : text
+}
+
+const formatSelfOperationSummary = (row: RequestLog) => {
+    const changeText = formatSelfChangeSummary(row, false)
+    if (changeText) return changeText
+    if (row.method?.toUpperCase() === 'GET') return t('log.request.viewedOperation', { operation: row.operation_name || t('log.request.unknownOperation') })
+    return t('log.request.executedWithoutChange', { operation: row.operation_name || t('log.request.unknownOperation') })
+}
+
+const tableTitle = computed(() => {
+    if (isSelfMode.value) {
+        return [
+            { prop: 'operation_name', h_label: t('log.request.operationName'), minWidth: 180, overflow: true },
+            { prop: 'change_summary', h_label: t('log.request.operationSummary'), minWidth: 360, customRow: true },
             {
                 prop: 'operation_status',
                 h_label: t('log.request.status'),
                 align: 'center',
-                width: 100,
-                customRow: true,
-            },
-            {
-                prop: 'is_high_risk',
-                h_label: t('log.request.highRisk'),
-                align: 'center',
-                width: 100,
-                customRow: true,
-                tag: {
-                    1: { type: 'danger', text: t('common.yes') },
-                    0: { type: 'info', text: t('common.no') },
-                },
-            },
-            {
-                prop: 'response_status',
-                h_label: t('log.request.httpStatus'),
-                align: 'center',
                 width: 120,
                 customRow: true,
             },
-            { prop: 'execution_time_us', h_label: t('log.request.duration'), align: 'center', width: 220, sortable: 'custom', customRow: true },
-            { prop: 'created_at', h_label: t('log.request.createdAt'), align: 'center', width: 160, sortable: 'custom' },
+            { prop: 'self_terminal', h_label: t('log.request.ipTerminal'), minWidth: 200, customRow: true },
+            { prop: 'self_tags', h_label: t('log.request.riskAndChange'), align: 'center', width: 160, customRow: true },
+            { prop: 'created_at', h_label: t('log.request.createdAt'), align: 'center', width: 180, sortable: 'custom' },
         ] as TableColumn<RequestLog>[]
-)
+    }
+
+    return [
+        { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80, sortable: 'custom' },
+        { prop: 'operation_name', h_label: t('log.request.operationName'), minWidth: 150, overflow: true },
+        { prop: 'operator_account', h_label: t('log.request.account'), width: 120, overflow: true },
+        {
+            prop: 'request_kind',
+            h_label: t('log.request.requestKind'),
+            align: 'center',
+            width: 120,
+            customRow: true,
+            tag: {
+                http: { type: getRequestKindTagType('http'), text: t('log.request.requestKindHttp') },
+                websocket: { type: getRequestKindTagType('websocket'), text: t('log.request.requestKindWebsocket') },
+            },
+        },
+        {
+            prop: 'method',
+            h_label: t('log.request.method'),
+            align: 'center',
+            width: 100,
+            customRow: true,
+            tag: {
+                GET: { type: 'success', text: 'GET' },
+                POST: { type: 'primary', text: 'POST' },
+                PUT: { type: 'warning', text: 'PUT' },
+                DELETE: { type: 'danger', text: 'DELETE' },
+            },
+        },
+        { prop: 'base_url', h_label: t('log.request.route'), minWidth: 200, overflow: true, copy: true, customRow: true },
+        {
+            prop: 'operation_status',
+            h_label: t('log.request.status'),
+            align: 'center',
+            width: 100,
+            customRow: true,
+        },
+        {
+            prop: 'is_high_risk',
+            h_label: t('log.request.highRisk'),
+            align: 'center',
+            width: 100,
+            customRow: true,
+            tag: {
+                1: { type: 'danger', text: t('common.yes') },
+                0: { type: 'info', text: t('common.no') },
+            },
+        },
+        {
+            prop: 'response_status',
+            h_label: t('log.request.httpStatus'),
+            align: 'center',
+            width: 120,
+            customRow: true,
+        },
+        { prop: 'execution_time_us', h_label: t('log.request.duration'), align: 'center', width: 220, sortable: 'custom', customRow: true },
+        { prop: 'created_at', h_label: t('log.request.createdAt'), align: 'center', width: 160, sortable: 'custom' },
+    ] as TableColumn<RequestLog>[]
+})
 </script>
 
 <style lang="scss" scoped>
@@ -417,5 +541,42 @@ const tableTitle = computed(
         overflow-x: auto;
         white-space: pre-wrap;
     }
+}
+
+.self-change-summary {
+    margin-top: var(--xl-space-4);
+    padding: var(--xl-space-4);
+    border-radius: var(--xl-radius-sm);
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-regular);
+
+    &__title {
+        margin-bottom: var(--xl-space-2);
+        color: var(--el-text-color-primary);
+        font-weight: 600;
+    }
+
+    p {
+        margin: 0;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+    }
+}
+
+.self-terminal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--xl-space-1);
+
+    small {
+        color: var(--el-text-color-secondary);
+    }
+}
+
+.self-tags {
+    display: flex;
+    justify-content: center;
+    gap: var(--xl-space-1);
+    flex-wrap: wrap;
 }
 </style>
