@@ -66,8 +66,9 @@ src
 ### 系统能力
 
 - `src/modules/system`：系统参数、字典、存储配置、任务、通知、文件资源等接口服务。
-- `src/modules/exportCenter`：导出任务提交和导出记录联动。
-- `src/views/system/task/index.vue`：任务中心分为 `definition`、`run`、`cron`、`export` 四个 Tab。
+- `src/modules/exportCenter`：导出任务提交、当前用户导出记录和实时进度联动。
+- `src/views/system/task/index.vue`：任务中心分为 `definition`、`run`、`cron` 三个运维 Tab。
+- `src/views/system/export/index.vue`：独立的“我的导出”页面，通过顶部入口进入；只展示当前用户的记录，不展示任务运行 ID 或队列信息。
 - `src/views/system/storage/index.vue`：作为兼容路由入口，进入后会重定向到 `/system/config?tab=storage`。
 
 ### 文件中心

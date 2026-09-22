@@ -1,28 +1,39 @@
 <template>
     <div class="task-stats-wrapper">
+        <section class="xl-container xl-m-bottom-10 stats-page-heading">
+            <div>
+                <h2>{{ t('system.task.statsPageTitle') }}</h2>
+                <p>{{ t('system.task.statsPageDescription') }}</p>
+            </div>
+            <div class="stats-page-heading__actions">
+                <span class="stats-range-label">{{ selectedRangeLabel }}</span>
+                <el-button :icon="Refresh" :loading="statsLoading" @click="handleStatsSearch">{{ t('system.task.refreshStats') }}</el-button>
+            </div>
+        </section>
+
         <div class="xl-container xl-m-bottom-10 search-panel">
             <el-form ref="statsQueryFormRef" class="xl-search-form" :model="statsQuery" @submit.prevent="handleStatsSearch" @keydown.enter.prevent="handleStatsSearch">
-                <el-row id="taskStatsSearchForm" :gutter="20">
-                    <el-col :span="4">
+                <el-row id="taskStatsSearchForm" :gutter="16">
+                    <el-col :xs="24" :sm="12" :md="6" :lg="5">
                         <el-form-item :label="t('system.task.code')" prop="task_code">
                             <el-input v-model.trim="statsQuery.task_code" :placeholder="t('system.task.codePlaceholder')" clearable />
                         </el-form-item>
                     </el-col>
-                    <el-col :span="3">
+                    <el-col :xs="24" :sm="12" :md="6" :lg="4">
                         <el-form-item :label="t('system.task.kind')" prop="kind">
                             <el-select v-model="statsQuery.kind" clearable>
                                 <el-option v-for="item in taskKindOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="3">
+                    <el-col :xs="24" :sm="12" :md="6" :lg="4">
                         <el-form-item :label="t('system.task.source')" prop="source">
                             <el-select v-model="statsQuery.source" clearable>
                                 <el-option v-for="item in taskSourceOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="8">
+                    <el-col :xs="24" :sm="12" :md="12" :lg="7">
                         <el-form-item :label="t('system.task.timeRange')" prop="statsDateRange">
                             <xl-date-range-picker v-model="statsDateRange" />
                         </el-form-item>
@@ -32,80 +43,119 @@
             </el-form>
         </div>
 
-        <div class="xl-container xl-m-bottom-10 stats-dashboard-panel">
-            <el-alert class="xl-m-bottom-16" :title="t('system.task.statsTruthTip')" type="info" show-icon />
+        <section class="xl-container xl-m-bottom-10 stats-overview-panel">
+            <el-alert class="stats-truth-tip" :title="t('system.task.statsTruthTip')" type="info" show-icon :closable="false" />
 
-            <el-row :gutter="16">
-                <el-col v-for="item in summaryCardsTop" :key="item.key" :xs="24" :sm="12" :lg="6">
-                    <el-card shadow="hover" class="xl-stat-card premium-stat-card">
-                        <div class="stat-content">
-                            <div class="stat-icon-wrapper" :style="{ backgroundColor: item.bgColor, color: item.color }">
-                                <el-icon :size="20"><component :is="item.icon" /></el-icon>
-                            </div>
-                            <div class="stat-info">
-                                <div class="stat-title">{{ item.title }}</div>
-                                <div class="stat-value" :style="{ color: item.color }">
-                                    <el-statistic :value="item.value" :precision="item.precision" :suffix="item.suffix" />
-                                </div>
-                            </div>
-                        </div>
-                    </el-card>
-                </el-col>
-            </el-row>
-
-            <el-row :gutter="16" class="xl-m-top-16">
-                <el-col v-for="item in summaryCardsBottom" :key="item.key" :xs="24" :sm="12" :lg="6">
-                    <el-card shadow="hover" class="xl-stat-card premium-stat-card">
-                        <div class="stat-content">
-                            <div class="stat-icon-wrapper" :style="{ backgroundColor: item.bgColor, color: item.color }">
-                                <el-icon :size="20"><component :is="item.icon" /></el-icon>
-                            </div>
-                            <div class="stat-info">
-                                <div class="stat-title">{{ item.title }}</div>
-                                <div class="stat-value" :style="{ color: item.color }">
-                                    <el-statistic :value="item.value" :precision="item.precision" :suffix="item.suffix" />
-                                </div>
-                            </div>
-                        </div>
-                    </el-card>
-                </el-col>
-            </el-row>
-
-            <div class="xl-m-top-16">
-                <el-descriptions class="custom-descriptions" :column="2" border>
-                    <el-descriptions-item :label="t('system.task.durationAvgMs')">{{ statsSummary.duration_avg_ms }}</el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.durationMaxMs')">{{ statsSummary.duration_max_ms }}</el-descriptions-item>
-                </el-descriptions>
+            <div class="metric-grid">
+                <article
+                    v-for="item in summaryCards"
+                    :key="item.key"
+                    class="metric-card"
+                    :class="[{ 'is-clickable': item.drilldownStatus }, `is-${item.tone}`]"
+                    :role="item.drilldownStatus ? 'button' : undefined"
+                    :tabindex="item.drilldownStatus ? 0 : undefined"
+                    @click="openSummaryDetails(item.drilldownStatus)"
+                    @keydown.enter.prevent="openSummaryDetails(item.drilldownStatus)"
+                >
+                    <div class="metric-card__topline">
+                        <span class="metric-card__icon"
+                            ><el-icon><component :is="item.icon" /></el-icon
+                        ></span>
+                        <span v-if="item.drilldownStatus" class="metric-card__link">{{ t('system.task.viewDetails') }} <i-ep-arrow-right /></span>
+                    </div>
+                    <span class="metric-card__label">{{ item.title }}</span>
+                    <el-statistic class="metric-card__value" :value="item.value" :precision="item.precision" :suffix="item.suffix" />
+                    <span class="metric-card__hint">{{ item.hint }}</span>
+                </article>
             </div>
-        </div>
+        </section>
 
-        <div class="xl-container xl-m-bottom-10 chart-panel">
-            <div class="task-stats-section-title">{{ t('system.task.statsTrend') }}</div>
-            <el-skeleton v-if="statsLoading" animated :rows="8" />
-            <div v-show="!statsLoading" ref="trendChartRef" class="task-trend-chart" />
-        </div>
+        <section class="stats-main-grid xl-m-bottom-10">
+            <div class="xl-container trend-panel">
+                <header class="panel-heading">
+                    <div>
+                        <h3>{{ t('system.task.statsTrend') }}</h3>
+                        <p>{{ t('system.task.statsTrendDescription') }}</p>
+                    </div>
+                    <span>{{ selectedRangeLabel }}</span>
+                </header>
 
-        <div class="xl-container table-panel">
-            <xl-table-list :loading="statsLoading" :data="trendRows" :tableTitle="trendTableTitle">
-                <template #td="{ val }">
-                    <span>{{ val ?? '-' }}</span>
-                </template>
-            </xl-table-list>
-        </div>
+                <div class="efficiency-strip">
+                    <div v-for="item in efficiencyMetrics" :key="item.key" class="efficiency-strip__item">
+                        <span>{{ item.title }}</span>
+                        <strong>{{ item.value }}</strong>
+                    </div>
+                </div>
+
+                <el-skeleton v-if="statsLoading" animated :rows="8" />
+                <div v-show="!statsLoading" ref="trendChartRef" class="task-trend-chart" />
+            </div>
+
+            <aside class="xl-container outcome-panel">
+                <header class="panel-heading panel-heading--stacked">
+                    <div>
+                        <h3>{{ t('system.task.failureBreakdown') }}</h3>
+                        <p>{{ t('system.task.drilldownTip') }}</p>
+                    </div>
+                </header>
+
+                <div class="outcome-list">
+                    <button
+                        v-for="item in statusBreakdown"
+                        :key="item.status"
+                        :data-testid="`task-stats-${item.status}`"
+                        type="button"
+                        class="outcome-item"
+                        :class="`is-${item.status}`"
+                        :disabled="item.value === 0"
+                        @click="openRunDetails(item.status)"
+                    >
+                        <span class="outcome-item__status" />
+                        <span class="outcome-item__copy">
+                            <strong>{{ item.title }}</strong>
+                            <small>{{ item.percent.toFixed(1) }}%</small>
+                        </span>
+                        <span class="outcome-item__value">{{ item.value }}</span>
+                        <i-ep-arrow-right />
+                        <span class="outcome-item__track"><i :style="{ width: `${item.percent}%` }" /></span>
+                    </button>
+                </div>
+            </aside>
+        </section>
+
+        <section class="xl-container trend-detail-panel">
+            <el-collapse v-model="expandedSections">
+                <el-collapse-item name="trend-table">
+                    <template #title>
+                        <div class="trend-detail-title">
+                            <span>{{ t('system.task.trendDetailTitle') }}</span>
+                            <small>{{ t('system.task.trendDetailDescription', { count: trendRows.length }) }}</small>
+                        </div>
+                    </template>
+                    <xl-table-list :loading="statsLoading" :data="trendRows" :tableTitle="trendTableTitle">
+                        <template #td="{ val }">
+                            <span>{{ val ?? '-' }}</span>
+                        </template>
+                    </xl-table-list>
+                </el-collapse-item>
+            </el-collapse>
+        </section>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, markRaw } from 'vue'
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { DataLine, Select, CloseBold, PieChart, Remove, Warning, VideoPause, Filter } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { DataLine, PieChart, Refresh, Select, Warning } from '@element-plus/icons-vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import { useDictOptions } from '@/composables/useDictOptions'
 import { initDashboardChart, type DashboardChart } from '@/modules/dashboard/echarts'
 import { createTaskRunStatsQuery } from '@/modules/system/model'
+import { buildTaskRunDrilldownQuery, type TaskRunDrilldownStatus } from '@/modules/system/taskRunDrilldown'
 import { SYSTEM_DICT_TYPES, taskKindFallbackOptions, taskSourceFallbackOptions } from '@/modules/system/dictOptions'
 import { fetchTaskRunStats, fetchTaskRunStatsTrend } from '@/modules/system/service'
 import { applyDateRangeToQuery } from '@/modules/log/helpers'
@@ -114,10 +164,12 @@ import type { TableColumn } from '@/types/common'
 import type { TaskRunStats, TaskRunStatsQuery, TaskRunTrendPoint } from '@/types/system'
 
 const { t } = useI18n()
+const router = useRouter()
 const { options: taskKindOptions, load: loadTaskKindOptions } = useDictOptions(SYSTEM_DICT_TYPES.taskKind, taskKindFallbackOptions)
 const { options: taskSourceOptions, load: loadTaskSourceOptions } = useDictOptions(SYSTEM_DICT_TYPES.taskSource, taskSourceFallbackOptions)
 
 type StatsDateRange = [string, string] | [] | null
+type MetricTone = 'primary' | 'success' | 'danger' | 'warning'
 
 const taskStatsDefaultRangeDays = 7
 
@@ -125,7 +177,11 @@ const statsQueryFormRef = ref<FormInstance>()
 const statsQuery = reactive(createTaskRunStatsQuery())
 const statsDateRange = ref<StatsDateRange>(createDefaultStatsDateRange())
 const statsLoading = ref(false)
+const expandedSections = ref<string[]>([])
 const statsSummary = ref<TaskRunStats>({
+    detail_time_basis: 'finished_at',
+    detail_start_time: '',
+    detail_end_time: '',
     total_count: 0,
     success_count: 0,
     failed_count: 0,
@@ -141,6 +197,7 @@ const statsSummary = ref<TaskRunStats>({
 const trendRows = ref<TaskRunTrendPoint[]>([])
 const trendChartRef = ref<HTMLElement | null>(null)
 let trendChart: DashboardChart | null = null
+let themeObserver: MutationObserver | undefined
 
 function formatDateTime(date: Date) {
     const year = date.getFullYear()
@@ -185,24 +242,100 @@ function ensureStatsDateRange(): [string, string] {
 
 const buildStatsParams = (): TaskRunStatsQuery => {
     const params: TaskRunStatsQuery = { ...statsQuery }
-    const selectedDateRange = ensureStatsDateRange()
-    applyDateRangeToQuery(params as Record<string, unknown>, selectedDateRange)
+    applyDateRangeToQuery(params as Record<string, unknown>, ensureStatsDateRange())
     return params
 }
 
-const summaryCardsTop = computed(() => [
-    { key: 'total', title: t('system.task.totalCount'), value: statsSummary.value.total_count, precision: 0, icon: markRaw(DataLine), color: '#4a89dc', bgColor: '#f0f6fc' },
-    { key: 'success', title: t('system.task.successCount'), value: statsSummary.value.success_count, precision: 0, icon: markRaw(Select), color: '#5da341', bgColor: '#f3faf0' },
-    { key: 'failed', title: t('system.task.failedCount'), value: statsSummary.value.failed_count, precision: 0, icon: markRaw(CloseBold), color: '#d9534f', bgColor: '#fdf3f3' },
-    { key: 'success_rate', title: t('system.task.successRate'), value: statsSummary.value.success_rate, precision: 1, suffix: '%', icon: markRaw(PieChart), color: '#d49635', bgColor: '#fcf7f1' },
+const selectedRangeLabel = computed(() => {
+    const range = ensureStatsDateRange()
+    return `${range[0].slice(0, 10)} — ${range[1].slice(0, 10)}`
+})
+
+const summaryCards = computed<
+    Array<{
+        key: string
+        title: string
+        value: number
+        precision: number
+        suffix?: string
+        icon: ReturnType<typeof markRaw>
+        tone: MetricTone
+        hint: string
+        drilldownStatus?: TaskRunDrilldownStatus
+    }>
+>(() => [
+    {
+        key: 'total',
+        title: t('system.task.totalCount'),
+        value: statsSummary.value.total_count,
+        precision: 0,
+        icon: markRaw(DataLine),
+        tone: 'primary',
+        hint: selectedRangeLabel.value,
+    },
+    {
+        key: 'success',
+        title: t('system.task.successCount'),
+        value: statsSummary.value.success_count,
+        precision: 0,
+        icon: markRaw(Select),
+        tone: 'success',
+        hint: t('system.task.sampledSuccessHint', { count: statsSummary.value.sampled_success_count }),
+    },
+    {
+        key: 'failed',
+        title: t('system.task.failedCount'),
+        value: statsSummary.value.failed_count,
+        precision: 0,
+        icon: markRaw(Warning),
+        tone: 'danger',
+        hint: t('system.task.failedDrilldownHint'),
+        drilldownStatus: 'failed',
+    },
+    {
+        key: 'success_rate',
+        title: t('system.task.successRate'),
+        value: statsSummary.value.success_rate,
+        precision: 1,
+        suffix: '%',
+        icon: markRaw(PieChart),
+        tone: 'warning',
+        hint: t('system.task.executionQuality'),
+    },
 ])
 
-const summaryCardsBottom = computed(() => [
-    { key: 'canceled', title: t('system.task.canceledCount'), value: statsSummary.value.canceled_count, precision: 0, suffix: undefined, icon: markRaw(Remove), color: '#8d9095', bgColor: '#f6f6f7' },
-    { key: 'timeout', title: t('system.task.timeoutCount'), value: statsSummary.value.timeout_count, precision: 0, suffix: undefined, icon: markRaw(Warning), color: '#d49635', bgColor: '#fcf7f1' },
-    { key: 'interrupted', title: t('system.task.interruptedCount'), value: statsSummary.value.interrupted_count, precision: 0, suffix: undefined, icon: markRaw(VideoPause), color: '#d9534f', bgColor: '#fdf3f3' },
-    { key: 'sampled', title: t('system.task.sampledSuccessCount'), value: statsSummary.value.sampled_success_count, precision: 0, suffix: undefined, icon: markRaw(Filter), color: '#4a89dc', bgColor: '#f0f6fc' },
+const statusBreakdown = computed<Array<{ status: TaskRunDrilldownStatus; title: string; value: number; percent: number }>>(() => {
+    const total = Math.max(statsSummary.value.total_count, 1)
+    return [
+        { status: 'failed', title: t('system.task.failedCount'), value: statsSummary.value.failed_count, percent: (statsSummary.value.failed_count / total) * 100 },
+        { status: 'timeout', title: t('system.task.timeoutCount'), value: statsSummary.value.timeout_count, percent: (statsSummary.value.timeout_count / total) * 100 },
+        { status: 'interrupted', title: t('system.task.interruptedCount'), value: statsSummary.value.interrupted_count, percent: (statsSummary.value.interrupted_count / total) * 100 },
+        { status: 'canceled', title: t('system.task.canceledCount'), value: statsSummary.value.canceled_count, percent: (statsSummary.value.canceled_count / total) * 100 },
+    ]
+})
+
+const formatDuration = (durationMs: number) => {
+    const milliseconds = Math.max(0, Number(durationMs) || 0)
+    if (milliseconds < 1000) return `${Math.round(milliseconds)} ms`
+    if (milliseconds < 60000) return `${(milliseconds / 1000).toFixed(milliseconds >= 10000 ? 1 : 2).replace(/\.0+$/, '')} s`
+    const minutes = Math.floor(milliseconds / 60000)
+    const seconds = Math.round((milliseconds % 60000) / 1000)
+    return seconds ? `${minutes} min ${seconds} s` : `${minutes} min`
+}
+
+const efficiencyMetrics = computed(() => [
+    { key: 'average', title: t('system.task.durationAvgMs'), value: formatDuration(statsSummary.value.duration_avg_ms) },
+    { key: 'maximum', title: t('system.task.durationMaxMs'), value: formatDuration(statsSummary.value.duration_max_ms) },
+    { key: 'details', title: t('system.task.sampledSuccessCount'), value: statsSummary.value.sampled_success_count },
 ])
+
+const openRunDetails = (status: TaskRunDrilldownStatus) => {
+    void router.push({ path: '/task/center', query: buildTaskRunDrilldownQuery(statsSummary.value, status) })
+}
+
+const openSummaryDetails = (status?: TaskRunDrilldownStatus) => {
+    if (status) openRunDetails(status)
+}
 
 const trendTableTitle = computed(
     () =>
@@ -216,9 +349,14 @@ const trendTableTitle = computed(
             { prop: 'timeout_count', h_label: t('system.task.timeoutCount'), minWidth: 120, align: 'center' },
             { prop: 'interrupted_count', h_label: t('system.task.interruptedCount'), minWidth: 130, align: 'center' },
             { prop: 'sampled_success_count', h_label: t('system.task.sampledSuccessCount'), minWidth: 150, align: 'center' },
-            { prop: 'duration_max_ms', h_label: t('system.task.durationMaxMs'), minWidth: 130, align: 'center' },
+            { prop: 'duration_max_ms', h_label: t('system.task.durationMaxMs'), minWidth: 130, align: 'center', formatter: (row) => formatDuration(row.duration_max_ms) },
         ] as TableColumn<TaskRunTrendPoint>[]
 )
+
+const chartColor = (variable: string, fallback: string) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
+    return value || fallback
+}
 
 const renderTrendChart = async () => {
     await nextTick()
@@ -226,29 +364,41 @@ const renderTrendChart = async () => {
     if (!trendChart) {
         trendChart = initDashboardChart(trendChartRef.value)
     }
+
+    const textColor = chartColor('--el-text-color-secondary', '#909399')
+    const primaryTextColor = chartColor('--el-text-color-primary', '#303133')
+    const borderColor = chartColor('--el-border-color-lighter', '#ebeef5')
+    const tooltipBackground = chartColor('--el-bg-color-overlay', '#ffffff')
+    const chartBackground = chartColor('--el-bg-color', '#ffffff')
     const labels = trendRows.value.map(formatTrendWindowStart)
+
     trendChart.setOption({
+        backgroundColor: 'transparent',
         tooltip: {
             trigger: 'axis',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderColor: '#ebeef5',
+            backgroundColor: tooltipBackground,
+            borderColor,
             borderWidth: 1,
-            textStyle: { color: '#606266' },
-            padding: [10, 15],
-            extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px;',
+            textStyle: { color: primaryTextColor },
+            padding: [10, 14],
+            extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-radius: 8px;',
         },
-        legend: { top: 0, icon: 'circle' },
-        grid: { left: 50, right: 20, top: 50, bottom: 40 },
+        legend: { top: 0, right: 0, icon: 'circle', textStyle: { color: textColor } },
+        grid: { left: 46, right: 18, top: 48, bottom: 36 },
         xAxis: {
             type: 'category',
+            boundaryGap: false,
             data: labels,
-            axisLine: { lineStyle: { color: '#DCDFE6' } },
-            axisLabel: { color: '#909399' },
+            axisLine: { lineStyle: { color: borderColor } },
+            axisTick: { show: false },
+            axisLabel: { color: textColor },
         },
         yAxis: {
             type: 'value',
-            splitLine: { lineStyle: { type: 'dashed', color: '#EBEEF5' } },
-            axisLabel: { color: '#909399' },
+            minInterval: 1,
+            axisLine: { show: false },
+            splitLine: { lineStyle: { type: 'dashed', color: borderColor } },
+            axisLabel: { color: textColor },
         },
         series: [
             {
@@ -257,21 +407,9 @@ const renderTrendChart = async () => {
                 smooth: true,
                 symbol: 'circle',
                 symbolSize: 6,
-                lineStyle: { width: 3, color: '#409EFF' },
-                itemStyle: { color: '#409EFF', borderWidth: 2, borderColor: '#fff' },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0,
-                        y: 0,
-                        x2: 0,
-                        y2: 1,
-                        colorStops: [
-                            { offset: 0, color: 'rgba(64,158,255,0.4)' },
-                            { offset: 1, color: 'rgba(64,158,255,0)' },
-                        ],
-                    },
-                },
+                lineStyle: { width: 3, color: '#409eff' },
+                itemStyle: { color: '#409eff', borderWidth: 2, borderColor: chartBackground },
+                areaStyle: { color: 'rgba(64, 158, 255, 0.12)' },
                 data: trendRows.value.map((item) => item.total_count),
             },
             {
@@ -279,22 +417,9 @@ const renderTrendChart = async () => {
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
-                symbolSize: 6,
-                lineStyle: { width: 3, color: '#67C23A' },
-                itemStyle: { color: '#67C23A', borderWidth: 2, borderColor: '#fff' },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0,
-                        y: 0,
-                        x2: 0,
-                        y2: 1,
-                        colorStops: [
-                            { offset: 0, color: 'rgba(103,194,58,0.4)' },
-                            { offset: 1, color: 'rgba(103,194,58,0)' },
-                        ],
-                    },
-                },
+                symbolSize: 5,
+                lineStyle: { width: 2, color: '#67c23a' },
+                itemStyle: { color: '#67c23a', borderWidth: 2, borderColor: chartBackground },
                 data: trendRows.value.map((item) => item.success_count),
             },
             {
@@ -302,22 +427,9 @@ const renderTrendChart = async () => {
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
-                symbolSize: 6,
-                lineStyle: { width: 3, color: '#F56C6C' },
-                itemStyle: { color: '#F56C6C', borderWidth: 2, borderColor: '#fff' },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0,
-                        y: 0,
-                        x2: 0,
-                        y2: 1,
-                        colorStops: [
-                            { offset: 0, color: 'rgba(245,108,108,0.4)' },
-                            { offset: 1, color: 'rgba(245,108,108,0)' },
-                        ],
-                    },
-                },
+                symbolSize: 5,
+                lineStyle: { width: 2, color: '#f56c6c' },
+                itemStyle: { color: '#f56c6c', borderWidth: 2, borderColor: chartBackground },
                 data: trendRows.value.map((item) => item.failed_count + item.timeout_count + item.interrupted_count),
             },
         ],
@@ -356,10 +468,15 @@ onMounted(async () => {
     await Promise.all([loadTaskKindOptions(), loadTaskSourceOptions()])
     await loadStats()
     window.addEventListener('resize', resizeChart)
+    themeObserver = new MutationObserver(() => {
+        void renderTrendChart()
+    })
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] })
 })
 
 onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart)
+    themeObserver?.disconnect()
     trendChart?.dispose()
     trendChart = null
 })
@@ -370,125 +487,454 @@ onBeforeUnmount(() => {
     :deep(.el-form-item) {
         width: 100%;
     }
+}
 
-    .xl-m-top-16 {
-        margin-top: 16px;
-    }
+.stats-page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
 
-    .xl-m-bottom-16 {
-        margin-bottom: 16px;
-    }
-
-    .stats-dashboard-panel,
-    .chart-panel,
-    .table-panel {
-        background-color: var(--el-bg-color);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.02);
-        border: 1px solid var(--el-border-color-light);
-    }
-
-    /* 统一的优质统计卡片样式 */
-    .premium-stat-card {
-        border-radius: 12px;
-        border: 1px solid var(--el-border-color-lighter);
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        background: linear-gradient(145deg, var(--el-bg-color), var(--el-bg-color-page));
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-
-        &:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-            border-color: var(--el-border-color-light);
-
-            .stat-icon-wrapper {
-                transform: scale(1.08) rotate(3deg);
-            }
-        }
-
-        .stat-content {
-            display: flex;
-            align-items: center;
-            padding: 8px 4px;
-            gap: 14px;
-        }
-
-        .stat-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: transform 0.3s ease;
-        }
-
-        .stat-info {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .stat-title {
-            font-size: 13px;
-            color: var(--el-text-color-secondary);
-            margin-bottom: 4px;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-        }
-
-        .stat-value {
-            font-size: 22px;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-
-        :deep(.el-statistic__content) {
-            font-size: inherit;
-            font-weight: inherit;
-            color: inherit;
-        }
-    }
-
-    /* 补充摘要面板 */
-    .custom-descriptions {
-        :deep(.el-descriptions__label) {
-            background-color: var(--el-fill-color-light);
-            color: var(--el-text-color-secondary);
-            width: 130px;
-        }
-
-        :deep(.el-descriptions__content) {
-            color: var(--el-text-color-primary);
-            font-weight: 500;
-        }
-    }
-
-    /* 趋势图区域 */
-    .task-stats-section-title {
-        font-size: 16px;
-        font-weight: 600;
+    h2 {
+        margin: 0;
         color: var(--el-text-color-primary);
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
+        font-size: var(--xl-font-xl);
+    }
 
-        &::before {
-            content: '';
-            display: inline-block;
-            width: 4px;
-            height: 16px;
-            background-color: var(--el-color-primary);
-            border-radius: 2px;
-            margin-right: 8px;
+    p {
+        margin: 6px 0 0;
+        color: var(--el-text-color-secondary);
+        font-size: var(--xl-font-sm);
+        line-height: 1.5;
+    }
+}
+
+.stats-page-heading__actions {
+    display: flex;
+    align-items: center;
+    flex: none;
+    gap: 12px;
+}
+
+.stats-range-label {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.stats-overview-panel,
+.trend-panel,
+.outcome-panel,
+.trend-detail-panel {
+    border: 1px solid var(--el-border-color-lighter);
+}
+
+.stats-truth-tip {
+    margin-bottom: 16px;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.metric-card {
+    position: relative;
+    min-width: 0;
+    padding: 18px;
+    overflow: hidden;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 10px;
+    color: var(--el-text-color-primary);
+    background: var(--el-bg-color);
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+
+    &::after {
+        position: absolute;
+        right: -26px;
+        bottom: -42px;
+        width: 108px;
+        height: 108px;
+        border-radius: 50%;
+        background: var(--metric-soft-color);
+        content: '';
+        pointer-events: none;
+    }
+
+    &.is-primary {
+        --metric-color: var(--el-color-primary);
+        --metric-soft-color: var(--el-color-primary-light-9);
+    }
+
+    &.is-success {
+        --metric-color: var(--el-color-success);
+        --metric-soft-color: var(--el-color-success-light-9);
+    }
+
+    &.is-danger {
+        --metric-color: var(--el-color-danger);
+        --metric-soft-color: var(--el-color-danger-light-9);
+    }
+
+    &.is-warning {
+        --metric-color: var(--el-color-warning);
+        --metric-soft-color: var(--el-color-warning-light-9);
+    }
+
+    &.is-clickable {
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            border-color: var(--metric-color);
+            background: var(--metric-soft-color);
+            outline: none;
+        }
+    }
+}
+
+.metric-card__topline {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 34px;
+}
+
+.metric-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    color: var(--metric-color);
+    background: var(--metric-soft-color);
+    font-size: 17px;
+}
+
+.metric-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--el-color-danger);
+    font-size: 12px;
+}
+
+.metric-card__label,
+.metric-card__hint {
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+
+.metric-card__label {
+    margin-top: 16px;
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+}
+
+.metric-card__value {
+    position: relative;
+    z-index: 1;
+    margin-top: 5px;
+
+    :deep(.el-statistic__content) {
+        color: var(--el-text-color-primary);
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+}
+
+.metric-card__hint {
+    margin-top: 8px;
+    overflow: hidden;
+    color: var(--el-text-color-placeholder);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stats-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+    gap: 10px;
+}
+
+.trend-panel,
+.outcome-panel {
+    min-width: 0;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+
+    h3 {
+        margin: 0;
+        color: var(--el-text-color-primary);
+        font-size: 16px;
+    }
+
+    p {
+        margin: 5px 0 0;
+        color: var(--el-text-color-secondary);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    > span {
+        flex: none;
+        color: var(--el-text-color-placeholder);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.efficiency-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 12px;
+    padding: 12px 0;
+    border-block: 1px solid var(--el-border-color-lighter);
+}
+
+.efficiency-strip__item {
+    min-width: 0;
+    padding: 0 16px;
+    border-right: 1px solid var(--el-border-color-lighter);
+
+    &:first-child {
+        padding-left: 0;
+    }
+
+    &:last-child {
+        border-right: 0;
+    }
+
+    span,
+    strong {
+        display: block;
+    }
+
+    span {
+        color: var(--el-text-color-secondary);
+        font-size: 12px;
+    }
+
+    strong {
+        margin-top: 5px;
+        color: var(--el-text-color-primary);
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.task-trend-chart {
+    width: 100%;
+    height: 320px;
+}
+
+.panel-heading--stacked {
+    display: block;
+}
+
+.outcome-list {
+    display: grid;
+    gap: 10px;
+}
+
+.outcome-item {
+    --outcome-color: var(--el-color-danger);
+
+    position: relative;
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr) auto 16px;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px 12px 18px;
+    overflow: hidden;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 9px;
+    color: var(--el-text-color-regular);
+    background: var(--el-bg-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+        border-color: var(--outcome-color);
+        outline: none;
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.55;
+    }
+
+    &.is-timeout {
+        --outcome-color: var(--el-color-warning);
+    }
+
+    &.is-interrupted {
+        --outcome-color: var(--el-color-primary);
+    }
+
+    &.is-canceled {
+        --outcome-color: var(--el-text-color-secondary);
+    }
+}
+
+.outcome-item__status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--outcome-color);
+}
+
+.outcome-item__copy {
+    min-width: 0;
+
+    strong,
+    small {
+        display: block;
+    }
+
+    strong {
+        overflow: hidden;
+        color: var(--el-text-color-primary);
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    small {
+        margin-top: 3px;
+        color: var(--el-text-color-placeholder);
+        font-size: 11px;
+    }
+}
+
+.outcome-item__value {
+    color: var(--outcome-color);
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.outcome-item__track {
+    position: absolute;
+    right: 12px;
+    bottom: 9px;
+    left: 30px;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--el-fill-color);
+
+    i {
+        display: block;
+        max-width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--outcome-color);
+    }
+}
+
+.trend-detail-panel {
+    padding-block: 0;
+
+    :deep(.el-collapse) {
+        border-block: 0;
+    }
+
+    :deep(.el-collapse-item__header) {
+        min-height: 58px;
+        border-bottom-color: var(--el-border-color-lighter);
+    }
+
+    :deep(.el-collapse-item__wrap) {
+        border-bottom: 0;
+    }
+}
+
+.trend-detail-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+
+    span {
+        color: var(--el-text-color-primary);
+        font-weight: 600;
+    }
+
+    small {
+        color: var(--el-text-color-secondary);
+        font-weight: 400;
+    }
+}
+
+@media (max-width: 1100px) {
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stats-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .outcome-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .stats-page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .stats-page-heading__actions {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .metric-grid,
+    .outcome-list {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-heading {
+        flex-direction: column;
+    }
+
+    .efficiency-strip__item {
+        padding-inline: 10px;
+
+        strong {
+            font-size: 14px;
         }
     }
 
     .task-trend-chart {
-        height: 320px;
-        width: 100%;
+        height: 280px;
+    }
+
+    .trend-detail-title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+        padding-block: 8px;
     }
 }
 </style>

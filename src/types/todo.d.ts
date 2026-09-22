@@ -38,6 +38,14 @@ export interface TodoSummary {
     due_today: number
 }
 
+export interface TodoReminderPreference {
+    in_app_enabled: boolean
+    sms_enabled: boolean
+    sms_available: boolean
+}
+
+export type TodoReminderPreferencePayload = Pick<TodoReminderPreference, 'in_app_enabled' | 'sms_enabled'>
+
 export interface TodoWritePayload {
     title: string
     description?: string

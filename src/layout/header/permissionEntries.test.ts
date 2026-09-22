@@ -70,26 +70,20 @@ describe('header permission entries', () => {
         vi.clearAllMocks()
     })
 
-    it('shows the export center only to users who can open the task center', () => {
+    it('shows personal exports without task operations permission', () => {
         const withoutPermission = mount(HeaderRight, {
             global: { stubs: { NotificationCenter: true }, config: { warnHandler: vi.fn() } },
         })
-        expect(withoutPermission.find('[aria-label="layout.exportCenter"]').exists()).toBe(false)
-
-        mocks.permissions.add('task:list')
-        const withPermission = mount(HeaderRight, {
-            global: { stubs: { NotificationCenter: true }, config: { warnHandler: vi.fn() } },
-        })
-        expect(withPermission.find('[aria-label="layout.exportCenter"]').exists()).toBe(true)
+        expect(withoutPermission.find('[aria-label="layout.exportCenter"]').exists()).toBe(true)
     })
 
-    it.each(['file:list', 'requestLog:export'])('does not expose the task export center for %s alone', (permission) => {
+    it.each(['file:list', 'requestLog:export'])('keeps personal exports visible for %s', (permission) => {
         mocks.permissions.add(permission)
         const wrapper = mount(HeaderRight, {
             global: { stubs: { NotificationCenter: true }, config: { warnHandler: vi.fn() } },
         })
 
-        expect(wrapper.find('[aria-label="layout.exportCenter"]').exists()).toBe(false)
+        expect(wrapper.find('[aria-label="layout.exportCenter"]').exists()).toBe(true)
     })
 
     it('shows notification management only to users who can send notifications', () => {

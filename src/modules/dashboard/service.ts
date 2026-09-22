@@ -1,4 +1,4 @@
-import { getDashboardOverview, getDashboardPersonal, getDashboardStatistics } from '@/api/dashboard'
+import { getDashboardOverview, getDashboardPersonal, getDashboardStatistics, type DashboardStatisticsQuery } from '@/api/dashboard'
 import { normalizeDetailData } from '@/modules/shared/response'
 
 export interface DashboardMetric {
@@ -152,8 +152,8 @@ export async function fetchDashboardPersonal() {
     })
 }
 
-export async function fetchDashboardStatistics() {
-    const response = await getDashboardStatistics()
+export async function fetchDashboardStatistics(params?: DashboardStatisticsQuery) {
+    const response = await getDashboardStatistics(params)
     return normalizeDetailData<DashboardStatistics>(response, {
         window_days: 0,
         window_start: '',

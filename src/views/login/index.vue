@@ -1,7 +1,5 @@
 <template>
     <div class="login-container">
-        <canvas ref="canvasRef" class="bg-canvas" aria-hidden="true"></canvas>
-
         <!-- 右上角工具栏 -->
         <div class="login-toolbar">
             <el-dropdown v-if="ENABLE_I18N" trigger="click" @command="handleLanguageCommand" teleported persistent>
@@ -37,7 +35,7 @@
         </div>
 
         <transition appear enter-active-class="animate__animated animate__fadeInUp">
-            <div class="login-shell">
+            <div ref="loginShellRef" class="login-shell">
                 <main class="login-card">
                     <div class="login-header">
                         <span class="logo-wrapper">
@@ -49,37 +47,67 @@
 
                     <div class="login-form">
                         <el-alert v-if="loginError" class="login-error" type="error" :title="loginError" :closable="false" show-icon />
-                        <el-form :model="loginForm" ref="loginFormRef" :rules="validateRules" size="large">
-                            <el-form-item prop="username" :label="t('login.username')">
-                                <el-input
-                                    v-model.trim="loginForm.username"
-                                    class="custom-input"
-                                    name="username"
-                                    autocomplete="username"
-                                    :placeholder="t('login.placeholders.username')"
-                                    @keyup.enter="handleLogin(loginFormRef)"
-                                >
-                                    <template #prefix>
-                                        <i-ep-user class="input-icon" />
-                                    </template>
-                                </el-input>
-                            </el-form-item>
-                            <el-form-item prop="password" :label="t('login.password')">
-                                <el-input
-                                    v-model="loginForm.password"
-                                    class="custom-input"
-                                    name="password"
-                                    autocomplete="current-password"
-                                    :placeholder="t('login.placeholders.password')"
-                                    type="password"
-                                    show-password
-                                    @keyup.enter="handleLogin(loginFormRef)"
-                                >
-                                    <template #prefix>
-                                        <i-ep-lock class="input-icon" />
-                                    </template>
-                                </el-input>
-                            </el-form-item>
+                        <el-tabs v-if="smsLoginEnabled" v-model="loginMode" class="login-mode-tabs" stretch>
+                            <el-tab-pane :label="t('login.modes.password')" name="password" />
+                            <el-tab-pane :label="t('login.modes.sms')" name="sms" />
+                        </el-tabs>
+                        <el-form :model="loginForm" ref="loginFormRef" :rules="validateRules" :validate-on-rule-change="false" size="large">
+                            <template v-if="loginMode === 'password'">
+                                <el-form-item prop="username" :label="t('login.username')">
+                                    <el-input
+                                        v-model.trim="loginForm.username"
+                                        class="custom-input"
+                                        name="username"
+                                        autocomplete="username"
+                                        :placeholder="t('login.placeholders.username')"
+                                        @keyup.enter="handleLogin(loginFormRef)"
+                                    >
+                                        <template #prefix>
+                                            <i-ep-user class="input-icon" />
+                                        </template>
+                                    </el-input>
+                                </el-form-item>
+                                <el-form-item prop="password" :label="t('login.password')">
+                                    <el-input
+                                        v-model="loginForm.password"
+                                        class="custom-input"
+                                        name="password"
+                                        autocomplete="current-password"
+                                        :placeholder="t('login.placeholders.password')"
+                                        type="password"
+                                        show-password
+                                        @keyup.enter="handleLogin(loginFormRef)"
+                                    >
+                                        <template #prefix>
+                                            <i-ep-lock class="input-icon" />
+                                        </template>
+                                    </el-input>
+                                </el-form-item>
+                            </template>
+
+                            <el-row v-else :gutter="12">
+                                <el-col :span="7">
+                                    <el-form-item prop="countryCode" :label="t('login.countryCode')">
+                                        <el-input v-model.trim="loginForm.countryCode" class="custom-input" name="country-code" autocomplete="tel-country-code" :placeholder="t('login.placeholders.countryCode')">
+                                            <template #prefix>+</template>
+                                        </el-input>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="17">
+                                    <el-form-item prop="phoneNumber" :label="t('login.phoneNumber')">
+                                        <el-input
+                                            v-model.trim="loginForm.phoneNumber"
+                                            class="custom-input"
+                                            name="phone-number"
+                                            autocomplete="tel-national"
+                                            :placeholder="t('login.placeholders.phoneNumber')"
+                                            @keyup.enter="handleLogin(loginFormRef)"
+                                        >
+                                            <template #prefix><i-ep-iphone class="input-icon" /></template>
+                                        </el-input>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
                             <el-form-item prop="captcha" :label="t('login.captcha')">
                                 <div class="captcha-wrapper">
                                     <el-input
@@ -115,6 +143,25 @@
                                 </div>
                             </el-form-item>
 
+                            <el-form-item v-if="loginMode === 'sms'" prop="smsCode" :label="t('login.smsCode')">
+                                <div class="sms-code-wrapper">
+                                    <el-input
+                                        v-model.trim="loginForm.smsCode"
+                                        class="custom-input"
+                                        name="sms-code"
+                                        autocomplete="one-time-code"
+                                        maxlength="8"
+                                        :placeholder="t('login.placeholders.smsCode')"
+                                        @keyup.enter="handleLogin(loginFormRef)"
+                                    >
+                                        <template #prefix><i-ep-message class="input-icon" /></template>
+                                    </el-input>
+                                    <el-button class="send-code-btn" :loading="smsSending" :disabled="smsRetrySeconds > 0" @click="handleSendSmsCode(loginFormRef)">
+                                        {{ smsRetrySeconds > 0 ? t('login.resendAfter', { seconds: smsRetrySeconds }) : t('login.sendSmsCode') }}
+                                    </el-button>
+                                </div>
+                            </el-form-item>
+
                             <el-form-item class="submit-item">
                                 <el-button class="submit-btn" type="primary" :loading="loginLoading" @click="handleLogin(loginFormRef)">
                                     {{ !loginLoading ? t('login.login') : t('login.loggingIn') }}
@@ -136,13 +183,13 @@
 
 <script setup lang="ts">
 import { USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_PATTERN, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
-import { fetchCaptcha } from '@/modules/auth/service'
+import { fetchCaptcha, fetchLoginOptions, sendLoginSmsCode } from '@/modules/auth/service'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, type FormInstance } from 'element-plus'
 import router from '@/router'
 import { Logger } from '@/utils/logger'
 import { normalizeRedirectPath } from '@/utils/redirect'
-import { computed, ref, reactive, onBeforeMount, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, reactive, onBeforeMount, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingStore, type ThemeMode } from '@/stores/setting'
 import { LOCALE_OPTIONS, ENABLE_I18N } from '@/locales'
@@ -161,7 +208,13 @@ const captchaSrc = ref('')
 const captchaLoading = ref(false)
 const captchaFailed = ref(false)
 const loginError = ref('')
+const loginMode = ref<'password' | 'sms'>('password')
+const smsLoginEnabled = ref(false)
+const smsSending = ref(false)
+const smsRetrySeconds = ref(0)
+const smsChallengeId = ref('')
 const loginFormRef = ref<FormInstance>()
+const loginShellRef = ref<HTMLDivElement>()
 const authStore = useAuthStore()
 const settingStore = useSettingStore()
 const { t } = useI18n()
@@ -186,23 +239,35 @@ const loginForm = reactive({
     password: DEFAULT_PASSWORD,
     captcha: '',
     captchaId: '',
+    countryCode: '86',
+    phoneNumber: '',
+    smsCode: '',
 })
 
 // ==================== 表单验证规则 ====================
 const validateRules = computed(() => ({
-    username: [
-        { required: true, message: t('login.usernameRequired') },
-        { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH, message: t('login.usernameInvalid') },
-        { pattern: USERNAME_PATTERN, message: t('login.usernameInvalid') },
-    ],
-    password: [
-        { required: true, message: t('login.passwordRequired') },
-        { min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: t('login.passwordInvalid') },
-    ],
+    username:
+        loginMode.value === 'password'
+            ? [
+                  { required: true, message: t('login.usernameRequired') },
+                  { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH, message: t('login.usernameInvalid') },
+                  { pattern: USERNAME_PATTERN, message: t('login.usernameInvalid') },
+              ]
+            : [],
+    password:
+        loginMode.value === 'password'
+            ? [
+                  { required: true, message: t('login.passwordRequired') },
+                  { min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: t('login.passwordInvalid') },
+              ]
+            : [],
     captcha: [
-        { required: true, message: t('login.captchaRequired') },
+        { required: loginMode.value === 'password' || !smsChallengeId.value, message: t('login.captchaRequired') },
         { pattern: /^[a-zA-Z0-9]{4}$/, message: t('login.captchaInvalid') },
     ],
+    countryCode: loginMode.value === 'sms' ? [{ required: true, pattern: /^\d{1,4}$/, message: t('login.countryCodeInvalid') }] : [],
+    phoneNumber: loginMode.value === 'sms' ? [{ required: true, pattern: /^1[3-9]\d{9}$/, message: t('login.phoneNumberInvalid') }] : [],
+    smsCode: loginMode.value === 'sms' ? [{ required: true, pattern: /^\d{6}$/, message: t('login.smsCodeInvalid') }] : [],
 }))
 
 // ==================== 方法 ====================
@@ -225,11 +290,91 @@ const refreshCaptcha = async () => {
     }
 }
 
+const loadLoginOptions = async () => {
+    try {
+        const options = await fetchLoginOptions()
+        smsLoginEnabled.value = options.sms_login_enabled === true
+        if (!smsLoginEnabled.value) loginMode.value = 'password'
+    } catch (error) {
+        smsLoginEnabled.value = false
+        loginMode.value = 'password'
+        Logger.warn('获取登录选项失败，继续使用密码登录:', error)
+    }
+}
+
+let smsCountdownTimer: ReturnType<typeof setInterval> | undefined
+
+const clearSmsCountdown = () => {
+    if (smsCountdownTimer) clearInterval(smsCountdownTimer)
+    smsCountdownTimer = undefined
+    smsRetrySeconds.value = 0
+}
+
+const startSmsCountdown = (seconds: number) => {
+    clearSmsCountdown()
+    smsRetrySeconds.value = Math.max(0, Math.floor(seconds))
+    if (smsRetrySeconds.value === 0) return
+    smsCountdownTimer = setInterval(() => {
+        smsRetrySeconds.value = Math.max(0, smsRetrySeconds.value - 1)
+        if (smsRetrySeconds.value === 0) clearSmsCountdown()
+    }, 1000)
+}
+
+const invalidateSmsChallenge = () => {
+    smsChallengeId.value = ''
+    loginForm.smsCode = ''
+    clearSmsCountdown()
+}
+
+const handleSendSmsCode = async (formEl: FormInstance | undefined) => {
+    if (!formEl || smsSending.value || smsRetrySeconds.value > 0) return
+    loginError.value = ''
+    if (!/^[a-zA-Z0-9]{4}$/.test(loginForm.captcha)) {
+        loginError.value = loginForm.captcha ? t('login.captchaInvalid') : t('login.captchaRequired')
+        return
+    }
+
+    try {
+        await formEl.validateField(['countryCode', 'phoneNumber'])
+    } catch {
+        return
+    }
+
+    smsSending.value = true
+    try {
+        const result = await sendLoginSmsCode({
+            country_code: loginForm.countryCode,
+            phone_number: loginForm.phoneNumber,
+            captcha: loginForm.captcha,
+            captcha_id: loginForm.captchaId,
+        })
+        if (!result.challenge_id) throw new Error('短信验证码响应缺少 challenge_id')
+        smsChallengeId.value = result.challenge_id
+        startSmsCountdown(result.retry_after)
+        loginForm.smsCode = ''
+        loginForm.captcha = ''
+        await refreshCaptcha()
+        ElMessage.success(t('login.smsCodeSent'))
+    } catch (error) {
+        loginError.value = t('login.sendSmsCodeFailed')
+        Logger.error('发送短信验证码失败:', error)
+        loginForm.captcha = ''
+        await refreshCaptcha()
+    } finally {
+        smsSending.value = false
+    }
+}
+
 /**
  * 处理登录
  */
 const handleLogin = async (formEl: FormInstance | undefined) => {
     if (!formEl) return
+
+    if (loginMode.value === 'sms' && !smsChallengeId.value) {
+        loginError.value = t('login.sendCodeFirst')
+        return
+    }
 
     let credentialsSubmitted = false
     try {
@@ -238,12 +383,21 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
         await formEl.validate()
 
         credentialsSubmitted = true
-        await authStore.loginWithCredentials({
-            username: loginForm.username,
-            password: loginForm.password,
-            captcha: loginForm.captcha,
-            captcha_id: loginForm.captchaId,
-        })
+        if (loginMode.value === 'sms') {
+            await authStore.loginWithSmsCode({
+                country_code: loginForm.countryCode,
+                phone_number: loginForm.phoneNumber,
+                sms_code: loginForm.smsCode,
+                challenge_id: smsChallengeId.value,
+            })
+        } else {
+            await authStore.loginWithCredentials({
+                username: loginForm.username,
+                password: loginForm.password,
+                captcha: loginForm.captcha,
+                captcha_id: loginForm.captchaId,
+            })
+        }
 
         if (authStore.routerData.length === 0) {
             // 走到这里说明 refreshUserInfo 已 resolve 但 routerData 仍空：要么后端返回空菜单，要么前端把 menu 当作空集合处理了。
@@ -258,7 +412,7 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
         const targetPath = normalizeRedirectPath(redirectQuery, authStore.firstPath || '/')
         await router.push(targetPath)
     } catch (error) {
-        if (credentialsSubmitted) loginError.value = t('login.loginFailed')
+        if (credentialsSubmitted) loginError.value = t(loginMode.value === 'sms' ? 'login.smsLoginFailed' : 'login.loginFailed')
         Logger.error('登录失败:', error)
         await refreshCaptcha()
         loginForm.captcha = ''
@@ -267,271 +421,62 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
     }
 }
 
-// ==================== Canvas 动画背景 ====================
-const canvasRef = ref<HTMLCanvasElement>()
-let animId = 0
+watch([() => loginForm.countryCode, () => loginForm.phoneNumber], ([countryCode, phoneNumber], [previousCountryCode, previousPhoneNumber]) => {
+    if (countryCode !== previousCountryCode || phoneNumber !== previousPhoneNumber) invalidateSmsChallenge()
+})
 
-interface Blob {
-    cx: number
-    cy: number
-    radius: number
-    color: { r: number; g: number; b: number }
-    vx: number
-    vy: number
-    phase: number
-    maxSpeed: number
-    minSpeed: number
-    depth: number
-}
-
-const initCanvasBg = () => {
-    const canvas = canvasRef.value
-    if (!canvas) return
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    const stage = canvas.parentElement
-
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    let w = 0
-    let h = 0
-
-    const resize = () => {
-        w = window.innerWidth
-        h = window.innerHeight
-        canvas.width = w * dpr
-        canvas.height = h * dpr
-        canvas.style.width = `${w}px`
-        canvas.style.height = `${h}px`
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    }
-    resize()
-    window.addEventListener('resize', resize)
-
-    const rand = (min: number, max: number) => Math.random() * (max - min) + min
-    const pointer = {
-        x: 0,
-        y: 0,
-        targetX: 0,
-        targetY: 0,
-        clientX: w / 2,
-        clientY: h / 2,
-        active: false,
-    }
-    let pointerStyleFrame = 0
-
-    const supportsPointerMotion = window.matchMedia?.('(pointer: fine)').matches ?? false
-    const updatePointer = (event: PointerEvent) => {
-        pointer.clientX = event.clientX
-        pointer.clientY = event.clientY
-        pointer.targetX = (event.clientX / Math.max(w, 1) - 0.5) * 2
-        pointer.targetY = (event.clientY / Math.max(h, 1) - 0.5) * 2
-        pointer.active = true
-        if (pointerStyleFrame) return
-        pointerStyleFrame = requestAnimationFrame(() => {
-            const xRatio = pointer.clientX / Math.max(w, 1)
-            const yRatio = pointer.clientY / Math.max(h, 1)
-            stage?.style.setProperty('--parallax-x', `${((xRatio - 0.5) * 42).toFixed(2)}px`)
-            stage?.style.setProperty('--parallax-y', `${((yRatio - 0.5) * 32).toFixed(2)}px`)
-            pointerStyleFrame = 0
-        })
-    }
-    const resetPointer = () => {
-        pointer.targetX = 0
-        pointer.targetY = 0
-        pointer.active = false
-        stage?.style.setProperty('--parallax-x', '0px')
-        stage?.style.setProperty('--parallax-y', '0px')
-    }
-
-    if (supportsPointerMotion) {
-        window.addEventListener('pointermove', updatePointer, { passive: true })
-        window.addEventListener('pointerleave', resetPointer)
-        window.addEventListener('blur', resetPointer)
-    }
-
-    const lightColors = [
-        { r: 96, g: 165, b: 250 },
-        { r: 56, g: 189, b: 248 },
-        { r: 129, g: 140, b: 248 },
-        { r: 147, g: 197, b: 253 },
-    ]
-
-    const darkColors = [
-        { r: 37, g: 99, b: 235 },
-        { r: 79, g: 70, b: 229 },
-        { r: 14, g: 165, b: 233 },
-        { r: 124, g: 58, b: 237 },
-    ]
-
-    const createBlobs = (colors: typeof lightColors): Blob[] =>
-        colors.map((color) => {
-            const minSpeed = rand(12, 24)
-            const maxSpeed = rand(30, 58)
-            const angle = rand(0, Math.PI * 2)
-            const initSpeed = rand(minSpeed, maxSpeed)
-            return {
-                cx: rand(0, w),
-                cy: rand(0, h),
-                radius: rand(200, 400),
-                color,
-                vx: Math.cos(angle) * initSpeed,
-                vy: Math.sin(angle) * initSpeed,
-                phase: rand(0, Math.PI * 2),
-                maxSpeed,
-                minSpeed,
-                depth: rand(0.35, 1),
-            }
-        })
-
-    const lightBlobs = createBlobs(lightColors)
-    const darkBlobs = createBlobs(darkColors)
-    let lastTime = performance.now()
-
-    const draw = (now: number) => {
-        const dt = Math.min((now - lastTime) / 1000, 0.05)
-        lastTime = now
-
-        const dark = document.documentElement.classList.contains('dark')
-        const blobs = dark ? darkBlobs : lightBlobs
-        pointer.x += (pointer.targetX - pointer.x) * 0.085
-        pointer.y += (pointer.targetY - pointer.y) * 0.085
-
-        ctx.clearRect(0, 0, w, h)
-
-        ctx.fillStyle = dark ? '#0f172a' : '#f4f7fb'
-        ctx.fillRect(0, 0, w, h)
-
-        const elapsed = now / 1000
-
-        // ==================== 1. 物理位置与边界碰撞更新 ====================
-        for (const blob of blobs) {
-            blob.cx += blob.vx * dt
-            blob.cy += blob.vy * dt
-
-            // 边界碰撞检测（台球反射：入射角等于反射角）
-            const margin = blob.radius * 0.3
-
-            if (blob.cx < -margin) {
-                blob.cx = -margin
-                blob.vx = -blob.vx
-            } else if (blob.cx > w + margin) {
-                blob.cx = w + margin
-                blob.vx = -blob.vx
-            }
-
-            if (blob.cy < -margin) {
-                blob.cy = -margin
-                blob.vy = -blob.vy
-            } else if (blob.cy > h + margin) {
-                blob.cy = h + margin
-                blob.vy = -blob.vy
-            }
-        }
-
-        // ==================== 2. 球与球之间的碰撞检测与处理 ====================
-        const collisionThreshold = 0.4
-        for (let i = 0; i < blobs.length; i++) {
-            for (let j = i + 1; j < blobs.length; j++) {
-                const b1 = blobs[i]
-                const b2 = blobs[j]
-
-                const dx = b1.cx - b2.cx
-                const dy = b1.cy - b2.cy
-                const dist = Math.sqrt(dx * dx + dy * dy)
-
-                const r1 = b1.radius * collisionThreshold
-                const r2 = b2.radius * collisionThreshold
-
-                if (dist < r1 + r2) {
-                    if (dist === 0) continue
-
-                    // 位置修正以防止粘连
-                    const overlap = r1 + r2 - dist
-                    const nx = dx / dist
-                    const ny = dy / dist
-
-                    b1.cx += nx * overlap * 0.5
-                    b1.cy += ny * overlap * 0.5
-                    b2.cx -= nx * overlap * 0.5
-                    b2.cy -= ny * overlap * 0.5
-
-                    // 重置随机速度（速率）
-                    const speed1 = rand(b1.minSpeed, b1.maxSpeed)
-                    const speed2 = rand(b2.minSpeed, b2.maxSpeed)
-
-                    // 反弹方向：沿着碰撞法线向外，并加上随机微调偏角（-45度 到 +45度）以增添随机感
-                    const angleOffset1 = rand(-Math.PI / 4, Math.PI / 4)
-                    const angleOffset2 = rand(-Math.PI / 4, Math.PI / 4)
-
-                    const angle1 = Math.atan2(dy, dx) + angleOffset1
-                    const angle2 = Math.atan2(-dy, -dx) + angleOffset2
-
-                    b1.vx = Math.cos(angle1) * speed1
-                    b1.vy = Math.sin(angle1) * speed1
-                    b2.vx = Math.cos(angle2) * speed2
-                    b2.vy = Math.sin(angle2) * speed2
-                }
-            }
-        }
-
-        for (const blob of blobs) {
-            blob.phase += dt * 0.5
-            const r = blob.radius * (1 + Math.sin(elapsed * 0.4 + blob.phase) * 0.08)
-            let renderX = blob.cx + pointer.x * 88 * blob.depth
-            let renderY = blob.cy + pointer.y * 66 * blob.depth
-
-            if (pointer.active) {
-                const dx = renderX - pointer.clientX
-                const dy = renderY - pointer.clientY
-                const distance = Math.hypot(dx, dy)
-                const influenceRadius = 320
-                if (distance > 0 && distance < influenceRadius) {
-                    const force = (1 - distance / influenceRadius) * 36 * blob.depth
-                    renderX += (dx / distance) * force
-                    renderY += (dy / distance) * force
-                }
-            }
-
-            const alpha = dark ? 0.2 : 0.34
-            const grad = ctx.createRadialGradient(renderX, renderY, 0, renderX, renderY, r)
-            grad.addColorStop(0, `rgba(${blob.color.r},${blob.color.g},${blob.color.b},${alpha})`)
-            grad.addColorStop(0.45, `rgba(${blob.color.r},${blob.color.g},${blob.color.b},${alpha * 0.35})`)
-            grad.addColorStop(1, `rgba(${blob.color.r},${blob.color.g},${blob.color.b},0)`)
-
-            ctx.beginPath()
-            ctx.arc(renderX, renderY, r, 0, Math.PI * 2)
-            ctx.fillStyle = grad
-            ctx.fill()
-        }
-
-        animId = requestAnimationFrame(draw)
-    }
-
-    animId = requestAnimationFrame(draw)
-
-    return () => {
-        cancelAnimationFrame(animId)
-        cancelAnimationFrame(pointerStyleFrame)
-        window.removeEventListener('resize', resize)
-        if (supportsPointerMotion) {
-            window.removeEventListener('pointermove', updatePointer)
-            window.removeEventListener('pointerleave', resetPointer)
-            window.removeEventListener('blur', resetPointer)
-        }
-    }
-}
+watch(loginMode, () => {
+    loginError.value = ''
+    loginFormRef.value?.clearValidate?.()
+})
 
 // ==================== 生命周期 ====================
 const triggerClick = (e: Event) => {
     ;(e.currentTarget as HTMLElement)?.click()
 }
 
-let disposeCanvasBg: (() => void) | undefined
+let shellParallaxFrame = 0
+let disposeShellParallax: (() => void) | undefined
 
-onBeforeMount(refreshCaptcha)
+const initShellParallax = () => {
+    const shell = loginShellRef.value
+    if (!shell || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !window.matchMedia?.('(pointer: fine)').matches) return
+
+    const reset = () => {
+        cancelAnimationFrame(shellParallaxFrame)
+        shellParallaxFrame = 0
+        shell.style.setProperty('--shell-parallax-x', '0px')
+        shell.style.setProperty('--shell-parallax-y', '0px')
+    }
+    const update = (event: PointerEvent) => {
+        if (shellParallaxFrame) return
+        shellParallaxFrame = requestAnimationFrame(() => {
+            const x = ((event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 36).toFixed(2)
+            const y = ((event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 28).toFixed(2)
+            shell.style.setProperty('--shell-parallax-x', `${x}px`)
+            shell.style.setProperty('--shell-parallax-y', `${y}px`)
+            shellParallaxFrame = 0
+        })
+    }
+
+    window.addEventListener('pointermove', update, { passive: true })
+    window.addEventListener('pointerleave', reset)
+    window.addEventListener('blur', reset)
+
+    return () => {
+        cancelAnimationFrame(shellParallaxFrame)
+        shellParallaxFrame = 0
+        window.removeEventListener('pointermove', update)
+        window.removeEventListener('pointerleave', reset)
+        window.removeEventListener('blur', reset)
+    }
+}
+
+onBeforeMount(() => {
+    void Promise.all([refreshCaptcha(), loadLoginOptions()])
+})
 onMounted(() => {
-    disposeCanvasBg = initCanvasBg()
+    disposeShellParallax = initShellParallax()
 
     // 预加载首页路由组件，图表库由首页按需加载，避免登录页提前拉取大包。
     const prefetch = () => {
@@ -544,14 +489,15 @@ onMounted(() => {
         setTimeout(prefetch, 2000)
     }
 })
-onBeforeUnmount(() => disposeCanvasBg?.())
+onBeforeUnmount(() => {
+    disposeShellParallax?.()
+    clearSmsCountdown()
+})
 </script>
 
 <style scoped lang="scss">
-/* 登录页保持单一任务焦点，动态效果只放在背景层，避免表单跟随鼠标晃动。 */
+/* 登录页保持单一任务焦点，背景只保留静态层次。 */
 .login-container {
-    --parallax-x: 0px;
-    --parallax-y: 0px;
     position: relative;
     isolation: isolate;
     display: flex;
@@ -562,19 +508,11 @@ onBeforeUnmount(() => disposeCanvasBg?.())
     min-height: 100vh;
     padding: 72px 24px 48px;
     overflow: hidden auto;
+    scrollbar-gutter: stable both-edges;
     background: #f4f7fb;
     background-image:
         radial-gradient(circle at 8% 8%, rgba(125, 211, 252, 0.24), transparent 32%), radial-gradient(circle at 90% 18%, rgba(167, 139, 250, 0.17), transparent 30%),
         radial-gradient(circle at 48% 100%, rgba(110, 231, 183, 0.18), transparent 34%);
-}
-
-.bg-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
 }
 
 .login-container::before {
@@ -585,14 +523,13 @@ onBeforeUnmount(() => disposeCanvasBg?.())
     pointer-events: none;
 }
 
-/* 与项目文档站首页保持同一套细网格和视差语言，不设置追随光标的独立光斑。 */
+/* 与项目文档站首页保持同一套静态细网格。 */
 .login-container::before {
     opacity: 0.3;
     background-image: linear-gradient(rgba(147, 197, 253, 0.36) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 197, 253, 0.36) 1px, transparent 1px);
-    background-position: var(--parallax-x) var(--parallax-y);
+    background-position: 0 0;
     background-size: 48px 48px;
     mask-image: radial-gradient(circle at center, #000 0, transparent 70%);
-    transition: background-position 0.18s ease-out;
 }
 
 .login-toolbar {
@@ -632,6 +569,8 @@ onBeforeUnmount(() => disposeCanvasBg?.())
 }
 
 .login-shell {
+    --shell-parallax-x: 0px;
+    --shell-parallax-y: 0px;
     position: relative;
     z-index: 2;
     width: min(420px, 100%);
@@ -651,8 +590,8 @@ onBeforeUnmount(() => disposeCanvasBg?.())
         0 0 0 152px rgba(22, 119, 255, 0.014);
     content: '';
     pointer-events: none;
-    transform: translate(calc(-50% + var(--parallax-x)), calc(-50% + var(--parallax-y)));
-    transition: transform 0.22s ease-out;
+    transform: translate(calc(-50% + var(--shell-parallax-x)), calc(-50% + var(--shell-parallax-y)));
+    transition: transform 0.18s ease-out;
 }
 
 .login-card {
@@ -712,6 +651,14 @@ onBeforeUnmount(() => disposeCanvasBg?.())
 
 .login-error {
     margin-bottom: var(--xl-space-4);
+}
+
+.login-mode-tabs {
+    margin-bottom: var(--xl-space-4);
+
+    :deep(.el-tabs__header) {
+        margin-bottom: 0;
+    }
 }
 
 .login-form {
@@ -800,6 +747,22 @@ onBeforeUnmount(() => disposeCanvasBg?.())
                 font-size: var(--xl-font-xs);
                 text-align: center;
             }
+        }
+    }
+
+    .sms-code-wrapper {
+        display: flex;
+        width: 100%;
+        gap: var(--xl-space-3);
+
+        .custom-input {
+            min-width: 0;
+        }
+
+        .send-code-btn {
+            flex: 0 0 132px;
+            height: 50px;
+            border-radius: 13px;
         }
     }
 
@@ -991,6 +954,15 @@ onBeforeUnmount(() => disposeCanvasBg?.())
         }
     }
 
+    .login-form .sms-code-wrapper {
+        flex-direction: column;
+
+        .send-code-btn {
+            flex-basis: auto;
+            width: 100%;
+        }
+    }
+
     .project-link {
         right: auto;
         bottom: 14px;
@@ -1000,10 +972,6 @@ onBeforeUnmount(() => disposeCanvasBg?.())
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bg-canvas {
-        display: none;
-    }
-
     .login-shell {
         animation: none !important;
     }

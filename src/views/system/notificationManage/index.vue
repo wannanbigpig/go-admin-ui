@@ -109,7 +109,7 @@ import { useI18n } from 'vue-i18n'
 import router from '@/router'
 import { dispatchSystemNotification } from '@/modules/system/service'
 import type { NotificationAudienceType, NotificationSendPayload } from '@/types/notification'
-import { useNotificationCategoryOptions } from '../notification/notificationConstants'
+import { useManualNotificationCategoryOptions } from '../notification/notificationConstants'
 
 interface NotificationManageFormState {
     audience_type: NotificationAudienceType
@@ -137,7 +137,7 @@ const createInitialForm = (): NotificationManageFormState => ({
 
 const form = reactive<NotificationManageFormState>(createInitialForm())
 
-const categoryOptions = useNotificationCategoryOptions()
+const categoryOptions = useManualNotificationCategoryOptions()
 
 const scopeItems = computed(() => {
     const items = [

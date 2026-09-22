@@ -44,4 +44,13 @@ describe('TodoCard', () => {
         expect(wrapper.find('.todo-card__error').exists()).toBe(true)
         expect(wrapper.find('el-empty-stub').exists()).toBe(false)
     })
+
+    it('opens the hidden todo route when an item has no business action', async () => {
+        const wrapper = shallowMount(TodoCard)
+        await flushPromises()
+
+        await wrapper.find('.todo-card__item').trigger('click')
+
+        expect(mocks.push).toHaveBeenCalledWith('/todo/list')
+    })
 })

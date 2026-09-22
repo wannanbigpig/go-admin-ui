@@ -107,6 +107,12 @@ const openActivity = (item: DashboardActivityView) => {
 
 <style scoped lang="scss">
 .recent-activity-card {
+    height: 100%;
+
+    :deep(.el-card__header) {
+        padding: var(--xl-space-3) var(--xl-space-4);
+    }
+
     :deep(.el-card__body) {
         padding: 0;
     }
@@ -149,9 +155,9 @@ const openActivity = (item: DashboardActivityView) => {
 
 .activity-entry {
     width: 100%;
-    min-height: 76px;
-    gap: var(--xl-space-3);
-    padding: var(--xl-space-3) 18px;
+    min-height: 54px;
+    gap: var(--xl-space-2);
+    padding: var(--xl-space-2) var(--xl-space-4);
     border: 0;
     background: transparent;
     color: inherit;
@@ -176,8 +182,8 @@ const openActivity = (item: DashboardActivityView) => {
 
 .activity-status-dot {
     flex: 0 0 auto;
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--el-color-info);
 
@@ -221,7 +227,7 @@ const openActivity = (item: DashboardActivityView) => {
 }
 
 .activity-loading {
-    padding: var(--xl-space-2) 18px;
+    padding: var(--xl-space-2) var(--xl-space-4);
 }
 
 .activity-skeleton {
@@ -247,7 +253,7 @@ const openActivity = (item: DashboardActivityView) => {
 .activity-error {
     justify-content: space-between;
     gap: var(--xl-space-3);
-    padding: var(--xl-space-4) 18px;
+    padding: var(--xl-space-4);
 }
 
 @media (max-width: 767px) {

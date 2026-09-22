@@ -35,7 +35,7 @@ export function useExportTaskSubmitter() {
                         confirmButtonText: t('system.task.exportGotoTaskCenter'),
                         cancelButtonText: t('common.actions.cancel'),
                     })
-                    await router.push({ path: '/task/center', query: { tab: 'export' } })
+                    await router.push({ path: '/my-exports' })
                 } catch {
                     // user canceled navigation prompt
                 }

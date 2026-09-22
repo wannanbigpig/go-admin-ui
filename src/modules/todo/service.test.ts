@@ -14,10 +14,10 @@ describe('modules/todo/service', () => {
     it('keeps only active todos and sorts overdue, priority, then due date', () => {
         const result = sortActiveTodos([
             todo({ id: 1, status: 'completed', is_overdue: true }),
-            todo({ id: 2, priority: 'urgent', due_at: '2026-09-20 10:00:00' }),
+            todo({ id: 2, priority: 'urgent', is_overdue: false, due_at: '2026-09-20 10:00:00' }),
             todo({ id: 3, priority: 'low', is_overdue: true, due_at: '2026-09-16 10:00:00' }),
             todo({ id: 4, priority: 'high', is_overdue: true, status: 'processing', due_at: '2026-09-16 11:00:00' }),
-            todo({ id: 5, priority: 'normal', due_at: '2026-09-18 10:00:00' }),
+            todo({ id: 5, priority: 'normal', is_overdue: false, due_at: '2026-09-18 10:00:00' }),
         ])
 
         expect(result.map((item) => item.id)).toEqual([4, 3, 2, 5])

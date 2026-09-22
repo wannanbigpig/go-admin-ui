@@ -29,11 +29,17 @@ export function useProfilePage() {
 
     const formData = reactive(createProfileForm())
 
+    const isPhoneNumberChanged = () => {
+        const nextPhoneNumber = formData.phone_number.trim()
+        const currentPhoneNumber = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number.trim() : ''
+        return Boolean(nextPhoneNumber) && nextPhoneNumber !== currentPhoneNumber
+    }
+
     const formRules = {
         current_password: [
             {
                 validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
-                    if (formData.password && !value) {
+                    if ((formData.password || isPhoneNumberChanged()) && !value) {
                         callback(new Error(translate('validation.profile.currentPasswordRequired')))
                         return
                     }
@@ -145,11 +151,14 @@ export function useProfilePage() {
             nickname: formData.nickname,
         }
 
+        const phoneNumberChanged = isPhoneNumberChanged()
         if (formData.phone_number) submitData.phone_number = formData.phone_number
         if (formData.email) submitData.email = formData.email
         if (formData.avatar) submitData.avatar = formData.avatar
-        if (formData.password) {
+        if (formData.password || phoneNumberChanged) {
             submitData.current_password = formData.current_password
+        }
+        if (formData.password) {
             submitData.password = formData.password
         }
 

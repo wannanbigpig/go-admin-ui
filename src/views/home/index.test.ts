@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, shallowMount } from '@vue/test-utils'
+import { flushPromises, mount, shallowMount } from '@vue/test-utils'
 import Home from './index.vue'
 import RecentActivityPanel from './components/RecentActivityPanel.vue'
 import TodoCard from './components/TodoCard.vue'
@@ -26,6 +26,7 @@ vi.mock('@/utils/logger', () => ({ Logger: { warn: vi.fn() } }))
 describe('home monitor lifecycle', () => {
     beforeEach(() => {
         vi.useFakeTimers()
+        vi.setSystemTime(new Date(2026, 8, 17, 12, 0, 0))
         vi.clearAllMocks()
         mocks.permissions.clear()
         mocks.permissions.add('dashboard:overview')
@@ -35,7 +36,10 @@ describe('home monitor lifecycle', () => {
         mocks.overview.mockResolvedValue(null)
         mocks.statistics.mockResolvedValue(null)
     })
-    afterEach(() => vi.useRealTimers())
+    afterEach(() => {
+        vi.restoreAllMocks()
+        vi.useRealTimers()
+    })
     it('does not install polling after unmount during initial API requests', async () => {
         let resolve!: (value: unknown) => void
         mocks.monitor.mockReturnValue(
@@ -66,12 +70,32 @@ describe('home monitor lifecycle', () => {
         mocks.monitor.mockResolvedValue(null)
         const wrapper = shallowMount(Home, { global: { config: { warnHandler: vi.fn() } } })
         await flushPromises()
-        await vi.advanceTimersByTimeAsync(30000)
+        await vi.advanceTimersByTimeAsync(15000)
         expect(mocks.monitor).toHaveBeenCalledTimes(2)
         wrapper.unmount()
         await vi.advanceTimersByTimeAsync(90000)
         expect(mocks.monitor).toHaveBeenCalledTimes(2)
         expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('pauses monitor polling while the page is hidden and refreshes when visible again', async () => {
+        const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+        mocks.monitor.mockResolvedValue(null)
+        const wrapper = shallowMount(Home, { global: { config: { warnHandler: vi.fn() } } })
+        await flushPromises()
+        expect(mocks.monitor).toHaveBeenCalledTimes(1)
+
+        hidden.mockReturnValue(true)
+        document.dispatchEvent(new Event('visibilitychange'))
+        await vi.advanceTimersByTimeAsync(45000)
+        expect(mocks.monitor).toHaveBeenCalledTimes(1)
+
+        hidden.mockReturnValue(false)
+        document.dispatchEvent(new Event('visibilitychange'))
+        await flushPromises()
+        expect(mocks.monitor).toHaveBeenCalledTimes(2)
+
+        wrapper.unmount()
     })
 
     it('loads personal data but skips every protected dashboard request without permissions', async () => {
@@ -85,10 +109,10 @@ describe('home monitor lifecycle', () => {
         expect(mocks.overview).not.toHaveBeenCalled()
         expect(mocks.statistics).not.toHaveBeenCalled()
         expect(mocks.monitor).not.toHaveBeenCalled()
-        expect(wrapper.text()).toContain('3')
-        expect(wrapper.text()).toContain('home.dashboard.personal.operations')
+        expect(wrapper.text()).not.toContain('home.dashboard.personal.operations')
         expect(wrapper.text()).not.toContain('home.dashboard.globalTitle')
         expect(wrapper.findComponent(TodoCard).exists()).toBe(true)
+        expect(wrapper.find('.personal-work-row .shortcut-card').exists()).toBe(true)
         expect(vi.getTimerCount()).toBe(0)
         wrapper.unmount()
     })
@@ -107,6 +131,37 @@ describe('home monitor lifecycle', () => {
         wrapper.unmount()
     })
 
+    it('loads the default seven-day statistics range and supports thirty-day and custom ranges', async () => {
+        mocks.monitor.mockResolvedValue(null)
+        const wrapper = mount(Home, {
+            global: {
+                config: { warnHandler: vi.fn() },
+                stubs: {
+                    RecentActivityPanel: true,
+                    TodoCard: true,
+                    ElCard: { template: '<section><slot name="header" /><slot /></section>' },
+                    ElDatePicker: { name: 'ElDatePicker', emits: ['update:modelValue', 'change'], template: '<div><slot /></div>' },
+                },
+            },
+        })
+        await flushPromises()
+
+        expect(mocks.statistics).toHaveBeenLastCalledWith({ start_date: '2026-09-11', end_date: '2026-09-17' })
+
+        await wrapper.find('[data-testid="dashboard-range-30d"]').trigger('click')
+        await flushPromises()
+        expect(mocks.statistics).toHaveBeenLastCalledWith({ start_date: '2026-08-19', end_date: '2026-09-17' })
+
+        await wrapper.find('[data-testid="dashboard-range-custom"]').trigger('click')
+        const picker = wrapper.findComponent({ name: 'ElDatePicker' })
+        picker.vm.$emit('update:modelValue', ['2026-09-01', '2026-09-10'])
+        picker.vm.$emit('change', ['2026-09-01', '2026-09-10'])
+        await flushPromises()
+
+        expect(mocks.statistics).toHaveBeenLastCalledWith({ start_date: '2026-09-01', end_date: '2026-09-10' })
+        wrapper.unmount()
+    })
+
     it('keeps only permission-backed shortcuts and opens the personal activity list for every user', async () => {
         mocks.permissions.clear()
         mocks.personal.mockResolvedValue({ activities: [], user_login: {} })
@@ -116,7 +171,7 @@ describe('home monitor lifecycle', () => {
         expect(wrapper.text()).toContain('home.dashboard.shortcut.profile')
         expect(wrapper.text()).not.toContain('home.dashboard.shortcut.users')
         expect(wrapper.text()).toContain('home.dashboard.shortcut.logs')
-        expect(wrapper.text()).toContain('home.dashboard.shortcut.todo')
+        expect(wrapper.text()).not.toContain('home.dashboard.shortcut.todo')
 
         wrapper.findComponent(RecentActivityPanel).vm.$emit('view-all')
         expect(mocks.routerPush).toHaveBeenCalledWith('/my-request-log')
@@ -125,7 +180,7 @@ describe('home monitor lifecycle', () => {
 
     it('shows the configuration shortcut for any configuration sub-capability', async () => {
         mocks.permissions.clear()
-        mocks.permissions.add('storage:config')
+        mocks.permissions.add('sms:config')
         const wrapper = shallowMount(Home, { global: { config: { warnHandler: vi.fn() } } })
         await flushPromises()
 

@@ -472,15 +472,16 @@ export interface StorageConfig {
         allowed_mime_types?: string[] | string
         allowed_extensions?: string[] | string
         export_temp_file_ttl_days?: number
+        [key: string]: unknown
     }
 }
 
 export type StorageConfigPayload = StorageConfig
 
-export type StorageSecretField = 'access_key_secret' | 'secret_access_key'
+export type StorageSecretField = string
 
 export interface StorageSecretPayload {
-    driver: Exclude<StorageDriver, 'local'>
+    driver: string
     field: StorageSecretField
 }
 
@@ -494,6 +495,65 @@ export interface StorageTestResult {
     driver?: StorageDriver
     latency_ms?: number
     detail?: Record<string, unknown>
+}
+
+export interface SmsProviderConfig {
+    enabled?: boolean
+    [key: string]: unknown
+}
+
+export interface SmsAliyunProviderConfig extends SmsProviderConfig {
+    enabled: boolean
+    access_key_id: string
+    access_key_secret: string
+    endpoint: string
+}
+
+export interface SmsTemplateConfig {
+    sign_name: string
+    template_code: string
+    variables: string[]
+}
+
+export interface SmsRouteConfig {
+    provider: string
+    template: string
+}
+
+export interface SmsConfig {
+    enabled: boolean
+    providers: Record<string, SmsProviderConfig> & { aliyun: SmsAliyunProviderConfig }
+    templates: Record<string, Record<string, SmsTemplateConfig>> & {
+        aliyun: {
+            login_otp: SmsTemplateConfig
+            todo_due: SmsTemplateConfig
+        }
+    }
+    routes: Record<string, SmsRouteConfig> & {
+        login_otp: SmsRouteConfig
+        todo_due?: SmsRouteConfig
+    }
+    otp: {
+        ttl_seconds: number
+        resend_interval_seconds: number
+        max_attempts: number
+        ip_limit_per_10_minutes: number
+        phone_daily_limit: number
+        global_daily_limit: number
+    }
+}
+
+export type SmsConfigPayload = SmsConfig
+
+export interface SmsTestPayload {
+    country_code: string
+    phone_number: string
+    config: SmsConfigPayload
+}
+
+export interface SmsTestResult {
+    success?: boolean
+    message?: string
 }
 
 export interface TaskRunEvent extends WithId {
@@ -521,6 +581,7 @@ export interface TaskRunQuery extends PageParams {
     source_id?: string | null
     status?: string | null
     detail_record_mode?: string | null
+    time_basis?: 'created_at' | 'finished_at' | null
     start_time?: string | null
     end_time?: string | null
 }
@@ -537,6 +598,9 @@ export interface TaskRunStats {
     task_code?: string
     kind?: string
     source?: string
+    detail_time_basis: 'finished_at'
+    detail_start_time: string
+    detail_end_time: string
     total_count: number
     success_count: number
     failed_count: number

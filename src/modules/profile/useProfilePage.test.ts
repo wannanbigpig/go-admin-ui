@@ -81,7 +81,7 @@ describe('profile session and password boundaries', () => {
         expect(mocks.modify).not.toHaveBeenCalled()
     })
 
-    it('requires the current password only when a new password is submitted', async () => {
+    it('requires the current password when a new password is submitted', async () => {
         setup()
         await flushPromises()
         page.openEditDrawer()
@@ -94,5 +94,40 @@ describe('profile session and password boundaries', () => {
         page.formData.current_password = 'current-password'
         await page.editConfirmSubmit()
         expect(mocks.modify).toHaveBeenCalledWith(expect.objectContaining({ current_password: 'current-password', password: 'new-password' }))
+    })
+
+    it('requires and submits the current password when the phone number changes', async () => {
+        setup()
+        await flushPromises()
+        page.openEditDrawer()
+        page.formData.phone_number = '13800138000'
+
+        await page.editConfirmSubmit()
+        expect(mocks.modify).not.toHaveBeenCalled()
+
+        page.formData.current_password = 'current-password'
+        await page.editConfirmSubmit()
+        expect(mocks.modify).toHaveBeenCalledWith(
+            expect.objectContaining({
+                phone_number: '13800138000',
+                current_password: 'current-password',
+            })
+        )
+    })
+
+    it('does not require or submit the current password when the phone number is unchanged', async () => {
+        mocks.fetch.mockResolvedValue({ ...mocks.auth.userInfo, phone_number: '13800138000' })
+        setup()
+        await flushPromises()
+        page.openEditDrawer()
+
+        await page.editConfirmSubmit()
+
+        expect(mocks.modify).toHaveBeenCalledWith(
+            expect.objectContaining({
+                phone_number: '13800138000',
+            })
+        )
+        expect(mocks.modify).toHaveBeenCalledWith(expect.not.objectContaining({ current_password: expect.anything() }))
     })
 })

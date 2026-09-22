@@ -4,11 +4,11 @@ const mocks = vi.hoisted(() => ({ get: vi.fn() }))
 
 vi.mock('@/utils/request', () => ({ get: mocks.get }))
 
-import { getDashboardPersonal } from './dashboard'
+import { getDashboardPersonal, getDashboardStatistics } from './dashboard'
 
-describe('personal dashboard API contract', () => {
+describe('dashboard api contract', () => {
     beforeEach(() => {
-        mocks.get.mockReset()
+        vi.clearAllMocks()
     })
 
     it('uses the access-token-scoped personal endpoint', async () => {
@@ -17,5 +17,13 @@ describe('personal dashboard API contract', () => {
         await getDashboardPersonal()
 
         expect(mocks.get).toHaveBeenCalledWith('/v1/dashboard/personal')
+    })
+
+    it('passes the selected inclusive date range to the statistics endpoint', async () => {
+        const params = { start_date: '2026-09-01', end_date: '2026-09-17' }
+
+        await getDashboardStatistics(params)
+
+        expect(mocks.get).toHaveBeenCalledWith('/v1/dashboard/statistics', params)
     })
 })

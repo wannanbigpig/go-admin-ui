@@ -117,7 +117,7 @@ describe('stores/notification.ts', () => {
                 {
                     id: '123',
                     title: '请求日志导出完成',
-                    message: '请求日志导出已完成，可前往任务中心下载。',
+                    message: '请求日志导出已完成，可前往我的导出下载。',
                     level: 'success',
                     category: 'export',
                     topic: 'export.finished',
@@ -137,7 +137,7 @@ describe('stores/notification.ts', () => {
 
         expect(store.notifications.length).toBe(1)
         // 关键断言：action_url 必须已被清洗为前端路由
-        expect(store.notifications[0].action_url).toBe('/task/center?tab=export')
+        expect(store.notifications[0].action_url).toBe('/my-exports')
     })
 
     it('normalizeNotificationActionUrl 应该能正确清洗和白名单验证 action_url', () => {
@@ -229,7 +229,7 @@ describe('stores/notification.ts', () => {
         expect(sentActions(socket, 'unsubscribe')).toEqual([{ action: 'unsubscribe', channel: 'monitor' }])
     })
 
-    it('stop 应当彻底清理 channelHandlers, subscribedChannels 和 exportFinishedTime', async () => {
+    it('stop 应当彻底清理频道订阅和导出实时状态', async () => {
         const store = useNotificationStore()
         store.start('valid-token', 'zh-CN')
         await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
@@ -238,10 +238,16 @@ describe('stores/notification.ts', () => {
         const handler = vi.fn()
         subscribeChannel('test-channel', handler)
         store.exportFinishedTime = 123456
+        store.exportProgressEvent = {
+            public_id: 'export-99',
+            progress: 50,
+            received_at: Date.now(),
+        }
 
         store.stop()
 
         expect(store.exportFinishedTime).toBe(0)
+        expect(store.exportProgressEvent).toBeNull()
 
         // 验证全局订阅列表是否被清空：如果被清空，那么再次登录时不会重新订阅 'test-channel'
         store.start('valid-token', 'zh-CN')
@@ -311,6 +317,57 @@ describe('stores/notification.ts', () => {
         )
 
         expect(store.exportFinishedTime).toBeGreaterThan(0)
+    })
+
+    it('应识别服务端 message_created 内嵌的 export.finished topic', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+        mockSockets[0].emitMessage(
+            JSON.stringify({
+                event: 'message_created',
+                category: 'export',
+                message: {
+                    id: 999,
+                    topic: 'export.finished',
+                    title: '导出完成',
+                    content: '可下载',
+                },
+            })
+        )
+
+        expect(store.exportFinishedTime).toBeGreaterThan(0)
+    })
+
+    it('接收到 export.progress 时应更新轻量进度事件且不生成通知', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+
+        mockSockets[0].emitMessage(
+            JSON.stringify({
+                event: 'export_progress',
+                topic: 'export.progress',
+                category: 'export',
+                data: {
+                    public_id: 'export-88',
+                    status: 'running',
+                    progress: 45,
+                    processed_count: 45,
+                    total_count: 100,
+                },
+            })
+        )
+
+        expect(store.exportProgressEvent).toMatchObject({
+            public_id: 'export-88',
+            status: 'running',
+            progress: 45,
+            processed_count: 45,
+            total_count: 100,
+        })
+        expect(store.notifications).toEqual([])
     })
 
     it('连接建立后应定时发送 ping 保活', async () => {

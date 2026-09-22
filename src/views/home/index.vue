@@ -17,27 +17,14 @@
                                     <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
                                 </template>
                             </el-alert>
-                            <div v-else class="personal-summary">
-                                <div v-for="item in personalSummaryItems" :key="item.key" class="personal-summary__item">
-                                    <span>{{ item.label }}</span>
-                                    <el-skeleton-item v-if="personalLoading" variant="text" class="summary-skeleton" />
-                                    <strong v-else>{{ item.value }}</strong>
-                                </div>
-                            </div>
                         </div>
-                        <el-button type="primary" :loading="dashboardLoading || personalLoading" @click="refreshDashboard">
-                            <template #icon>
-                                <i-ep-refresh-right />
-                            </template>
-                            {{ t('home.dashboard.refresh') }}
-                        </el-button>
                     </div>
                 </el-card>
             </el-col>
         </el-row>
 
         <el-row :gutter="16" class="dashboard-row personal-work-row">
-            <el-col :xs="24" :lg="16">
+            <el-col :xs="24" :lg="12" class="workbench-column">
                 <recent-activity-panel
                     :items="activities"
                     :loading="personalLoading"
@@ -49,13 +36,10 @@
                     @retry="refreshDashboard"
                 />
             </el-col>
-            <el-col :xs="24" :lg="8" class="todo-column">
+            <el-col :xs="24" :md="12" :lg="6" class="workbench-column">
                 <todo-card />
             </el-col>
-        </el-row>
-
-        <el-row :gutter="16" class="dashboard-row">
-            <el-col :span="24">
+            <el-col :xs="24" :md="12" :lg="6" class="workbench-column">
                 <el-card shadow="never" class="shortcut-card">
                     <template #header>
                         <div class="card-header">
@@ -148,12 +132,54 @@
                 <el-col :xs="24" :lg="16">
                     <el-card shadow="never" class="stat-card stat-card--primary">
                         <template #header>
-                            <div class="card-header">
-                                <span>{{ t('home.dashboard.trend.title') }}</span>
-                                <span class="card-header-extra">{{ t('home.dashboard.trend.subtitle') }}</span>
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <span>{{ t('home.dashboard.trend.title') }}</span>
+                                    <span class="card-header-extra">{{ t('home.dashboard.trend.subtitle') }}</span>
+                                </div>
+                                <div class="chart-toolbar">
+                                    <el-button-group>
+                                        <el-button data-testid="dashboard-range-7d" size="small" :type="statisticsRangePreset === '7d' ? 'primary' : 'default'" @click="selectStatisticsRange('7d')">
+                                            {{ t('home.dashboard.range.sevenDays') }}
+                                        </el-button>
+                                        <el-button data-testid="dashboard-range-30d" size="small" :type="statisticsRangePreset === '30d' ? 'primary' : 'default'" @click="selectStatisticsRange('30d')">
+                                            {{ t('home.dashboard.range.thirtyDays') }}
+                                        </el-button>
+                                        <el-button data-testid="dashboard-range-custom" size="small" :type="statisticsRangePreset === 'custom' ? 'primary' : 'default'" @click="selectStatisticsRange('custom')">
+                                            {{ t('home.dashboard.range.custom') }}
+                                        </el-button>
+                                    </el-button-group>
+                                    <el-date-picker
+                                        v-if="statisticsRangePreset === 'custom'"
+                                        v-model="customStatisticsRange"
+                                        data-testid="dashboard-custom-range"
+                                        class="chart-toolbar__date"
+                                        type="daterange"
+                                        size="small"
+                                        unlink-panels
+                                        value-format="YYYY-MM-DD"
+                                        :clearable="false"
+                                        :disabled-date="disableFutureStatisticsDate"
+                                        :start-placeholder="t('common.date.start')"
+                                        :end-placeholder="t('common.date.end')"
+                                        @change="handleCustomStatisticsRangeChange"
+                                    />
+                                    <el-button
+                                        data-testid="dashboard-statistics-refresh"
+                                        size="small"
+                                        circle
+                                        :loading="statisticsRefreshing"
+                                        :disabled="!statisticsQuery"
+                                        :title="t('home.dashboard.refresh')"
+                                        :aria-label="t('home.dashboard.refresh')"
+                                        @click="refreshStatistics"
+                                    >
+                                        <i-ep-refresh-right />
+                                    </el-button>
+                                </div>
                             </div>
                         </template>
-                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="6" animated />
+                        <el-skeleton v-if="(dashboardLoading || statisticsRefreshing) && !dashboardStatistics" :rows="6" animated />
                         <div v-else-if="statisticsTrendDays.length" ref="trendChartRef" class="chart chart--large"></div>
                         <el-empty v-else :description="t('home.dashboard.trend.empty')" :image-size="72" />
                     </el-card>
@@ -166,7 +192,7 @@
                                 <span v-if="responseTimeAvgText" class="card-header-extra">{{ responseTimeAvgText }}</span>
                             </div>
                         </template>
-                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="6" animated />
+                        <el-skeleton v-if="(dashboardLoading || statisticsRefreshing) && !dashboardStatistics" :rows="6" animated />
                         <div v-else-if="hasResponseTime" ref="responseTimeChartRef" class="chart chart--large"></div>
                         <el-empty v-else :description="t('home.dashboard.responseTime.empty')" :image-size="72" />
                     </el-card>
@@ -179,7 +205,7 @@
                         <template #header>
                             <span>{{ t('home.dashboard.errorCodes.title') }}</span>
                         </template>
-                        <el-skeleton v-if="dashboardLoading && !dashboardStatistics" :rows="5" animated />
+                        <el-skeleton v-if="(dashboardLoading || statisticsRefreshing) && !dashboardStatistics" :rows="5" animated />
                         <div v-else-if="hasErrorCodes" ref="errorCodesChartRef" class="chart"></div>
                         <el-empty v-else :description="t('home.dashboard.errorCodes.empty')" :image-size="72" />
                     </el-card>
@@ -225,7 +251,21 @@
                     <template #header>
                         <div class="card-header">
                             <span>{{ t('home.dashboard.serverMonitor') }}</span>
-                            <el-tag v-if="dashboardMonitor" type="info" size="small">{{ formatUptime(dashboardMonitor.host?.uptime || 0) }}</el-tag>
+                            <div class="monitor-header-actions">
+                                <el-tag v-if="dashboardMonitor" type="info" size="small">{{ formatUptime(dashboardMonitor.host?.uptime || 0) }}</el-tag>
+                                <el-button
+                                    data-testid="dashboard-monitor-refresh"
+                                    text
+                                    circle
+                                    size="small"
+                                    :loading="monitorLoading"
+                                    :aria-label="t('home.dashboard.refresh')"
+                                    :title="t('home.dashboard.refresh')"
+                                    @click="fetchMonitor"
+                                >
+                                    <i-ep-refresh v-if="!monitorLoading" />
+                                </el-button>
+                            </div>
                         </div>
                     </template>
                     <el-skeleton v-if="monitorLoading && !dashboardMonitor" :rows="4" animated />
@@ -300,11 +340,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { fetchDashboardOverview, fetchDashboardPersonal, fetchDashboardStatistics, type DashboardActivityItem, type DashboardOverview, type DashboardPersonal, type DashboardStatistics } from '@/modules/dashboard/service'
-import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
+import { getDashboardMonitor, type DashboardMonitor, type DashboardStatisticsQuery } from '@/api/dashboard'
 import RecentActivityPanel from '@/views/home/components/RecentActivityPanel.vue'
 import TodoCard from '@/views/home/components/TodoCard.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -312,6 +353,7 @@ import { useSettingStore } from '@/stores/setting'
 import { hasPermission } from '@/utils/auth'
 import { formatFileSize } from '@/utils/helper'
 import { Logger } from '@/utils/logger'
+import { useIntervalPolling } from '@/composables/useIntervalPolling'
 import type { DashboardChart } from '@/modules/dashboard/echarts'
 
 type InitDashboardChart = (el: HTMLElement) => DashboardChart
@@ -326,6 +368,7 @@ const username = ref('')
 const loginTime = ref('')
 const lastLoginIP = ref('')
 const dashboardLoading = ref(false)
+const statisticsRefreshing = ref(false)
 const personalLoading = ref(false)
 const personalFailed = ref(false)
 const overviewFailed = ref(false)
@@ -343,6 +386,40 @@ let trendChart: DashboardChart | null = null
 let responseTimeChart: DashboardChart | null = null
 let errorCodesChart: DashboardChart | null = null
 const metricSkeletons = [1, 2, 3, 4]
+
+type StatisticsRangePreset = '7d' | '30d' | 'custom'
+
+const MAX_STATISTICS_RANGE_DAYS = 90
+const statisticsRangePreset = ref<StatisticsRangePreset>('7d')
+const customStatisticsRange = ref<[string, string] | null>(null)
+
+const formatStatisticsDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const createPresetStatisticsQuery = (days: number): DashboardStatisticsQuery => {
+    const end = new Date()
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (days - 1))
+    return { start_date: formatStatisticsDate(start), end_date: formatStatisticsDate(end) }
+}
+
+const statisticsRangeDays = (range: [string, string]) => {
+    const start = Date.parse(`${range[0]}T00:00:00Z`)
+    const end = Date.parse(`${range[1]}T00:00:00Z`)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0
+    return Math.floor((end - start) / 86400000) + 1
+}
+
+const statisticsQuery = computed<DashboardStatisticsQuery | null>(() => {
+    if (statisticsRangePreset.value === '7d') return createPresetStatisticsQuery(7)
+    if (statisticsRangePreset.value === '30d') return createPresetStatisticsQuery(30)
+    const range = customStatisticsRange.value
+    if (!range || statisticsRangeDays(range) < 1 || statisticsRangeDays(range) > MAX_STATISTICS_RANGE_DAYS) return null
+    return { start_date: range[0], end_date: range[1] }
+})
 
 const metricMeta = computed<Record<string, { tone: string; title: string }>>(() => ({
     users: { tone: 'is-blue', title: t('home.dashboard.metrics.users') },
@@ -368,23 +445,13 @@ const shortcuts = computed(() =>
         { key: 'roles', label: t('home.dashboard.shortcut.roles'), path: '/permission/role-list', permissions: ['role:list'] },
         { key: 'menus', label: t('home.dashboard.shortcut.menus'), path: '/permission/menu-list', permissions: ['menu:list'] },
         { key: 'logs', label: t('home.dashboard.shortcut.logs'), path: '/my-request-log' },
-        { key: 'todo', label: t('home.dashboard.shortcut.todo'), path: '/todo/list' },
-        { key: 'config', label: t('home.dashboard.shortcut.config'), path: '/system/config', permissions: ['sysConfig:list', 'storage:config', 'requestLog:maskConfig'] },
+        { key: 'config', label: t('home.dashboard.shortcut.config'), path: '/system/config', permissions: ['sysConfig:list', 'storage:config', 'sms:config', 'requestLog:maskConfig'] },
         { key: 'tasks', label: t('home.dashboard.shortcut.tasks'), path: '/task/center', permissions: ['task:list'] },
         { key: 'profile', label: t('home.dashboard.shortcut.profile'), path: '/profile' },
     ].filter((item) => !item.permissions || item.permissions.some((permission) => hasPermission(permission)))
 )
 
 const activities = computed(() => (dashboardPersonal.value?.activities || []).slice(0, 5))
-const personalSummaryItems = computed(() => {
-    const summary = dashboardPersonal.value?.summary
-    return [
-        { key: 'operations', label: t('home.dashboard.personal.operations'), value: summary ? summary.today_operations : '-' },
-        { key: 'failures', label: t('home.dashboard.personal.failures'), value: summary ? summary.today_failures : '-' },
-        { key: 'changes', label: t('home.dashboard.personal.changes'), value: summary ? summary.today_changes : '-' },
-        { key: 'notifications', label: t('home.dashboard.personal.notifications'), value: summary ? summary.unread_notifications : '-' },
-    ]
-})
 const trendSeriesNames = computed(() => ({
     requests: t('home.dashboard.trend.series.requests'),
     errors: t('home.dashboard.trend.series.errors'),
@@ -470,7 +537,7 @@ const getProgressColor = (percentage: number): string => {
 }
 
 const fetchMonitor = async () => {
-    if (!isMounted || !hasPermission('dashboard:monitor')) return
+    if (!isMounted || !hasPermission('dashboard:monitor') || monitorLoading.value) return
     monitorLoading.value = true
     try {
         const res = await getDashboardMonitor()
@@ -485,6 +552,17 @@ const fetchMonitor = async () => {
         if (isMounted) monitorLoading.value = false
     }
 }
+
+const monitorPolling = useIntervalPolling(
+    async () => {
+        await fetchMonitor()
+    },
+    {
+        interval: 15000,
+        pauseWhenHidden: true,
+        when: () => isMounted && hasPermission('dashboard:monitor') && !monitorLoading.value,
+    }
+)
 
 const toDisplayText = (value: unknown, fallback: string) => {
     return typeof value === 'string' && value.trim() ? value : fallback
@@ -515,7 +593,7 @@ const refreshDashboard = async () => {
 
         const personalPromise = fetchDashboardPersonal()
         const overviewPromise = canViewOverview ? fetchDashboardOverview() : Promise.resolve(null)
-        const statisticsPromise = canViewStatistics ? fetchDashboardStatistics() : Promise.resolve(null)
+        const statisticsPromise = canViewStatistics && statisticsQuery.value ? fetchDashboardStatistics(statisticsQuery.value) : Promise.resolve(dashboardStatistics.value)
 
         const [personalResult, overviewResult, statisticsResult] = await Promise.allSettled([personalPromise, overviewPromise, statisticsPromise])
 
@@ -564,6 +642,44 @@ const refreshDashboard = async () => {
     syncUserInfo()
     if (!isMounted) return
     await rebuildCharts()
+}
+
+const refreshStatistics = async () => {
+    const query = statisticsQuery.value
+    if (!isMounted || !hasPermission('dashboard:statistics') || !query || statisticsRefreshing.value) return
+
+    statisticsRefreshing.value = true
+    statisticsFailed.value = false
+    try {
+        dashboardStatistics.value = await fetchDashboardStatistics(query)
+    } catch (error) {
+        statisticsFailed.value = true
+        Logger.warn('获取仪表盘统计失败', error)
+    } finally {
+        statisticsRefreshing.value = false
+    }
+    if (isMounted) await rebuildCharts()
+}
+
+const selectStatisticsRange = async (preset: StatisticsRangePreset) => {
+    statisticsRangePreset.value = preset
+    if (preset !== 'custom') await refreshStatistics()
+}
+
+const handleCustomStatisticsRangeChange = async (range: [string, string] | null) => {
+    customStatisticsRange.value = range
+    if (!range) return
+    const days = statisticsRangeDays(range)
+    if (days < 1 || days > MAX_STATISTICS_RANGE_DAYS) {
+        ElMessage.warning(t('home.dashboard.range.maxDays', { count: MAX_STATISTICS_RANGE_DAYS }))
+        return
+    }
+    await refreshStatistics()
+}
+
+const disableFutureStatisticsDate = (date: Date) => {
+    const today = new Date()
+    return date.getTime() > new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).getTime()
 }
 
 const rebuildCharts = async () => {
@@ -631,7 +747,6 @@ const chartTooltip = () => {
 }
 
 let resizeObserver: ResizeObserver | null = null
-let monitorTimer: ReturnType<typeof setInterval> | null = null
 
 const initResizeObserver = () => {
     if (typeof ResizeObserver === 'undefined') return
@@ -784,8 +899,7 @@ onMounted(async () => {
     await Promise.all([refreshDashboard(), canViewMonitor ? fetchMonitor() : Promise.resolve()])
     if (!isMounted) return
     if (canViewMonitor) {
-        // 每 30 秒刷新一次监控数据
-        monitorTimer = setInterval(fetchMonitor, 30000)
+        monitorPolling.start()
     }
 })
 
@@ -796,10 +910,7 @@ onUnmounted(() => {
     trendChart?.dispose()
     responseTimeChart?.dispose()
     errorCodesChart?.dispose()
-    if (monitorTimer) {
-        clearInterval(monitorTimer)
-        monitorTimer = null
-    }
+    monitorPolling.stop()
 })
 
 watch(
@@ -829,9 +940,20 @@ watch(
 }
 
 @media (max-width: 1199px) {
-    .todo-column,
     .responsive-column {
         margin-top: var(--xl-space-4);
+    }
+}
+
+.personal-work-row {
+    row-gap: var(--xl-space-4);
+}
+
+.workbench-column {
+    display: flex;
+
+    > :deep(.el-card) {
+        width: 100%;
     }
 }
 
@@ -843,6 +965,12 @@ watch(
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.monitor-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--xl-space-2);
 }
 
 .welcome-card {
@@ -889,43 +1017,9 @@ h1 {
     gap: var(--xl-space-2);
 }
 
-.personal-summary {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(96px, 1fr));
-    gap: var(--xl-space-3);
-    margin-top: var(--xl-space-4);
-    max-width: 720px;
-}
-
-.personal-summary__item {
-    min-width: 0;
-    padding: var(--xl-space-2) var(--xl-space-3);
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: var(--xl-radius-sm);
-    background: var(--el-bg-color-overlay);
-    display: flex;
-    flex-direction: column;
-    gap: var(--xl-space-1);
-
-    span {
-        color: var(--el-text-color-secondary);
-        font-size: var(--xl-font-xs);
-    }
-
-    strong {
-        color: var(--el-text-color-primary);
-        font-size: var(--xl-font-lg);
-    }
-}
-
 .welcome-state {
     max-width: 560px;
     margin-top: var(--xl-space-4);
-}
-
-.summary-skeleton {
-    width: 44px;
-    height: 22px;
 }
 
 .section-heading {
@@ -986,8 +1080,20 @@ h1 {
 
 .shortcut-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: var(--xl-space-3);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--xl-space-2);
+}
+
+.shortcut-card {
+    height: 100%;
+
+    :deep(.el-card__header) {
+        padding: var(--xl-space-3) var(--xl-space-4);
+    }
+
+    :deep(.el-card__body) {
+        padding: var(--xl-space-3);
+    }
 }
 
 .shortcut-btn {
@@ -995,9 +1101,9 @@ h1 {
     align-items: center;
     gap: var(--xl-space-2);
     min-width: 0;
-    height: 52px;
+    height: 42px;
     margin: 0;
-    padding: 0 var(--xl-space-3);
+    padding: 0 var(--xl-space-2);
     border: 1px solid var(--el-border-color-lighter);
     border-radius: var(--xl-radius-sm);
     color: var(--el-text-color-regular);
@@ -1022,7 +1128,7 @@ h1 {
 .shortcut-icon {
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .shortcut-arrow {
@@ -1112,6 +1218,32 @@ h1 {
 .card-header-extra {
     color: var(--el-text-color-secondary);
     font-size: var(--xl-font-sm);
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--xl-space-3);
+}
+
+.chart-card-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--xl-space-2);
+    min-width: 0;
+}
+
+.chart-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--xl-space-2);
+    min-width: 0;
+}
+
+.chart-toolbar__date {
+    width: 230px;
 }
 
 .storage-block {
@@ -1206,13 +1338,23 @@ h1 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .personal-summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .card-header-extra {
+        display: none;
+    }
+
+    .chart-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .chart-toolbar {
+        flex-wrap: wrap;
+        justify-content: flex-start;
         width: 100%;
     }
 
-    .card-header-extra {
-        display: none;
+    .chart-toolbar__date {
+        width: min(100%, 260px);
     }
 
     .monitor-load-grid {

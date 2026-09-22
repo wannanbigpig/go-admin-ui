@@ -24,74 +24,16 @@
 
             <el-divider />
 
-            <template v-if="formData.active_driver === 'local'">
-                <el-form-item :label="t('system.storage.local.basePath')" prop="config.local.base_path">
-                    <el-input v-model.trim="formData.config.local.base_path" :placeholder="t('system.storage.local.basePathPlaceholder')" />
-                </el-form-item>
-                <el-form-item :label="t('system.storage.local.publicBasePath')" prop="config.local.public_base_path">
-                    <el-input v-model.trim="formData.config.local.public_base_path" :placeholder="t('system.storage.local.publicBasePathPlaceholder')" />
-                </el-form-item>
-                <el-form-item :label="t('system.storage.local.privateBasePath')" prop="config.local.private_base_path">
-                    <el-input v-model.trim="formData.config.local.private_base_path" :placeholder="t('system.storage.local.privateBasePathPlaceholder')" />
-                </el-form-item>
-            </template>
+            <component
+                :is="activeProviderDefinition.component"
+                v-if="activeProviderDefinition"
+                :model-value="activeProviderConfig"
+                v-bind="activeProviderComponentProps"
+                @update:model-value="updateActiveProviderConfig"
+                @toggle-secret="toggleActiveProviderSecret"
+            />
 
-            <template v-else-if="formData.active_driver === 'aliyun_oss'">
-                <el-row :gutter="16">
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.endpoint')" prop="config.aliyun_oss.endpoint">
-                            <el-input v-model.trim="formData.config.aliyun_oss.endpoint" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.region')" prop="config.aliyun_oss.region">
-                            <el-input v-model.trim="formData.config.aliyun_oss.region" />
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <el-form-item :label="t('system.storage.bucket')" prop="config.aliyun_oss.bucket">
-                    <el-input v-model.trim="formData.config.aliyun_oss.bucket" />
-                </el-form-item>
-                <el-row :gutter="16">
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.accessKeyId')" prop="config.aliyun_oss.access_key_id">
-                            <el-input v-model.trim="formData.config.aliyun_oss.access_key_id" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.accessKeySecret')" prop="config.aliyun_oss.access_key_secret">
-                            <el-input
-                                v-model.trim="formData.config.aliyun_oss.access_key_secret"
-                                :type="isSecretFieldRevealed('aliyun_oss.access_key_secret') ? 'text' : 'password'"
-                                :placeholder="t('system.storage.secretPlaceholder')"
-                            >
-                                <template v-if="canViewSensitive && hasSensitiveValue('aliyun_oss.access_key_secret')" #suffix>
-                                    <el-icon size="16" class="xl-cursor-hover" @click="toggleSecretField('aliyun_oss.access_key_secret')">
-                                        <i-ep-loading v-if="isSecretFieldLoading('aliyun_oss.access_key_secret')" />
-                                        <i-ant-design-eye-invisible-outlined v-else-if="isSecretFieldRevealed('aliyun_oss.access_key_secret')" />
-                                        <i-ant-design-eye-outlined v-else />
-                                    </el-icon>
-                                </template>
-                            </el-input>
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="16">
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.publicDomain')" prop="config.aliyun_oss.public_domain">
-                            <el-input v-model.trim="formData.config.aliyun_oss.public_domain" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item :label="t('system.storage.internalEndpoint')" prop="config.aliyun_oss.internal_endpoint">
-                            <el-input v-model.trim="formData.config.aliyun_oss.internal_endpoint" />
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <el-form-item :label="t('system.storage.forcePathStyle')" prop="config.aliyun_oss.force_path_style">
-                    <el-switch v-model="formData.config.aliyun_oss.force_path_style" />
-                </el-form-item>
-            </template>
+            <el-alert v-else :title="t('system.storage.unknownDriverTitle')" :description="t('system.storage.unknownDriverDescription', { driver: formData.active_driver })" type="warning" :closable="false" show-icon />
 
             <el-divider />
 
@@ -141,6 +83,7 @@ import { validateFormSafely } from '@/modules/shared/form'
 import { Logger } from '@/utils/logger'
 import { hasPermission } from '@/utils/auth'
 import type { StorageConfig, StorageConfigPayload } from '@/types/system'
+import { createRegisteredStorageProviderDefaults, mergeRegisteredStorageProviderDefaults, storageProviderForms, type StorageProviderConfig } from './storageProviders/registry'
 
 interface Props {
     embedded?: boolean
@@ -153,21 +96,7 @@ const { t } = useI18n()
 const createDefaultForm = (): StorageConfig => ({
     active_driver: 'local',
     config: {
-        local: {
-            base_path: '',
-            public_base_path: '',
-            private_base_path: '',
-        },
-        aliyun_oss: {
-            endpoint: '',
-            region: '',
-            bucket: '',
-            access_key_id: '',
-            access_key_secret: '',
-            public_domain: '',
-            internal_endpoint: '',
-            force_path_style: false,
-        },
+        ...(createRegisteredStorageProviderDefaults() as unknown as Pick<StorageConfig['config'], 'local' | 'aliyun_oss'>),
         signed_url_ttl_seconds: 600,
         max_file_size_mb: 20,
         allowed_mime_types: [],
@@ -182,7 +111,7 @@ const saving = ref(false)
 const testing = ref(false)
 const allowedExtensionsText = ref('')
 const formData = reactive(createDefaultForm())
-type StorageSecretFieldPath = 'aliyun_oss.access_key_secret'
+type StorageSecretFieldPath = string
 
 type StorageSecretFieldState = {
     maskedValue: string
@@ -198,71 +127,93 @@ const createSecretState = (): StorageSecretFieldState => ({
     revealed: false,
 })
 
-const secretFieldState = reactive<Record<StorageSecretFieldPath, StorageSecretFieldState>>({
-    'aliyun_oss.access_key_secret': createSecretState(),
-})
+const secretFieldState = reactive<Record<StorageSecretFieldPath, StorageSecretFieldState>>(
+    Object.fromEntries(storageProviderForms.filter((provider) => provider.secretReveal).map((provider) => [`${provider.secretReveal!.driver}.${provider.secretReveal!.field}`, createSecretState()]))
+)
 
-const driverOptions = computed(() => [
-    { label: t('system.storage.drivers.local'), value: 'local' },
-    { label: t('system.storage.drivers.aliyunOss'), value: 'aliyun_oss' },
-])
+const activeProviderDefinition = computed(() => storageProviderForms.find((provider) => provider.key === formData.active_driver) || null)
+const activeProviderConfig = computed(() => {
+    const definition = activeProviderDefinition.value
+    if (!definition) return {}
+    const configured = formData.config[definition.key]
+    return configured && typeof configured === 'object' ? (configured as StorageProviderConfig) : definition.createDefaultConfig()
+})
+const driverOptions = computed(() => {
+    const options = storageProviderForms.map((provider) => ({ label: provider.labelKey ? t(provider.labelKey) : provider.label, value: provider.key }))
+    if (!activeProviderDefinition.value && formData.active_driver) {
+        options.push({ label: formData.active_driver, value: formData.active_driver })
+    }
+    return options
+})
 const canViewSensitive = computed(() => hasPermission('storage:secret', true))
 
 const formRules = computed(() => ({
     active_driver: [{ required: true, message: t('system.storage.form.driverRequired'), trigger: 'change' }],
-    'config.local.base_path': [{ required: formData.active_driver === 'local', message: t('system.storage.form.basePathRequired'), trigger: 'blur' }],
-    'config.aliyun_oss.endpoint': [{ required: formData.active_driver === 'aliyun_oss', message: t('system.storage.form.endpointRequired'), trigger: 'blur' }],
-    'config.aliyun_oss.region': [{ required: formData.active_driver === 'aliyun_oss', message: t('system.storage.form.regionRequired'), trigger: 'blur' }],
-    'config.aliyun_oss.bucket': [{ required: formData.active_driver === 'aliyun_oss', message: t('system.storage.form.bucketRequired'), trigger: 'blur' }],
 }))
 
-const getSecretFieldValue = (field: StorageSecretFieldPath) => {
-    switch (field) {
-        case 'aliyun_oss.access_key_secret':
-            return formData.config.aliyun_oss.access_key_secret || ''
-        default:
-            return ''
+const activeProviderComponentProps = computed(() => {
+    const reveal = activeProviderDefinition.value?.secretReveal
+    if (!reveal) return {}
+    const field = `${reveal.driver}.${reveal.field}` as StorageSecretFieldPath
+    return {
+        canViewSensitive: canViewSensitive.value,
+        secretHasValue: hasSensitiveValue(field),
+        secretLoading: isSecretFieldLoading(field),
+        secretRevealed: isSecretFieldRevealed(field),
     }
+})
+
+const updateActiveProviderConfig = (value: StorageProviderConfig) => {
+    const definition = activeProviderDefinition.value
+    if (definition) formData.config[definition.key] = value
+}
+
+const toggleActiveProviderSecret = () => {
+    const reveal = activeProviderDefinition.value?.secretReveal
+    if (reveal) void toggleSecretField(`${reveal.driver}.${reveal.field}` as StorageSecretFieldPath)
+}
+
+const secretProviderDefinition = (field: StorageSecretFieldPath) => storageProviderForms.find((provider) => provider.secretReveal && `${provider.secretReveal.driver}.${provider.secretReveal.field}` === field)
+
+const getSecretFieldValue = (field: StorageSecretFieldPath) => {
+    const definition = secretProviderDefinition(field)
+    const config = definition ? formData.config[definition.key] : null
+    return definition?.secretReveal && config && typeof config === 'object' ? definition.secretReveal.getValue(config as StorageProviderConfig) : ''
 }
 
 const setSecretFieldValue = (field: StorageSecretFieldPath, value: string) => {
-    switch (field) {
-        case 'aliyun_oss.access_key_secret':
-            formData.config.aliyun_oss.access_key_secret = value
-            break
-    }
+    const definition = secretProviderDefinition(field)
+    const config = definition ? formData.config[definition.key] : null
+    if (definition?.secretReveal && config && typeof config === 'object') definition.secretReveal.setValue(config as StorageProviderConfig, value)
 }
 
 const resetSecretFieldState = () => {
-    ;(Object.keys(secretFieldState) as StorageSecretFieldPath[]).forEach((field) => {
-        const state = secretFieldState[field]
+    for (const definition of storageProviderForms) {
+        const reveal = definition.secretReveal
+        if (!reveal) continue
+        const field = `${reveal.driver}.${reveal.field}`
+        const state = (secretFieldState[field] ||= createSecretState())
         state.maskedValue = getSecretFieldValue(field)
         state.revealedValue = ''
         state.loading = false
         state.revealed = false
-    })
-}
-
-const getSecretQuery = (field: StorageSecretFieldPath) => {
-    switch (field) {
-        case 'aliyun_oss.access_key_secret':
-            return { driver: 'aliyun_oss' as const, field: 'access_key_secret' as const }
-        default:
-            return { driver: 'aliyun_oss' as const, field: 'access_key_secret' as const }
     }
 }
 
 const hasSensitiveValue = (field: StorageSecretFieldPath) => {
-    const state = secretFieldState[field]
+    const state = secretFieldState[field] || createSecretState()
     return Boolean(String(state.maskedValue || getSecretFieldValue(field) || '').trim())
 }
 
-const isSecretFieldLoading = (field: StorageSecretFieldPath) => secretFieldState[field].loading
-const isSecretFieldRevealed = (field: StorageSecretFieldPath) => secretFieldState[field].revealed
+const isSecretFieldLoading = (field: StorageSecretFieldPath) => secretFieldState[field]?.loading || false
+const isSecretFieldRevealed = (field: StorageSecretFieldPath) => secretFieldState[field]?.revealed || false
 
 const toggleSecretField = async (field: StorageSecretFieldPath) => {
     if (!canViewSensitive.value) return
-    const state = secretFieldState[field]
+    const definition = secretProviderDefinition(field)
+    const reveal = definition?.secretReveal
+    if (!reveal) return
+    const state = (secretFieldState[field] ||= createSecretState())
     if (state.loading || !hasSensitiveValue(field)) return
     if (state.revealed) {
         if (getSecretFieldValue(field) === state.revealedValue) {
@@ -273,7 +224,7 @@ const toggleSecretField = async (field: StorageSecretFieldPath) => {
     }
     state.loading = true
     try {
-        const secret = await fetchStorageSecret(getSecretQuery(field).driver, getSecretQuery(field).field)
+        const secret = await fetchStorageSecret(reveal.driver, reveal.field)
         state.maskedValue = state.maskedValue || getSecretFieldValue(field)
         state.revealedValue = secret
         setSecretFieldValue(field, secret)
@@ -290,8 +241,7 @@ const applyConfig = (config: StorageConfig) => {
     const merged: StorageConfig = {
         active_driver: config.active_driver || defaults.active_driver,
         config: {
-            local: { ...defaults.config.local, ...(config.config?.local || {}) },
-            aliyun_oss: { ...defaults.config.aliyun_oss, ...(config.config?.aliyun_oss || {}) },
+            ...mergeRegisteredStorageProviderDefaults(config.config || defaults.config),
             signed_url_ttl_seconds: config.config?.signed_url_ttl_seconds ?? defaults.config.signed_url_ttl_seconds,
             max_file_size_mb: config.config?.max_file_size_mb ?? defaults.config.max_file_size_mb,
             allowed_mime_types: config.config?.allowed_mime_types ?? defaults.config.allowed_mime_types,
@@ -307,6 +257,7 @@ const applyConfig = (config: StorageConfig) => {
 const buildPayload = (): StorageConfigPayload => ({
     active_driver: formData.active_driver,
     config: {
+        ...formData.config,
         local: { ...formData.config.local },
         aliyun_oss: { ...formData.config.aliyun_oss },
         signed_url_ttl_seconds: Number(formData.config.signed_url_ttl_seconds || 0),

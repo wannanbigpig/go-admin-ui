@@ -57,6 +57,30 @@ export interface LoginPayload {
     [key: string]: unknown
 }
 
+export interface LoginOptions {
+    sms_login_enabled: boolean
+}
+
+export interface SmsCodeSendPayload {
+    country_code: string
+    phone_number: string
+    captcha: string
+    captcha_id: string
+}
+
+export interface SmsCodeSendResult {
+    challenge_id: string
+    retry_after: number
+    expires_in: number
+}
+
+export interface SmsLoginPayload {
+    country_code: string
+    phone_number: string
+    sms_code: string
+    challenge_id: string
+}
+
 export interface UpdateProfilePayload {
     nickname?: string
     phone_number?: string

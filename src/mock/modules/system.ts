@@ -29,6 +29,50 @@ const storageConfig = {
     },
 }
 
+const smsConfig = {
+    enabled: true,
+    providers: {
+        aliyun: {
+            enabled: true,
+            access_key_id: 'mock-access-key-id',
+            access_key_secret: '******',
+            endpoint: 'https://dysmsapi.aliyuncs.com',
+        },
+    },
+    templates: {
+        aliyun: {
+            login_otp: {
+                sign_name: 'GinLayout',
+                template_code: 'SMS_LOGIN_OTP',
+                variables: ['code'],
+            },
+            todo_due: {
+                sign_name: 'GinLayout',
+                template_code: 'SMS_TODO_DUE',
+                variables: ['title', 'due_at'],
+            },
+        },
+    },
+    routes: {
+        login_otp: {
+            provider: 'aliyun',
+            template: 'login_otp',
+        },
+        todo_due: {
+            provider: 'aliyun',
+            template: 'todo_due',
+        },
+    },
+    otp: {
+        ttl_seconds: 300,
+        resend_interval_seconds: 60,
+        max_attempts: 5,
+        ip_limit_per_10_minutes: 10,
+        phone_daily_limit: 20,
+        global_daily_limit: 1000,
+    },
+}
+
 // 模拟文件资源文件夹
 let mockFolders = [
     { id: 1, name: '全部文件', parent_id: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -294,6 +338,47 @@ let mockTrashFiles: MockTrashFile[] = [
 ]
 
 export const systemMock: MockRoute[] = [
+    {
+        pattern: /^\/v1\/todo\/list$/,
+        method: 'GET',
+        handler: () => ({
+            data: [],
+            total: 0,
+            per_page: 5,
+            current_page: 1,
+            last_page: 1,
+        }),
+    },
+    {
+        pattern: /^\/v1\/todo\/summary$/,
+        method: 'GET',
+        handler: () => ({ pending: 0, processing: 0, overdue: 0, due_today: 0 }),
+    },
+    {
+        pattern: /^\/v1\/todo\/reminder-preference$/,
+        method: 'GET',
+        handler: () => ({ in_app_enabled: true, sms_enabled: false, sms_available: true }),
+    },
+    {
+        pattern: /^\/v1\/todo\/reminder-preference$/,
+        method: 'POST',
+        handler: (data: unknown) => ({ ...(data as Record<string, unknown>), sms_available: true }),
+    },
+    {
+        pattern: /^\/v1\/system\/sms\/config$/,
+        method: 'GET',
+        handler: () => smsConfig,
+    },
+    {
+        pattern: /^\/v1\/system\/sms\/config$/,
+        method: 'POST',
+        handler: () => ({}),
+    },
+    {
+        pattern: /^\/v1\/system\/sms\/test$/,
+        method: 'POST',
+        handler: (data: unknown) => ({ success: Boolean((data as { config?: unknown })?.config), message: 'Mock 已使用当前表单草稿发送测试短信' }),
+    },
     {
         pattern: /^\/v1\/system\/dict\/options$/,
         method: 'GET',
@@ -1096,68 +1181,36 @@ export const systemMock: MockRoute[] = [
             last_page: 1,
             data: [
                 {
-                    id: 22,
+                    public_id: 'cf70a3fa-d3f6-4a76-ac5c-f9ae04272001',
                     export_name: '请求日志',
                     scene: 'request_log',
-                    scene_name: '请求日志',
-                    task_code: 'export:request-log',
-                    task_run_id: 3654,
-                    trigger_user_id: 1,
                     status: 'failed',
-                    status_name: '导出失败',
                     stage: 'failed',
-                    stage_name: '失败',
-                    queue: 'export',
                     progress: 0,
                     total_count: 0,
                     processed_count: 0,
-                    file_id: 0,
                     file_uuid: '',
                     file_name: '',
                     file_size: 0,
-                    file_url: '',
-                    download_url: '',
-                    has_file: false,
                     download_ready: false,
                     format: 'csv',
-                    error_message: 'queue publisher unavailable',
-                    fail_reason: 'queue publisher unavailable',
-                    can_retry: true,
-                    retry_block_reason: '',
-                    started_at: null,
                     finished_at: '2026-06-10 16:56:54',
                     created_at: '2026-06-10 16:56:54',
                 },
                 {
-                    id: 14,
+                    public_id: 'cf70a3fa-d3f6-4a76-ac5c-f9ae04272002',
                     export_name: '请求日志',
                     scene: 'request_log',
-                    scene_name: '请求日志',
-                    task_code: 'export:request-log',
-                    task_run_id: 1974,
-                    trigger_user_id: 1,
                     status: 'success',
-                    status_name: '导出成功',
                     stage: 'download_ready',
-                    stage_name: '可下载',
-                    queue: 'export',
                     progress: 100,
                     total_count: 10,
                     processed_count: 10,
-                    file_id: 14,
                     file_uuid: '3181079ac2ea4ea780dc58373adbe656',
                     file_name: 'request_logs_20260610113047.csv',
                     file_size: 3383,
-                    file_url: 'http://127.0.0.1:9001/admin/v1/file/3181079ac2ea4ea780dc58373adbe656',
-                    download_url: 'http://127.0.0.1:9001/admin/v1/file/3181079ac2ea4ea780dc58373adbe656',
-                    has_file: true,
                     download_ready: true,
                     format: 'csv',
-                    error_message: '',
-                    fail_reason: '',
-                    can_retry: false,
-                    retry_block_reason: '仅失败导出任务允许重试',
-                    started_at: '2026-06-10 11:30:47',
                     finished_at: '2026-06-10 11:30:47',
                     created_at: '2026-06-10 11:16:00',
                 },
@@ -1221,6 +1274,9 @@ export const systemMock: MockRoute[] = [
             task_code: '',
             kind: '',
             source: '',
+            detail_time_basis: 'finished_at',
+            detail_start_time: '2026-06-09 00:00:00',
+            detail_end_time: '2026-06-10 23:59:59',
             total_count: 100,
             success_count: 98,
             failed_count: 2,

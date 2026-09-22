@@ -16,6 +16,11 @@ export interface DashboardStatistics {
     [key: string]: unknown
 }
 
+export interface DashboardStatisticsQuery extends Record<string, unknown> {
+    start_date: string
+    end_date: string
+}
+
 export interface CPUInfo {
     usage_percent: number
     cores: number
@@ -86,8 +91,8 @@ export function getDashboardPersonal() {
     return get('/v1/dashboard/personal')
 }
 
-export function getDashboardStatistics() {
-    return get<DashboardStatistics>('/v1/dashboard/statistics')
+export function getDashboardStatistics(params?: DashboardStatisticsQuery) {
+    return get<DashboardStatistics>('/v1/dashboard/statistics', params)
 }
 
 export function getDashboardMonitor() {

@@ -171,13 +171,14 @@ const tableTitle = computed(
             {
                 prop: 'title',
                 h_label: t('permission.menu.name'),
-                minWidth: 200,
+                minWidth: 240,
                 customRow: true,
+                overflow: true,
             },
             {
                 prop: 'full_path',
                 h_label: t('permission.menu.routeOrPermission'),
-                minWidth: 200,
+                minWidth: 260,
                 hidden: true,
                 customRow: true,
                 overflow: true,
@@ -192,7 +193,7 @@ const tableTitle = computed(
                 h_label: t('permission.menu.type'),
                 align: 'center',
                 h_tip: t('permission.menu.tooltips.type'),
-                width: 120,
+                width: 130,
                 tag: {
                     1: { type: 'primary', text: t('permission.menu.typeDirectory') },
                     2: { type: 'success', text: t('permission.menu.typeMenu') },
@@ -203,7 +204,7 @@ const tableTitle = computed(
                 prop: 'status',
                 h_label: t('common.labels.status'),
                 align: 'center',
-                width: 120,
+                width: 130,
                 tag: {
                     0: { type: 'danger', text: t('common.status.disabled') },
                     1: { type: 'success', text: t('common.status.enabled') },
@@ -213,7 +214,7 @@ const tableTitle = computed(
                 prop: 'is_show',
                 h_label: t('permission.menu.show'),
                 align: 'center',
-                width: 120,
+                width: 130,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -224,7 +225,7 @@ const tableTitle = computed(
                 prop: 'is_auth',
                 h_label: t('permission.menu.auth'),
                 align: 'center',
-                width: 130,
+                width: 140,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -235,7 +236,7 @@ const tableTitle = computed(
                 prop: 'is_external_links',
                 h_label: t('permission.menu.external'),
                 align: 'center',
-                width: 130,
+                width: 150,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },
@@ -245,7 +246,7 @@ const tableTitle = computed(
                 prop: 'is_new_window',
                 h_label: t('permission.menu.newWindow'),
                 align: 'center',
-                width: 150,
+                width: 160,
                 tag: {
                     1: { type: 'success', text: t('common.yes') },
                     0: { type: 'danger', text: t('common.no') },

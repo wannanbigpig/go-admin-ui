@@ -76,12 +76,12 @@ describe('dynamicRoutes', () => {
             router.addRoute('Layout', route)
         })
 
-        // 尝试 push 到 /task/center?tab=export
-        await router.push('/task/center?tab=export')
+        // 任务运维只保留自身的执行记录 Tab。
+        await router.push('/task/center?tab=run')
 
         expect(router.currentRoute.value.name).not.toBe('NotFound')
         expect(router.currentRoute.value.name).toBe('TaskCenter')
-        expect(router.currentRoute.value.query.tab).toBe('export')
+        expect(router.currentRoute.value.query.tab).toBe('run')
     })
 
     it('findFirstValidRoute 应该支持空 path 首页路由', () => {
@@ -107,6 +107,34 @@ describe('dynamicRoutes', () => {
         ])
 
         expect(findFirstValidRoute(routes)).toBe('')
+    })
+
+    it('隐藏菜单应保留为可访问动态路由', () => {
+        const routes = convertRoute([
+            {
+                id: 89,
+                pid: 0,
+                title: '我的待办',
+                code: '',
+                name: 'TodoList',
+                type: 2,
+                icon: 'ep:list',
+                path: 'todo/list',
+                redirect: '',
+                component_key: 'todo:index',
+                is_show: 0,
+                is_auth: 0,
+                is_new_window: 0,
+                is_external_links: 0,
+                sort: 97,
+                children: [],
+            },
+        ])
+
+        expect(routes).toHaveLength(1)
+        expect(routes[0].path).toBe('todo/list')
+        expect(routes[0].meta?.show).toBe(false)
+        expect(routes[0].component).toBeDefined()
     })
 
     it('不同父路由下相同相对 path 的子菜单都应保留', () => {

@@ -1,11 +1,18 @@
 import * as todoApi from '@/api/todo'
 import { normalizeDetailData, normalizeListData } from '@/modules/shared/response'
-import type { TodoItem, TodoListQuery, TodoStatus, TodoSummary, TodoWritePayload } from '@/types/todo'
+import type { TodoItem, TodoListQuery, TodoReminderPreference, TodoReminderPreferencePayload, TodoStatus, TodoSummary, TodoWritePayload } from '@/types/todo'
 
 const EMPTY_SUMMARY: TodoSummary = { pending: 0, processing: 0, overdue: 0, due_today: 0 }
 
 export const fetchTodoList = async (params?: TodoListQuery) => normalizeListData<TodoItem>(await todoApi.getTodoList(params))
 export const fetchTodoSummary = async () => normalizeDetailData<TodoSummary>(await todoApi.getTodoSummary(), EMPTY_SUMMARY)
+export const fetchTodoReminderPreference = async () =>
+    normalizeDetailData<TodoReminderPreference>(await todoApi.getTodoReminderPreference(), {
+        in_app_enabled: true,
+        sms_enabled: false,
+        sms_available: false,
+    })
+export const submitTodoReminderPreference = (data: TodoReminderPreferencePayload) => todoApi.updateTodoReminderPreference(data)
 export const submitTodoCreate = (data: TodoWritePayload) => todoApi.createTodo(data)
 export const submitTodoUpdate = (data: TodoWritePayload & { id: number | string }) => todoApi.updateTodo(data)
 export const submitTodoStatus = (id: number | string, status: TodoStatus) => todoApi.updateTodoStatus({ id, status })

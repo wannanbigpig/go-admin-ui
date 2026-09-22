@@ -206,6 +206,7 @@
 import { computed, onMounted, onActivated, onDeactivated, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'
@@ -214,6 +215,7 @@ import { useListPage } from '@/composables/useListPage'
 import { useIntervalPolling } from '@/composables/useIntervalPolling'
 import { useDictOptions } from '@/composables/useDictOptions'
 import { createTaskRunQuery } from '@/modules/system/model'
+import { parseTaskRunDrilldownQuery } from '@/modules/system/taskRunDrilldown'
 import { SYSTEM_DICT_TYPES, taskKindFallbackOptions, taskSourceFallbackOptions, taskRunStatusFallbackOptions, taskDetailRecordModeFallbackOptions } from '@/modules/system/dictOptions'
 import { fetchTaskRunList, fetchTaskRunDetail, fetchTaskRunEvents, retryTaskByRunId, cancelTaskByRunId } from '@/modules/system/service'
 import { Logger } from '@/utils/logger'
@@ -224,8 +226,11 @@ import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 
 const props = defineProps<{ active: boolean }>()
 let hasActivated = false
+const TASK_RUN_DRILLDOWN_QUERY_KEYS = ['task_code', 'kind', 'source', 'status', 'time_basis', 'detail_start_time', 'detail_end_time'] as const
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const { options: taskKindOptions, tagMap: taskKindTagMap, load: loadTaskKindOptions } = useDictOptions(SYSTEM_DICT_TYPES.taskKind, taskKindFallbackOptions)
 const { options: taskSourceOptions, tagMap: taskSourceTagMap, load: loadTaskSourceOptions } = useDictOptions(SYSTEM_DICT_TYPES.taskSource, taskSourceFallbackOptions)
 const { options: taskRunStatusOptions, tagMap: taskRunStatusTagMap, load: loadTaskRunStatusOptions } = useDictOptions(SYSTEM_DICT_TYPES.taskRunStatus, taskRunStatusFallbackOptions)
@@ -240,6 +245,10 @@ const showRunDetailDrawer = ref(false)
 const currentRunDetail = ref<TaskRun | null>(null)
 const runEvents = ref<TaskRunEvent[]>([])
 const runEventsLoading = ref(false)
+
+const drilldown = parseTaskRunDrilldownQuery(route.query as Record<string, unknown>)
+Object.assign(runQuery, drilldown.filters)
+if (drilldown.dateRange) runDateRange.value = drilldown.dateRange
 
 const {
     loading: runLoading,
@@ -274,6 +283,9 @@ const {
 
 const handleRunReset = async () => {
     runDateRange.value = []
+    const nextQuery = { ...route.query }
+    for (const key of TASK_RUN_DRILLDOWN_QUERY_KEYS) delete nextQuery[key]
+    await router.replace({ query: nextQuery })
     await rawHandleRunReset()
 }
 

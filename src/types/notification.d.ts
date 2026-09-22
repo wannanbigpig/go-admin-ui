@@ -80,3 +80,14 @@ export interface NotificationSocketMessage extends Partial<AppNotification> {
     data?: Record<string, unknown> | NotificationSocketMessage[] | null
     list?: NotificationSocketMessage[]
 }
+
+export interface ExportProgressRealtimeEvent {
+    public_id: string
+    scene?: string
+    status?: string
+    progress?: number
+    processed_count?: number
+    total_count?: number
+    stage?: string
+    received_at: number
+}

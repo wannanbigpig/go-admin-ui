@@ -79,6 +79,7 @@ export function createTaskRunQuery(): TaskRunQuery {
         source_id: null,
         status: null,
         detail_record_mode: null,
+        time_basis: null,
         start_time: null,
         end_time: null,
     }

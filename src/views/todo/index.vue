@@ -7,7 +7,10 @@
                         <h2>{{ t('todo.title') }}</h2>
                         <p>{{ t('todo.subtitle') }}</p>
                     </div>
-                    <el-button type="primary" @click="openCreate">{{ t('todo.add') }}</el-button>
+                    <div class="page-actions">
+                        <el-button @click="reminderDialogVisible = true">{{ t('todo.reminder.entry') }}</el-button>
+                        <el-button type="primary" @click="openCreate">{{ t('todo.add') }}</el-button>
+                    </div>
                 </div>
             </template>
 
@@ -17,6 +20,10 @@
                     <strong>{{ item.value }}</strong>
                 </div>
             </div>
+
+            <el-alert v-if="failed" class="load-error" :title="t('todo.loadFailed')" type="error" :closable="false" show-icon>
+                <template #default><el-button link type="primary" @click="load">{{ t('todo.retry') }}</el-button></template>
+            </el-alert>
 
             <el-form :inline="true" :model="query" class="filter-form" @submit.prevent="search">
                 <el-form-item :label="t('todo.keyword')">
@@ -89,6 +96,8 @@
                 <el-button type="primary" :loading="saving" @click="save">{{ t('common.actions.confirm') }}</el-button>
             </template>
         </el-dialog>
+
+        <TodoReminderPreferenceDialog v-model="reminderDialogVisible" />
     </div>
 </template>
 
@@ -100,6 +109,7 @@ import { useRouter } from 'vue-router'
 import { fetchTodoList, fetchTodoSummary, isManualTodo, isTodoOverdue, submitTodoCreate, submitTodoDelete, submitTodoStatus, submitTodoUpdate } from '@/modules/todo/service'
 import { normalizeInternalActionUrl } from '@/utils/notificationAction'
 import { Logger } from '@/utils/logger'
+import TodoReminderPreferenceDialog from './components/TodoReminderPreferenceDialog.vue'
 import type { TodoDueScope, TodoItem, TodoPriority, TodoStatus, TodoSummary, TodoWritePayload } from '@/types/todo'
 
 const { t } = useI18n()
@@ -108,12 +118,14 @@ const priorities: TodoPriority[] = ['low', 'normal', 'high', 'urgent']
 const statuses: TodoStatus[] = ['pending', 'processing', 'completed', 'canceled']
 const dueScopes: TodoDueScope[] = ['all', 'overdue', 'today', 'upcoming', 'no_due']
 const loading = ref(false)
+const failed = ref(false)
 const saving = ref(false)
 const items = ref<TodoItem[]>([])
 const total = ref(0)
 const summary = ref<TodoSummary>({ pending: 0, processing: 0, overdue: 0, due_today: 0 })
 const query = reactive({ page: 1, per_page: 10, keyword: '', status: '' as TodoStatus | '', due_scope: 'all' as TodoDueScope })
 const dialogVisible = ref(false)
+const reminderDialogVisible = ref(false)
 const editingId = ref<number | string | null>(null)
 const formRef = ref<FormInstance>()
 const form = reactive<TodoWritePayload>({ title: '', description: '', priority: 'normal', due_at: '' })
@@ -122,10 +134,10 @@ const rules = computed<FormRules>(() => ({
     priority: [{ required: true, message: t('todo.validation.priority'), trigger: 'change' }],
 }))
 const summaryItems = computed(() => [
-    { key: 'pending', label: t('todo.summary.pending'), value: summary.value.pending },
-    { key: 'processing', label: t('todo.summary.processing'), value: summary.value.processing },
-    { key: 'overdue', label: t('todo.summary.overdue'), value: summary.value.overdue },
-    { key: 'dueToday', label: t('todo.summary.dueToday'), value: summary.value.due_today },
+    { key: 'pending', label: t('todo.summary.pending'), value: failed.value ? '-' : summary.value.pending },
+    { key: 'processing', label: t('todo.summary.processing'), value: failed.value ? '-' : summary.value.processing },
+    { key: 'overdue', label: t('todo.summary.overdue'), value: failed.value ? '-' : summary.value.overdue },
+    { key: 'dueToday', label: t('todo.summary.dueToday'), value: failed.value ? '-' : summary.value.due_today },
 ])
 
 const load = async () => {
@@ -138,8 +150,12 @@ const load = async () => {
         items.value = list.list
         total.value = list.total
         summary.value = summaryResult
+        failed.value = false
     } catch (error) {
         Logger.error('获取待办失败:', error)
+        items.value = []
+        total.value = 0
+        failed.value = true
     } finally {
         loading.value = false
     }
@@ -195,13 +211,15 @@ onMounted(load)
 
 <style scoped lang="scss">
 .page-header { display: flex; justify-content: space-between; align-items: center; }
+.page-actions { display: flex; gap: var(--xl-space-2); }
 .page-header h2 { margin: 0 0 var(--xl-space-1); }
 .page-header p { margin: 0; color: var(--el-text-color-secondary); }
 .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--xl-space-3); margin-bottom: var(--xl-space-5); }
 .summary-item { padding: var(--xl-space-4); border-radius: var(--xl-radius-sm); background: var(--el-fill-color-light); display: flex; justify-content: space-between; align-items: center; }
 .summary-item strong { font-size: 24px; }
+.load-error { margin-bottom: var(--xl-space-4); }
 .filter-form :deep(.el-select), .filter-form :deep(.el-input) { width: 200px; }
 .todo-title-cell { display: flex; align-items: center; gap: var(--xl-space-2); }
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: var(--xl-space-5); }
-@media (max-width: 768px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .page-header { align-items: flex-start; gap: var(--xl-space-3); } }
+@media (max-width: 768px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .page-header { align-items: flex-start; gap: var(--xl-space-3); } .page-actions { flex-wrap: wrap; justify-content: flex-end; } }
 </style>

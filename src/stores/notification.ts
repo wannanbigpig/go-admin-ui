@@ -5,7 +5,7 @@ import router from '@/router'
 import * as systemApi from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
 import { normalizeListData } from '@/modules/shared/response'
-import type { AppNotification, NotificationConnectionStatus, NotificationLevel, NotificationSocketMessage } from '@/types/notification'
+import type { AppNotification, ExportProgressRealtimeEvent, NotificationConnectionStatus, NotificationLevel, NotificationSocketMessage } from '@/types/notification'
 import { Logger } from '@/utils/logger'
 import { translate } from '@/locales'
 import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
@@ -159,7 +159,7 @@ function isExportMessage(input: Record<string, unknown>) {
     if (String(input.category || '').toLowerCase() === 'export') return true
     if (String(input.topic || '').toLowerCase() === 'export.finished') return true
     const actionURL = String(input.action_url || '')
-    if (actionURL.includes('/task/center') && actionURL.includes('tab=export')) return true
+    if (actionURL.includes('/my-exports')) return true
     const meta = input.meta
     if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
         const scene = String((meta as Record<string, unknown>).scene || '')
@@ -197,8 +197,8 @@ export function normalizeNotification(input: Partial<AppNotification> & Record<s
     }
 
     let actionURL = typeof input.action_url === 'string' ? input.action_url : undefined
-    if (actionURL && (actionURL.includes('/v1/file/') || actionURL.includes('/admin/v1/file/'))) {
-        actionURL = '/task/center?tab=export'
+    if (actionURL && (actionURL.includes('/v1/file/') || actionURL.includes('/admin/v1/file/') || (actionURL.includes('/task/center') && actionURL.includes('tab=export')))) {
+        actionURL = '/my-exports'
     }
     actionURL = normalizeNotificationActionUrl(actionURL)
 
@@ -210,7 +210,7 @@ export function normalizeNotification(input: Partial<AppNotification> & Record<s
         source: exportMessage || input.source === 'export' ? 'export' : 'websocket',
         read: Boolean(input.read || input.is_read),
         created_at: String(input.created_at || new Date().toISOString()),
-        action_url: actionURL || (exportMessage ? '/task/center?tab=export' : undefined),
+        action_url: actionURL || (exportMessage ? '/my-exports' : undefined),
         action_label: typeof input.action_label === 'string' ? input.action_label : exportMessage ? translate('layout.notification.viewExportCenter') : undefined,
         meta: typeof input.meta === 'object' && input.meta && !Array.isArray(input.meta) ? (input.meta as Record<string, unknown>) : undefined,
         category: typeof input.category === 'string' ? input.category : undefined,
@@ -269,12 +269,40 @@ function applyRealtimeReadState(payload: NotificationSocketMessage, list: AppNot
     return false
 }
 
+function getSocketTopic(payload: NotificationSocketMessage) {
+    const directTopic = String(payload.topic || '').toLowerCase()
+    if (directTopic) return directTopic
+    if (payload.message && typeof payload.message === 'object' && !Array.isArray(payload.message)) {
+        return String(payload.message.topic || '').toLowerCase()
+    }
+    return ''
+}
+
+function normalizeExportProgressEvent(payload: NotificationSocketMessage): ExportProgressRealtimeEvent | null {
+    const data = payload.data
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null
+    const value = data as Record<string, unknown>
+    const publicID = value.public_id
+    if (typeof publicID !== 'string' || !publicID.trim()) return null
+    return {
+        public_id: publicID,
+        scene: typeof value.scene === 'string' ? value.scene : undefined,
+        status: typeof value.status === 'string' ? value.status : undefined,
+        progress: Number.isFinite(Number(value.progress)) ? Number(value.progress) : undefined,
+        processed_count: Number.isFinite(Number(value.processed_count)) ? Number(value.processed_count) : undefined,
+        total_count: Number.isFinite(Number(value.total_count)) ? Number(value.total_count) : undefined,
+        stage: typeof value.stage === 'string' ? value.stage : undefined,
+        received_at: Date.now(),
+    }
+}
+
 export const useNotificationStore = defineStore(
     'notification',
     () => {
         const notifications = ref<AppNotification[]>([])
         const unreadCount = ref(0)
         const exportFinishedTime = ref<number>(0)
+        const exportProgressEvent = ref<ExportProgressRealtimeEvent | null>(null)
         const connectionStatus = ref<NotificationConnectionStatus>('idle')
         const listLoading = ref(false)
         const lastError = ref('')
@@ -447,10 +475,17 @@ export const useNotificationStore = defineStore(
                 lastSocketMessageAt = Date.now()
                 const payload = JSON.parse(event.data) as NotificationSocketMessage
 
-                const topic = String(payload.topic || '').toLowerCase()
+                const topic = getSocketTopic(payload)
                 const category = String(payload.category || '').toLowerCase()
                 if (topic === 'export.finished' || (category === 'export' && topic === 'export.finished')) {
                     exportFinishedTime.value = Date.now()
+                }
+
+                const eventType = String(payload.event || '').toLowerCase()
+                if (eventType === 'export_progress' || topic === 'export.progress') {
+                    const progressEvent = normalizeExportProgressEvent(payload)
+                    if (progressEvent) exportProgressEvent.value = progressEvent
+                    return
                 }
 
                 // 检查是否是已订阅的频道消息（type 字段），未订阅的 type 继续走通知事件处理。
@@ -639,6 +674,7 @@ export const useNotificationStore = defineStore(
             channelHandlers.clear()
             subscribedChannels.clear()
             exportFinishedTime.value = 0
+            exportProgressEvent.value = null
         }
 
         const reconnect = () => {
@@ -651,6 +687,7 @@ export const useNotificationStore = defineStore(
             notifications,
             unreadCount,
             exportFinishedTime,
+            exportProgressEvent,
             hasUnread,
             connectionStatus,
             listLoading,

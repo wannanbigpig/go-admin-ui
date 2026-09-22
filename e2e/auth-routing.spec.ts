@@ -9,7 +9,7 @@ test('登录后应进入权限动态路由且不持久化认证状态', async ({
     await expect(captchaInput).toHaveValue('1234')
     await page.getByRole('button', { name: '登录', exact: true }).click()
 
-    await expect(page).not.toHaveURL(/\/login(?:\?|$)/)
+    await expect(page).not.toHaveURL(/\/login(?:\?|$)/, { timeout: 15_000 })
     await expect.poll(() => page.evaluate(() => localStorage.getItem('auth'))).toBeNull()
 
     await page.goto('/system/notification-manage')

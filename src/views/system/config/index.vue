@@ -72,6 +72,10 @@
             <system-storage-config-panel />
         </div>
 
+        <div v-if="activeTab === 'sms' && checkPermission('sms:config')">
+            <sms-config-panel />
+        </div>
+
         <div v-if="activeTab === 'audit_mask' && checkPermission('requestLog:maskConfig')">
             <request-log-mask-config-panel />
         </div>
@@ -87,6 +91,7 @@ import xlActionButton from '@/components/actionButton/index.vue'
 import xlI18nInput from '@/components/i18nInput/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import SystemStorageConfigPanel from '@/views/system/components/StorageConfigPanel.vue'
+import SmsConfigPanel from '@/views/system/components/SmsConfigPanel.vue'
 import RequestLogMaskConfigPanel from '@/views/system/components/RequestLogMaskConfigPanel.vue'
 import { useI18n } from 'vue-i18n'
 import { useListPage } from '@/composables/useListPage'
@@ -108,13 +113,14 @@ const { checkPermission, getButtonInfoFull } = usePermission()
 const route = useRoute()
 const router = useRouter()
 
-type ConfigTabName = 'normal' | 'storage' | 'audit_mask'
+type ConfigTabName = 'normal' | 'storage' | 'sms' | 'audit_mask'
 
 const activeTab = ref<ConfigTabName>('normal')
 const visibleTabs = computed(() =>
     [
         { name: 'normal' as const, label: t('system.config.tabs.normal'), permission: 'sysConfig:list' },
         { name: 'storage' as const, label: t('system.config.tabs.storage'), permission: 'storage:config' },
+        { name: 'sms' as const, label: t('system.config.tabs.sms'), permission: 'sms:config' },
         { name: 'audit_mask' as const, label: t('system.config.tabs.auditMask'), permission: 'requestLog:maskConfig' },
     ].filter((tab) => checkPermission(tab.permission))
 )

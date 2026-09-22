@@ -74,7 +74,7 @@ const openTodo = (item: TodoItem) => {
         router.push(target)
         return
     }
-    router.push({ path: '/todo/list', query: { id: String(item.id) } })
+    router.push('/todo/list')
 }
 
 onMounted(load)
@@ -83,6 +83,14 @@ onMounted(load)
 <style scoped lang="scss">
 .todo-card {
     height: 100%;
+
+    :deep(.el-card__header) {
+        padding: var(--xl-space-3) var(--xl-space-4);
+    }
+
+    :deep(.el-card__body) {
+        padding: var(--xl-space-3) var(--xl-space-4);
+    }
 }
 
 .todo-card__header,
@@ -104,7 +112,7 @@ onMounted(load)
 }
 
 .todo-card__body {
-    min-height: 260px;
+    min-height: 246px;
 }
 
 .todo-card__error {
@@ -116,8 +124,9 @@ onMounted(load)
 
 .todo-card__item {
     width: 100%;
-    gap: var(--xl-space-3);
-    padding: var(--xl-space-3) 0;
+    gap: var(--xl-space-2);
+    min-height: 49px;
+    padding: var(--xl-space-2) 0;
     border: 0;
     border-bottom: 1px solid var(--el-border-color-lighter);
     background: transparent;

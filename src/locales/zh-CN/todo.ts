@@ -28,5 +28,18 @@ export default {
     deleteSuccess: '待办已删除',
     deleteConfirm: '确认删除该手工待办吗？',
     businessReadonly: '业务来源待办需前往对应业务页面处理',
+    reminder: {
+        entry: '提醒设置',
+        title: '待办到期提醒',
+        inApp: '站内提醒',
+        inAppHint: '在通知中心接收到期提醒',
+        sms: '短信提醒',
+        smsHint: '向个人资料中绑定的手机号发送提醒',
+        phoneMissing: '尚未绑定手机号，无法开启短信提醒。',
+        goToProfile: '去个人资料绑定',
+        systemLeadHint: '提醒提前时间由管理员通过 todo.reminder_lead_minutes 系统参数统一配置。',
+        save: '保存设置',
+        saveSuccess: '提醒设置已保存',
+    },
     validation: { title: '请输入待办标题', priority: '请选择优先级' },
 }

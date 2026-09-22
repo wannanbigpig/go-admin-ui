@@ -21,6 +21,10 @@ import type {
     StorageConfigPayload,
     StorageSecretField,
     StorageTestResult,
+    SmsConfig,
+    SmsConfigPayload,
+    SmsTestPayload,
+    SmsTestResult,
     SystemFileReference,
     SystemFileFolder,
     SystemFileFolderPayload,
@@ -296,6 +300,9 @@ export async function fetchTaskRunList(params?: Record<string, unknown>) {
 export async function fetchTaskRunStats(params?: TaskRunStatsQuery) {
     const response = await systemApi.getTaskRunStats(params)
     return normalizeDetailData(response, {
+        detail_time_basis: 'finished_at',
+        detail_start_time: '',
+        detail_end_time: '',
         total_count: 0,
         success_count: 0,
         failed_count: 0,
@@ -698,10 +705,24 @@ export async function testStorageConnection(data: StorageConfigPayload) {
     return normalizeDetailData(response, {} as StorageTestResult)
 }
 
-export async function fetchStorageSecret(driver: 'aliyun_oss', field: StorageSecretField) {
+export async function fetchStorageSecret(driver: string, field: StorageSecretField) {
     const response = await systemApi.getStorageSecret({ driver, field })
     const detail = normalizeDetailData(response, { value: '' })
     return String(detail.value || '')
+}
+
+export async function fetchSmsConfig() {
+    const response = await systemApi.getSmsConfig()
+    return normalizeDetailData(response, {} as SmsConfig)
+}
+
+export async function updateSmsConfig(data: SmsConfigPayload) {
+    return await systemApi.saveSmsConfig(data)
+}
+
+export async function testSmsConnection(data: SmsTestPayload) {
+    const response = await systemApi.testSmsConfig(data)
+    return normalizeDetailData(response, {} as SmsTestResult)
 }
 
 export async function fetchTaskRunEvents(runId: number | string) {

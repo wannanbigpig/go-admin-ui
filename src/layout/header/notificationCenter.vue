@@ -49,7 +49,7 @@
                             <span v-if="!item.read" class="notification-item__dot" />
                         </div>
                         <el-tag size="small" effect="plain" :type="notificationTagTypeMap[item.level || 'info']">
-                            {{ sourceLabelMap[item.source || 'websocket'] }}
+                            {{ notificationSourceLabel(item) }}
                         </el-tag>
                     </div>
                     <div class="notification-item__message" :class="{ 'is-expanded': isExpanded(item.id) }" :data-id="item.id">
@@ -124,6 +124,13 @@ const sourceLabelMap = computed<Record<AppNotification['source'], string>>(() =>
     websocket: t('layout.notification.source.websocket'),
     export: t('layout.notification.source.export'),
 }))
+
+const notificationSourceLabel = (item: AppNotification) => {
+    if (item.category === 'todo') return t('system.notification.categoryOptions.todo')
+    if (item.category === 'system') return t('system.notification.categoryOptions.system')
+    if (item.category === 'export') return t('system.notification.categoryOptions.export')
+    return sourceLabelMap.value[item.source || 'websocket']
+}
 
 const notificationTagTypeMap: Record<AppNotification['level'], 'success' | 'warning' | 'danger' | 'info'> = {
     success: 'success',

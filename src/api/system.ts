@@ -19,6 +19,10 @@ import type {
     StorageSecretPayload,
     StorageSecretResult,
     StorageTestResult,
+    SmsConfig,
+    SmsConfigPayload,
+    SmsTestPayload,
+    SmsTestResult,
     SystemFileReference,
     SystemFileFolder,
     SystemFileFolderPayload,
@@ -300,6 +304,18 @@ export function testStorageConfig(data: StorageConfigPayload) {
 
 export function getStorageSecret(params: StorageSecretPayload) {
     return get<StorageSecretResult>('/v1/system/storage/secret', params as unknown as Record<string, unknown>)
+}
+
+export function getSmsConfig() {
+    return get<SmsConfig>('/v1/system/sms/config')
+}
+
+export function saveSmsConfig(data: SmsConfigPayload) {
+    return post<unknown>('/v1/system/sms/config', data)
+}
+
+export function testSmsConfig(data: SmsTestPayload) {
+    return post<SmsTestResult>('/v1/system/sms/test', data)
 }
 
 export function getTaskRunEvents(params: { run_id: number | string }) {

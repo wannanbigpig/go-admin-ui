@@ -53,7 +53,7 @@ export default {
         pendingCount: '{count} 项待处理',
         empty: '暂无数据',
         trend: {
-            title: '近 7 日趋势',
+            title: '访问趋势',
             subtitle: '请求、错误与登录变化',
             empty: '暂无趋势数据',
             series: {
@@ -98,8 +98,10 @@ export default {
             },
         },
         range: {
-            week: '本周',
-            month: '本月',
+            sevenDays: '7 天',
+            thirtyDays: '30 天',
+            custom: '自定义',
+            maxDays: '最多可查询 {count} 天',
         },
         week: {
             mon: '周一',

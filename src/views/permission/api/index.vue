@@ -220,18 +220,18 @@ const columns = computed<ProTableColumns<ApiPermission>>(
             {
                 prop: 'code',
                 h_label: 'CODE',
-                width: 120,
+                width: 150,
                 overflow: true,
                 h_tip: t('permission.api.codeTip'),
                 copy: true,
                 customRow: true,
             },
-            { prop: 'name', h_label: t('permission.api.name'), width: 200, overflow: true },
-            { prop: 'route', h_label: t('permission.api.route'), minWidth: 260 },
+            { prop: 'name', h_label: t('permission.api.name'), minWidth: 220, overflow: true },
+            { prop: 'route', h_label: t('permission.api.route'), minWidth: 280, overflow: true },
             {
                 prop: 'method',
                 h_label: t('permission.api.method'),
-                width: 120,
+                width: 100,
                 type: 'tag',
                 tag: {
                     POST: { type: 'primary' },
@@ -245,7 +245,7 @@ const columns = computed<ProTableColumns<ApiPermission>>(
                 prop: 'is_auth',
                 h_label: t('permission.api.authMode'),
                 align: 'center',
-                width: 120,
+                width: 160,
                 type: 'tag',
                 tag: {
                     [API_PERMISSION_AUTH_MODE.AUTHZ]: { type: 'success', text: t('permission.api.authAuthz') },
@@ -258,7 +258,7 @@ const columns = computed<ProTableColumns<ApiPermission>>(
                 prop: 'is_effective',
                 h_label: t('permission.api.effective'),
                 align: 'center',
-                width: 120,
+                width: 110,
                 customRow: true,
                 icon: {
                     1: { color: 'var(--el-color-success)', text: 'ant-design:check-outlined' },
@@ -270,17 +270,17 @@ const columns = computed<ProTableColumns<ApiPermission>>(
                 prop: 'sort',
                 h_label: t('permission.api.weight'),
                 align: 'center',
-                width: 120,
+                width: 90,
                 h_tip: t('permission.api.weightTip'),
             },
             {
                 prop: 'func_path',
                 h_label: t('permission.api.methodPath'),
-                width: 220,
+                minWidth: 240,
                 h_tip: t('permission.api.methodPathTip'),
                 overflow: true,
             },
-            { prop: 'description', h_label: t('common.labels.description'), overflow: true },
+            { prop: 'description', h_label: t('common.labels.description'), minWidth: 260, overflow: true },
         ] as ProTableColumns<ApiPermission>
 )
 </script>

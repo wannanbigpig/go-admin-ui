@@ -1,4 +1,5 @@
 import type { ExportRecord, ExportRecordQuery, ExportRecordStatus, ExportTaskSubmitResult } from '@/types/exportCenter'
+import type { ExportProgressRealtimeEvent } from '@/types/notification'
 
 export const ACTIVE_EXPORT_RECORD_STATUSES: ExportRecordStatus[] = ['pending', 'running', 'retrying']
 
@@ -6,10 +7,9 @@ export function createExportRecordQuery(): ExportRecordQuery {
     return {
         page: 1,
         per_page: 10,
+        public_id: null,
         scene: null,
         status: null,
-        task_run_id: null,
-        trigger_user_id: null,
     }
 }
 
@@ -35,17 +35,36 @@ export function getExportRecordProgressText(record: Pick<ExportRecord, 'processe
     return `${normalizedProcessed}/${Math.round(totalCount)}`
 }
 
-export function canDownloadExportRecord(record: Pick<ExportRecord, 'file_uuid' | 'file_id' | 'download_ready'>) {
-    return Boolean(record.file_uuid || record.file_id || record.download_ready)
+export function isExportRecordExpired(record: Pick<ExportRecord, 'file_expired' | 'file_expires_at'>, now = Date.now()) {
+    if (record.file_expired === true) return true
+    if (!record.file_expires_at) return false
+    const expiresAt = new Date(record.file_expires_at.replace(' ', 'T')).getTime()
+    return Number.isFinite(expiresAt) && expiresAt <= now
+}
+
+export function canDownloadExportRecord(record: Pick<ExportRecord, 'file_uuid' | 'download_ready' | 'file_expired' | 'file_expires_at'>) {
+    if (isExportRecordExpired(record)) return false
+    if (record.download_ready === false) return false
+    return Boolean(record.file_uuid && record.download_ready)
+}
+
+export function applyExportProgressEvent(records: ExportRecord[], event: ExportProgressRealtimeEvent) {
+    return records.map((record) => {
+        if (record.public_id !== event.public_id) return record
+        return {
+            ...record,
+            status: (event.status || record.status) as ExportRecordStatus,
+            progress: event.progress ?? record.progress,
+            processed_count: event.processed_count ?? record.processed_count,
+            total_count: event.total_count ?? record.total_count,
+            stage: event.stage || record.stage,
+        }
+    })
 }
 
 export function normalizeExportTaskSubmitResult(result: Partial<ExportTaskSubmitResult> | null | undefined): ExportTaskSubmitResult {
     return {
-        run_id: result?.run_id ?? '',
-        export_record_id: result?.export_record_id,
-        export_record: result?.export_record,
-        task_id: result?.task_id,
-        queue: result?.queue,
-        type: result?.type,
+        public_id: result?.public_id ?? '',
+        status: result?.status,
     }
 }

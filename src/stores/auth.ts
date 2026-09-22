@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin } from '@/modules/auth/service'
+import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin, loginWithSmsCode as submitSmsLogin } from '@/modules/auth/service'
 import { checkToken as checkTokenApi, refreshAccessToken as refreshAccessTokenApi } from '@/api/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
@@ -8,7 +8,7 @@ import { ref, computed } from 'vue'
 import { buildButtonPermissionMap, extractButtonPermissions } from '@/modules/auth/permission'
 import { ElMessageBox } from 'element-plus'
 import { Logger } from '@/utils/logger'
-import type { LoginPayload, UserInfo, UserPermission } from '@/types/auth'
+import type { LoginPayload, LoginResult, SmsLoginPayload, UserInfo, UserPermission } from '@/types/auth'
 import { translate } from '@/locales'
 import { apiCache } from '@/utils/apiCache'
 
@@ -114,9 +114,9 @@ export const useAuthStore = defineStore(
         /**
          * 使用凭证登录
          */
-        const loginWithCredentials = async (credentials: LoginPayload) => {
+        const completeLogin = async (submit: () => Promise<LoginResult>) => {
             resetAuthStore()
-            const result = await submitLogin(credentials)
+            const result = await submit()
             updateToken(result.access_token, result.expires_at)
             try {
                 await refreshUserInfo({ force: true })
@@ -127,6 +127,10 @@ export const useAuthStore = defineStore(
             }
             return result
         }
+
+        const loginWithCredentials = (credentials: LoginPayload) => completeLogin(() => submitLogin(credentials))
+
+        const loginWithSmsCode = (credentials: SmsLoginPayload) => completeLogin(() => submitSmsLogin(credentials))
 
         /**
          * 刷新用户信息（支持并发控制，多次调用共享同一个 Promise）
@@ -296,6 +300,7 @@ export const useAuthStore = defineStore(
             buttonPermissionMap,
             // Actions
             loginWithCredentials,
+            loginWithSmsCode,
             refreshUserInfo,
             ensureTokenValid,
             refreshAccessToken,

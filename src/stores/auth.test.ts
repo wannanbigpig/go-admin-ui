@@ -7,6 +7,7 @@ const hoisted = vi.hoisted(() => {
     const mockFetchCurrentUser = vi.fn()
     const mockFetchUserMenuTree = vi.fn()
     const mockSubmitLogin = vi.fn()
+    const mockSubmitSmsLogin = vi.fn()
     const mockConvertRoute = vi.fn()
     const mockAddDynamicRoutes = vi.fn()
     const mockRemoveDynamicRoute = vi.fn()
@@ -32,6 +33,7 @@ const hoisted = vi.hoisted(() => {
         mockFetchCurrentUser,
         mockFetchUserMenuTree,
         mockSubmitLogin,
+        mockSubmitSmsLogin,
         mockConvertRoute,
         mockAddDynamicRoutes,
         mockRemoveDynamicRoute,
@@ -59,6 +61,7 @@ vi.mock('@/modules/auth/service', () => ({
     fetchCurrentUser: hoisted.mockFetchCurrentUser,
     fetchUserMenuTree: hoisted.mockFetchUserMenuTree,
     loginWithCredentials: hoisted.mockSubmitLogin,
+    loginWithSmsCode: hoisted.mockSubmitSmsLogin,
 }))
 
 vi.mock('@/api/auth', () => ({
@@ -119,6 +122,7 @@ describe('stores/auth.ts', () => {
         hoisted.mockFetchCurrentUser.mockReset()
         hoisted.mockFetchUserMenuTree.mockReset()
         hoisted.mockSubmitLogin.mockReset()
+        hoisted.mockSubmitSmsLogin.mockReset()
         hoisted.mockConvertRoute.mockReset()
         hoisted.mockAddDynamicRoutes.mockReset()
         hoisted.mockRemoveDynamicRoute.mockReset()
@@ -168,6 +172,25 @@ describe('stores/auth.ts', () => {
 
         expect(hoisted.mockAddDynamicRoutes).not.toHaveBeenCalled()
         expect(hoisted.mockRemoveDynamicRoute).toHaveBeenCalledTimes(1)
+    })
+
+    it('短信登录应复用 token、用户信息和动态菜单初始化流程', async () => {
+        const store = useAuthStore()
+        const expiresAt = Math.floor(Date.now() / 1000) + 3600
+        const menuList = [{ id: 1, title: '首页', path: '/' }] as UserPermission[]
+        hoisted.mockSubmitSmsLogin.mockResolvedValue({ access_token: 'sms-access', token_type: 'Bearer', expires_at: expiresAt })
+        hoisted.mockFetchCurrentUser.mockResolvedValue({ id: 1, username: 'sms-user', nickname: '短信用户', avatar: '' })
+        hoisted.mockFetchUserMenuTree.mockResolvedValue(menuList)
+        hoisted.mockConvertRoute.mockReturnValue([{ path: '/', name: 'Home' }])
+        const payload = { country_code: '86', phone_number: '13800138000', sms_code: '123456', challenge_id: 'challenge-id' }
+
+        await store.loginWithSmsCode(payload)
+
+        expect(hoisted.mockSubmitSmsLogin).toHaveBeenCalledWith(payload)
+        expect(store.access_token).toBe('sms-access')
+        expect(store.userInfo.username).toBe('sms-user')
+        expect(store.menu).toEqual(menuList)
+        expect(hoisted.mockAddDynamicRoutes).toHaveBeenCalledWith([{ path: '/', name: 'Home' }])
     })
 
     it('refreshUserInfo 不应因滑动刷新 token 更新版本而丢弃用户和菜单响应', async () => {

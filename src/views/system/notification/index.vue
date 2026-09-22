@@ -36,7 +36,7 @@
                         <template #icon><i-ep-check /></template>
                         {{ t('layout.notification.markAllRead') }}
                     </el-button>
-                    <el-button type="primary" link size="default" @click="handleOpenManagePage">
+                    <el-button v-if="canManageNotifications" type="primary" link size="default" @click="handleOpenManagePage">
                         <template #icon><i-ep-setting /></template>
                         {{ t('system.notification.manageEntry') }}
                     </el-button>
@@ -189,9 +189,11 @@ import router from '@/router'
 import type { AppNotification } from '@/types/notification'
 import { useNotificationCategoryOptions } from './notificationConstants'
 import { normalizeNotificationActionUrl } from '@/utils/notificationAction'
+import { usePermission } from '@/composables/usePermission'
 
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
+const { checkPermission } = usePermission()
 
 const queryFormRef = ref<FormInstance>()
 const loading = ref(false)
@@ -217,6 +219,7 @@ const pagination = reactive({
 })
 
 const hasUnread = computed(() => list.value.some((item) => !item.read))
+const canManageNotifications = computed(() => checkPermission('notification:send'))
 
 const categoryOptions = useNotificationCategoryOptions()
 
@@ -229,6 +232,7 @@ const getCategoryLabel = (category?: string) => {
     const map: Record<string, string> = {
         system: t('system.notification.categoryOptions.system'),
         export: t('system.notification.categoryOptions.export'),
+        todo: t('system.notification.categoryOptions.todo'),
     }
     return category ? map[category] || category : '-'
 }
@@ -237,6 +241,7 @@ const getCategoryTagType = (category?: string): 'primary' | 'success' | 'warning
     const map: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'info'> = {
         system: 'success',
         export: 'primary',
+        todo: 'warning',
     }
     return category ? map[category] || 'info' : 'info'
 }

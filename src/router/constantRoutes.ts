@@ -58,6 +58,16 @@ const constantRoutes: RouteRecordRaw[] = [
                     show: false,
                 },
             },
+            {
+                path: '/my-exports',
+                name: 'MyExports',
+                component: () => import('@/views/system/export/index.vue'),
+                meta: {
+                    title: 'My Exports',
+                    titleKey: 'system.task.myExportsTitle',
+                    show: false,
+                },
+            },
         ],
     },
     {

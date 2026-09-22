@@ -28,5 +28,18 @@ export default {
     deleteSuccess: 'Todo deleted',
     deleteConfirm: 'Delete this manual todo?',
     businessReadonly: 'Business todos must be handled on their business page',
+    reminder: {
+        entry: 'Reminder Settings',
+        title: 'Todo Due Reminders',
+        inApp: 'In-app reminders',
+        inAppHint: 'Receive due reminders in Notification Center',
+        sms: 'SMS reminders',
+        smsHint: 'Send reminders to the phone number in your profile',
+        phoneMissing: 'No phone number is linked, so SMS reminders cannot be enabled.',
+        goToProfile: 'Open Profile',
+        systemLeadHint: 'The reminder lead time is managed system-wide by administrators through todo.reminder_lead_minutes.',
+        save: 'Save Settings',
+        saveSuccess: 'Reminder settings saved',
+    },
     validation: { title: 'Please enter a title', priority: 'Please select a priority' },
 }

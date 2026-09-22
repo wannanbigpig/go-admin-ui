@@ -53,7 +53,7 @@ export default {
         pendingCount: '{count} pending',
         empty: 'No data',
         trend: {
-            title: 'Last 7 Days Trend',
+            title: 'Traffic Trend',
             subtitle: 'Requests, errors, and login activity',
             empty: 'No trend data',
             series: {
@@ -98,8 +98,10 @@ export default {
             },
         },
         range: {
-            week: 'Week',
-            month: 'Month',
+            sevenDays: '7 days',
+            thirtyDays: '30 days',
+            custom: 'Custom',
+            maxDays: 'Select up to {count} days',
         },
         week: {
             mon: 'Mon',

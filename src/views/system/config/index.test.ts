@@ -101,6 +101,7 @@ const mountPage = () =>
                 ElTableColumn: TableColumnStub,
                 ElForm: true,
                 SystemStorageConfigPanel: { template: '<div data-testid="storage-panel" />' },
+                SmsConfigPanel: { template: '<div data-testid="sms-panel" />' },
                 RequestLogMaskConfigPanel: { template: '<div data-testid="mask-panel" />' },
             },
         },
@@ -137,6 +138,19 @@ describe('system config permission tabs', () => {
         expect(wrapper.find('[data-testid="normal-panel"]').exists()).toBe(true)
         expect(mocks.getList).toHaveBeenCalledTimes(1)
         expect(mocks.loadDict).toHaveBeenCalledTimes(2)
+    })
+
+    it('shows the sms tab without loading normal configuration data when only sms config is authorized', async () => {
+        mocks.permissions.add('sms:config')
+        mocks.route.query = { tab: 'sms' }
+
+        const wrapper = mountPage()
+        await flushPromises()
+
+        expect(wrapper.findAll('.tab-pane').map((item) => item.attributes('data-name'))).toEqual(['sms'])
+        expect(wrapper.find('[data-testid="sms-panel"]').exists()).toBe(true)
+        expect(mocks.getList).not.toHaveBeenCalled()
+        expect(mocks.loadDict).not.toHaveBeenCalled()
     })
 
     it('normalizes an invalid query when the normal tab is already the fallback', async () => {
