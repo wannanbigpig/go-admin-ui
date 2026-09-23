@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin, loginWithSmsCode as submitSmsLogin } from '@/modules/auth/service'
-import { checkToken as checkTokenApi, refreshAccessToken as refreshAccessTokenApi } from '@/api/auth'
+import { checkToken as checkTokenApi, refreshAccessToken as refreshAccessTokenApi, logout as logoutApi } from '@/api/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
 import router from '@/router'
 import { removeDynamicRoute, convertRoute, addDynamicRoutes, findFirstValidRoute } from '@/router/dynamicRoutes'
@@ -11,11 +11,14 @@ import { Logger } from '@/utils/logger'
 import type { LoginPayload, LoginResult, SmsLoginPayload, UserInfo, UserPermission } from '@/types/auth'
 import { translate } from '@/locales'
 import { apiCache } from '@/utils/apiCache'
+import { invalidateDictOptionsCache } from '@/composables/useDictOptions'
 
 // ==================== 常量定义 ====================
 /** 当前刷新用户信息的 Promise（用于并发控制） */
 let refreshingPromise: Promise<void> | null = null
 let checkingTokenPromise: Promise<boolean> | null = null
+/** 与 checkingTokenPromise 配对：避免不同 token 的在途校验结果被复用 */
+let checkingTokenPromiseKey = ''
 const AUTH_PERSIST_KEY = 'auth'
 
 export const useAuthStore = defineStore(
@@ -189,11 +192,14 @@ export const useAuthStore = defineStore(
             const currentKey = `${access_token.value}:${expires_at.value}`
             const requestSessionVersion = authSessionVersion.value
             if (tokenCheckedKey.value === currentKey) return true
-            if (!checkingTokenPromise) {
-                checkingTokenPromise = checkTokenApi()
+            // 按 token key 隔离在途校验：轮换/刷新后不得复用旧 promise 结果
+            if (!checkingTokenPromise || checkingTokenPromiseKey !== currentKey) {
+                const promiseKey = currentKey
+                const nextPromise = checkTokenApi()
                     .then(() => {
                         if (requestSessionVersion !== authSessionVersion.value) return false
-                        tokenCheckedKey.value = currentKey
+                        if (access_token.value === '' || `${access_token.value}:${expires_at.value}` !== promiseKey) return false
+                        tokenCheckedKey.value = promiseKey
                         return true
                     })
                     .catch(async (error) => {
@@ -203,8 +209,13 @@ export const useAuthStore = defineStore(
                         return Boolean(token.value)
                     })
                     .finally(() => {
-                        checkingTokenPromise = null
+                        if (checkingTokenPromise === nextPromise) {
+                            checkingTokenPromise = null
+                            checkingTokenPromiseKey = ''
+                        }
                     })
+                checkingTokenPromise = nextPromise
+                checkingTokenPromiseKey = promiseKey
             }
             return checkingTokenPromise
         }
@@ -247,8 +258,10 @@ export const useAuthStore = defineStore(
             isTokenExpiredModalShown.value = false
             refreshingPromise = null
             checkingTokenPromise = null
+            checkingTokenPromiseKey = ''
             tokenRefreshPromise = null
             apiCache.clear()
+            invalidateDictOptionsCache()
             localStorage.removeItem(AUTH_PERSIST_KEY)
             removeDynamicRoute()
         }
@@ -256,7 +269,12 @@ export const useAuthStore = defineStore(
         /**
          * 退出登录
          */
-        const logout = (redirectUrl?: string) => {
+        const logout = async (redirectUrl?: string) => {
+            try {
+                await logoutApi()
+            } catch {
+                // 忽略注销接口错误，确保本地状态正常重置
+            }
             resetAuthStore()
             router.push({ name: 'Login', query: { redirect: redirectUrl } })
         }

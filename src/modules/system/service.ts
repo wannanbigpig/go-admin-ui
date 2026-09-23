@@ -4,6 +4,7 @@ import axios from 'axios'
 import { request } from '@/utils/request'
 import { i18n } from '@/locales'
 import * as systemApi from '@/api/system'
+import { ErrorCode } from '@/constants/errorCodes'
 import * as logApi from '@/api/log'
 import { normalizeDetailData, normalizeListData, normalizeArrayData } from '@/modules/shared/response'
 import type { NotificationSendPayload, NotificationSendResult } from '@/types/notification'
@@ -493,7 +494,7 @@ const buildUploadMeta = (file: File, options: SystemFileUploadOptions, hash: str
     size: file.size,
     mime_type: options.mime_type || file.type || 'application/octet-stream',
     folder_id: options.folder_id ?? null,
-    is_public: options.is_public ?? 1,
+    is_public: options.is_public ?? 0,
 })
 
 function resolveCredentialCompleteToken(credential: SystemFileUploadCredential) {
@@ -554,7 +555,7 @@ async function uploadSystemFilesLocal(files: File[], options: SystemFileUploadOp
             files,
             {
                 folder_id: options.folder_id ?? '',
-                is_public: options.is_public ?? 1,
+                is_public: options.is_public ?? 0,
                 driver: 'local',
             },
             {
@@ -625,7 +626,7 @@ export async function uploadSystemFile(file: File, options: SystemFileUploadOpti
                 size: file.size,
                 mime_type: options.mime_type || file.type,
                 folder_id: options.folder_id ?? '',
-                is_public: options.is_public ?? 1,
+                is_public: options.is_public ?? 0,
                 driver,
             },
             {
@@ -639,11 +640,11 @@ export async function uploadSystemFile(file: File, options: SystemFileUploadOpti
     try {
         return await uploadSystemFileDirect(file, { ...options, hash, driver })
     } catch (error: unknown) {
-        // 强制触发 HMR 热更新，清理 linter 过期内存缓存
-        // 如果错误码是 11011（如直传大文件超出限制或直传被限），自动降级为本地上传
+        // 如果错误码是 LocalStorageMultipartUnsupported 或 FileTooLarge，自动降级为本地普通上传
         const errObj = error as { code?: number; data?: { code?: number } } | null | undefined
-        if (errObj?.code === 11011 || errObj?.data?.code === 11011) {
-            Logger.warn('直传触发 11011 错误，自动降级为本地普通上传:', error)
+        const code = errObj?.code ?? errObj?.data?.code
+        if (code === ErrorCode.LocalStorageMultipartUnsupported || code === ErrorCode.FileTooLarge) {
+            Logger.warn(`直传触发 ${code} 错误，自动降级为本地普通上传:`, error)
             const response = await systemApi.uploadSystemFileLocal(
                 file,
                 {
@@ -652,7 +653,7 @@ export async function uploadSystemFile(file: File, options: SystemFileUploadOpti
                     size: file.size,
                     mime_type: options.mime_type || file.type,
                     folder_id: options.folder_id ?? '',
-                    is_public: options.is_public ?? 1,
+                    is_public: options.is_public ?? 0,
                     driver: 'local',
                 },
                 {

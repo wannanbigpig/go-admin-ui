@@ -84,6 +84,7 @@ export default {
         save: '保存配置',
         placeholder: '每行一个字段名',
         common: '通用字段',
+        commonTip: '（同时对 HTTP 请求日志与业务操作审计变更 Change Diff 自动脱敏）',
         requestGroup: '请求字段',
         responseGroup: '响应字段',
         requestHeader: '请求头字段',

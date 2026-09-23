@@ -67,6 +67,7 @@ vi.mock('@/modules/auth/service', () => ({
 vi.mock('@/api/auth', () => ({
     checkToken: vi.fn(),
     refreshAccessToken: hoisted.mockRefreshAccessTokenApi,
+    logout: vi.fn(),
 }))
 
 vi.mock('@/utils/apiCache', () => ({
@@ -292,11 +293,13 @@ describe('stores/auth.ts', () => {
         expect(hoisted.mockApiCacheClear).toHaveBeenCalledTimes(1)
     })
 
-    it('handleTokenExpired 应触发弹窗并在确认时本地退出', async () => {
+    it('handleTokenExpired 应触发弹窗并在确认时调用登出接口并本地退出', async () => {
         const store = useAuthStore()
         store.updateToken('test-access', Math.floor(Date.now() / 1000) + 3600)
 
         const { ElMessageBox } = await import('element-plus')
+        const { logout } = await import('@/api/auth')
+        vi.mocked(logout).mockResolvedValue(undefined)
         vi.mocked(ElMessageBox.alert).mockImplementation((msg, title, options) => {
             if (options && typeof options.callback === 'function') {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -307,8 +310,11 @@ describe('stores/auth.ts', () => {
         })
 
         store.handleTokenExpired()
-
-        expect(store.access_token).toBe('')
+        // logout 为 async：先调 API 再 reset，需等微任务链完成
+        await vi.waitFor(() => {
+            expect(store.access_token).toBe('')
+        })
+        expect(vi.mocked(logout)).toHaveBeenCalled()
         expect(hoisted.mockRouter.push).toHaveBeenCalledWith({
             name: 'Login',
             query: { redirect: '/system/user' },
@@ -369,5 +375,32 @@ describe('stores/auth.ts', () => {
         await expect(next).resolves.toBe('fresh-b')
         await expect(shared).resolves.toBe('fresh-b')
         expect(store.access_token).toBe('fresh-b')
+    })
+
+    it('ensureTokenValid 按 token key 隔离在途校验，轮换后不复用旧 promise', async () => {
+        const store = useAuthStore()
+        const { checkToken } = await import('@/api/auth')
+        const mockCheckToken = vi.mocked(checkToken)
+        const exp = Math.floor(Date.now() / 1000) + 3600
+        store.updateToken('token-a', exp)
+
+        let resolveFirst!: (value: unknown) => void
+        mockCheckToken.mockImplementationOnce(
+            () =>
+                new Promise((resolve) => {
+                    resolveFirst = resolve
+                }),
+        )
+        const first = store.ensureTokenValid()
+
+        // 校验在途时轮换到新 token，必须发起新的 check，而不是复用 token-a 的 promise
+        store.updateToken('token-b', exp + 1)
+        mockCheckToken.mockResolvedValueOnce({})
+        const second = store.ensureTokenValid()
+
+        expect(mockCheckToken).toHaveBeenCalledTimes(2)
+        resolveFirst({})
+        await expect(first).resolves.toBe(false)
+        await expect(second).resolves.toBe(true)
     })
 })

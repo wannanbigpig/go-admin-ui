@@ -38,6 +38,7 @@ export function updateProfile(data: UpdateProfilePayload) {
 // 上传头像
 export function uploadAvatar(data: FormData) {
     return request<{ path: string; url: string; origin_name: string }>('/v1/admin-user/avatar/upload', 'POST', {
+        timeout: 0,
         data,
         headers: {
             'Content-Type': 'multipart/form-data',

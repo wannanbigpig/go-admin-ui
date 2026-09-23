@@ -56,9 +56,16 @@ export function normalizeDetailData<T>(response: unknown, fallback: T): T {
         return payload.length > 0 ? (payload[0] as T) : fallback
     }
 
-    // 处理嵌套一层 data 的情况 (常见于某些 API 设计)
-    if (typeof payload === 'object' && 'data' in payload && !Array.isArray((payload as Record<string, unknown>).data)) {
-        return (payload as { data: T }).data
+    // 处理外壳嵌套一层 data 的情况 (如仅包含 data 属性，或包含 code/msg 协议外壳)
+    if (typeof payload === 'object') {
+        const record = payload as Record<string, unknown>
+        if ('data' in record && !Array.isArray(record.data)) {
+            const keys = Object.keys(record)
+            const isWrapper = keys.length === 1 || ('code' in record && 'msg' in record)
+            if (isWrapper && record.data != null) {
+                return record.data as T
+            }
+        }
     }
 
     return payload as T

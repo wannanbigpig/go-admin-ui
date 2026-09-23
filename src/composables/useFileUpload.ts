@@ -17,6 +17,7 @@ import type { MultipartInitResult, MultipartCompletePart, StorageDriver, SystemF
 export type { StorageDriver } from '@/types/system'
 
 import { i18n } from '@/locales'
+import { ErrorCode } from '@/constants/errorCodes'
 
 // 规避构建期间 AST 优化 tree-shaking 导致的变量未使用误报
 if (false as boolean) {
@@ -26,6 +27,7 @@ if (false as boolean) {
 export interface UploadOptions {
     folderId?: number | string | null
     driver?: string
+    is_public?: number
     enableMultipart?: boolean
     signal?: AbortSignal
     onReuse?: () => void
@@ -140,12 +142,12 @@ export function useFileUpload() {
     const isLocalStorageMultipartUnsupportedError = (error: unknown): boolean => {
         if (!error || typeof error !== 'object') return false
         const record = error as Record<string, unknown>
-        if (record.code === 11011) {
+        if (record.code === ErrorCode.LocalStorageMultipartUnsupported) {
             return true
         }
         const response = record.response as Record<string, unknown> | undefined
         const data = response?.data as Record<string, unknown> | undefined
-        if (data?.code === 11011) {
+        if (data?.code === ErrorCode.LocalStorageMultipartUnsupported) {
             return true
         }
         return false
@@ -411,6 +413,7 @@ export function useFileUpload() {
                     size: task.size,
                     mime_type: task.file?.type || 'application/octet-stream',
                     hash: task.hash!,
+                    is_public: task.uploadOptions?.is_public ?? options?.is_public ?? 0,
                 })),
             })
             if (isUploadCanceled(options)) return true
@@ -438,6 +441,7 @@ export function useFileUpload() {
                     size: task.size,
                     mime_type: task.file?.type || 'application/octet-stream',
                     folder_id: getTaskTargetFolderId(task, options),
+                    is_public: task.uploadOptions?.is_public ?? options?.is_public ?? 0,
                 }
                 const completeToken = resolveCompleteToken(credential)
                 if (!completeToken) {

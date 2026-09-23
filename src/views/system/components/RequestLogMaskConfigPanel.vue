@@ -35,6 +35,7 @@
                                 <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" /></svg>
                             </span>
                             <h4>{{ t('system.requestMask.common') }}</h4>
+                            <span class="header-tip">{{ t('system.requestMask.commonTip') }}</span>
                         </div>
                     </div>
                     <div class="section-content textarea-wrapper">
@@ -347,6 +348,12 @@ onMounted(() => {
             font-size: 16px;
             font-weight: 600;
             color: var(--el-text-color-primary);
+        }
+
+        .header-tip {
+            font-size: 13px;
+            font-weight: normal;
+            color: var(--el-text-color-secondary);
         }
 
         .header-icon {

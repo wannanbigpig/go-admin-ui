@@ -248,12 +248,14 @@ describe('utils/request.ts', () => {
                 total: 8,
                 current_page: 3,
                 per_page: 20,
+                last_page: 1,
             })
         ).toEqual({
             list: [{ id: 2 }],
             total: 8,
             page: 3,
             pageSize: 20,
+            last_page: 1,
         })
     })
 

@@ -39,6 +39,7 @@ jobs:
           } >> release-notes.md
       - run: pnpm run lint --no-cache
       - run: pnpm run type-check
+      - run: pnpm run check:error-codes
       - run: pnpm run test:run
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm run test:e2e

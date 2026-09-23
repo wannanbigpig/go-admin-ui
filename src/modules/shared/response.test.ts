@@ -11,6 +11,13 @@ describe('modules/shared/response.ts', () => {
         expect(normalizeDetailData(null, { id: 0 })).toEqual({ id: 0 })
         expect(normalizeDetailData([{ id: 2 }], { id: 0 })).toEqual({ id: 2 })
         expect(normalizeDetailData({ data: { id: 3 } }, { id: 0 })).toEqual({ id: 3 })
+        expect(normalizeDetailData({ code: 0, msg: 'OK', data: { id: 4 } }, { id: 0 })).toEqual({ id: 4 })
+        // 业务实体自身包含 data 属性时不应被解包掉
+        expect(normalizeDetailData({ id: 5, name: 'report', data: { foo: 'bar' } }, { id: 0, name: '', data: {} })).toEqual({
+            id: 5,
+            name: 'report',
+            data: { foo: 'bar' },
+        })
     })
 
     it('normalizeArrayData 应处理数组和 data 数组结构', () => {

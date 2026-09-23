@@ -5,6 +5,8 @@ export interface ApiResponse<T = unknown> {
     code: number
     msg: string
     data: T
+    cost?: string
+    request_id?: string
 }
 
 /**
@@ -24,6 +26,7 @@ export interface PageData<T> {
     total: number
     page?: number
     pageSize?: number
+    last_page?: number
 }
 
 /**

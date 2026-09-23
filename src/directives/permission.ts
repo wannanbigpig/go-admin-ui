@@ -10,7 +10,12 @@ interface PermissionHTMLElement extends HTMLElement {
 }
 
 /**
- * 增强版按钮权限指令
+ * 增强版按钮权限指令。
+ *
+ * 语义约定（TypeSafe 实验 + 产品核对后保持现状）：
+ * - `v-permission` 调用 `hasPermission(code, true)`，同时校验权限码与 `is_show`。
+ * - `is_show=0` 表示“UI 不展示”，不是“无权限”：API/Casbin 仍以权限码为权威。
+ * - 需要“有码即可见、隐藏只靠别的开关”时，用 `hasPermission(code)`（checkShow=false），不要改本指令默认行为。
  */
 const permissionDirective: Directive = {
     mounted(el: PermissionHTMLElement, binding: DirectiveBinding) {

@@ -85,6 +85,7 @@ export default {
         save: 'Save Config',
         placeholder: 'One field per line',
         common: 'Common Fields',
+        commonTip: '(Automatically masks HTTP request logs and business audit Change Diff)',
         requestGroup: 'Request Fields',
         responseGroup: 'Response Fields',
         requestHeader: 'Request Header Fields',

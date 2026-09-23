@@ -8,6 +8,7 @@ import { Logger } from '@/utils/logger'
 import { DEFAULT_LOCALE, translate } from '@/locales'
 import { resolveBaseURL } from '@/utils/env'
 import { isAuthExpiredError } from '@/modules/auth/error'
+import { ErrorCode } from '@/constants/errorCodes'
 
 declare module 'axios' {
     interface AxiosRequestConfig {
@@ -32,9 +33,9 @@ const REQUESTED_WITH_VALUE = 'XMLHttpRequest'
 
 /**
  * 静默业务码：响应 code 命中后不弹 ElMessage，由业务侧自行处理。
- * - 11011：未配置/未启用的功能（不弹错误）
+ * - LocalStorageMultipartUnsupported：本地存储不支持分片上传，业务侧根据需要自动降级
  */
-export const SILENT_BUSINESS_CODES = [11011] as const
+export const SILENT_BUSINESS_CODES = [ErrorCode.LocalStorageMultipartUnsupported] as const
 
 // ==================== 创建 axios 实例 ====================
 /**
@@ -83,6 +84,7 @@ export const normalizeApiData = (data: unknown): unknown => {
             total: Number(data.total ?? 0),
             page: Number(data.current_page ?? data.page ?? 1),
             pageSize: Number(data.per_page ?? data.pageSize ?? 10),
+            ...(data.last_page !== undefined ? { last_page: Number(data.last_page) } : {}),
         }
     }
 
@@ -485,8 +487,9 @@ export const upload = <T = unknown>(url: string, files: File | File[], extra: Re
     })
 
     return request<T>(url, 'POST', {
-        data: formData,
+        timeout: 0,
         ...options,
+        data: formData,
     })
 }
 
