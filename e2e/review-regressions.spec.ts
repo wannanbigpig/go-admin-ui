@@ -119,7 +119,7 @@ test('回收站删除失败显示明细保留勾选，恢复后出现父目录',
         const { default: router } = await import(routerURL)
         await router.push('/system/file')
     })
-    await page.getByText('回收站', { exact: true }).click()
+    await page.locator('.file-sidebar').getByText('回收站', { exact: true }).click()
     const dialog = page.getByRole('dialog', { name: '回收站', exact: true })
     await expect(dialog.getByText('recover.txt', { exact: true })).toBeVisible()
     await dialog.locator('tbody .el-checkbox').click()

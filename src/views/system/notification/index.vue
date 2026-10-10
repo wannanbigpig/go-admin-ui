@@ -77,7 +77,7 @@
                             <div class="item-badge-dot" v-if="!item.read" />
                             <div class="item-main">
                                 <div class="item-top">
-                                    <el-tag size="small" class="item-tag" effect="flat" :type="getCategoryTagType(item.category)">
+                                    <el-tag size="small" class="item-tag" effect="light" :type="getCategoryTagType(item.category)">
                                         {{ getCategoryLabel(item.category) }}
                                     </el-tag>
                                     <span class="item-time">{{ formatTimeAgo(item.created_at) }}</span>
@@ -94,9 +94,9 @@
                             v-model:current-page="queryParams.page"
                             v-model:page-size="queryParams.per_page"
                             :total="total"
-                            :pager-count="3"
+                            :pager-count="5"
                             layout="prev, pager, next"
-                            small
+                            size="small"
                             @current-change="handlePageChange"
                         />
                     </div>
