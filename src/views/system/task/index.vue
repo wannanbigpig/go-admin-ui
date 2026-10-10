@@ -1,21 +1,27 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10 task-page-heading">
+        <div class="xl-container xl-m-bottom-16 task-page-heading">
             <h2>{{ t('system.task.operationsTitle') }}</h2>
             <p>{{ activeTabDescription }}</p>
         </div>
 
-        <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-10">
-            <el-tab-pane :label="t('system.task.definitionTab')" name="definition" />
-            <el-tab-pane :label="t('system.task.runTab')" name="run" />
-            <el-tab-pane :label="t('system.task.cronTab')" name="cron" />
+        <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-16">
+            <el-tab-pane :label="t('system.task.definitionTab')" name="definition">
+                <KeepAlive>
+                    <TaskDefinitionPanel v-if="activeTab === 'definition'" key="definition" @triggered="handleTriggered" />
+                </KeepAlive>
+            </el-tab-pane>
+            <el-tab-pane :label="t('system.task.runTab')" name="run">
+                <KeepAlive>
+                    <TaskRunPanel v-if="activeTab === 'run'" key="run" ref="runPanelRef" :active="activeTab === 'run'" />
+                </KeepAlive>
+            </el-tab-pane>
+            <el-tab-pane :label="t('system.task.cronTab')" name="cron">
+                <KeepAlive>
+                    <CronStatePanel v-if="activeTab === 'cron'" key="cron" />
+                </KeepAlive>
+            </el-tab-pane>
         </el-tabs>
-
-        <KeepAlive>
-            <TaskDefinitionPanel v-if="activeTab === 'definition'" key="definition" @triggered="handleTriggered" />
-            <TaskRunPanel v-else-if="activeTab === 'run'" key="run" ref="runPanelRef" :active="activeTab === 'run'" />
-            <CronStatePanel v-else-if="activeTab === 'cron'" key="cron" />
-        </KeepAlive>
     </div>
 </template>
 

@@ -49,17 +49,24 @@
                         </template>
 
                         <template #default="scope">
-                            <slot v-if="item.customRow" name="td" :item="item" :val="getCellValue(item, scope.row)" :row="scope.row" />
+                            <slot v-if="item.customRow" name="td" :item="item" :val="getCellValue(item, scope.row, scope.$index)" :row="scope.row" />
                             <template v-else-if="item.tag">
-                                <el-tag :type="getTagType(item, scope.row)">
-                                    {{ getTagText(item, scope.row) }}
+                                <el-tag :type="getTagType(item, scope.row, scope.$index)">
+                                    {{ getTagText(item, scope.row, scope.$index) }}
                                 </el-tag>
                             </template>
-                            <span v-else>{{ getCellValue(item, scope.row) }}</span>
+                            <span v-else>{{ getCellValue(item, scope.row, scope.$index) }}</span>
                         </template>
                     </el-table-column>
                 </template>
                 <slot name="operation"></slot>
+                <template #empty>
+                    <div class="xl-table__empty">
+                        <slot name="empty">
+                            <el-empty :image-size="80" :description="emptyText || t('common.noData')" />
+                        </slot>
+                    </div>
+                </template>
             </el-table>
 
             <xl-pagination v-if="showPagination" :current-page="currentPage" :page-size="pageSize" :total="pagination.total" @size-change="handlePageSizeChange" @current-change="handlePageChange" />
@@ -69,6 +76,7 @@
 
 <script setup lang="ts" generic="T extends object">
 import { computed, ref, getCurrentInstance } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TableInstance } from 'element-plus'
 import xlPagination from '@/components/pagination/index.vue'
 import type { TableColumn } from '@/types/common'
@@ -93,6 +101,7 @@ interface Props {
     defaultExpandAll?: boolean
     selectable?: boolean | ((row: T, index: number) => boolean)
     height?: string | number
+    emptyText?: string
     pagination?: {
         total: number
         page?: number
@@ -114,9 +123,11 @@ const props = withDefaults(defineProps<Props>(), {
     treeProps: () => ({ children: 'children', hasChildren: 'hasChildren' }),
     defaultExpandAll: false,
     selectable: false,
+    emptyText: '',
     pagination: () => ({}) as NonNullable<Props['pagination']>,
 })
 
+const { t } = useI18n()
 const emit = defineEmits(['size-change', 'current-change', 'selection-change', 'sort-change'])
 const tableRef = ref<TableInstance>()
 
@@ -128,31 +139,36 @@ const rowSelectable = (row: T, index: number) => {
     return typeof props.selectable === 'function' ? props.selectable(row, index) : true
 }
 
-const getCellValue = (item: TableColumn<T>, row: T) => {
-    if (typeof item.formatter === 'function') return item.formatter(row)
+const getCellValue = (item: TableColumn<T>, row: T, index?: number) => {
     const propStr = item.prop as string
-    if (!propStr) return '-'
-    if (propStr.includes('.')) {
-        const val = propStr.split('.').reduce((acc: unknown, part: string) => {
-            if (acc && typeof acc === 'object') {
-                return (acc as Record<string, unknown>)[part]
-            }
-            return undefined
-        }, row)
-        return val ?? '-'
+    let rawValue: unknown
+    if (propStr) {
+        if (propStr.includes('.')) {
+            rawValue = propStr.split('.').reduce((acc: unknown, part: string) => {
+                if (acc && typeof acc === 'object') {
+                    return (acc as Record<string, unknown>)[part]
+                }
+                return undefined
+            }, row)
+        } else {
+            rawValue = (row as Record<string, unknown>)[propStr]
+        }
     }
-    return (row as Record<string, unknown>)[propStr] ?? '-'
+    if (typeof item.formatter === 'function') {
+        return item.formatter(row, item, rawValue, index)
+    }
+    return rawValue ?? '-'
 }
 
-const getTagType = (item: TableColumn<T>, row: T) => {
+const getTagType = (item: TableColumn<T>, row: T, index?: number) => {
     if (!item.tag) return 'info'
-    const tagValue = item.tagKey ? (row as Record<string, unknown>)[item.tagKey as string] : getCellValue(item, row)
+    const tagValue = item.tagKey ? (row as Record<string, unknown>)[item.tagKey as string] : getCellValue(item, row, index)
     const tagConfig = item.tag[tagValue as string | number]
     return tagConfig?.type || 'info'
 }
 
-const getTagText = (item: TableColumn<T>, row: T) => {
-    const cellValue = getCellValue(item, row)
+const getTagText = (item: TableColumn<T>, row: T, index?: number) => {
+    const cellValue = getCellValue(item, row, index)
     if (!item.tag) return cellValue
     const tagValue = item.tagKey ? (row as Record<string, unknown>)[item.tagKey as string] : cellValue
     const tagConfig = item.tag[tagValue as string | number]
@@ -202,3 +218,12 @@ defineExpose({
     toggleRowExpansion,
 })
 </script>
+
+<style scoped lang="scss">
+.xl-table__empty {
+    padding: 36px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+</style>

@@ -112,16 +112,16 @@ describe('dynamicRoutes', () => {
     it('隐藏菜单应保留为可访问动态路由', () => {
         const routes = convertRoute([
             {
-                id: 89,
+                id: 99,
                 pid: 0,
-                title: '我的待办',
+                title: '隐藏页面',
                 code: '',
-                name: 'TodoList',
+                name: 'HiddenPage',
                 type: 2,
                 icon: 'ep:list',
-                path: 'todo/list',
+                path: 'hidden-page',
                 redirect: '',
-                component_key: 'todo:index',
+                component_key: 'about:index',
                 is_show: 0,
                 is_auth: 0,
                 is_new_window: 0,
@@ -132,7 +132,7 @@ describe('dynamicRoutes', () => {
         ])
 
         expect(routes).toHaveLength(1)
-        expect(routes[0].path).toBe('todo/list')
+        expect(routes[0].path).toBe('hidden-page')
         expect(routes[0].meta?.show).toBe(false)
         expect(routes[0].component).toBeDefined()
     })

@@ -1,4 +1,4 @@
-import { nextTick, reactive, ref } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
@@ -30,6 +30,18 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     const menuTreeData = ref<Menu[]>([])
     const menuTreeDataLoaded = ref(false)
     const menuTreeLoading = ref(false)
+    let detailRequestVersion = 0
+    const detailLoading = ref(false)
+    const detailReady = ref(false)
+    let editingRoleId: number | null = null
+    watch(showDrawer, (visible) => {
+        if (!visible) {
+            detailRequestVersion += 1
+            detailReady.value = false
+            detailLoading.value = false
+            menuTreeLoading.value = false
+        }
+    }, { flush: 'sync' })
 
     const initialFormData = createRoleForm()
     const formData = reactive({ ...initialFormData })
@@ -154,7 +166,7 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     }
 
     const resetFormData = () => {
-        Object.assign(formData, { ...initialFormData })
+        Object.assign(formData, createRoleForm())
         isEditMode.value = false
         isSuperAdminEditing.value = false
     }
@@ -190,7 +202,7 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         syncFormMenuListFromTree()
     }
 
-    const setMenuTreeChecked = async () => {
+    const setMenuTreeChecked = async (requestVersion = detailRequestVersion) => {
         const waitForNextFrame = () =>
             new Promise<void>((resolve) => {
                 requestAnimationFrame(() => resolve())
@@ -198,10 +210,12 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
 
         for (let i = 0; i < 10; i++) {
             await nextTick()
+            if (requestVersion !== detailRequestVersion) return
             if (menuTreeRef.value) break
             await waitForNextFrame()
         }
 
+        if (requestVersion !== detailRequestVersion) return
         if (menuTreeRef.value && menuTreeData.value.length > 0) {
             const menuIds = normalizeMenuList(formData.menu_list)
 
@@ -218,17 +232,11 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         }
     }
 
-    const getMenuTreeData = async () => {
-        const menuData = await fetchMenuTree({ status: ROLE_STATUS.NORMAL })
-        const clonedData = cloneMenuTree(menuData)
-        updateMenuTreeDisabled(clonedData)
-        menuTreeData.value = clonedData
-        return clonedData
-    }
-
-    const loadRoleIntoForm = async (roleId: number) => {
+    const loadRoleIntoForm = async (roleId: number, requestVersion: number) => {
         const response = await getRoleDetail({ id: roleId })
+        if (requestVersion !== detailRequestVersion) return
         const roleData = normalizeDetailData<Role>(response, {} as Role)
+        if (roleData.id !== roleId) throw new Error('Role detail identity does not match the requested role')
         const rawMenuList = roleData.menu_list ?? roleData.permission_ids ?? []
         const menuIds = normalizeMenuList(rawMenuList)
 
@@ -248,23 +256,38 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
     }
 
     const openCreateDrawer = async () => {
+        const requestVersion = ++detailRequestVersion
+        detailReady.value = false
+        detailLoading.value = true
+        editingRoleId = null
         showDrawer.value = true
         currentIndex.value = null
         resetFormData()
         formTitle.value = translate('permission.role.addTitle')
 
         if (menuTreeDataLoaded.value) {
-            await setMenuTreeChecked()
+            await setMenuTreeChecked(requestVersion)
         }
 
-        await ensureMenuTreeLoaded()
+        await ensureMenuTreeLoaded(requestVersion)
 
-        setTimeout(() => {
-            formDataRef.value?.clearValidate()
-        }, 50)
+        await nextTick()
+        if (requestVersion !== detailRequestVersion) return
+        if (!menuTreeDataLoaded.value) {
+            showDrawer.value = false
+            return
+        }
+        formDataRef.value?.setInitialValues(formData)
+        formDataRef.value?.clearValidate()
+        detailReady.value = true
+        detailLoading.value = false
     }
 
     const openEditDrawer = async (row?: Partial<Role>, index?: number) => {
+        const requestVersion = ++detailRequestVersion
+        detailReady.value = false
+        detailLoading.value = true
+        editingRoleId = null
         showDrawer.value = true
         currentIndex.value = index ?? null
         resetFormData()
@@ -277,26 +300,39 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
 
         formTitle.value = translate('permission.role.editTitle')
         isEditMode.value = true
+        editingRoleId = row.id
 
         try {
-            await loadRoleIntoForm(row.id)
+            await loadRoleIntoForm(row.id, requestVersion)
+            if (requestVersion !== detailRequestVersion) return
             if (menuTreeDataLoaded.value) {
-                await setMenuTreeChecked()
+                await setMenuTreeChecked(requestVersion)
             }
         } catch (error) {
+            if (requestVersion !== detailRequestVersion) return
             Logger.error('获取角色详情失败:', error)
             showDrawer.value = false
             return
         }
 
-        await ensureMenuTreeLoaded()
+        if (requestVersion !== detailRequestVersion) return
+        await ensureMenuTreeLoaded(requestVersion)
+        if (requestVersion !== detailRequestVersion) return
 
-        setTimeout(() => {
-            formDataRef.value?.clearValidate()
-        }, 50)
+        await nextTick()
+        if (requestVersion !== detailRequestVersion) return
+        if (!menuTreeDataLoaded.value) {
+            showDrawer.value = false
+            return
+        }
+        formDataRef.value?.setInitialValues(formData)
+        formDataRef.value?.clearValidate()
+        detailReady.value = true
+        detailLoading.value = false
     }
 
-    const ensureMenuTreeLoaded = async () => {
+    const ensureMenuTreeLoaded = async (requestVersion: number) => {
+        if (requestVersion !== detailRequestVersion) return
         if (menuTreeDataLoaded.value) {
             updateMenuTreeDisabled(menuTreeData.value)
             return
@@ -304,20 +340,37 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
 
         menuTreeLoading.value = true
         try {
-            await getMenuTreeData()
+            const menuData = await fetchMenuTree({ status: ROLE_STATUS.NORMAL })
+            if (requestVersion !== detailRequestVersion) return
+            const clonedData = cloneMenuTree(menuData)
+            updateMenuTreeDisabled(clonedData)
+            menuTreeData.value = clonedData
             menuTreeDataLoaded.value = true
-            await setMenuTreeChecked()
+            await setMenuTreeChecked(requestVersion)
         } catch (error) {
+            if (requestVersion !== detailRequestVersion) return
             Logger.error('获取菜单列表失败:', error)
             menuTreeDataLoaded.value = false
         } finally {
-            menuTreeLoading.value = false
+            if (requestVersion === detailRequestVersion) menuTreeLoading.value = false
         }
     }
 
+    const resetEditForm = async () => {
+        if (detailLoading.value || isSubmitting.value) return
+        formDataRef.value?.resetFields()
+        await nextTick()
+        await setMenuTreeChecked()
+    }
+
     const editConfirmSubmit = async () => {
+        if (!showDrawer.value || !detailReady.value || !menuTreeDataLoaded.value || detailLoading.value || isSubmitting.value) return
+        const requestVersion = detailRequestVersion
+        const wasEditing = isEditMode.value
+        const roleId = editingRoleId
         const valid = await validateFormSafely(formDataRef.value, translate('validation.role.formName'))
-        if (!valid) return
+        if (!valid || requestVersion !== detailRequestVersion || !detailReady.value || !menuTreeDataLoaded.value) return
+        if (wasEditing && (roleId === null || formData.id !== roleId)) return
 
         await runWithSubmitLock(async () => {
             if (isSuperAdminEditing.value) {
@@ -330,14 +383,14 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
             }
 
             const submitData = getSubmitData()
-            if (isEditMode.value) {
+            if (wasEditing) {
                 await updateRole(submitData)
             } else {
                 await createRole(submitData)
             }
 
-            showDrawer.value = false
-            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
+            if (requestVersion === detailRequestVersion) showDrawer.value = false
+            ElMessage.success(wasEditing ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
             await refreshRoleList()
         }).catch((error) => {
             Logger.error('提交失败:', error)
@@ -350,6 +403,8 @@ export function useRoleForm({ refreshRoleList }: UseRoleFormOptions) {
         formTitle,
         currentIndex,
         isSubmitting,
+        detailLoading,
+        resetEditForm,
         menuTreeRef,
         formData,
         isEditMode,

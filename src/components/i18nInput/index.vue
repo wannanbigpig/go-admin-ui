@@ -16,13 +16,14 @@
             </div>
         </template>
 
-        <el-dialog v-model="showDialog" :title="dialogTitle || t('common.i18n.dialogTitle')" width="560px" append-to-body>
+        <el-dialog v-model="showDialog" :title="dialogTitle || t('common.i18n.dialogTitle')" width="min(560px, calc(100vw - 32px))" append-to-body>
             <div class="xl-i18n-input-list">
                 <div v-for="locale in localeOptions" :key="locale.value" class="xl-i18n-input-item">
-                    <div class="xl-i18n-input-locale">
+                    <label class="xl-i18n-input-locale" :for="`${inputId}-${locale.value}`">
                         <el-tag size="small" type="info">{{ locale.label }}</el-tag>
-                    </div>
+                    </label>
                     <el-input
+                        :id="`${inputId}-${locale.value}`"
                         v-model="draftValue[locale.value]"
                         :placeholder="itemPlaceholder ? itemPlaceholder.replace('{lang}', locale.label) : t('common.i18n.localePlaceholder', { lang: locale.label })"
                         maxlength="60"
@@ -40,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LOCALE_OPTIONS, ENABLE_I18N, DEFAULT_LOCALE } from '@/locales'
 
@@ -59,6 +60,7 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const { t } = useI18n()
+const inputId = useId()
 
 const localeOptions = computed(() => {
     if (!ENABLE_I18N) {

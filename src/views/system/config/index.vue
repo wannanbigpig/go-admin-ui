@@ -1,84 +1,86 @@
 <template>
     <div>
-        <el-tabs v-if="visibleTabs.length" v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-10">
-            <el-tab-pane v-for="tab in visibleTabs" :key="tab.name" :label="tab.label" :name="tab.name" />
-        </el-tabs>
-
-        <div v-if="activeTab === 'normal' && checkPermission('sysConfig:list')">
-            <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="configList" :pagination="pagination" :search-max-show="4" @search="onSearch" @reset="handleReset">
-                <template #actions>
-                    <xl-action-button v-permission="'sysConfig:add'" code="sysConfig:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
-                    <xl-action-button v-permission="'sysConfig:refresh'" code="sysConfig:refresh" type="primary" :show-icon="false" :loading="refreshing" @click="handleRefreshCache" />
-                </template>
-                <template #operation>
-                    <el-table-column width="140" :label="t('common.labels.operation')" align="center" fixed="right">
-                        <template #default="scope">
-                            <xl-action-buttons :buttons="actionButtons" :scope="scope" />
+        <el-tabs v-if="visibleTabs.length" v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-16">
+            <el-tab-pane v-for="tab in visibleTabs" :key="tab.name" :label="tab.label" :name="tab.name">
+                <template v-if="activeTab === tab.name">
+                <div v-if="activeTab === 'normal' && checkPermission('sysConfig:list')">
+                    <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="configList" :pagination="pagination" :search-max-show="4" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
+                        <template #actions>
+                            <xl-action-button v-permission="'sysConfig:add'" code="sysConfig:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
+                            <xl-action-button v-permission="'sysConfig:refresh'" code="sysConfig:refresh" type="default" :show-icon="false" :loading="refreshing" @click="handleRefreshCache" />
                         </template>
-                    </el-table-column>
+                        <template #operation>
+                            <el-table-column width="140" :label="t('common.labels.operation')" align="center" fixed="right">
+                                <template #default="scope">
+                                    <xl-action-buttons :buttons="actionButtons" :scope="scope" />
+                                </template>
+                            </el-table-column>
+                        </template>
+                    </xl-pro-table>
+
+                    <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formRef" :onConfirm="submitForm" :isSubmitting="submitting" size="md">
+                        <el-form ref="formRef" :model="formData" :rules="formRules" label-width="auto">
+                            <el-form-item :label="t('system.config.key')" prop="config_key">
+                                <el-input v-model.trim="formData.config_key" :disabled="isEditMode" />
+                            </el-form-item>
+                            <el-form-item :label="t('system.config.name')" prop="config_name_i18n">
+                                <xl-i18n-input v-model="formData.config_name_i18n" show-tip />
+                            </el-form-item>
+                            <el-row :gutter="16">
+                                <el-col :span="12">
+                                    <el-form-item :label="t('system.config.valueType')" prop="value_type">
+                                        <el-select v-model="formData.value_type">
+                                            <el-option v-for="item in valueTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item :label="t('system.config.groupCode')" prop="group_code">
+                                        <el-input v-model.trim="formData.group_code" />
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-form-item :label="t('system.config.value')" prop="config_value">
+                                <el-input v-model="formData.config_value" type="textarea" :rows="4" />
+                            </el-form-item>
+                            <el-row :gutter="16">
+                                <el-col :span="8">
+                                    <el-form-item :label="t('system.config.sensitive')" prop="is_sensitive">
+                                        <el-switch v-model="formData.is_sensitive" :active-value="1" :inactive-value="0" />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="8">
+                                    <el-form-item :label="t('common.labels.status')" prop="status">
+                                        <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="8">
+                                    <el-form-item :label="t('common.labels.sort')" prop="sort">
+                                        <el-input-number v-model="formData.sort" :min="0" :step="10" style="width: 100%" />
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-form-item :label="t('common.labels.description')" prop="remark">
+                                <el-input v-model.trim="formData.remark" type="textarea" :rows="3" maxlength="255" show-word-limit />
+                            </el-form-item>
+                        </el-form>
+                    </xl-drawer>
+                </div>
+
+                <div v-if="activeTab === 'storage' && checkPermission('storage:config')">
+                    <system-storage-config-panel />
+                </div>
+
+                <div v-if="activeTab === 'sms' && checkPermission('sms:config')">
+                    <sms-config-panel />
+                </div>
+
+                <div v-if="activeTab === 'audit_mask' && checkPermission('requestLog:maskConfig')">
+                    <request-log-mask-config-panel />
+                </div>
                 </template>
-            </xl-pro-table>
-
-            <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formRef" :onConfirm="submitForm" :isSubmitting="submitting" size="36%">
-                <el-form ref="formRef" :model="formData" :rules="formRules" label-width="auto">
-                    <el-form-item :label="t('system.config.key')" prop="config_key">
-                        <el-input v-model.trim="formData.config_key" :disabled="isEditMode" />
-                    </el-form-item>
-                    <el-form-item :label="t('system.config.name')" prop="config_name_i18n">
-                        <xl-i18n-input v-model="formData.config_name_i18n" show-tip />
-                    </el-form-item>
-                    <el-row :gutter="16">
-                        <el-col :span="12">
-                            <el-form-item :label="t('system.config.valueType')" prop="value_type">
-                                <el-select v-model="formData.value_type">
-                                    <el-option v-for="item in valueTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
-                                </el-select>
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="12">
-                            <el-form-item :label="t('system.config.groupCode')" prop="group_code">
-                                <el-input v-model.trim="formData.group_code" />
-                            </el-form-item>
-                        </el-col>
-                    </el-row>
-                    <el-form-item :label="t('system.config.value')" prop="config_value">
-                        <el-input v-model="formData.config_value" type="textarea" :rows="4" />
-                    </el-form-item>
-                    <el-row :gutter="16">
-                        <el-col :span="8">
-                            <el-form-item :label="t('system.config.sensitive')" prop="is_sensitive">
-                                <el-switch v-model="formData.is_sensitive" :active-value="1" :inactive-value="0" />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="8">
-                            <el-form-item :label="t('common.labels.status')" prop="status">
-                                <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="8">
-                            <el-form-item :label="t('common.labels.sort')" prop="sort">
-                                <el-input-number v-model="formData.sort" :min="0" :step="10" style="width: 100%" />
-                            </el-form-item>
-                        </el-col>
-                    </el-row>
-                    <el-form-item :label="t('common.labels.description')" prop="remark">
-                        <el-input v-model.trim="formData.remark" type="textarea" :rows="3" maxlength="255" show-word-limit />
-                    </el-form-item>
-                </el-form>
-            </xl-drawer>
-        </div>
-
-        <div v-if="activeTab === 'storage' && checkPermission('storage:config')">
-            <system-storage-config-panel />
-        </div>
-
-        <div v-if="activeTab === 'sms' && checkPermission('sms:config')">
-            <sms-config-panel />
-        </div>
-
-        <div v-if="activeTab === 'audit_mask' && checkPermission('requestLog:maskConfig')">
-            <request-log-mask-config-panel />
-        </div>
+            </el-tab-pane>
+        </el-tabs>
     </div>
 </template>
 
@@ -147,8 +149,10 @@ const {
     pagination,
     getList,
     handleSearch,
+    handleSortChange,
 } = useListPage<SystemConfig, typeof queryWhere>({
     query: queryWhere,
+    sortFields: ['id', 'config_key', 'group_code', 'sort', 'updated_at'],
     fetcher: (params) => fetchSystemConfigList(params),
 })
 
@@ -331,9 +335,10 @@ const actionButtons = computed(() => [
 ])
 
 const columns = computed<ProTableColumns<SystemConfig>>(() => [
-    { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
+    { prop: 'id', sortable: 'custom', h_label: t('common.labels.id'), width: 80, align: 'center' },
     {
         prop: 'config_key',
+        sortable: 'custom',
         h_label: t('system.config.key'),
         label: t('system.config.key'),
         minWidth: 180,
@@ -352,6 +357,7 @@ const columns = computed<ProTableColumns<SystemConfig>>(() => [
     { prop: 'value_type', h_label: t('system.config.valueType'), width: 100, align: 'center' },
     {
         prop: 'group_code',
+        sortable: 'custom',
         h_label: t('system.config.groupCode'),
         label: t('system.config.groupCode'),
         minWidth: 120,
@@ -381,8 +387,8 @@ const columns = computed<ProTableColumns<SystemConfig>>(() => [
             span: 5,
         },
     },
-    { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
-    { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+    { prop: 'sort', sortable: 'custom', h_label: t('common.labels.sort'), width: 80, align: 'center' },
+    { prop: 'updated_at', sortable: 'custom', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
 ])
 
 let normalTabLoaded = false

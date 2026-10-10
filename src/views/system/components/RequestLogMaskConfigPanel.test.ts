@@ -27,7 +27,7 @@ const ActionButtonStub = defineComponent({
 })
 
 describe('request log mask config permissions', () => {
-    it('binds both save entries to the mask configuration permission', async () => {
+    it('binds save button to the mask configuration permission', async () => {
         const wrapper = mount(RequestLogMaskConfigPanel, {
             global: {
                 config: { warnHandler: vi.fn() },
@@ -38,6 +38,6 @@ describe('request log mask config permissions', () => {
         await flushPromises()
 
         const codes = wrapper.findAllComponents(ActionButtonStub).map((button) => button.props('code'))
-        expect(codes).toEqual(['requestLog:maskConfig', 'requestLog:maskConfig'])
+        expect(codes).toEqual(['requestLog:maskConfig'])
     })
 })

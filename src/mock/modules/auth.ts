@@ -2462,6 +2462,18 @@ const permissionList = [
     },
 ]
 
+const mockProfile = {
+    id: 1,
+    username: 'admin',
+    nickname: '超级管理员 (Mock)',
+    email: 'admin@example.com',
+    avatar: '',
+    role_ids: [1],
+    dept_id: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+}
+
 export const authMock: MockRoute[] = [
     {
         pattern: /^\/v1\/login\/options$/,
@@ -2517,16 +2529,24 @@ export const authMock: MockRoute[] = [
     {
         pattern: /^\/v1\/admin-user\/get$/,
         method: 'GET',
-        handler: () => ({
-            id: 1,
-            username: 'admin',
-            nickname: '超级管理员 (Mock)',
-            avatar: '',
-            role_ids: [1],
-            dept_id: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        }),
+        handler: () => ({ ...mockProfile }),
+    },
+    {
+        pattern: /^\/v1\/admin-user\/update-profile$/,
+        method: 'POST',
+        handler: (data: unknown) => {
+            const payload = (data || {}) as Record<string, unknown>
+            for (const field of ['nickname', 'email', 'avatar'] as const) {
+                if (typeof payload[field] === 'string') mockProfile[field] = payload[field]
+            }
+            mockProfile.updated_at = new Date().toISOString()
+            return {}
+        },
+    },
+    {
+        pattern: /^\/v1\/admin-user\/profile-security\/options$/,
+        method: 'GET',
+        handler: () => ({ sms_verification_required: true }),
     },
     {
         pattern: /^\/v1\/admin-user\/user-menu-info$/,

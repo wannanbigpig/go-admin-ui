@@ -1,5 +1,5 @@
 import { USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_PATTERN, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
@@ -19,6 +19,14 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
     const { isSubmitting, runWithSubmitLock } = useSubmitLock()
+    let detailRequestVersion = 0
+    const detailLoading = ref(false)
+    watch(showDrawer, (visible) => {
+        if (!visible) {
+            detailRequestVersion += 1
+            detailLoading.value = false
+        }
+    }, { flush: 'sync' })
     const initialFormData = createAdminUserForm()
     const formData = reactive({ ...initialFormData })
     const originalFormData = ref<Partial<AdminUser> | null>(null)
@@ -119,7 +127,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     const getSubmitData = () => (isEditMode.value ? getEditSubmitData() : getAddSubmitData())
 
     const resetFormData = () => {
-        Object.assign(formData, { ...initialFormData })
+        Object.assign(formData, createAdminUserForm())
     }
 
     const extractDeptIds = (
@@ -162,18 +170,24 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
     }
 
     const openEditDrawer = async (type: number, row?: Partial<AdminUser> & Record<string, unknown>, index?: number) => {
+        const requestVersion = ++detailRequestVersion
+        detailLoading.value = true
         resetFormData()
+        originalFormData.value = null
         currentIndex.value = index ?? null
 
         if (type === 2) {
             if (!row || (typeof row.id !== 'number' && typeof row.id !== 'string')) {
                 ElMessage.error(translate('validation.adminUser.invalidRow'))
+                detailLoading.value = false
                 return
             }
 
             formTitle.value = translate('permission.adminUser.editTitle')
+            showDrawer.value = true
             try {
                 const userData = await fetchAdminUserDetail(row.id)
+                if (requestVersion !== detailRequestVersion) return
                 const mergedUserData = { ...row, ...userData }
 
                 Object.assign(formData, {
@@ -189,7 +203,9 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
                 })
                 saveOriginalData()
             } catch (error) {
+                if (requestVersion !== detailRequestVersion) return
                 Logger.error('获取管理员详情失败:', error)
+                showDrawer.value = false
                 return
             }
         } else {
@@ -199,27 +215,31 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
 
         showDrawer.value = true
 
-        setTimeout(() => {
-            formDataRef.value?.clearValidate()
-        }, 50)
+        await nextTick()
+        if (requestVersion !== detailRequestVersion) return
+        formDataRef.value?.setInitialValues(formData)
+        formDataRef.value?.clearValidate()
+        detailLoading.value = false
     }
 
     const editConfirmSubmit = async () => {
-        if (isSubmitting.value) return
+        if (isSubmitting.value || detailLoading.value) return
+        const requestVersion = detailRequestVersion
+        const wasEditing = isEditMode.value
         const valid = await validateFormSafely(formDataRef.value, translate('permission.adminUser.title'))
-        if (!valid) return
+        if (!valid || requestVersion !== detailRequestVersion) return
 
         await runWithSubmitLock(async () => {
             const submitData = getSubmitData()
-            if (isEditMode.value) {
+            if (wasEditing) {
                 await updateAdminUserItem(submitData)
             } else {
                 await createAdminUserItem(submitData)
             }
 
             // 写成功后先关抽屉+提示，再刷新列表，避免列表刷新把提交按钮卡在"提交中"。
-            showDrawer.value = false
-            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
+            if (requestVersion === detailRequestVersion) showDrawer.value = false
+            ElMessage.success(wasEditing ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
             await refreshList()
         }).catch((error) => {
             Logger.error('提交失败:', error)
@@ -232,6 +252,7 @@ export function useAdminUserForm({ refreshList }: UseAdminUserFormOptions) {
         formTitle,
         currentIndex,
         isSubmitting,
+        detailLoading,
         formData,
         isEditMode,
         isRootAdminEditing,

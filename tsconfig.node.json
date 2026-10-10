@@ -11,5 +11,5 @@
         "tsBuildInfoFile": "./node_modules/.cache/tsconfig.node.tsbuildinfo",
         "types": ["node"]
     },
-    "include": ["vite.config.js"]
+    "include": ["vite.config.js", "scripts/release-policy.mjs"]
 }

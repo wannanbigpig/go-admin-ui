@@ -77,7 +77,7 @@ const goBack = () => {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #f8fafc;
+    background-color: var(--el-bg-color-page);
     overflow: hidden;
 }
 
@@ -400,14 +400,16 @@ const goBack = () => {
         }
 
         &.btn-back {
-            background: #ffffff;
-            color: #475569;
+            background: var(--el-bg-color-overlay, #ffffff);
+            color: var(--el-text-color-regular, #475569);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--el-border-color-lighter, rgba(0, 0, 0, 0.06));
 
             &:hover {
                 transform: translateY(-3px);
                 box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
-                color: #0f172a;
+                color: var(--el-text-color-primary, #0f172a);
+                background: var(--el-fill-color-light, #f1f5f9);
             }
         }
 
@@ -424,9 +426,9 @@ const goBack = () => {
 }
 
 /* 暗色模式适配 */
-html.dark {
+:global(html.dark) {
     .error-page-container {
-        background-color: #0f172a;
+        background-color: var(--el-bg-color-page);
     }
     .glow-1 {
         background: rgba(56, 189, 248, 0.1);
@@ -465,20 +467,21 @@ html.dark {
     }
 
     .error-title {
-        color: #f8fafc;
+        color: var(--el-text-color-primary, #f8fafc);
     }
     .error-desc {
-        color: #94a3b8;
+        color: var(--el-text-color-secondary, #94a3b8);
     }
 
-    .action-buttons :deep(.el-button.btn-back) {
-        background: rgba(30, 41, 59, 0.8);
-        color: #e2e8f0;
+    .action-buttons .el-button.btn-back {
+        background: var(--el-bg-color-overlay, rgba(30, 41, 59, 0.8));
+        color: var(--el-text-color-regular, #e2e8f0);
+        border-color: var(--el-border-color-lighter);
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 
         &:hover {
-            background: rgba(51, 65, 85, 0.9);
-            color: #f8fafc;
+            background: var(--el-fill-color, rgba(51, 65, 85, 0.9));
+            color: var(--el-text-color-primary, #f8fafc);
             box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
         }
     }

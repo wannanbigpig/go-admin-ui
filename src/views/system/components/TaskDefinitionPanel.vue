@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
+        <div class="xl-container xl-m-bottom-16">
             <el-form ref="taskQueryFormRef" class="xl-search-form" :model="taskQuery" @submit.prevent="handleTaskSearch" @keydown.enter.prevent="handleTaskSearch">
                 <el-row id="taskSearchForm" :gutter="20">
                     <el-col :span="4">
@@ -33,7 +33,7 @@
         </div>
 
         <div class="xl-container">
-            <xl-table-list :loading="taskLoading" :data="taskList" :tableTitle="taskTableTitle" :pagination="taskPagination">
+            <xl-table-list :loading="taskLoading" :data="taskList" :tableTitle="taskTableTitle" :pagination="taskPagination" @sort-change="handleTaskSortChange">
                 <template #td="{ item, val, row }">
                     <template v-if="item.tag">
                         <el-tag v-if="val !== undefined && val !== null && val !== '' && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
@@ -81,7 +81,7 @@
             </xl-table-list>
         </div>
 
-        <el-drawer v-model="showOperationConfigDrawer" :title="t('system.task.operationConfigTitle')" size="560px" destroy-on-close>
+        <el-drawer v-model="showOperationConfigDrawer" :title="t('system.task.operationConfigTitle')" size="var(--xl-drawer-md)" destroy-on-close>
             <el-alert class="xl-m-bottom-10" :title="t('system.task.operationConfigNotice')" type="warning" show-icon />
             <el-form label-position="top" :model="operationConfigForm">
                 <el-form-item :label="t('system.task.code')">
@@ -94,7 +94,8 @@
                     <el-switch v-model="operationConfigForm.allow_manual" :active-value="1" :inactive-value="0" />
                 </el-form-item>
                 <el-form-item :label="t('system.task.allowRetry')">
-                    <el-switch v-model="operationConfigForm.allow_retry" :active-value="1" :inactive-value="0" />
+                    <el-switch v-model="operationConfigForm.allow_retry" :active-value="1" :inactive-value="0" :disabled="isHighRiskCron" />
+                    <div v-if="isHighRiskCron" class="form-help-text">{{ t('system.task.highRiskCronRetryHint') }}</div>
                 </el-form-item>
                 <template v-if="operationConfigTaskKind === 'cron'">
                     <el-form-item :label="t('system.task.cronConfigMode')">
@@ -152,7 +153,7 @@
             </template>
         </el-drawer>
 
-        <el-drawer v-model="showRecordPolicyDrawer" :title="t('system.task.recordPolicyTitle')" size="520px" destroy-on-close>
+        <el-drawer v-model="showRecordPolicyDrawer" :title="t('system.task.recordPolicyTitle')" size="var(--xl-drawer-md)" destroy-on-close>
             <el-alert class="xl-m-bottom-10" :title="recordPolicyNotice" type="info" show-icon />
             <el-form label-position="top" :model="recordPolicyForm">
                 <el-form-item :label="t('system.task.code')">
@@ -240,9 +241,11 @@ const {
     pagination: taskPagination,
     getList: getTaskList,
     handleSearch: handleTaskSearch,
+    handleSortChange: handleTaskSortChange,
     handleReset: handleTaskReset,
 } = useListPage<TaskDefinition, typeof taskQuery>({
     query: taskQuery,
+    sortFields: ['id', 'code', 'name', 'updated_at'],
     queryFormRef: taskQueryFormRef,
     fetcher: async (params) => {
         try {
@@ -318,6 +321,7 @@ const shouldShowRecordSuccessRate = computed(() => normalizeRecordSuccessMode(re
 const shouldShowRecordSuccessInterval = computed(() => normalizeRecordSuccessMode(recordPolicyForm.record_success_mode) === 'interval')
 
 const operationConfigTaskKind = computed(() => currentOperationTask.value?.kind || '')
+const isHighRiskCron = computed(() => operationConfigTaskKind.value === 'cron' && Number(currentOperationTask.value?.is_high_risk) === 1)
 const cronModeOptions = computed(() => [
     { label: t('system.task.cronModeEverySeconds'), value: 'every_seconds' },
     { label: t('system.task.cronModeEveryMinutes'), value: 'every_minutes' },
@@ -346,6 +350,7 @@ const operationConfigCronDescription = computed(() => {
 const handleOpenOperationConfig = (row: TaskDefinition) => {
     currentOperationTask.value = row
     Object.assign(operationConfigForm, createTaskOperationConfigPayload(row))
+    if (isHighRiskCron.value) operationConfigForm.allow_retry = 0
     if (row.kind === 'cron') {
         Object.assign(cronConfigForm, parseCronSpecToConfig(row.cron_spec || ''))
     }
@@ -552,9 +557,9 @@ const normalizeRecordPolicyPayload = (): TaskRecordPolicyPayload => {
 const taskTableTitle = computed(
     () =>
         [
-            { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
-            { prop: 'code', h_label: t('system.task.code'), minWidth: 180, overflow: true },
-            { prop: 'name', h_label: t('system.task.name'), minWidth: 160, overflow: true },
+            { prop: 'id', sortable: 'custom', h_label: t('common.labels.id'), width: 80, align: 'center' },
+            { prop: 'code', sortable: 'custom', h_label: t('system.task.code'), minWidth: 180, overflow: true },
+            { prop: 'name', sortable: 'custom', h_label: t('system.task.name'), minWidth: 160, overflow: true },
             {
                 prop: 'kind',
                 h_label: t('system.task.kind'),
@@ -610,7 +615,7 @@ const taskTableTitle = computed(
             },
             { prop: 'record_success_rate', h_label: t('system.task.recordSuccessRate'), width: 120, align: 'center' },
             { prop: 'record_success_interval_seconds', h_label: t('system.task.recordSuccessIntervalSecondsShort'), width: 130, align: 'center' },
-            { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+            { prop: 'updated_at', sortable: 'custom', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
         ] as TableColumn<TaskDefinition>[]
 )
 

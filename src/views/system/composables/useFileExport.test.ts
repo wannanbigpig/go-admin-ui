@@ -20,7 +20,7 @@ describe('file list and export filter agreement', () => {
         const exporter = useFileExport({ queryWhere: query, selectedCategory: ref(category), selectedFolderId: ref(folder), dateRange: ref([]) })
         await exporter.handleExportList()
         const payload = submit.mock.calls.at(-1)![0]
-        expect(payload).toEqual({ ...expected, page: undefined, per_page: undefined })
+        expect(payload).toEqual({ ...expected, page: undefined, per_page: undefined, limit: 50_000 })
         expect(payload).not.toHaveProperty('page')
         expect(payload.folder_id).toBe(expectedFolder)
         expect(payload.include_subfolder).toBe(recursion)

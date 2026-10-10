@@ -80,6 +80,7 @@ const buttonAttrs = computed(() => {
     if (props.type !== undefined) result.type = props.type
     if (props.link !== undefined) result.link = props.link
     if (props.size !== undefined) result.size = props.size
+    if (!result['aria-label'] && !result['aria-labelledby']) result['aria-label'] = displayText.value
 
     delete result.class
     delete result.style
@@ -125,6 +126,12 @@ const isDisabled = computed(() => {
     display: inline-flex;
     vertical-align: middle;
     align-items: center;
+
+    :deep(.el-button.is-link),
+    :deep(.el-button.is-text) {
+        border-color: transparent !important;
+        box-shadow: none !important;
+    }
 }
 .xl-action-button-tooltip-trigger {
     display: inline-flex;

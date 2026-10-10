@@ -22,9 +22,11 @@ export function useAdminLoginLogPage() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset: rawHandleReset,
     } = useListPage<LoginLog, typeof queryWhere>({
         query: queryWhere,
+        sortFields: ['id', 'username', 'execution_time', 'created_at'],
         queryFormRef,
         transformParams: (query) => {
             const params = { ...query }
@@ -73,6 +75,7 @@ export function useAdminLoginLogPage() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
         showDetailDrawer,
         currentDetail,

@@ -38,7 +38,7 @@
             <div v-if="notificationStore.listLoading" class="notification-panel__loading">
                 <el-skeleton animated :rows="4" />
             </div>
-            <div v-else-if="notificationStore.notifications.length === 0" class="notification-panel__empty">
+            <div v-else-if="previewNotifications.length === 0" class="notification-panel__empty">
                 <el-empty :description="t('layout.notification.empty')" :image-size="72" />
             </div>
             <div v-else class="notification-list">
@@ -156,7 +156,7 @@ const connectionStatusText = computed(() => {
     }
 })
 
-const previewNotifications = computed(() => notificationStore.notifications.slice(0, 5))
+const previewNotifications = computed(() => notificationStore.notifications.filter((item) => !item.read).slice(0, 5))
 
 const startNotificationCenter = () => {
     if (!authStore.token) {
@@ -225,8 +225,16 @@ onMounted(() => {
     checkOverflow()
 })
 
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize)
+    if (resizeTimer) {
+        clearTimeout(resizeTimer)
+        resizeTimer = null
+    }
+})
+
 const handleMarkAllRead = async () => {
-    await notificationStore.markAllRead()
+    if (!(await notificationStore.markAllRead())) return
 }
 
 const openNotificationCenter = async () => {

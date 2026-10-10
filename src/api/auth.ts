@@ -1,5 +1,5 @@
 import { post, get, request } from '@/utils/request'
-import type { TokenResult, UpdateProfilePayload, UserInfo, UserPermission } from '@/types/auth'
+import type { ChangePhonePayload, ProfileCodePayload, ProfileSecurityOptions, SmsCodeSendResult, TokenResult, UpdateProfilePayload, UserInfo, UserPermission } from '@/types/auth'
 
 // 退出登录
 export function logout() {
@@ -33,6 +33,18 @@ export function getUserMenuList() {
 // 更新个人信息
 export function updateProfile(data: UpdateProfilePayload) {
     return post<unknown>('/v1/admin-user/update-profile', data)
+}
+
+export function getProfileSecurityOptions() {
+    return get<ProfileSecurityOptions>('/v1/admin-user/profile-security/options')
+}
+
+export function sendProfileCode(data: ProfileCodePayload) {
+    return post<SmsCodeSendResult>('/v1/admin-user/profile-security/send-code', data)
+}
+
+export function changeProfilePhone(data: ChangePhonePayload) {
+    return post<unknown>('/v1/admin-user/change-phone', data)
 }
 
 // 上传头像

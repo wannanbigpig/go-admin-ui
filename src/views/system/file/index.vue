@@ -102,15 +102,11 @@
                                 <div v-if="isFolderListRow(row)" class="file-thumbnail-placeholder folder-thumbnail">
                                     <el-icon color="var(--el-color-primary)"><FolderOpened /></el-icon>
                                 </div>
-                                <el-image
+                                <AuthenticatedFileImage
                                     v-else-if="isImageFile(row) && getFileThumbnailUrl(row)"
-                                    :src="getFileThumbnailUrl(row)"
-                                    fit="cover"
+                                    :file="row"
                                     class="file-thumbnail"
-                                    :preview-src-list="getFilePreviewList(row)"
-                                    preview-teleported
-                                    hide-on-click-modal
-                                    :alt="row.origin_name || ''"
+                                    preview
                                     @click.stop
                                 />
                                 <div v-else class="file-thumbnail-placeholder">
@@ -253,51 +249,59 @@
                 </el-table>
             </el-dialog>
 
-            <el-dialog v-model="showTrashDialog" :title="t('system.file.trash')" width="86%" append-to-body @open="loadTrashList">
-                <div class="trash-batch-actions" style="margin-bottom: 12px; display: flex; gap: 10px">
-                    <el-button type="primary" :disabled="selectedTrashFiles.length === 0" :loading="batchTrashOperating" @click="handleBatchRestore">
-                        {{ t('system.file.batchRestore') }}
-                    </el-button>
-                    <el-button type="danger" :disabled="selectedTrashFiles.length === 0" :loading="batchTrashOperating" @click="handleBatchDestroy">
-                        {{ t('system.file.batchDestroy') }}
-                    </el-button>
-                </div>
-                <xl-pro-table :loading="trashLoading" :data="trashList" :columns="trashColumns" :pagination="trashPagination" selectable height="450" @selection-change="handleTrashSelectionChange">
-                    <template #td="{ item, val, row }">
-                        <div v-if="item.prop === 'origin_name'" class="file-name-cell">
-                            <el-image
-                                v-if="isImageFile(row) && getFileThumbnailUrl(row)"
-                                :src="getFileThumbnailUrl(row)"
-                                fit="cover"
-                                class="file-thumbnail"
-                                :preview-src-list="getFilePreviewList(row)"
-                                preview-teleported
-                                hide-on-click-modal
-                                :alt="row.origin_name || ''"
-                            />
-                            <div v-else class="file-thumbnail-placeholder">
-                                <el-icon color="var(--el-text-color-placeholder)"><Document /></el-icon>
-                                <span class="file-ext" v-if="row.ext">{{ String(row.ext).substring(0, 4).toUpperCase() }}</span>
+            <el-drawer
+                v-model="showTrashDialog"
+                :title="t('system.file.trash')"
+                size="min(100vw, clamp(760px, 72vw, 1200px))"
+                append-to-body
+                @open="loadTrashList"
+                class="trash-drawer"
+            >
+                <div class="trash-drawer-content">
+                    <div class="trash-batch-actions" style="margin-bottom: 12px; display: flex; gap: 10px">
+                        <el-button type="primary" :disabled="selectedTrashFiles.length === 0" :loading="batchTrashOperating" @click="handleBatchRestore">
+                            {{ t('system.file.batchRestore') }}
+                        </el-button>
+                        <el-button type="danger" :disabled="selectedTrashFiles.length === 0" :loading="batchTrashOperating" @click="handleBatchDestroy">
+                            {{ t('system.file.batchDestroy') }}
+                        </el-button>
+                    </div>
+                    <el-alert v-if="trashDestroyFailures.length" :title="t('system.file.batchDestroyFailureDetails')" type="error" :closable="false" show-icon style="margin-bottom: 12px">
+                        <p v-for="failure in trashDestroyFailures" :key="failure.id">#{{ failure.id }}: {{ failure.message }}</p>
+                    </el-alert>
+                    <xl-pro-table :loading="trashLoading" :data="trashList" :columns="trashColumns" :pagination="trashPagination" selectable height="calc(100vh - 200px)" @selection-change="handleTrashSelectionChange">
+                        <template #td="{ item, val, row }">
+                            <div v-if="item.prop === 'origin_name'" class="file-name-cell">
+                                <AuthenticatedFileImage
+                                    v-if="isImageFile(row) && getFileThumbnailUrl(row)"
+                                    :file="row"
+                                    class="file-thumbnail"
+                                    preview
+                                />
+                                <div v-else class="file-thumbnail-placeholder">
+                                    <el-icon color="var(--el-text-color-placeholder)"><Document /></el-icon>
+                                    <span class="file-ext" v-if="row.ext">{{ String(row.ext).substring(0, 4).toUpperCase() }}</span>
+                                </div>
+                                <span class="file-name-text">{{ val || '-' }}</span>
                             </div>
-                            <span class="file-name-text">{{ val || '-' }}</span>
-                        </div>
-                        <el-tag v-else-if="item.prop === 'storage_status'" :type="getStorageStatusTagType(row.storage_status)">
-                            {{ getStorageStatusLabel(row.storage_status) }}
-                        </el-tag>
-                        <el-tag v-else-if="item.prop === 'storage_driver'" :type="getStorageDriverTagType(row.storage_driver)">
-                            {{ getStorageDriverLabel(row.storage_driver) }}
-                        </el-tag>
-                        <span v-else>{{ val }}</span>
-                    </template>
-                    <template #operation>
-                        <el-table-column width="130" :label="t('common.labels.operation')" align="center" fixed="right">
-                            <template #default="scope">
-                                <xl-action-buttons :buttons="trashActionButtons" :scope="scope" />
-                            </template>
-                        </el-table-column>
-                    </template>
-                </xl-pro-table>
-            </el-dialog>
+                            <el-tag v-else-if="item.prop === 'storage_status'" :type="getStorageStatusTagType(row.storage_status)">
+                                {{ getStorageStatusLabel(row.storage_status) }}
+                            </el-tag>
+                            <el-tag v-else-if="item.prop === 'storage_driver'" :type="getStorageDriverTagType(row.storage_driver)">
+                                {{ getStorageDriverLabel(row.storage_driver) }}
+                            </el-tag>
+                            <span v-else>{{ val }}</span>
+                        </template>
+                        <template #operation>
+                            <el-table-column width="130" :label="t('common.labels.operation')" align="center" fixed="right">
+                                <template #default="scope">
+                                    <xl-action-buttons :buttons="trashActionButtons" :scope="scope" />
+                                </template>
+                            </el-table-column>
+                        </template>
+                    </xl-pro-table>
+                </div>
+            </el-drawer>
         </template>
     </FileExplorerLayout>
 </template>
@@ -330,6 +334,7 @@ import FileGrid from '../components/FileGrid.vue'
 import FileDetailDrawer from '../components/FileDetailDrawer.vue'
 import FileUploadQueue from '../components/FileUploadQueue.vue'
 import FileExplorerLayout from '../components/FileExplorerLayout.vue'
+import AuthenticatedFileImage from '../components/AuthenticatedFileImage.vue'
 import ConfirmDeleteByNameDialog from '../components/ConfirmDeleteByNameDialog.vue'
 
 const { t } = useI18n()
@@ -510,6 +515,7 @@ const {
     trashPagination,
     handleSelectionChange,
     selectedTrashFiles,
+    trashDestroyFailures,
     batchTrashOperating,
     handleTrashSelectionChange,
     moveItemsToFolder,
@@ -925,13 +931,6 @@ const getFileThumbnailUrl = (row?: FileListRow | SystemFile) => {
     return row.thumbnail_url || row.url || (row.uuid ? getImageUrl(row.uuid) : '')
 }
 
-const getFilePreviewList = (row?: FileListRow | SystemFile) => {
-    if (!row) return []
-    if ('item_type' in row && row.item_type === 'folder') return []
-    const url = row.url || (row.uuid ? getImageUrl(row.uuid) : '')
-    return url ? [url] : []
-}
-
 const getStorageDriverLabel = (value?: string) => storageDriverOptions.value.find((item) => item.value === value)?.label || value || '-'
 
 const getStorageDriverTagType = (value?: string) => {
@@ -1160,5 +1159,14 @@ onMounted(() => {
 
 .reference-dialog-table {
     margin-top: 10px;
+}
+
+:deep(.trash-drawer) {
+    .el-drawer__body {
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
 }
 </style>

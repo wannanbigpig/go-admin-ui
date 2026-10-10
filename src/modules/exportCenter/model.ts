@@ -1,4 +1,4 @@
-import type { ExportRecord, ExportRecordQuery, ExportRecordStatus, ExportTaskSubmitResult } from '@/types/exportCenter'
+import type { ExportRecord, ExportRecordQuery, ExportRecordSortBy, ExportRecordStatus, ExportTaskSubmitResult } from '@/types/exportCenter'
 import type { ExportProgressRealtimeEvent } from '@/types/notification'
 
 export const ACTIVE_EXPORT_RECORD_STATUSES: ExportRecordStatus[] = ['pending', 'running', 'retrying']
@@ -10,7 +10,15 @@ export function createExportRecordQuery(): ExportRecordQuery {
         public_id: null,
         scene: null,
         status: null,
+        sort_by: null,
+        sort_order: null,
     }
+}
+
+export function resolveExportRecordSort(prop: string, order: 'ascending' | 'descending' | null) {
+    if (!order) return { sort_by: null, sort_order: null }
+    if (prop !== 'created_at' && prop !== 'finished_at' && prop !== 'file_size') return null
+    return { sort_by: prop as ExportRecordSortBy, sort_order: order === 'ascending' ? 'asc' as const : 'desc' as const }
 }
 
 export function isActiveExportRecordStatus(status?: string | null) {

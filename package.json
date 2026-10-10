@@ -25,6 +25,8 @@
         "build:production": "vite build --mode production",
         "type-check": "tsc --noEmit -p tsconfig.node.json && vue-tsc --noEmit -p tsconfig.json",
         "check:error-codes": "node scripts/check-error-codes.mjs",
+        "check:release": "node scripts/check-release.mjs",
+        "test:release": "node --test scripts/release-policy.node-test.mjs",
         "lint": "eslint src/",
         "lint:fix": "eslint src/ --fix",
         "preview": "vite preview",

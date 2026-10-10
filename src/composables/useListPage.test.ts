@@ -81,6 +81,29 @@ describe('composables/useListPage.ts', () => {
         )
     })
 
+    it('表头排序应从第一页向服务端请求，重置筛选时保留排序，清除表头后恢复默认顺序', async () => {
+        const query = reactive({ page: 3, per_page: 10, keyword: 'abc' })
+        const fetcher = vi.fn(async (_params: typeof query) => ({ list: [], total: 0, page: 1, pageSize: 10 }))
+        const { handleSortChange, handleReset } = useListPage<TestItem, typeof query>({
+            query,
+            fetcher,
+            sortFields: ['created_at'],
+            delayFirstFetch: false,
+        })
+
+        await handleSortChange({ prop: 'created_at', order: 'ascending' })
+        expect(query.page).toBe(1)
+        expect(fetcher).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, sort_by: 'created_at', sort_order: 'asc' }))
+
+        await handleReset()
+        expect(fetcher).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', sort_order: 'asc' }))
+
+        await handleSortChange({ prop: 'created_at', order: null })
+        expect(fetcher.mock.lastCall?.[0]).not.toHaveProperty('sort_by')
+        await handleSortChange({ prop: 'unsafe_column', order: 'descending' })
+        expect(fetcher.mock.lastCall?.[0]).not.toHaveProperty('sort_by')
+    })
+
     it('应支持 transformParams 与 handleReset', async () => {
         const query = reactive({
             page: 2,

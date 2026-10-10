@@ -1,15 +1,16 @@
-import { onMounted, onBeforeUnmount, reactive, ref } from 'vue'
+import { onMounted, onBeforeUnmount, reactive, ref, computed } from 'vue'
 import { Logger } from '@/utils/logger'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
 import { useAuthStore } from '@/stores/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
-import { fetchProfile, modifyProfile } from '@/modules/profile/service'
+import { fetchProfile, fetchProfileSecurityOptions, modifyProfile, requestProfileCode, submitPhoneChange } from '@/modules/profile/service'
 import { createProfileForm } from '@/modules/profile/model'
 import { validateFormSafely } from '@/modules/shared/form'
 import type { UpdateProfilePayload, UserInfo } from '@/types/auth'
 import { translate } from '@/locales'
 import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/modules/auth/validation'
+import router from '@/router'
 
 export function useProfilePage() {
     const authStore = useAuthStore()
@@ -26,24 +27,37 @@ export function useProfilePage() {
     const formTitle = ref(translate('profile.editProfile'))
     const { isSubmitting, runWithSubmitLock } = useSubmitLock(0)
     const formKey = ref(0)
-
     const formData = reactive(createProfileForm())
+    const savedFormSignature = ref('')
+    const hasUnsavedChanges = computed(() => savedFormSignature.value !== '' && JSON.stringify(formData) !== savedFormSignature.value)
+    let confirmingClose = false
+    const smsVerificationRequired = ref<boolean | null>(null)
+    const codeSending = ref(false)
+    const showPhoneDrawer = ref(false)
+    const phoneDataRef = ref<FormInstance>()
+    const phoneSaving = ref(false)
+    const phoneCodeSending = ref(false)
+    const phoneData = reactive({ country_code: '86', phone_number: '', current_password: '', sms_code: '', sms_challenge_id: '' })
 
-    const isPhoneNumberChanged = () => {
-        const nextPhoneNumber = formData.phone_number.trim()
-        const currentPhoneNumber = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number.trim() : ''
-        return Boolean(nextPhoneNumber) && nextPhoneNumber !== currentPhoneNumber
-    }
+    /** 仅勾选「修改密码」时展示并提交密码字段。 */
+    const showPasswordFields = computed(() => formData.change_password)
+    const showCurrentPassword = computed(() => formData.change_password)
+    const needsCurrentPassword = showCurrentPassword
 
     const formRules = {
         current_password: [
             {
                 validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
-                    if ((formData.password || isPhoneNumberChanged()) && !value) {
+                    // 仅改密码时需要当前密码；昵称/邮箱/头像不需要。
+                    if (!formData.change_password) {
+                        callback()
+                        return
+                    }
+                    if (!value) {
                         callback(new Error(translate('validation.profile.currentPasswordRequired')))
                         return
                     }
-                    if (value && (value.length < PASSWORD_MIN_LENGTH || value.length > PASSWORD_MAX_LENGTH)) {
+                    if (value.length < PASSWORD_MIN_LENGTH || value.length > PASSWORD_MAX_LENGTH) {
                         callback(new Error(translate('validation.adminUser.passwordLength')))
                         return
                     }
@@ -52,15 +66,42 @@ export function useProfilePage() {
                 trigger: ['blur', 'change'],
             },
         ],
-        password: [{ min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: translate('validation.adminUser.passwordLength'), trigger: ['blur', 'change'] }],
+        password: [
+            {
+                validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
+                    if (!formData.change_password) {
+                        callback()
+                        return
+                    }
+                    if (!value) {
+                        callback(new Error(translate('validation.profile.newPasswordRequired')))
+                        return
+                    }
+                    if (value.length < PASSWORD_MIN_LENGTH || value.length > PASSWORD_MAX_LENGTH) {
+                        callback(new Error(translate('validation.adminUser.passwordLength')))
+                        return
+                    }
+                    callback()
+                },
+                trigger: ['blur', 'change'],
+            },
+        ],
         confirm_password: [
             {
                 validator: (_: unknown, value: string, callback: (error?: Error) => void) => {
-                    if (formData.password && value !== formData.password) {
-                        callback(new Error(translate(value ? 'validation.adminUser.passwordNotMatch' : 'validation.adminUser.confirmPasswordRequired')))
-                    } else {
+                    if (!formData.change_password) {
                         callback()
+                        return
                     }
+                    if (!formData.password) {
+                        callback()
+                        return
+                    }
+                    if (value !== formData.password) {
+                        callback(new Error(translate(value ? 'validation.adminUser.passwordNotMatch' : 'validation.adminUser.confirmPasswordRequired')))
+                        return
+                    }
+                    callback()
                 },
                 trigger: ['blur', 'change'],
             },
@@ -69,13 +110,6 @@ export function useProfilePage() {
             { required: true, message: translate('validation.profile.nicknameRequired'), trigger: 'blur' },
             { min: 2, max: 20, message: translate('validation.profile.nicknameLength'), trigger: 'blur' },
         ],
-        phone_number: [
-            {
-                pattern: /^1[3-9]\d{9}$/,
-                message: translate('validation.profile.phoneInvalid'),
-                trigger: 'blur',
-            },
-        ],
         email: [
             {
                 type: 'email',
@@ -83,6 +117,22 @@ export function useProfilePage() {
                 trigger: ['blur', 'change'],
             },
         ],
+    }
+
+    const resetPasswordFields = () => {
+        formData.current_password = ''
+        formData.password = ''
+        formData.confirm_password = ''
+        formData.sms_code = ''
+        formData.sms_challenge_id = ''
+    }
+
+    const toggleChangePassword = (checked: boolean) => {
+        if (!checked) {
+            resetPasswordFields()
+        }
+        // 字段显隐变化后清掉旧的校验红字
+        void formDataRef.value?.clearValidate(['current_password', 'password', 'confirm_password'])
     }
 
     const formatDepartments = (departments: unknown) => {
@@ -126,20 +176,74 @@ export function useProfilePage() {
         }
     }
 
+    const loadSecurityOptions = async (): Promise<boolean | null> => {
+        try {
+            const options = await fetchProfileSecurityOptions()
+            if (!isCurrentSession()) return null
+            smsVerificationRequired.value = options.sms_verification_required
+            return options.sms_verification_required
+        } catch (error) {
+            smsVerificationRequired.value = null
+            Logger.error('获取个人资料安全选项失败:', error)
+            return null
+        }
+    }
+
     const openEditDrawer = () => {
         formTitle.value = translate('profile.editProfileInfo')
         formData.id = userInfo.value.id
         formData.nickname = userInfo.value.nickname
         formData.username = userInfo.value.username
-        formData.phone_number = typeof userInfo.value.phone_number === 'string' ? userInfo.value.phone_number : ''
         formData.email = typeof userInfo.value.email === 'string' ? userInfo.value.email : ''
         formData.avatar = userInfo.value.avatar || ''
-        formData.current_password = ''
-        formData.password = ''
-        formData.confirm_password = ''
+        formData.change_password = false
+        resetPasswordFields()
+        savedFormSignature.value = JSON.stringify(formData)
 
         showDrawer.value = true
         formKey.value++
+        if (smsVerificationRequired.value === null) void loadSecurityOptions()
+    }
+
+    const confirmProfileClose = async (done: () => void) => {
+        if (isSubmitting.value || confirmingClose || !isCurrentSession()) return
+        if (!hasUnsavedChanges.value) {
+            done()
+            return
+        }
+        const currentFormKey = formKey.value
+        confirmingClose = true
+        try {
+            await ElMessageBox.confirm(translate('profile.discardChangesConfirm'), translate('profile.editProfile'), {
+                type: 'warning',
+                confirmButtonText: translate('common.actions.confirm'),
+                cancelButtonText: translate('common.actions.cancel'),
+                distinguishCancelAndClose: true,
+            })
+            if (currentFormKey === formKey.value && isCurrentSession() && !isSubmitting.value) done()
+        } catch (error) {
+            if (error !== 'cancel' && error !== 'close') Logger.warn('个人资料关闭确认失败:', error)
+        } finally {
+            confirmingClose = false
+        }
+    }
+
+    const sendPasswordCode = async () => {
+        if (codeSending.value || !isCurrentSession()) return
+        const required = await loadSecurityOptions()
+        if (required !== true) return
+        codeSending.value = true
+        try {
+            const result = await requestProfileCode({ purpose: 'password' })
+            if (!isCurrentSession()) return
+            formData.sms_challenge_id = result.challenge_id
+            formData.sms_code = ''
+            ElMessage.success(translate('profile.codeSent'))
+        } catch (error) {
+            Logger.error('发送改密验证码失败:', error)
+        } finally {
+            codeSending.value = false
+        }
     }
 
     const editConfirmSubmit = async () => {
@@ -147,19 +251,30 @@ export function useProfilePage() {
         const valid = await validateFormSafely(formDataRef.value, translate('validation.profileForm.formName'))
         if (!valid || !isCurrentSession()) return
 
-        const submitData: UpdateProfilePayload = {
-            nickname: formData.nickname,
+        if (formData.change_password) {
+            const required = await loadSecurityOptions()
+            if (required === null) return
+            if (required && (!formData.sms_challenge_id || !formData.sms_code)) {
+                ElMessage.error(translate('profile.codeRequired'))
+                return
+            }
         }
 
-        const phoneNumberChanged = isPhoneNumberChanged()
-        if (formData.phone_number) submitData.phone_number = formData.phone_number
-        if (formData.email) submitData.email = formData.email
-        if (formData.avatar) submitData.avatar = formData.avatar
-        if (formData.password || phoneNumberChanged) {
-            submitData.current_password = formData.current_password
+        const submitData: UpdateProfilePayload = {
+            nickname: formData.nickname,
+            email: formData.email,
         }
-        if (formData.password) {
+
+        if (formData.avatar) submitData.avatar = formData.avatar
+
+        // 仅勾选修改密码时提交密码及可能需要的短信验证。
+        if (formData.change_password && formData.password) {
+            submitData.current_password = formData.current_password
             submitData.password = formData.password
+            if (smsVerificationRequired.value) {
+                submitData.sms_challenge_id = formData.sms_challenge_id
+                submitData.sms_code = formData.sms_code
+            }
         }
 
         // 提交锁只包裹真正的写请求，避免成功后还把刷新/延时算进"提交中"，导致按钮卡几秒。
@@ -175,12 +290,81 @@ export function useProfilePage() {
 
         ElMessage.success(translate('common.result.updateSuccess'))
         showDrawer.value = false
+        if (submitData.password) {
+            authStore.resetAuthStore()
+            await router.replace({ name: 'Login' })
+            return
+        }
         // 写成功后刷新展示信息（单次 admin-user/get），不阻塞提交按钮。
         await getProfile()
     }
 
+    const openPhoneDrawer = async () => {
+        if ((await loadSecurityOptions()) === null || !isCurrentSession()) return
+        Object.assign(phoneData, { country_code: '86', phone_number: '', current_password: '', sms_code: '', sms_challenge_id: '' })
+        showPhoneDrawer.value = true
+    }
+
+    const sendPhoneCode = async () => {
+        if (phoneCodeSending.value || smsVerificationRequired.value !== true || !isCurrentSession()) return
+        if (!/^1[3-9]\d{9}$/.test(phoneData.phone_number) || !phoneData.current_password) {
+            ElMessage.error(translate('profile.phoneAndPasswordRequired'))
+            return
+        }
+        phoneCodeSending.value = true
+        try {
+            const result = await requestProfileCode({
+                purpose: 'phone', country_code: phoneData.country_code,
+                phone_number: phoneData.phone_number, current_password: phoneData.current_password,
+            })
+            if (!isCurrentSession()) return
+            phoneData.sms_challenge_id = result.challenge_id
+            phoneData.sms_code = ''
+            ElMessage.success(translate('profile.codeSent'))
+        } catch (error) {
+            Logger.error('发送新手机号验证码失败:', error)
+        } finally {
+            phoneCodeSending.value = false
+        }
+    }
+
+    const changePhoneConfirm = async () => {
+        if (phoneSaving.value || !isCurrentSession()) return
+        const valid = await validateFormSafely(phoneDataRef.value, translate('profile.changePhone'))
+        if (!valid || !isCurrentSession()) return
+        const required = await loadSecurityOptions()
+        if (required === null) return
+        if (required && (!phoneData.sms_challenge_id || !phoneData.sms_code)) {
+            ElMessage.error(translate('profile.codeRequired'))
+            return
+        }
+        phoneSaving.value = true
+        try {
+            await submitPhoneChange({
+                country_code: phoneData.country_code, phone_number: phoneData.phone_number,
+                current_password: phoneData.current_password,
+                ...(required ? { sms_challenge_id: phoneData.sms_challenge_id, sms_code: phoneData.sms_code } : {}),
+            })
+            if (!isCurrentSession()) return
+            ElMessage.success(translate('profile.phoneChangedRelogin'))
+            showPhoneDrawer.value = false
+            authStore.resetAuthStore()
+            await router.replace({ name: 'Login' })
+        } catch (error) {
+            Logger.error('换绑手机号失败:', error)
+        } finally {
+            phoneSaving.value = false
+        }
+    }
+
+    const phoneRules = {
+        phone_number: [{ required: true, pattern: /^1[3-9]\d{9}$/, message: translate('validation.profile.phoneInvalid'), trigger: 'blur' }],
+        current_password: [{ required: true, message: translate('profile.currentPasswordPlaceholder'), trigger: 'blur' }],
+    }
+
     onMounted(() => {
         getProfile()
+        void loadSecurityOptions()
     })
 
     return {
@@ -194,9 +378,26 @@ export function useProfilePage() {
         formKey,
         formData,
         formRules,
+        smsVerificationRequired,
+        codeSending,
+        sendPasswordCode,
+        showPhoneDrawer,
+        phoneDataRef,
+        phoneData,
+        phoneRules,
+        phoneSaving,
+        phoneCodeSending,
+        openPhoneDrawer,
+        sendPhoneCode,
+        changePhoneConfirm,
+        showPasswordFields,
+        showCurrentPassword,
+        needsCurrentPassword,
         formatDepartments,
         formatDateTime,
         openEditDrawer,
         editConfirmSubmit,
+        confirmProfileClose,
+        toggleChangePassword,
     }
 }

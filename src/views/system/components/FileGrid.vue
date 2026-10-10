@@ -84,13 +84,13 @@
             </div>
 
             <div class="item-icon-box">
-                <el-image v-if="isImageFile(file) && getFileThumbnailUrl(file)" :src="getFileThumbnailUrl(file)" fit="cover" class="grid-thumbnail" lazy :alt="file.origin_name || ''">
+                <AuthenticatedFileImage v-if="isImageFile(file) && getFileThumbnailUrl(file)" :file="file" class="grid-thumbnail" lazy>
                     <template #placeholder>
                         <div class="image-slot">
                             <el-icon><Picture /></el-icon>
                         </div>
                     </template>
-                </el-image>
+                </AuthenticatedFileImage>
                 <div v-else class="grid-placeholder">
                     <el-icon :size="40" color="var(--el-text-color-placeholder)"><Document /></el-icon>
                     <span class="grid-ext">{{ file.ext?.toUpperCase() }}</span>
@@ -175,6 +175,7 @@ import { formatFileSize } from '@/utils/helper'
 import type { SystemFile, SystemFileFolder } from '@/types/system'
 import { RESOURCE_DRAG_MIME, isResourceDragEvent } from '../composables/fileDragDrop'
 import type { FileOperationItem } from '../composables/useFileOperations'
+import AuthenticatedFileImage from './AuthenticatedFileImage.vue'
 
 const { t } = useI18n()
 

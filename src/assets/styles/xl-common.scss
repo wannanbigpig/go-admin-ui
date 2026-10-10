@@ -7,6 +7,7 @@
 
 // ==================== 容器工具类 ====================
 .xl-container {
+    box-sizing: border-box;
     padding: 20px;
     background-color: var(--xl-bg-color);
     border-radius: 12px;
@@ -132,19 +133,27 @@ $xl-margin-steps: (0, 4, 8, 10, 12, 16, 20, 24, 32);
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 16px;
+    margin-bottom: var(--xl-space-2);
+    padding-bottom: var(--xl-space-2);
     border-bottom: 1px dashed var(--el-border-color-lighter);
 }
 
 // ==================== 选项卡样式 ====================
 .xl-tabs {
     &.xl-container {
-        padding: 0 20px;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
     }
 
     .el-tabs__header {
-        margin: 0;
+        margin: 0 0 16px;
+        padding: 0 20px;
+        background-color: var(--xl-bg-color);
+        border: 1px solid var(--el-border-color-lighter);
+        border-radius: var(--xl-radius-lg);
+        box-shadow: $xl-shadow-card;
     }
 
     .el-tabs__nav-wrap::after {
@@ -170,7 +179,7 @@ $xl-margin-steps: (0, 4, 8, 10, 12, 16, 20, 24, 32);
     }
 
     .el-tabs__content {
-        display: none;
+        overflow: visible;
     }
 }
 

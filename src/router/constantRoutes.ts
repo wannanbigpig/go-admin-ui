@@ -68,6 +68,16 @@ const constantRoutes: RouteRecordRaw[] = [
                     show: false,
                 },
             },
+            {
+                path: '/todo/list',
+                name: 'MyTodos',
+                component: () => import('@/views/todo/index.vue'),
+                meta: {
+                    title: 'My Todos',
+                    titleKey: 'todo.title',
+                    show: false,
+                },
+            },
         ],
     },
     {

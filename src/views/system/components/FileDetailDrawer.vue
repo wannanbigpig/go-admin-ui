@@ -1,18 +1,15 @@
 <template>
-    <el-drawer v-model="visible" :title="t('system.file.detailTitle')" direction="rtl" size="720px" @close="emit('update:modelValue', false)">
+    <el-drawer v-model="visible" :title="t('system.file.detailTitle')" direction="rtl" size="var(--xl-drawer-md)" @close="emit('update:modelValue', false)">
         <div v-loading="loading" :element-loading-text="t('system.file.loadingText')" class="detail-container">
             <template v-if="file">
                 <!-- 顶部文件概览 -->
                 <div class="file-detail-header">
                     <div class="header-icon">
-                        <el-image
+                        <AuthenticatedFileImage
                             v-if="isImageFile(file) && file.url"
-                            :src="file.thumbnail_url || file.url"
-                            fit="cover"
+                            :file="file"
                             class="detail-thumbnail"
-                            :preview-src-list="[file.url]"
-                            preview-teleported
-                            :alt="file.origin_name || ''"
+                            preview
                         />
                         <div v-else-if="isFolderDetail(file)" class="detail-icon-placeholder">
                             <el-icon :size="48" color="var(--el-color-primary)"><FolderOpened /></el-icon>
@@ -49,7 +46,7 @@
                         <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.url')" :span="2">
                             <el-link
                                 v-if="file.url"
-                                :href="isSafeUrl(file.url) ? file.url : undefined"
+                                :href="Number(file.is_public) === 1 && isSafeUrl(file.url) ? file.url : undefined"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 type="primary"
@@ -100,19 +97,19 @@
                         <el-tag size="small" type="primary" effect="dark" round class="count-tag">{{ file.reference_count || 0 }}</el-tag>
                     </div>
                     <el-table :data="references" border size="small" :empty-text="t('common.noData')" class="modern-table">
-                        <el-table-column prop="owner_type" :label="t('system.file.referenceOwnerType')" width="110">
+                        <el-table-column prop="owner_type" :label="t('system.file.referenceOwnerType')" width="110" show-overflow-tooltip>
                             <template #default="{ row }">
                                 {{ row.owner_type || '-' }}
                             </template>
                         </el-table-column>
                         <el-table-column prop="source_name" :label="t('system.file.referenceSource')" min-width="140" show-overflow-tooltip />
-                        <el-table-column prop="field_name" :label="t('system.file.referenceField')" min-width="150">
+                        <el-table-column prop="field_name" :label="t('system.file.referenceField')" min-width="150" show-overflow-tooltip>
                             <template #default="{ row }">
                                 <span class="field-label">{{ row.owner_field }}</span>
                                 <span v-if="row.field_name" class="field-remark">({{ row.field_name }})</span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="created_at" :label="t('common.labels.createdAt')" width="160" align="center" />
+                        <el-table-column prop="created_at" :label="t('common.labels.createdAt')" width="160" align="center" show-overflow-tooltip />
                     </el-table>
                 </div>
             </template>
@@ -125,7 +122,9 @@ import { Document, FolderOpened, InfoFilled, Link } from '@element-plus/icons-vu
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { downloadFileBlob, fetchSystemFileBlob } from '@/modules/system/service'
 import type { SystemFile, SystemFileReference } from '@/types/system'
+import AuthenticatedFileImage from './AuthenticatedFileImage.vue'
 
 const { t } = useI18n()
 
@@ -168,14 +167,41 @@ const buildActualLocalPath = (file: SystemFile) => {
     return String(file.storage_path || file.path || '').replace(/^\/+/, '')
 }
 
-const isSafeUrl = (url?: string) => /^https?:\/\//.test(url || '')
+const isSafeUrl = (url?: string) => /^https?:\/\//.test(url || '') || /^\/(?!\/)/.test(url || '')
 
-const handleOpenFileUrl = (url?: string) => {
-    if (!isSafeUrl(url)) {
+// Blob URLs inherit the application origin; active documents must only be downloaded.
+const previewMimeTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/avif', 'application/pdf', 'text/plain'])
+
+const handleOpenFileUrl = async (url?: string) => {
+    if (!props.file || !isSafeUrl(url)) {
         ElMessage.error(t('common.result.operationFailed'))
         return
     }
-    window.open(url, '_blank', 'noopener,noreferrer')
+    if (Number(props.file.is_public) === 1) {
+        window.open(url, '_blank', 'noopener,noreferrer')
+        return
+    }
+    const tab = window.open('about:blank', '_blank')
+    if (!tab) {
+        ElMessage.error(t('common.result.operationFailed'))
+        return
+    }
+    tab.opener = null
+    const file = props.file
+    try {
+        const blob = await fetchSystemFileBlob(file.uuid)
+        const mimeType = blob.type.split(';')[0]?.trim().toLowerCase() || ''
+        if (!previewMimeTypes.has(mimeType)) {
+            tab.close()
+            downloadFileBlob(blob, file.origin_name || file.uuid)
+            return
+        }
+        const objectUrl = URL.createObjectURL(blob)
+        tab.location.replace(objectUrl)
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5 * 60_000)
+    } catch {
+        tab.close()
+    }
 }
 
 const formatFileSize = (size?: number) => {
@@ -227,7 +253,7 @@ const getStorageStatusTagType = (value?: string) => {
 
 <style scoped lang="scss">
 .detail-container {
-    padding: 0 20px 20px;
+    padding: 0;
 }
 
 .file-detail-header {

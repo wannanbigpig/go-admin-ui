@@ -14,11 +14,14 @@ export function createProfileForm() {
         id: 0,
         nickname: '',
         username: '',
-        phone_number: '',
         email: '',
         avatar: '',
+        /** 仅勾选后才展示并提交修改密码相关字段 */
+        change_password: false,
         current_password: '',
         password: '',
         confirm_password: '',
+        sms_code: '',
+        sms_challenge_id: '',
     }
 }

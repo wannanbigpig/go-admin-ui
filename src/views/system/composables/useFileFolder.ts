@@ -125,7 +125,7 @@ export function useFileFolder(options?: { onSelectFolder?: (folderId: number | s
         folderDialogMode.value = mode
         activeFolder.value = folder || null
         folderForm.id = mode === 'rename' ? folder?.id : undefined
-        folderForm.parent_id = mode === 'create' ? selectedFolderId.value : (folder?.parent_id ?? null)
+        folderForm.parent_id = mode === 'create' ? (folder?.id ?? selectedFolderId.value) : (folder?.parent_id ?? null)
         folderForm.name = mode === 'rename' ? folder?.name || '' : ''
         showFolderDialog.value = true
     }
@@ -162,7 +162,6 @@ export function useFileFolder(options?: { onSelectFolder?: (folderId: number | s
 
     const handleFolderCommand = async (command: string, folder: SystemFileFolder) => {
         if (command === 'create') {
-            selectedFolderId.value = folder.id
             openFolderDialog('create', folder)
             return
         }

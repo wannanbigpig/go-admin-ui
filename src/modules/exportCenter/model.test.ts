@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyExportProgressEvent, canDownloadExportRecord, isExportRecordExpired } from './model'
+import { applyExportProgressEvent, canDownloadExportRecord, isExportRecordExpired, resolveExportRecordSort } from './model'
 import type { ExportRecord } from '@/types/exportCenter'
 
 describe('export center realtime progress', () => {
@@ -40,5 +40,15 @@ describe('export record download availability', () => {
 
     it('respects an explicit backend download_ready=false result', () => {
         expect(canDownloadExportRecord({ file_uuid: 'file-uuid', download_ready: false })).toBe(false)
+    })
+})
+
+describe('export record sorting', () => {
+    it('maps only supported table columns to server sorting', () => {
+        expect(resolveExportRecordSort('created_at', 'ascending')).toEqual({ sort_by: 'created_at', sort_order: 'asc' })
+        expect(resolveExportRecordSort('finished_at', 'descending')).toEqual({ sort_by: 'finished_at', sort_order: 'desc' })
+        expect(resolveExportRecordSort('file_size', 'ascending')).toEqual({ sort_by: 'file_size', sort_order: 'asc' })
+        expect(resolveExportRecordSort('file_size', null)).toEqual({ sort_by: null, sort_order: null })
+        expect(resolveExportRecordSort('file_name', 'ascending')).toBeNull()
     })
 })

@@ -12,7 +12,7 @@
                 :tooltip-content="normalizeTooltip(button)"
                 :button-info="resolveButtonInfo(button)"
                 :text="button.text || String(resolveButtonInfo(button)?.title || button.permission || '')"
-                @click="handleClick(button, scope)"
+                @click="handleClick(button, scope, $event)"
             />
         </template>
         <template v-else>
@@ -27,7 +27,7 @@
                 :tooltip-content="normalizeTooltip(button)"
                 :button-info="resolveButtonInfo(button)"
                 :text="button.text || String(resolveButtonInfo(button)?.title || button.permission || '')"
-                @click="handleClick(button, scope)"
+                @click="handleClick(button, scope, $event)"
             />
             <el-dropdown v-if="hasMoreButtons" trigger="click" size="small" teleported persistent>
                 <el-button type="primary" link class="more-trigger-button">
@@ -68,7 +68,8 @@ export interface TableScope<U> {
 }
 
 export interface ActionButtonConfig<U> {
-    permission: string
+    /** null 表示该操作由页面登录态及业务条件控制，不使用按钮权限节点。 */
+    permission: string | null
     buttonInfo?: Record<string, unknown>
     text?: string
     showIcon?: boolean
@@ -128,7 +129,7 @@ const getIndex = (s: TableScope<T> | T): number => {
 }
 
 const resolveButtonInfo = (button: ActionButtonConfig<T>) => {
-    return getButtonInfoFull(button.permission) || button.buttonInfo || null
+    return (button.permission ? getButtonInfoFull(button.permission) : null) || button.buttonInfo || null
 }
 
 const visibleButtons = computed(() => {
@@ -138,7 +139,7 @@ const visibleButtons = computed(() => {
         if (typeof btn.visible === 'function' && !btn.visible(row, index)) {
             return false
         }
-        return checkPermission(btn.permission, true)
+        return btn.permission === null || checkPermission(btn.permission, true)
     })
 })
 
@@ -173,13 +174,8 @@ const hasMoreButtons = computed(() => {
     return moreButtons.value.length > 0
 })
 
-const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, event?: Event) => {
+const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, _event?: Event) => {
     if (normalizeDisabled(button)) return
-
-    // 移除焦点以解决 Element Plus 下拉菜单隐藏时的 aria-hidden 报错
-    if (event?.currentTarget && 'blur' in (event.currentTarget as HTMLElement)) {
-        ;(event.currentTarget as HTMLElement).blur()
-    }
 
     const row = getRowData(scope)
     const index = getIndex(scope)
@@ -198,8 +194,16 @@ const handleClick = (button: ActionButtonConfig<T>, scope: TableScope<T> | T, ev
     justify-content: center;
     gap: 8px;
     width: 100%;
+
+    :deep(.el-button) {
+        border-color: transparent !important;
+        box-shadow: none !important;
+    }
 }
 .more-trigger-button {
+    border-color: transparent !important;
+    box-shadow: none !important;
+
     :deep(span) {
         display: inline-flex;
         align-items: center;

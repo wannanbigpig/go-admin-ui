@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
+        <div class="xl-container xl-m-bottom-16">
             <el-form ref="cronQueryFormRef" class="xl-search-form" :model="cronQuery" @submit.prevent="handleCronSearch" @keydown.enter.prevent="handleCronSearch">
                 <el-row id="cronSearchForm" :gutter="20">
                     <el-col :span="5">
@@ -22,7 +22,7 @@
 
         <div class="xl-container">
             <el-alert class="xl-m-bottom-10" :title="t('system.task.cronScheduleNotice')" type="info" show-icon />
-            <xl-table-list :loading="cronLoading" :data="cronList" :tableTitle="cronTableTitle" :pagination="cronPagination">
+            <xl-table-list :loading="cronLoading" :data="cronList" :tableTitle="cronTableTitle" :pagination="cronPagination" @sort-change="handleCronSortChange">
                 <template #td="{ item, val, row }">
                     <template v-if="item.tag">
                         <el-tag v-if="val !== undefined && val !== null && val !== '' && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
@@ -67,9 +67,11 @@ const {
     pagination: cronPagination,
     getList: getCronList,
     handleSearch: handleCronSearch,
+    handleSortChange: handleCronSortChange,
     handleReset: handleCronReset,
 } = useListPage<CronTaskState, typeof cronQuery>({
     query: cronQuery,
+    sortFields: ['id', 'task_code', 'next_run_at', 'updated_at'],
     queryFormRef: cronQueryFormRef,
     fetcher: async (params) => {
         try {
@@ -89,8 +91,8 @@ const {
 const cronTableTitle = computed(
     () =>
         [
-            { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
-            { prop: 'task_code', h_label: t('system.task.code'), minWidth: 160, overflow: true },
+            { prop: 'id', sortable: 'custom', h_label: t('common.labels.id'), width: 80, align: 'center' },
+            { prop: 'task_code', sortable: 'custom', h_label: t('system.task.code'), minWidth: 160, overflow: true },
             { prop: 'cron_spec', h_label: t('system.task.cronSpec'), minWidth: 190, customRow: true },
             {
                 prop: 'last_status',
@@ -100,13 +102,13 @@ const cronTableTitle = computed(
                 customRow: true,
                 tag: taskRunStatusTagMap.value,
             },
-            { prop: 'next_run_at', h_label: t('system.task.nextRunAt'), width: 160, align: 'center' },
+            { prop: 'next_run_at', sortable: 'custom', h_label: t('system.task.nextRunAt'), width: 160, align: 'center' },
             { prop: 'last_started_at', h_label: t('system.task.startedAt'), width: 160, align: 'center' },
             { prop: 'last_finished_at', h_label: t('system.task.finishedAt'), width: 160, align: 'center' },
             { prop: 'last_success_at', h_label: t('system.task.lastSuccessAt'), width: 160, align: 'center' },
             { prop: 'last_failed_at', h_label: t('system.task.lastFailedAt'), width: 160, align: 'center' },
             { prop: 'last_stats_window_start', h_label: t('system.task.lastStatsWindowStart'), width: 170, align: 'center' },
-            { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+            { prop: 'updated_at', sortable: 'custom', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
             { prop: 'last_error', h_label: t('system.task.lastError'), minWidth: 200, overflow: true },
         ] as TableColumn<CronTaskState>[]
 )

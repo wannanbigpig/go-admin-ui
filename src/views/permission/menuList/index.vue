@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
+        <div class="xl-container xl-m-bottom-16">
             <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">

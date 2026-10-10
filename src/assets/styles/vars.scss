@@ -19,8 +19,8 @@ $xl-collapse-btn-hover-width: 30px;
 $xl-collapse-btn-hover-height: 30px;
 
 // 主内容区
-$xl-main-padding: 5px;
-$xl-main-inner-padding: 10px;
+$xl-main-padding: 16px;
+$xl-main-inner-padding: 0;
 
 // 表格
 $xl-table-height: 50px;
@@ -61,6 +61,6 @@ $xl-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 $xl-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
 
 // ==================== Drawer 宽度 ====================
-$xl-drawer-sm: clamp(360px, 38vw, 560px);
-$xl-drawer-md: clamp(480px, 46vw, 720px);
-$xl-drawer-lg: clamp(640px, 60vw, 960px);
+$xl-drawer-sm: min(100vw, clamp(360px, 38vw, 560px));
+$xl-drawer-md: min(100vw, clamp(480px, 46vw, 720px));
+$xl-drawer-lg: min(100vw, clamp(640px, 60vw, 960px));

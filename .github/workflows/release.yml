@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 12.4.1
@@ -26,27 +28,49 @@ jobs:
           set -euo pipefail
           package_version="$(node -p "require('./package.json').version")"
           test "${GITHUB_REF_NAME#v}" = "$package_version"
+          pnpm run check:release --tag "$GITHUB_REF_NAME"
           grep -Fq "## [${package_version}]" CHANGELOG.md
           awk -v marker="## [${package_version}]" '
             index($0, marker) == 1 { found=1 }
             found && /^## \[/ && index($0, marker) != 1 { exit }
             found { print }
-          ' CHANGELOG.md > release-notes.md
-          test -s release-notes.md
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
           {
             printf '\n## Compatibility, upgrade, and rollback\n\n'
             cat docs/compatibility.md
-          } >> release-notes.md
+          } >> "$RUNNER_TEMP/release-notes.md"
+          cat "docs/upgrades/${package_version}.md" >> "$RUNNER_TEMP/release-notes.md"
       - run: pnpm run lint --no-cache
       - run: pnpm run type-check
       - run: pnpm run check:error-codes
       - run: pnpm run test:run
+      - run: pnpm run test:release
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm run test:e2e
       - run: pnpm run build:production
       - name: Pack static files
-        run: tar -czf "x-l-admin-vue3_${GITHUB_REF_NAME#v}.tar.gz" dist
+        run: |
+          mkdir -p dist/release-info
+          cp docs/compatibility.md docs/release.json "docs/upgrades/${GITHUB_REF_NAME#v}.md" dist/release-info/
+          tar -czf "x-l-admin-vue3_${GITHUB_REF_NAME#v}.tar.gz" dist
+          sha256sum x-l-admin-vue3_*.tar.gz > checksums.txt
+      - name: Reject an existing release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.repos.getReleaseByTag({ ...context.repo, tag: context.ref.replace('refs/tags/', '') });
+              throw new Error('A release already exists for this tag; do not mix artifacts from different builds.');
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
       - uses: softprops/action-gh-release@v2
         with:
-          body_path: release-notes.md
-          files: x-l-admin-vue3_*.tar.gz
+          body_path: ${{ runner.temp }}/release-notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          overwrite_files: false
+          fail_on_unmatched_files: true
+          files: |
+            x-l-admin-vue3_*.tar.gz
+            checksums.txt

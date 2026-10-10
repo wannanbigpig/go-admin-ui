@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
+        <div class="xl-container xl-m-bottom-16">
             <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearchWrapper" @keydown.enter.prevent="handleSearchWrapper">
                 <el-row id="searchForm" :gutter="20">
                     <el-col :span="4">
@@ -19,7 +19,7 @@
                 <xl-action-button v-permission="'department:add'" :show-icon="false" type="primary" :button-info="addButtonInfo" @click="openEditDrawer(1, null, null)" />
             </div>
             <div>
-                <xl-table-list :loading="loading" ref="tableListRef" :data="departmentList" :tableTitle="tableTitle" :pagination="{ total: 0 }" row-key="id" :default-expand-all="true">
+                <xl-table-list :loading="loading" ref="tableListRef" :data="departmentList" :tableTitle="tableTitle" row-key="id" :default-expand-all="true">
                     <template #td="{ item, val }">
                         <el-tag v-if="item.tag" :type="item.tag[val as string | number]?.type || 'info'">
                             {{ item.tag[val as string | number]?.text || val }}
@@ -38,8 +38,8 @@
         </div>
 
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="30%">
-            <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules()" :key="currentIndex ?? 0">
+        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" :loading="detailLoading" size="md">
+            <el-form v-loading="detailLoading" ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules()" :key="currentIndex ?? 0">
                 <el-row :gutter="20">
                     <el-col :span="24">
                         <el-form-item :label="t('permission.department.parent')" prop="pid">
@@ -79,7 +79,7 @@
         </xl-drawer>
 
         <!-- 绑定角色抽屉 -->
-        <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.department.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
+        <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.department.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="md">
             <el-skeleton v-if="roleOptionsLoading" animated />
             <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto" :rules="bindRoleRules">
                 <el-form-item :label="t('permission.department.name')">
@@ -150,7 +150,7 @@ const handleResetWrapper = () => {
     handleReset()
 }
 
-const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, isProtectedEditingDepartment, formData, getDynamicRules, filteredParentOptions, openEditDrawer, handleAddChild, editConfirmSubmit } =
+const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, detailLoading, isProtectedEditingDepartment, formData, getDynamicRules, filteredParentOptions, openEditDrawer, handleAddChild, editConfirmSubmit } =
     useDepartmentForm({ departmentOptions, getChildrenIds, refreshList: getList })
 const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentDeptName, roleOptions, roleOptionsLoading, bindRoleData, bindRoleRules, filterRole, handleBindRole, bindRoleConfirmSubmit } = useDepartmentRoleBinding({
     refreshList: getList,

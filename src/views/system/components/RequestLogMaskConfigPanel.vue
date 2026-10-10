@@ -1,27 +1,11 @@
 <template>
     <div class="request-mask-panel" :class="{ 'is-embedded': embedded }">
-        <div v-if="!embedded" class="request-mask-header">
-            <div class="header-content">
-                <h3 class="title">
-                    <span class="title-icon">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
-                        </svg>
-                    </span>
-                    {{ t('system.requestMask.title') }}
-                </h3>
-                <div class="desc-box">
-                    <span class="desc-icon">
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <path fill="currentColor" d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                        </svg>
-                    </span>
-                    <span>{{ t('system.requestMask.description') }}</span>
-                </div>
+        <div v-if="!embedded" class="panel-header">
+            <div class="panel-title-wrapper">
+                <span class="panel-title-bar"></span>
+                <h3 class="panel-title">{{ t('system.requestMask.title') }}</h3>
             </div>
-            <div class="request-mask-actions">
-                <xl-action-button v-permission="'requestLog:maskConfig'" code="requestLog:maskConfig" type="primary" :show-icon="false" :text="t('system.requestMask.save')" :loading="saving" @click="handleSave" />
-            </div>
+            <p class="panel-description">{{ t('system.requestMask.description') }}</p>
         </div>
 
         <el-skeleton v-if="loading" animated :rows="8" />
@@ -31,9 +15,6 @@
                 <section class="request-mask-section is-full fade-in-up" style="animation-delay: 0.1s">
                     <div class="request-mask-section-header">
                         <div class="header-title">
-                            <span class="header-icon primary-icon">
-                                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" /></svg>
-                            </span>
                             <h4>{{ t('system.requestMask.common') }}</h4>
                             <span class="header-tip">{{ t('system.requestMask.commonTip') }}</span>
                         </div>
@@ -49,10 +30,6 @@
                 <section v-for="(group, index) in maskFieldGroups" :key="group.title" class="request-mask-section fade-in-up" :style="{ animationDelay: `${0.2 + index * 0.1}s` }">
                     <div class="request-mask-section-header">
                         <div class="header-title">
-                            <span class="header-icon" :class="index === 0 ? 'warning-icon' : 'success-icon'">
-                                <svg v-if="index === 0" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" /></svg>
-                                <svg v-else viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
-                            </span>
                             <h4>{{ group.title }}</h4>
                         </div>
                     </div>
@@ -71,7 +48,7 @@
                 </section>
             </div>
 
-            <div class="request-mask-actions request-mask-actions-bottom" :class="{ 'is-embedded': embedded }">
+            <div class="panel-actions-bottom">
                 <xl-action-button v-permission="'requestLog:maskConfig'" code="requestLog:maskConfig" type="primary" :show-icon="false" :text="t('system.requestMask.save')" :loading="saving" @click="handleSave" />
             </div>
         </el-form>
@@ -194,84 +171,63 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .request-mask-panel {
-    padding: var(--xl-space-5);
+    padding: 20px;
     background-color: var(--xl-bg-color);
-    border-radius: var(--xl-radius-lg);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    transition: all 0.3s ease;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .request-mask-panel.is-embedded {
     padding: 0;
+    border-radius: 0;
     background-color: transparent;
+    border: none;
     box-shadow: none;
 }
 
-.request-mask-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--xl-space-4);
-    margin-bottom: var(--xl-space-5);
-    padding-bottom: var(--xl-space-4);
-    border-bottom: 1px dashed var(--el-border-color-lighter);
+.panel-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
 
-    .header-content {
-        flex: 1;
-    }
-
-    .title {
+    .panel-title-wrapper {
         display: flex;
         align-items: center;
-        gap: var(--xl-space-2);
-        margin: 0 0 10px;
-        font-size: var(--xl-font-xl);
+        gap: 10px;
+    }
+
+    .panel-title-bar {
+        width: 4px;
+        height: 18px;
+        background-color: var(--el-color-primary);
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .panel-title {
+        margin: 0;
+        font-size: 18px;
         font-weight: 600;
+        line-height: 1.4;
         color: var(--el-text-color-primary);
-
-        .title-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: var(--xl-radius-md);
-            background: var(--el-color-primary-light-9);
-            color: var(--el-color-primary);
-        }
     }
 
-    .desc-box {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px var(--xl-space-3);
-        background-color: var(--el-color-info-light-9);
-        border-radius: var(--xl-radius-md);
-        color: var(--el-text-color-regular);
-        font-size: var(--xl-font-md);
-
-        .desc-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--el-color-info);
-        }
+    .panel-description {
+        margin: 8px 0 0 14px;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
+        line-height: 1.5;
     }
 }
 
-.request-mask-actions {
-    display: flex;
-    gap: 10px;
-    flex-shrink: 0;
-}
-
-.request-mask-actions-bottom {
+.panel-actions-bottom {
     display: flex;
     justify-content: flex-end;
-    margin-top: var(--xl-space-5);
-    padding-top: 20px;
-    border-top: 1px dashed var(--el-border-color-lighter);
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .request-mask-form {
@@ -287,65 +243,37 @@ onMounted(() => {
 .request-mask-section {
     position: relative;
     min-width: 0;
-    padding: var(--xl-space-5);
+    padding: 20px;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: var(--xl-radius-lg);
+    border-radius: 8px;
     background-color: var(--el-bg-color);
-    transition: all 0.3s var(--xl-ease-standard);
+    transition: all 0.2s ease;
     overflow: hidden;
 
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: var(--xl-space-1);
-        height: 100%;
-        background: transparent;
-        transition: all 0.3s;
-    }
-
     &:hover {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-        transform: translateY(-2px);
-        border-color: var(--el-border-color-light);
-
-        &::before {
-            background: var(--el-color-primary);
-        }
+        border-color: var(--el-color-primary-light-5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 }
 
 .request-mask-section.is-full {
     grid-column: 1 / -1;
-
-    &:hover::before {
-        background: var(--el-color-success);
-    }
-}
-
-.request-mask-section:nth-child(2):hover::before {
-    background: var(--el-color-warning);
-}
-
-.request-mask-section:nth-child(3):hover::before {
-    background: var(--el-color-danger);
 }
 
 .request-mask-section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
     .header-title {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
 
         h4 {
             margin: 0;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: var(--el-text-color-primary);
         }
@@ -354,28 +282,6 @@ onMounted(() => {
             font-size: 13px;
             font-weight: normal;
             color: var(--el-text-color-secondary);
-        }
-
-        .header-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: var(--xl-radius-md);
-
-            &.primary-icon {
-                background: var(--el-color-success-light-9);
-                color: var(--el-color-success);
-            }
-            &.warning-icon {
-                background: var(--el-color-warning-light-9);
-                color: var(--el-color-warning);
-            }
-            &.success-icon {
-                background: var(--el-color-danger-light-9);
-                color: var(--el-color-danger);
-            }
         }
     }
 }
@@ -468,16 +374,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-    .request-mask-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .request-mask-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
     .request-mask-layout {
         grid-template-columns: 1fr;
     }

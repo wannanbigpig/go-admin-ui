@@ -61,7 +61,7 @@ const TabsStub = defineComponent({
 const TabPaneStub = defineComponent({
     name: 'ElTabPane',
     props: ['name', 'label'],
-    template: '<div class="tab-pane" :data-name="name">{{ label }}</div>',
+    template: '<div class="tab-pane" :data-name="name">{{ label }}<slot /></div>',
 })
 
 const ProTableStub = defineComponent({
@@ -136,6 +136,7 @@ describe('system config permission tabs', () => {
 
         expect(wrapper.findAll('.tab-pane').map((item) => item.attributes('data-name'))).toEqual(['normal'])
         expect(wrapper.find('[data-testid="normal-panel"]').exists()).toBe(true)
+        expect(wrapper.get('[data-testid="normal-panel"]').element.closest('.tab-pane')?.getAttribute('data-name')).toBe('normal')
         expect(mocks.getList).toHaveBeenCalledTimes(1)
         expect(mocks.loadDict).toHaveBeenCalledTimes(2)
     })
@@ -149,6 +150,7 @@ describe('system config permission tabs', () => {
 
         expect(wrapper.findAll('.tab-pane').map((item) => item.attributes('data-name'))).toEqual(['sms'])
         expect(wrapper.find('[data-testid="sms-panel"]').exists()).toBe(true)
+        expect(wrapper.get('[data-testid="sms-panel"]').element.closest('.tab-pane')?.getAttribute('data-name')).toBe('sms')
         expect(mocks.getList).not.toHaveBeenCalled()
         expect(mocks.loadDict).not.toHaveBeenCalled()
     })

@@ -1,91 +1,93 @@
 <template>
     <div>
-        <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-10">
-            <el-tab-pane :label="t('system.dict.typeTab')" name="type" />
-            <el-tab-pane :label="t('system.dict.itemTab')" name="item" />
+        <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-16">
+            <el-tab-pane :label="t('system.dict.typeTab')" name="type">
+                <xl-pro-table
+                    v-if="activeTab === 'type'"
+                    :search-model="typeQuery"
+                    :columns="typeColumns"
+                    :loading="typeLoading"
+                    :data="typeList"
+                    :pagination="typePagination"
+                    :search-max-show="3"
+                    @search="onTypeSearch"
+                    @reset="handleTypeReset"
+                    @sort-change="handleTypeSortChange"
+                >
+                    <template #actions>
+                        <xl-action-button v-permission="'sysDict:add'" code="sysDict:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
+                    </template>
+                    <template #operation>
+                        <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
+                            <template #default="scope">
+                                <xl-action-buttons :buttons="typeActionButtons" :scope="scope" />
+                            </template>
+                        </el-table-column>
+                    </template>
+                </xl-pro-table>
+            </el-tab-pane>
+            <el-tab-pane :label="t('system.dict.itemTab')" name="item">
+                <xl-pro-table
+                    v-if="activeTab === 'item'"
+                    v-model:search-model="itemQuery"
+                    :columns="itemColumns"
+                    :loading="itemLoading"
+                    :data="itemList"
+                    :pagination="itemPagination"
+                    :search-max-show="4"
+                    @search="handleItemSearch"
+                    @reset="handleItemSearch"
+                    @sort-change="handleItemSortChange"
+                >
+                    <template #search>
+                        <el-form class="xl-search-form" :model="itemQuery" @submit.prevent="handleItemSearch" @keydown.enter.prevent="handleItemSearch">
+                            <el-row id="itemSearchForm" :gutter="20">
+                                <el-col :span="6">
+                                    <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
+                                        <el-select v-model="selectedTypeCode" filterable clearable :placeholder="t('system.dict.typeCodePlaceholder')">
+                                            <el-option v-for="type in typeOptions" :key="type.type_code" :label="`${type.type_name} (${type.type_code})`" :value="type.type_code" />
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="5">
+                                    <el-form-item :label="t('system.dict.itemLabel')" prop="label">
+                                        <el-input v-model.trim="itemQuery.label" :placeholder="t('system.dict.itemLabelPlaceholder')" clearable />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="5">
+                                    <el-form-item :label="t('system.dict.itemValue')" prop="value">
+                                        <el-input v-model.trim="itemQuery.value" :placeholder="t('system.dict.itemValuePlaceholder')" clearable />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="3">
+                                    <el-form-item :label="t('common.labels.status')" prop="status">
+                                        <el-select v-model="itemQuery.status" clearable :placeholder="t('common.placeholders.selectStatus')">
+                                            <el-option v-for="item in commonStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <div class="xl-search-btn">
+                                    <el-button type="primary" native-type="button" :disabled="itemLoading" @click="handleItemSearch">{{ t('common.actions.search') }}</el-button>
+                                    <el-button native-type="button" :disabled="itemLoading" @click="handleItemReset">{{ t('common.actions.reset') }}</el-button>
+                                </div>
+                            </el-row>
+                        </el-form>
+                    </template>
+                    <template #actions>
+                        <xl-action-button v-permission="'sysDict:add'" code="sysDict:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
+                    </template>
+                    <template #operation>
+                        <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
+                            <template #default="scope">
+                                <xl-action-buttons :buttons="itemActionButtons" :scope="scope" />
+                            </template>
+                        </el-table-column>
+                    </template>
+                </xl-pro-table>
+            </el-tab-pane>
         </el-tabs>
 
-        <xl-pro-table
-            v-if="activeTab === 'type'"
-            :search-model="typeQuery"
-            :columns="typeColumns"
-            :loading="typeLoading"
-            :data="typeList"
-            :pagination="typePagination"
-            :search-max-show="3"
-            @search="onTypeSearch"
-            @reset="handleTypeReset"
-        >
-            <template #actions>
-                <xl-action-button v-permission="'sysDict:add'" code="sysDict:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
-            </template>
-            <template #operation>
-                <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
-                    <template #default="scope">
-                        <xl-action-buttons :buttons="typeActionButtons" :scope="scope" />
-                    </template>
-                </el-table-column>
-            </template>
-        </xl-pro-table>
-
-        <xl-pro-table
-            v-else
-            v-model:search-model="itemQuery"
-            :columns="itemColumns"
-            :loading="itemLoading"
-            :data="itemList"
-            :pagination="itemPagination"
-            :search-max-show="4"
-            @search="handleItemSearch"
-            @reset="handleItemSearch"
-        >
-            <template #search>
-                <el-form class="xl-search-form" :model="itemQuery" @submit.prevent="handleItemSearch" @keydown.enter.prevent="handleItemSearch">
-                    <el-row id="itemSearchForm" :gutter="20">
-                        <el-col :span="6">
-                            <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
-                                <el-select v-model="selectedTypeCode" filterable clearable :placeholder="t('system.dict.typeCodePlaceholder')">
-                                    <el-option v-for="type in typeOptions" :key="type.type_code" :label="`${type.type_name} (${type.type_code})`" :value="type.type_code" />
-                                </el-select>
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="5">
-                            <el-form-item :label="t('system.dict.itemLabel')" prop="label">
-                                <el-input v-model.trim="itemQuery.label" :placeholder="t('system.dict.itemLabelPlaceholder')" clearable />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="5">
-                            <el-form-item :label="t('system.dict.itemValue')" prop="value">
-                                <el-input v-model.trim="itemQuery.value" :placeholder="t('system.dict.itemValuePlaceholder')" clearable />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="3">
-                            <el-form-item :label="t('common.labels.status')" prop="status">
-                                <el-select v-model="itemQuery.status" clearable :placeholder="t('common.placeholders.selectStatus')">
-                                    <el-option v-for="item in commonStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                                </el-select>
-                            </el-form-item>
-                        </el-col>
-                        <div class="xl-search-btn">
-                            <el-button type="primary" native-type="button" :disabled="itemLoading" @click="handleItemSearch">{{ t('common.actions.search') }}</el-button>
-                            <el-button native-type="button" :disabled="itemLoading" @click="handleItemReset">{{ t('common.actions.reset') }}</el-button>
-                        </div>
-                    </el-row>
-                </el-form>
-            </template>
-            <template #actions>
-                <xl-action-button v-permission="'sysDict:add'" code="sysDict:add" type="primary" :show-icon="false" @click="openCreateDrawer" />
-            </template>
-            <template #operation>
-                <el-table-column width="150" :label="t('common.labels.operation')" align="center" fixed="right">
-                    <template #default="scope">
-                        <xl-action-buttons :buttons="itemActionButtons" :scope="scope" />
-                    </template>
-                </el-table-column>
-            </template>
-        </xl-pro-table>
-
-        <xl-drawer v-model="showTypeDrawer" :title="typeFormTitle" :formRef="typeFormRef" :onConfirm="submitTypeForm" :isSubmitting="typeSubmitting" size="36%">
+        <xl-drawer v-model="showTypeDrawer" :title="typeFormTitle" :formRef="typeFormRef" :onConfirm="submitTypeForm" :isSubmitting="typeSubmitting" size="md">
             <el-form ref="typeFormRef" :model="typeFormData" :rules="typeFormRules" label-width="auto">
                 <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
                     <el-input v-model.trim="typeFormData.type_code" :disabled="typeEditMode" />
@@ -111,7 +113,7 @@
             </el-form>
         </xl-drawer>
 
-        <xl-drawer v-model="showItemDrawer" :title="itemFormTitle" :formRef="itemFormRef" :onConfirm="submitItemForm" :isSubmitting="itemSubmitting" size="38%">
+        <xl-drawer v-model="showItemDrawer" :title="itemFormTitle" :formRef="itemFormRef" :onConfirm="submitItemForm" :isSubmitting="itemSubmitting" size="md">
             <el-form ref="itemFormRef" :model="itemFormData" :rules="itemFormRules" label-width="auto">
                 <el-form-item :label="t('system.dict.typeCode')" prop="type_code">
                     <el-select v-model="itemFormData.type_code" filterable>
@@ -215,8 +217,10 @@ const {
     pagination: typePagination,
     getList: getTypeList,
     handleSearch: handleTypeSearch,
+    handleSortChange: handleTypeSortChange,
 } = useListPage<DictType, typeof typeQuery>({
     query: typeQuery,
+    sortFields: ['id', 'type_code', 'sort', 'updated_at'],
     fetcher: (params) => fetchDictTypeList(params),
 })
 
@@ -225,8 +229,10 @@ const {
     items: itemList,
     pagination: itemPagination,
     handleSearch: handleItemSearch,
+    handleSortChange: handleItemSortChange,
 } = useListPage<DictItem, typeof itemQuery>({
     query: itemQuery,
+    sortFields: ['id', 'value', 'sort', 'updated_at'],
     transformParams: (query) => ({
         ...query,
         type_code: selectedTypeCode.value || query.type_code,
@@ -561,9 +567,10 @@ const itemActionButtons = computed(() => [
 ])
 
 const typeColumns = computed<ProTableColumns<DictType>>(() => [
-    { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
+    { prop: 'id', sortable: 'custom', h_label: t('common.labels.id'), width: 80, align: 'center' },
     {
         prop: 'type_code',
+        sortable: 'custom',
         h_label: t('system.dict.typeCode'),
         label: t('system.dict.typeCode'),
         minWidth: 160,
@@ -588,14 +595,14 @@ const typeColumns = computed<ProTableColumns<DictType>>(() => [
         tag: commonStatusTagMap.value,
         search: { type: 'select', placeholder: t('common.placeholders.selectStatus'), options: commonStatusOptions.value, span: 4 },
     },
-    { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
-    { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+    { prop: 'sort', sortable: 'custom', h_label: t('common.labels.sort'), width: 80, align: 'center' },
+    { prop: 'updated_at', sortable: 'custom', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
 ])
 
 const itemColumns = computed<ProTableColumns<DictItem>>(() => [
-    { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
+    { prop: 'id', sortable: 'custom', h_label: t('common.labels.id'), width: 80, align: 'center' },
     { prop: 'label', h_label: t('system.dict.itemLabel'), minWidth: 160, overflow: true },
-    { prop: 'value', h_label: t('system.dict.itemValue'), minWidth: 120, overflow: true },
+    { prop: 'value', sortable: 'custom', h_label: t('system.dict.itemValue'), minWidth: 120, overflow: true },
     { prop: 'color', h_label: t('system.dict.color'), width: 120 },
     { prop: 'tag_type', h_label: t('system.dict.tagType'), width: 120 },
     {
@@ -614,8 +621,8 @@ const itemColumns = computed<ProTableColumns<DictItem>>(() => [
         type: 'tag',
         tag: commonStatusTagMap.value,
     },
-    { prop: 'sort', h_label: t('common.labels.sort'), width: 80, align: 'center' },
-    { prop: 'updated_at', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
+    { prop: 'sort', sortable: 'custom', h_label: t('common.labels.sort'), width: 80, align: 'center' },
+    { prop: 'updated_at', sortable: 'custom', h_label: t('common.labels.updatedAt'), width: 160, align: 'center' },
 ])
 
 onMounted(async () => {

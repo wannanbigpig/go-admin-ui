@@ -1,12 +1,12 @@
 <template>
     <div class="xl-left-content">
-        <div class="xl-refresh-btn xl-cursor-pointer" @click="handleRefresh">
+        <button type="button" class="xl-refresh-btn xl-cursor-pointer" :aria-label="t('layout.refreshPage')" :disabled="refreshStore.isRefreshing" @click="handleRefresh">
             <el-tooltip effect="dark" :content="t('layout.refreshPage')" placement="bottom" :enterable="false">
                 <el-icon size="24" :class="{ 'xl-refresh-icon': refreshStore.isRefreshing }">
                     <i-ep-refresh />
                 </el-icon>
             </el-tooltip>
-        </div>
+        </button>
         <div>
             <xl-breadcrumb />
         </div>
@@ -37,6 +37,13 @@ const handleRefresh = () => {
     align-items: center;
 
     .xl-refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
         width: 24px;
         height: 24px;
         margin-right: 10px;

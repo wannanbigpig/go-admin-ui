@@ -190,3 +190,5 @@ corepack pnpm run build:production
 ## 许可证
 
 [MIT](LICENSE)
+
+版本仅在 `package.json` 手工维护，兼容范围和升级说明入口在 `docs/release.json`。发布前运行 `pnpm run check:release`、`pnpm run test:release`；构建输出 `build-info.json`。后台与后端独立发布；官网不维护独立版本，API 文档可切换后端正式 Release，自动发现并核对配套后台 Tag，在线阅读对应资料；已发布版本与实际部署版本分别核对，详见 [版本与升级策略](docs/compatibility.md)。

@@ -20,7 +20,10 @@ export function useFileExport(options: UseFileExportOptions) {
 
     const handleExportList = async () => {
         const params = buildFileQueryParams(options.queryWhere, options.selectedCategory.value, options.selectedFolderId.value, options.dateRange.value)
-        const payload = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page' && key !== 'per_page')) as SystemFileExportPayload
+        const payload = {
+            ...Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page' && key !== 'per_page')),
+            limit: 50_000,
+        } as SystemFileExportPayload
 
         await submitExportTask({
             loading: exporting,

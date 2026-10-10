@@ -21,7 +21,8 @@ vi.mock('vue-i18n', async (importOriginal) => ({
             if (key === 'log.request.changeCreated') return `${params?.label} 设置为 ${params?.after}`
             if (key === 'log.request.changeRemoved') return `${params?.label} 已移除（原值 ${params?.before}）`
             if (key === 'log.request.changeProtected') return `${params?.label} 已更新`
-            if (key === 'log.request.changeOmitted') return `另有 ${params?.count} 项受保护变更`
+            if (key === 'log.request.changeOmitted') return `另有 ${params?.count} 项变更未在个人日志中展示`
+            if (key === 'log.request.changeCount') return `${params?.count} 项变更`
             if (key === 'log.request.changeSeparator') return '；'
             if (key === 'log.request.viewedOperation') return `查看了${params?.operation}`
             if (key === 'log.request.executedWithoutChange') return `执行了${params?.operation}，未记录字段变更`
@@ -60,6 +61,7 @@ vi.mock('@/modules/log/useRequestLogPage', () => ({
                         { label: '状态', change_type: 'updated', before_text: '禁用', after_text: '启用' },
                         { label: '密码', change_type: 'changed' },
                         { label: '已删除文件（ID 8）', change_type: 'action' },
+                        { label: '角色名称', change_type: 'created', after_text: '但是' },
                     ],
                     omitted_count: 1,
                 },
@@ -106,7 +108,35 @@ const ProTableStub = defineComponent({
                 slots.td?.({
                     item: { prop: 'change_summary' },
                     val: null,
-                    row: { id: 1, method: 'GET', operation_name: '用户列表', operation_status: 0, created_at: '2026-09-16 20:30:00' },
+                    row: {
+                        id: 1,
+                        method: 'POST',
+                        operation_name: '新增角色',
+                        operation_status: 0,
+                        created_at: '2026-09-16 20:30:00',
+                        change_summary: {
+                            has_changes: true,
+                            items: [
+                                { label: '角色ID', change_type: 'created', after_text: '2' },
+                                { label: '角色名称', change_type: 'created', after_text: '但是' },
+                            ],
+                            omitted_count: 0,
+                        },
+                    },
+                }),
+                slots.td?.({
+                    item: { prop: 'change_summary' },
+                    val: null,
+                    row: {
+                        id: 2,
+                        method: 'POST',
+                        operation_name: '刷新菜单权限缓存',
+                        change_summary: {
+                            has_changes: true,
+                            items: [{ label: '已刷新菜单权限缓存', change_type: 'action' }],
+                            omitted_count: 0,
+                        },
+                    },
                 }),
                 slots.operation?.(),
             ])
@@ -223,8 +253,14 @@ describe('personal request-log page', () => {
         expect(wrapper.text()).not.toContain('private-jwt-id')
         expect(wrapper.text()).not.toContain('private-response-body')
         expect(wrapper.text()).not.toContain('raw-secret')
-        expect(wrapper.text()).toContain('2026-09-16 20:30:00，状态 从 禁用 改为 启用；密码 已更新；已删除文件（ID 8）；另有 1 项受保护变更')
-        expect(wrapper.text()).toContain('查看了用户列表')
+        expect(wrapper.findAll('[data-testid="self-list-summary"]').map((item) => item.text())).toEqual(['2 项变更', '已刷新菜单权限缓存'])
+        expect(wrapper.findAll('[data-testid="self-change-summary"] li').map((item) => item.text())).toEqual([
+            '状态 从 禁用 改为 启用',
+            '密码 已更新',
+            '已删除文件（ID 8）',
+            '角色名称 设置为 但是',
+        ])
+        expect(wrapper.text()).toContain('另有 1 项变更未在个人日志中展示')
         expect(mocks.getAdminUserOptions).not.toHaveBeenCalled()
         expect(mocks.openDetailDrawer).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }))
     })
@@ -280,7 +316,7 @@ describe('personal request-log page', () => {
         expect(wrapper.text()).not.toContain('private-jwt-id')
         expect(wrapper.text()).not.toContain('private-response-body')
         expect(wrapper.text()).not.toContain('raw-secret')
-        expect(wrapper.text()).not.toContain('2026-09-16 20:30:00，状态 从 禁用 改为 启用；密码 已更新；已删除文件（ID 8）；另有 1 项受保护变更')
+        expect(wrapper.text()).not.toContain('角色名称 设置为 但是')
         expect(mocks.handleReset).toHaveBeenCalledTimes(1)
     })
 })

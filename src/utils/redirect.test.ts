@@ -6,6 +6,8 @@ describe('utils/redirect.ts', () => {
         expect(normalizeRedirectPath('/dashboard')).toBe('/dashboard')
         expect(normalizeRedirectPath('//evil.example')).toBe('/')
         expect(normalizeRedirectPath('https://evil.example')).toBe('/')
+        expect(normalizeRedirectPath('/login', '/fallback')).toBe('/fallback')
+        expect(normalizeRedirectPath('/login?redirect=%2Flogin', '/fallback')).toBe('/fallback')
         expect(normalizeRedirectPath(undefined, '/fallback')).toBe('/fallback')
     })
 })

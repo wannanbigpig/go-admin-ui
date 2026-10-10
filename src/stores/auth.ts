@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, getActivePinia } from 'pinia'
 import { fetchCurrentUser, fetchUserMenuTree, loginWithCredentials as submitLogin, loginWithSmsCode as submitSmsLogin } from '@/modules/auth/service'
 import { checkToken as checkTokenApi, refreshAccessToken as refreshAccessTokenApi, logout as logoutApi } from '@/api/auth'
 import { createEmptyUserInfo } from '@/modules/auth/model'
@@ -123,6 +123,7 @@ export const useAuthStore = defineStore(
             updateToken(result.access_token, result.expires_at)
             try {
                 await refreshUserInfo({ force: true })
+                tokenCheckedKey.value = `${result.access_token}:${result.expires_at}`
             } catch (error) {
                 Logger.error('登录后刷新用户信息失败:', error)
                 resetAuthStore()
@@ -262,6 +263,15 @@ export const useAuthStore = defineStore(
             tokenRefreshPromise = null
             apiCache.clear()
             invalidateDictOptionsCache()
+            try {
+                const pinia = getActivePinia()
+                const existingNotificationStore = pinia && (pinia as unknown as { _s?: Map<string, { stop?: () => void }> })._s?.get('notification')
+                if (existingNotificationStore && typeof existingNotificationStore.stop === 'function') {
+                    existingNotificationStore.stop()
+                }
+            } catch {
+                // ignore
+            }
             localStorage.removeItem(AUTH_PERSIST_KEY)
             removeDynamicRoute()
         }

@@ -27,6 +27,8 @@ interface UseListPageOptions<T, Q extends Record<string, unknown> & PaginationQu
     extraParams?: () => Record<string, unknown>
     queryFormRef?: Ref<FormInstance | undefined>
     defaultQuery?: Partial<Q>
+    /** 允许由表头触发的服务端排序字段，字段名须与接口白名单一致。 */
+    sortFields?: readonly string[]
     /**
      * fetcher 抛错时的回调。composable 内部已统一兜底返回空页结果并打印日志，
      * 业务层无需再写 try/catch。仅当需要额外提示/上报时使用。
@@ -69,6 +71,7 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
     extraParams,
     queryFormRef,
     defaultQuery,
+    sortFields,
     onError,
     onSuccess,
     delayFirstFetch = true,
@@ -78,16 +81,19 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
     const items = shallowRef<T[]>([])
     const isFirstFetch = ref(true)
     let requestVersion = 0
+    let sortBy = ''
+    let sortOrder = ''
 
     const buildParams = (): Q => {
         let base = query
         if (typeof transformParams === 'function') {
             base = transformParams(query)
         }
-        if (typeof extraParams === 'function') {
-            return { ...base, ...extraParams() } as Q
+        const params = typeof extraParams === 'function' ? { ...base, ...extraParams() } : { ...base }
+        if (sortBy && sortOrder) {
+            return { ...params, sort_by: sortBy, sort_order: sortOrder } as Q
         }
-        return base
+        return params as Q
     }
 
     const runFetch = async (): Promise<ListPageResult<T>> => {
@@ -156,6 +162,12 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
         await runFetch()
     }
 
+    const handleSortChange = async ({ prop, order }: { prop: string; order: 'ascending' | 'descending' | null }) => {
+        sortBy = order && sortFields?.includes(prop) ? prop : ''
+        sortOrder = sortBy ? (order === 'ascending' ? 'asc' : 'desc') : ''
+        await handleSearch()
+    }
+
     const handleReset = async (options: ResetOptions = {}) => {
         const { refetch = true } = options
 
@@ -182,6 +194,7 @@ export function useListPage<T = unknown, Q extends Record<string, unknown> & Pag
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
     }
 }

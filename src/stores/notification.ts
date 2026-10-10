@@ -233,7 +233,7 @@ function normalizeSocketPayload(rawPayload: NotificationSocketMessage): AppNotif
     }
 
     const eventType = String(payload.type || payload.event || '').toLowerCase()
-    if (eventType === 'ping' || eventType === 'pong' || eventType === 'message_read' || eventType === 'message_read_all') {
+    if (eventType === 'ping' || eventType === 'pong' || eventType === 'message_read' || eventType === 'message_read_all' || eventType === 'message_deleted') {
         return null
     }
 
@@ -254,16 +254,12 @@ function applyRealtimeReadState(payload: NotificationSocketMessage, list: AppNot
         if (!messageID) {
             return false
         }
-        const target = list.find((item) => item.id === String(messageID))
-        if (target) {
-            target.read = true
-        }
+        const index = list.findIndex((item) => item.id === String(messageID))
+        if (index >= 0) list.splice(index, 1)
         return true
     }
     if (eventType === 'message_read_all') {
-        list.forEach((item) => {
-            item.read = true
-        })
+        list.splice(0)
         return true
     }
     return false
@@ -317,6 +313,9 @@ export const useNotificationStore = defineStore(
         let currentLocale = 'zh-CN'
         let isStopping = false
         let connectionGeneration = 0
+        let listVersion = 0
+        let unreadCountRequestVersion = 0
+        let connectionAttempt = 0
 
         const hasUnread = computed(() => unreadCount.value > 0)
 
@@ -347,24 +346,25 @@ export const useNotificationStore = defineStore(
         }
 
         const upsertNotification = (notification: AppNotification, showToast = false) => {
+            listVersion++
             latestAnnouncement.value = `${notification.title}。${notification.message}`
             const existingIndex = notifications.value.findIndex((item) => item.id === notification.id)
+            if (notification.read) {
+                if (existingIndex >= 0) {
+                    notifications.value.splice(existingIndex, 1)
+                    unreadCount.value = Math.max(0, unreadCount.value - 1)
+                }
+                return
+            }
             if (existingIndex >= 0) {
                 const existing = notifications.value[existingIndex]
-                const nextRead = notification.read ? true : existing.read
-                if (existing.read && !nextRead) {
-                    unreadCount.value += 1
-                }
                 notifications.value.splice(existingIndex, 1, {
                     ...existing,
                     ...notification,
-                    read: nextRead,
                 })
             } else {
                 notifications.value.unshift(notification)
-                if (!notification.read) {
-                    unreadCount.value += 1
-                }
+                unreadCount.value += 1
                 if (notifications.value.length > NOTIFICATION_PANEL_LIMIT) {
                     notifications.value = notifications.value.slice(0, NOTIFICATION_PANEL_LIMIT)
                 }
@@ -391,9 +391,11 @@ export const useNotificationStore = defineStore(
 
         const refreshUnreadCount = async (requestGeneration = connectionGeneration) => {
             if (!currentToken) return
+            const requestVersion = ++unreadCountRequestVersion
+            const notificationVersion = listVersion
             try {
                 const result = await systemApi.getNotificationUnreadCount()
-                if (requestGeneration !== connectionGeneration || isStopping) return
+                if (requestGeneration !== connectionGeneration || requestVersion !== unreadCountRequestVersion || notificationVersion !== listVersion || isStopping) return
                 unreadCount.value = Math.max(0, Number(result?.unread_count ?? result?.count ?? 0))
             } catch (error) {
                 Logger.error('获取通知未读数失败:', error)
@@ -402,13 +404,15 @@ export const useNotificationStore = defineStore(
 
         const loadNotifications = async (requestGeneration = connectionGeneration) => {
             if (!currentToken) return
+            const requestVersion = listVersion
             listLoading.value = true
             try {
-                const response = await systemApi.getNotificationList({ page: 1, per_page: NOTIFICATION_PANEL_LIMIT })
-                if (requestGeneration !== connectionGeneration || isStopping) return
+                const response = await systemApi.getNotificationList({ page: 1, per_page: NOTIFICATION_PANEL_LIMIT, is_read: 0 })
+                if (requestGeneration !== connectionGeneration || requestVersion !== listVersion || isStopping) return
                 const normalized = normalizeListData<AppNotification>(response)
                 notifications.value = normalized.list
                     .map((item) => normalizeNotification(item as unknown as Record<string, unknown>))
+                    .filter((item) => !item.read)
                     .slice(0, NOTIFICATION_PANEL_LIMIT)
                     .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
             } catch (error) {
@@ -422,17 +426,19 @@ export const useNotificationStore = defineStore(
 
         const markRead = async (id: string) => {
             const requestGeneration = connectionGeneration
-            const target = notifications.value.find((item) => item.id === id)
-            if (target?.read) return true
+            const targetIndex = notifications.value.findIndex((item) => item.id === id)
+            const target = notifications.value[targetIndex]
             const persistedID = toPositiveInteger(id)
             if (!persistedID) {
                 if (!target) return false
-                target.read = true
+                listVersion++
+                notifications.value.splice(targetIndex, 1)
                 unreadCount.value = Math.max(0, unreadCount.value - 1)
                 return true
             }
             if (target) {
-                target.read = true
+                listVersion++
+                notifications.value.splice(targetIndex, 1)
                 unreadCount.value = Math.max(0, unreadCount.value - 1)
             }
             try {
@@ -447,26 +453,49 @@ export const useNotificationStore = defineStore(
                 if (requestGeneration !== connectionGeneration || isStopping) return false
                 Logger.error('标记通知已读失败:', error)
                 if (target) {
-                    target.read = false
+                    listVersion++
+                    notifications.value.splice(targetIndex, 0, target)
                     unreadCount.value += 1
                 }
                 return false
             }
         }
 
-        const markAllRead = async () => {
+        const deleteNotification = async (id: string) => {
+            const persistedID = toPositiveInteger(id)
+            if (!persistedID) return false
+            const requestGeneration = connectionGeneration
+            try {
+                const result = await systemApi.deleteNotification({ id: persistedID })
+                if (requestGeneration !== connectionGeneration || isStopping) return false
+                listVersion++
+                notifications.value = notifications.value.filter((item) => item.id !== id)
+                const nextUnread = Number(result.unread_count)
+                if (Number.isFinite(nextUnread)) unreadCount.value = Math.max(0, nextUnread)
+                return true
+            } catch (error) {
+                Logger.error('删除通知失败:', error)
+                return false
+            }
+        }
+
+        const markAllRead = async (): Promise<boolean> => {
             const requestGeneration = connectionGeneration
             const previous = notifications.value.map((item) => ({ ...item }))
             const previousUnread = unreadCount.value
-            notifications.value = notifications.value.map((item) => ({ ...item, read: true }))
+            listVersion++
+            notifications.value = []
             unreadCount.value = 0
             try {
                 await systemApi.markAllNotificationsRead()
+                return requestGeneration === connectionGeneration && !isStopping
             } catch (error) {
-                if (requestGeneration !== connectionGeneration || isStopping) return
+                if (requestGeneration !== connectionGeneration || isStopping) return false
                 Logger.error('全部标记已读失败:', error)
+                listVersion++
                 notifications.value = previous
                 unreadCount.value = previousUnread
+                return false
             }
         }
 
@@ -514,12 +543,22 @@ export const useNotificationStore = defineStore(
                 }
 
                 if (applyRealtimeReadState(payload, notifications.value)) {
+                    listVersion++
                     if (payload.unread_count != null) {
                         const unread = Number(payload.unread_count)
                         if (!Number.isNaN(unread) && unread >= 0) {
                             unreadCount.value = unread
                         }
                     }
+                    return
+                }
+
+                if (messageType === 'message_deleted' || eventType === 'message_deleted') {
+                    listVersion++
+                    const messageID = toPositiveInteger(payload.message_id ?? payload.id)
+                    if (messageID) notifications.value = notifications.value.filter((item) => item.id !== String(messageID))
+                    const nextUnread = Number(payload.unread_count)
+                    if (payload.unread_count != null && Number.isFinite(nextUnread)) unreadCount.value = Math.max(0, nextUnread)
                     return
                 }
 
@@ -573,6 +612,7 @@ export const useNotificationStore = defineStore(
             const requestGeneration = connectionGeneration
             const requestToken = currentToken
             const requestLocale = currentLocale
+            const refreshOnOpen = connectionAttempt++ > 0
 
             if (import.meta.env.DEV && (import.meta.env.VITE_ENABLE_MOCK === 'true' || import.meta.env.VITE_ENABLE_MOCK_FALLBACK === 'true')) {
                 connectionStatus.value = 'connected'
@@ -601,6 +641,10 @@ export const useNotificationStore = defineStore(
                     startHeartbeat()
                     // 重新订阅所有频道
                     resubscribeAllChannels()
+                    // 重连不会重放离线消息，需要重新读取持久化的未读状态。
+                    if (refreshOnOpen) {
+                        void Promise.all([loadNotifications(requestGeneration), refreshUnreadCount(requestGeneration)])
+                    }
                     latestAnnouncement.value = translate('layout.notification.connected') || '通知服务已连接'
                 }
                 nextSocket.onmessage = (event) => {
@@ -641,6 +685,7 @@ export const useNotificationStore = defineStore(
 
         const start = (token: string, locale: string) => {
             connectionGeneration++
+            connectionAttempt = 0
             currentToken = token
             currentLocale = locale
             initialized.value = true
@@ -658,6 +703,7 @@ export const useNotificationStore = defineStore(
 
         const stop = () => {
             connectionGeneration++
+            listVersion++
             isStopping = true
             currentToken = ''
             disconnect()
@@ -696,6 +742,7 @@ export const useNotificationStore = defineStore(
             loadNotifications,
             refreshUnreadCount,
             markRead,
+            deleteNotification,
             markAllRead,
             latestAnnouncement,
             start,

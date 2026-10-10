@@ -56,11 +56,11 @@ export function createAdminLoginLogQuery() {
     return {
         page: 1,
         per_page: 10,
-        username: null,
-        ip: null,
-        login_status: null,
-        start_time: null,
-        end_time: null,
+        username: null as string | null,
+        ip: null as string | null,
+        login_status: null as number | null,
+        start_time: null as string | null,
+        end_time: null as string | null,
     }
 }
 
@@ -68,11 +68,11 @@ export function createOnlineSessionQuery() {
     return {
         page: 1,
         per_page: 10,
-        uid: null,
-        username: null,
-        ip: null,
-        is_revoked: null,
-        start_time: null,
-        end_time: null,
+        uid: null as string | number | null,
+        username: null as string | null,
+        ip: null as string | null,
+        is_revoked: null as number | null,
+        start_time: null as string | null,
+        end_time: null as string | null,
     }
 }

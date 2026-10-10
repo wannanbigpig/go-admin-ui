@@ -1,19 +1,20 @@
 <template>
     <div class="storage-panel" :class="{ 'is-embedded': embedded }">
-        <div v-if="!embedded" class="storage-header">
-            <div>
-                <h3>{{ t('system.storage.title') }}</h3>
-                <p>{{ t('system.storage.description') }}</p>
+        <div v-if="!embedded" class="panel-header">
+            <div class="panel-title-wrapper">
+                <span class="panel-title-bar"></span>
+                <h3 class="panel-title">{{ t('system.storage.title') }}</h3>
             </div>
-            <div class="storage-actions">
-                <xl-action-button v-permission="'storage:test'" :text="t('system.storage.testConnection')" type="primary" :show-icon="false" :loading="testing" @click="handleTest" />
-                <xl-action-button v-permission="'storage:update'" :text="t('system.storage.save')" type="primary" :show-icon="false" :loading="saving" @click="handleSave" />
-            </div>
+            <p class="panel-description">{{ t('system.storage.description') }}</p>
         </div>
 
         <el-skeleton v-if="loading" animated :rows="10" />
 
-        <el-form v-else ref="formRef" :model="formData" :rules="formRules" :validate-on-rule-change="false" label-width="170px" class="storage-form">
+        <el-alert v-else-if="loadError" :title="t('system.storage.loadFailed')" type="error" :closable="false" show-icon>
+            <el-button @click="loadConfig">{{ t('common.actions.retry') }}</el-button>
+        </el-alert>
+
+        <el-form v-else-if="configLoaded" ref="formRef" :model="formData" :rules="formRules" :validate-on-rule-change="false" label-width="170px" class="storage-form">
             <el-form-item :label="t('system.storage.activeDriver')" prop="active_driver">
                 <el-radio-group v-model="formData.active_driver">
                     <el-radio-button v-for="item in driverOptions" :key="item.value" :value="item.value">
@@ -65,9 +66,9 @@
                 </el-col>
             </el-row>
 
-            <div class="storage-actions storage-actions-bottom" :class="{ 'is-embedded': embedded }">
-                <xl-action-button v-permission="'storage:test'" :text="t('system.storage.testConnection')" type="primary" :show-icon="false" :loading="testing" @click="handleTest" />
-                <xl-action-button v-permission="'storage:update'" :text="t('system.storage.save')" type="primary" :show-icon="false" :loading="saving" @click="handleSave" />
+            <div class="panel-actions-bottom">
+                <xl-action-button v-permission="'storage:test'" :text="t('system.storage.testConnection')" type="default" :show-icon="false" :loading="testing" :disabled="!configLoaded || loading || saving" @click="handleTest" />
+                <xl-action-button v-permission="'storage:update'" :text="t('system.storage.save')" type="primary" :show-icon="false" :loading="saving" :disabled="!configLoaded || loading || testing" @click="handleSave" />
             </div>
         </el-form>
     </div>
@@ -107,6 +108,8 @@ const createDefaultForm = (): StorageConfig => ({
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const configLoaded = ref(false)
+const loadError = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const allowedExtensionsText = ref('')
@@ -278,10 +281,14 @@ const validateForm = async () => {
 
 const loadConfig = async () => {
     loading.value = true
+    configLoaded.value = false
+    loadError.value = false
     try {
         const config = await fetchStorageConfig()
         applyConfig(config)
+        configLoaded.value = true
     } catch (error) {
+        loadError.value = true
         Logger.error('获取存储配置失败:', error)
     } finally {
         loading.value = false
@@ -289,6 +296,7 @@ const loadConfig = async () => {
 }
 
 const handleTest = async () => {
+    if (!configLoaded.value || loading.value || saving.value || testing.value) return
     if (!(await validateForm())) return
     testing.value = true
     try {
@@ -302,6 +310,7 @@ const handleTest = async () => {
 }
 
 const handleSave = async () => {
+    if (!configLoaded.value || loading.value || saving.value || testing.value) return
     if (!(await validateForm())) return
     saving.value = true
     try {
@@ -324,43 +333,61 @@ onMounted(() => {
 .storage-panel {
     padding: 20px;
     background-color: var(--xl-bg-color);
-    border-radius: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .storage-panel.is-embedded {
     padding: 0;
+    border-radius: 0;
     background-color: transparent;
+    border: none;
+    box-shadow: none;
 }
 
-.storage-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--xl-space-4);
-    margin-bottom: 18px;
+.panel-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
 
-    h3 {
-        margin: 0 0 6px;
-        font-size: var(--xl-font-xl);
-        font-weight: 600;
+    .panel-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
-    p {
+    .panel-title-bar {
+        width: 4px;
+        height: 18px;
+        background-color: var(--el-color-primary);
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .panel-title {
         margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1.4;
+        color: var(--el-text-color-primary);
+    }
+
+    .panel-description {
+        margin: 8px 0 0 14px;
+        font-size: 13px;
         color: var(--el-text-color-secondary);
         line-height: 1.5;
     }
 }
 
-.storage-actions {
+.panel-actions-bottom {
     display: flex;
-    gap: 10px;
-    flex-shrink: 0;
-}
-
-.storage-actions-bottom {
     justify-content: flex-end;
-    margin-top: 18px;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .storage-form {
@@ -371,15 +398,5 @@ onMounted(() => {
     font-size: 14px;
     font-weight: 600;
     color: var(--el-text-color-regular);
-}
-
-@media (max-width: 768px) {
-    .storage-header {
-        flex-direction: column;
-    }
-
-    .storage-actions {
-        width: 100%;
-    }
 }
 </style>

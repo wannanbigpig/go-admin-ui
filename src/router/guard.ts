@@ -77,14 +77,14 @@ export async function beforeEach(to: RouteLocationNormalized) {
             const matchedNotFound = to.name === ROUTE_NAME.NOT_FOUND || to.matched.some((route) => route.name === ROUTE_NAME.NOT_FOUND)
             const rootOnlyMatchedLayout = to.path === ROUTE_PATH.HOME && to.matched.length <= 1
             if (refreshedUserInfo && (matchedNotFound || rootOnlyMatchedLayout)) {
-                return { path: to.path, query: to.query, replace: true }
+                return { path: to.path, query: to.query, hash: to.hash, replace: true }
             }
         } else if (isEmpty(authStore.routerData)) {
             Logger.warn('路由数据为空，无法添加动态路由')
         } else {
             try {
                 addDynamicRoutes(authStore.routerData)
-                return { path: to.path, query: to.query, replace: true }
+                return { path: to.path, query: to.query, hash: to.hash, replace: true }
             } catch (error) {
                 Logger.error('添加动态路由失败:', error)
                 return { path: ROUTE_PATH.HOME }

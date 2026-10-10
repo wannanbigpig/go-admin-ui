@@ -6,13 +6,13 @@
     overflow: visible;
 
     .xl-main-inner {
-        width: calc(100% - $xl-main-inner-padding * 2);
+        width: 100%;
         background-color: var(--xl-main-bg-color);
-        padding: $xl-main-inner-padding;
-        min-height: calc(100vh - $xl-header-height - $xl-main-padding * 2 - $xl-main-inner-padding * 2);
+        padding: 0;
+        min-height: calc(100vh - $xl-header-height - $xl-main-padding * 2);
     }
 
     .xl-main-height {
-        height: calc(100vh - $xl-header-height - $xl-main-padding * 2 - $xl-main-inner-padding * 2);
+        height: calc(100vh - $xl-header-height - $xl-main-padding * 2);
     }
 }

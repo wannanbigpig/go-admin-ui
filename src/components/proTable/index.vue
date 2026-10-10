@@ -1,7 +1,7 @@
 <template>
     <div class="xl-pro-table">
         <!-- 内建搜索区（columns/search-schema 驱动）；若未配置则保留 search slot 入口 -->
-        <div v-if="hasBuiltinSearch || $slots.search" class="xl-container xl-m-bottom-10">
+        <div v-if="hasBuiltinSearch || $slots.search" class="xl-container xl-m-bottom-16">
             <slot v-if="$slots.search" name="search" />
             <el-form v-else ref="searchFormRef" class="xl-search-form" size="default" :model="localModel" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row :gutter="20">
@@ -13,13 +13,9 @@
                                 </el-select>
                             </template>
                             <template v-else-if="field.type === 'daterange'">
-                                <el-date-picker
-                                    v-model="localModel[field.prop]"
-                                    type="daterange"
-                                    range-separator="-"
-                                    :start-placeholder="t('common.date.start')"
-                                    :end-placeholder="t('common.date.end')"
-                                    value-format="YYYY-MM-DD"
+                                <xl-date-range-picker
+                                    :model-value="getDateRangeValue(localModel[field.prop])"
+                                    @update:model-value="(value) => (localModel[field.prop] = value)"
                                 />
                             </template>
                             <template v-else>
@@ -43,7 +39,7 @@
             </el-form>
         </div>
 
-        <div class="xl-container">
+        <div class="xl-container" :class="{ 'xl-pro-table__table-only': !$slots.actions && !$slots.toolbar && !$slots['list-header'] }">
             <div v-if="$slots.actions || $slots.toolbar" class="xl-pro-table__toolbar">
                 <div v-if="$slots.actions" class="xl-table-actions xl-pro-table__toolbar-actions">
                     <slot name="actions" />
@@ -51,6 +47,10 @@
                 <div v-if="$slots.toolbar" class="xl-pro-table__toolbar-main">
                     <slot name="toolbar" />
                 </div>
+            </div>
+
+            <div v-if="$slots['list-header']" class="xl-pro-table__list-header">
+                <slot name="list-header" />
             </div>
 
             <xl-table-list
@@ -101,6 +101,9 @@
                 <template #operation>
                     <slot name="operation" />
                 </template>
+                <template #empty>
+                    <slot name="empty" />
+                </template>
             </xl-table-list>
         </div>
     </div>
@@ -111,6 +114,7 @@ import { computed, ref, watch, reactive, getCurrentInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance } from 'element-plus'
 import xlTableList from '@/components/tableList/index.vue'
+import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import type { TableColumn } from '@/types/common'
 import type { ProTableColumns, ProTableSearchSchema, ProTableCellType, ProTableColumn } from './types'
 
@@ -239,6 +243,7 @@ const searchFields = computed<ProTableSearchSchema>(() => {
 const hasBuiltinSearch = computed(() => searchFields.value.length > 0)
 
 const localModel = reactive<Record<string, unknown>>({})
+const getDateRangeValue = (value: unknown): (string | Date)[] | null => (Array.isArray(value) ? value : null)
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> => {
     return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -375,13 +380,21 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
+.xl-pro-table__table-only {
+    padding-top: var(--xl-space-3);
+}
+
+.xl-pro-table__list-header {
+    margin-bottom: var(--xl-space-2);
+}
+
 .xl-pro-table__toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 16px;
+    margin-bottom: var(--xl-space-2);
+    padding-bottom: var(--xl-space-2);
     border-bottom: 1px dashed var(--el-border-color-lighter);
 }
 

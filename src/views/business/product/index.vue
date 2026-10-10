@@ -1,6 +1,6 @@
 <template>
     <div>
-        <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="productList" :pagination="pagination" @search="onSearch" @reset="handleReset">
+        <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="productList" :pagination="pagination" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
             <template #actions>
                 <xl-action-button v-permission="'product:create'" code="product:create" type="primary" :show-icon="false" @click="openCreateDrawer" />
             </template>
@@ -14,7 +14,15 @@
         </xl-pro-table>
 
         <!-- 产品表单抽屉 -->
-        <el-drawer v-model="showDrawer" :title="isEditMode ? t('product.editTitle') : t('product.addTitle')" size="40%">
+        <xl-drawer
+            v-model="showDrawer"
+            :title="isEditMode ? t('product.editTitle') : t('product.addTitle')"
+            :formRef="formRef"
+            :onConfirm="handleSubmit"
+            :isSubmitting="submitting"
+            :withReset="false"
+            size="md"
+        >
             <el-form ref="formRef" :model="formData" :rules="formRules" label-width="auto">
                 <el-form-item :label="t('product.name')" prop="name">
                     <el-input v-model.trim="formData.name" :placeholder="t('product.namePlaceholder')" />
@@ -35,11 +43,7 @@
                     <DeptTreeSelect v-model="formData.dept_id" :multiple="false" :placeholder="t('product.ownerDepartmentPlaceholder')" />
                 </el-form-item>
             </el-form>
-            <template #footer>
-                <el-button @click="showDrawer = false">{{ t('common.actions.cancel') }}</el-button>
-                <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ t('common.actions.confirm') }}</el-button>
-            </template>
-        </el-drawer>
+        </xl-drawer>
     </div>
 </template>
 
@@ -49,6 +53,7 @@ import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
+import xlDrawer from '@/components/drawer/index.vue'
 import DeptTreeSelect from '@/components/DeptTreeSelect.vue'
 import { getProductList, deleteProduct, type Product } from '@/api/product'
 import { useListPage } from '@/composables/useListPage'
@@ -57,6 +62,7 @@ import { useProductForm } from '@/modules/product/useProductForm'
 import { Logger } from '@/utils/logger'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import type { ProTableColumns } from '@/components/proTable/types'
 
 const authStore = useAuthStore()
 const { t } = useI18n()
@@ -75,9 +81,11 @@ const {
     pagination,
     getList,
     handleSearch,
+    handleSortChange,
     handleReset: resetProductList,
 } = useListPage<Product, typeof queryWhere>({
     query: queryWhere,
+    sortFields: ['id', 'name', 'price', 'created_at'],
     transformParams: (query) => ({
         ...query,
         name: query.name.trim() || '',
@@ -99,14 +107,14 @@ const formRules = computed<FormRules>(() => ({
 }))
 
 // 表格列定义
-const columns = computed(() => [
-    { prop: 'id', h_label: 'ID', width: 80 },
-    { prop: 'name', h_label: t('product.name'), label: t('product.name'), search: { type: 'input' as const, placeholder: t('product.namePlaceholder'), span: 6 } },
+const columns = computed<ProTableColumns<Product>>(() => [
+    { prop: 'id', sortable: 'custom', h_label: 'ID', width: 80 },
+    { prop: 'name', sortable: 'custom', h_label: t('product.name'), label: t('product.name'), search: { type: 'input' as const, placeholder: t('product.namePlaceholder'), span: 6 } },
     { prop: 'description', h_label: t('common.labels.description'), overflow: true },
-    { prop: 'price', h_label: t('product.price'), width: 100 },
+    { prop: 'price', sortable: 'custom', h_label: t('product.price'), width: 100 },
     { prop: 'status_name', h_label: t('common.labels.status'), width: 80 },
     { prop: 'dept_name', h_label: t('product.ownerDepartment'), width: 120 },
-    { prop: 'created_at', h_label: t('common.labels.createdAt'), width: 180 },
+    { prop: 'created_at', sortable: 'custom', h_label: t('common.labels.createdAt'), width: 180 },
 ])
 
 const actionButtons = computed<ActionButtonConfig<Product>[]>(() => [

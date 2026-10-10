@@ -4,7 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Logger } from '@/utils/logger'
 import { CONFIRM_DIALOG_TITLE } from '@/constants/messages'
 import type { PageData } from '@/types/common'
-import type { SystemFile, SystemFileFolder, SystemFileReference, SystemFileBatchDeleteResult } from '@/types/system'
+import type { SystemFile, SystemFileFolder, SystemFileReference, SystemFileBatchDeleteResult, SystemFileBatchDestroyResult } from '@/types/system'
 import {
     fetchSystemFileDetail,
     fetchSystemFileFolderStats,
@@ -32,6 +32,7 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
 
     const selectedFiles = ref<FileOperationItem[]>([])
     const selectedTrashFiles = ref<SystemFile[]>([])
+    const trashDestroyFailures = ref<NonNullable<SystemFileBatchDestroyResult['failures']>>([])
     const batchDeleting = ref(false)
     const batchTrashOperating = ref(false)
     const showMoveDialog = ref(false)
@@ -282,7 +283,8 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
                 per_page: trashPagination.pageSize,
                 is_deleted: 1,
             })) as PageData<SystemFile> & { page?: number; pageSize?: number }
-            trashList.value = result.list
+            // 保持数组引用，让表格按 row-key 清理已删除项并保留失败项的勾选。
+            trashList.value.splice(0, trashList.value.length, ...result.list)
             trashPagination.total = result.total
             trashPagination.page = result.page ?? trashPagination.page
             trashPagination.pageSize = result.pageSize ?? trashPagination.pageSize
@@ -296,6 +298,7 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
     }
 
     const openTrashDialog = () => {
+        trashDestroyFailures.value = []
         showTrashDialog.value = true
     }
 
@@ -303,6 +306,8 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         try {
             trashOperatingId.value = row.id
             await restoreSystemFileFromTrash(row.id)
+            trashDestroyFailures.value = trashDestroyFailures.value.filter((failure) => String(failure.id) !== String(row.id))
+            await loadFolderTree()
             ElMessage.success(t('system.file.restoreSuccess'))
             await loadTrashList()
             await getList()
@@ -422,6 +427,8 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
             batchTrashOperating.value = true
             const ids = selectedTrashFiles.value.map((item) => item.id)
             await restoreSystemFilesBatchFromTrash(ids)
+            trashDestroyFailures.value = []
+            await loadFolderTree()
             ElMessage.success(t('system.file.restoreSuccess'))
             selectedTrashFiles.value = []
             await loadTrashList()
@@ -442,9 +449,18 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
             await ElMessageBox.confirm(t('system.file.batchDestroyConfirm', { count: selectedTrashFiles.value.length }), t(CONFIRM_DIALOG_TITLE), { type: 'warning' })
             batchTrashOperating.value = true
             const ids = selectedTrashFiles.value.map((item) => item.id)
-            await destroySystemFilesBatchFromTrash(ids)
-            ElMessage.success(t('common.result.deleteSuccess'))
-            selectedTrashFiles.value = []
+            trashDestroyFailures.value = []
+            const result = await destroySystemFilesBatchFromTrash(ids)
+            trashDestroyFailures.value = result.failures || []
+            if (result.failed === 0) {
+                ElMessage.success(t('system.file.batchDestroySuccess', { count: result.destroyed }))
+            } else if (result.destroyed > 0) {
+                ElMessage.warning(t('system.file.batchDestroyPartial', { success: result.destroyed, failed: result.failed }))
+            } else {
+                ElMessage.error(t('system.file.batchDestroyFailed'))
+            }
+            const failedIds = new Set(trashDestroyFailures.value.map((failure) => String(failure.id)))
+            selectedTrashFiles.value = selectedTrashFiles.value.filter((file) => failedIds.has(String(file.id)))
             await loadTrashList()
         } catch (error) {
             if (error === 'cancel' || error === 'close') return
@@ -563,6 +579,7 @@ export function useFileOperations(options: { selectedFolderId: Ref<number | stri
         trashLoading,
         trashPagination,
         selectedTrashFiles,
+        trashDestroyFailures,
         batchTrashOperating,
         showDeleteConfirmDialog,
         deleteConfirmLoading,

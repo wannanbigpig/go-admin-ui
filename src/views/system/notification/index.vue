@@ -1,7 +1,7 @@
 <template>
     <div class="notification-center-page">
         <!-- 顶部搜索表单 -->
-        <div class="xl-container xl-m-bottom-10">
+        <div class="xl-container xl-m-bottom-16">
             <el-form ref="queryFormRef" class="xl-search-form" :model="queryParams" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="notificationSearchForm" :gutter="20">
                     <el-col :span="5">
@@ -63,11 +63,16 @@
                             v-for="item in list"
                             :key="item.id"
                             class="notification-item"
+                            role="button"
+                            tabindex="0"
+                            :aria-pressed="selectedNotification?.id === item.id"
                             :class="{
                                 'is-unread': !item.read,
                                 'is-active': selectedNotification?.id === item.id,
                             }"
                             @click="selectNotification(item)"
+                            @keydown.enter="selectNotification(item)"
+                            @keydown.space.prevent="selectNotification(item)"
                         >
                             <div class="item-badge-dot" v-if="!item.read" />
                             <div class="item-main">
@@ -118,9 +123,10 @@
                                     <el-icon><i-ep-clock /></el-icon>
                                     {{ formatDateTime(selectedNotification.created_at) }}
                                 </span>
-                                <el-button v-if="!selectedNotification.read" type="primary" plain size="small" class="mark-read-btn" @click="handleMarkRead(selectedNotification)">{{
+                                <el-button v-if="!selectedNotification.read" type="default" size="default" class="mark-read-btn" @click="handleMarkRead(selectedNotification)">{{
                                     t('system.notification.markRead')
                                 }}</el-button>
+                                <el-button type="danger" link size="default" @click="handleDelete(selectedNotification)">{{ t('common.actions.delete') }}</el-button>
                             </div>
                             <h2 class="detail-title">{{ selectedNotification.title }}</h2>
                         </div>
@@ -144,15 +150,15 @@
         </div>
 
         <!-- 移动端适配：抽屉详情展示 -->
-        <el-drawer v-model="drawerVisible" direction="rtl" size="85%" :with-header="false" class="notification-mobile-drawer">
+        <el-drawer v-model="drawerVisible" :title="selectedNotification?.title || t('layout.notification.title')" direction="rtl" size="var(--xl-drawer-md)" :with-header="false" class="notification-mobile-drawer">
             <div v-if="selectedNotification" class="detail-content mobile-detail">
-                <div class="drawer-close-btn" role="button" tabindex="0" aria-label="Close" @click="drawerVisible = false" @keydown.enter="drawerVisible = false">
+                <div class="drawer-close-btn" role="button" tabindex="0" :aria-label="t('common.actions.close')" @click="drawerVisible = false" @keydown.enter="drawerVisible = false" @keydown.space.prevent="drawerVisible = false">
                     <el-icon size="20"><i-ep-close /></el-icon>
                 </div>
 
                 <div class="detail-header">
                     <div class="detail-meta">
-                        <el-tag size="small" effect="plain" :type="getCategoryTagType(selectedNotification.category)">
+                        <el-tag size="default" effect="plain" :type="getCategoryTagType(selectedNotification.category)">
                             {{ getCategoryLabel(selectedNotification.category) }}
                         </el-tag>
                         <span class="detail-time">{{ formatDateTime(selectedNotification.created_at) }}</span>
@@ -165,10 +171,11 @@
                 </div>
 
                 <div class="detail-footer-actions">
-                    <el-button v-if="!selectedNotification.read" type="primary" plain size="default" @click="handleMarkRead(selectedNotification)">{{ t('system.notification.markRead') }}</el-button>
+                    <el-button v-if="!selectedNotification.read" :type="selectedNotification.action_url ? 'default' : 'primary'" size="default" @click="handleMarkRead(selectedNotification)">{{ t('system.notification.markRead') }}</el-button>
                     <el-button v-if="selectedNotification.action_url" type="primary" size="default" @click="handleActionClick(selectedNotification)">
                         {{ selectedNotification.action_label || t('system.notification.goHandle') }}
                     </el-button>
+                    <el-button type="danger" plain size="default" @click="handleDelete(selectedNotification)">{{ t('common.actions.delete') }}</el-button>
                 </div>
             </div>
         </el-drawer>
@@ -178,7 +185,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import { useNotificationStore, normalizeNotification } from '@/stores/notification'
 import { getNotificationList } from '@/api/system'
@@ -321,10 +328,8 @@ const fetchList = async () => {
             const found = list.value.find((item) => item.id === selectedNotification.value?.id)
             if (found) {
                 selectedNotification.value = found
-            } else if (!selectedNotification.value) {
-                if (window.innerWidth > 768) {
-                    selectedNotification.value = list.value[0]
-                }
+            } else {
+                selectedNotification.value = window.innerWidth > 768 ? list.value[0] : null
             }
         } else {
             selectedNotification.value = null
@@ -363,7 +368,28 @@ const handleMarkRead = async (item: AppNotification) => {
     const success = await notificationStore.markRead(item.id)
     if (!success) {
         item.read = previousRead
+    } else if (queryParams.is_read === 0) {
+        await fetchList()
     }
+}
+
+const handleDelete = async (item: AppNotification) => {
+    try {
+        await ElMessageBox.confirm(t('system.notification.deleteConfirmMessage'), t('common.confirm.title'), {
+            confirmButtonText: t('common.actions.confirm'),
+            cancelButtonText: t('common.actions.cancel'),
+            type: 'warning',
+        })
+    } catch {
+        return
+    }
+
+    if (!(await notificationStore.deleteNotification(item.id))) return
+    if (selectedNotification.value?.id === item.id) selectedNotification.value = null
+    drawerVisible.value = false
+    if (list.value.length === 1 && queryParams.page > 1) queryParams.page -= 1
+    await fetchList()
+    ElMessage.success(t('common.result.deleteSuccess'))
 }
 
 const handleActionClick = async (item: AppNotification) => {
@@ -377,7 +403,21 @@ const handleActionClick = async (item: AppNotification) => {
 
 const handleMarkAllRead = async () => {
     try {
-        await notificationStore.markAllRead()
+        await ElMessageBox.confirm(
+            t('system.notification.markAllConfirmMessage'),
+            t('common.confirm.title'),
+            {
+                confirmButtonText: t('common.actions.confirm'),
+                cancelButtonText: t('common.actions.cancel'),
+                type: 'warning',
+            }
+        )
+    } catch {
+        return
+    }
+
+    try {
+        if (!(await notificationStore.markAllRead())) return
         list.value = list.value.map((item) => ({ ...item, read: true }))
         if (selectedNotification.value) {
             selectedNotification.value.read = true

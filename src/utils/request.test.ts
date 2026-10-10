@@ -259,6 +259,22 @@ describe('utils/request.ts', () => {
         })
     })
 
+    it('保留分页响应附带的全量状态汇总', () => {
+        expect(normalizeApiData({
+            data: [{ id: 2 }],
+            total: 1,
+            current_page: 1,
+            per_page: 10,
+            summary: { total: 3, pending: 2 },
+        })).toEqual({
+            list: [{ id: 2 }],
+            total: 1,
+            page: 1,
+            pageSize: 10,
+            summary: { total: 3, pending: 2 },
+        })
+    })
+
     it('响应拦截器遇到业务 401 应刷新 access token 并重放请求', async () => {
         hoisted.mockAuthStore.refreshAccessToken.mockResolvedValueOnce('new-access-token')
         hoisted.mockService.request.mockResolvedValueOnce({ id: 1 })
@@ -310,6 +326,17 @@ describe('utils/request.ts', () => {
             })
         ).resolves.toEqual({ ok: true })
         expect(hoisted.mockAuthStore.refreshAccessToken).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+        { message: 'Network Error' },
+        { code: 'ECONNABORTED', message: 'timeout of 10000ms exceeded' },
+        { message: 'Bad Gateway', response: { status: 502, data: '<html>Bad Gateway</html>' } },
+    ])('silent 应静默传输错误并保持拒绝: $message', async (failure) => {
+        const error = { ...failure, config: { silent: true } }
+        const onRejected = getCallback(hoisted.callbacks.responseOnRejected, 'responseOnRejected')
+        await expect(onRejected(error)).rejects.toBe(error)
+        expect(ElMessage).not.toHaveBeenCalled()
     })
 
     it('响应错误拦截器应处理网络错误、超时和兜底错误', async () => {

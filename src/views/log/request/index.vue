@@ -110,12 +110,12 @@
             <template #actions>
                 <template v-if="!isSelfMode">
                     <xl-action-button v-permission="'requestLog:export'" type="primary" :show-icon="false" :text="t('log.request.export')" :loading="exporting" @click="exportCsv" />
-                    <xl-action-button v-permission="'requestLog:maskConfig'" type="primary" :show-icon="false" :text="t('log.request.maskConfig')" @click="openMaskConfigDialog" />
+                    <xl-action-button v-permission="'requestLog:maskConfig'" type="default" :show-icon="false" :text="t('log.request.maskConfig')" @click="openMaskConfigDialog" />
                 </template>
             </template>
 
             <template #td="{ item, val, row }">
-                <span v-if="item.prop === 'change_summary'" class="self-list-summary" data-testid="self-list-summary">
+                <span v-if="item.prop === 'change_summary'" class="self-list-summary" data-testid="self-list-summary" :title="formatSelfOperationSummary(row)">
                     {{ formatSelfOperationSummary(row) }}
                 </span>
                 <div v-else-if="item.prop === 'self_terminal'" class="self-terminal">
@@ -165,7 +165,7 @@
         </xl-pro-table>
 
         <!-- 详情抽屉 -->
-        <el-drawer v-model="showDetailDrawer" :title="t('log.request.detailTitle')" direction="rtl" size="50%">
+        <el-drawer v-model="showDetailDrawer" :title="t('log.request.detailTitle')" direction="rtl" size="min(100vw, var(--xl-drawer-lg))">
             <div v-loading="detailLoading" :element-loading-text="t('log.request.loadingText')" class="detail-content">
                 <template v-if="currentDetail">
                     <el-descriptions :column="2" border>
@@ -208,7 +208,15 @@
 
                     <section v-if="selfDetail?.change_summary?.has_changes" class="self-change-summary">
                         <div class="self-change-summary__title">{{ t('log.request.changeSummary') }}</div>
-                        <p data-testid="self-change-summary">{{ formatSelfChangeSummary(selfDetail) }}</p>
+                        <ul class="self-change-summary__items" data-testid="self-change-summary">
+                            <li v-for="(item, index) in selfDetail.change_summary.items" :key="index">{{ formatSelfChangeItem(item) }}</li>
+                        </ul>
+                        <p v-if="selfDetail.change_summary.omitted_count" class="self-change-summary__note">
+                            {{ t('log.request.changeOmitted', { count: selfDetail.change_summary.omitted_count }) }}
+                        </p>
+                        <p v-if="!selfDetail.change_summary.items.length && !selfDetail.change_summary.omitted_count" class="self-change-summary__note">
+                            {{ t('log.request.changeUnknown') }}
+                        </p>
                     </section>
 
                     <el-divider v-if="adminDetail" />
@@ -255,7 +263,7 @@ import { Logger } from '@/utils/logger'
 import { EXECUTION_TIME_SCOPE_ALL_VALUE, EXECUTION_TIME_SCOPE_FILTER_OPTIONS, LOG_METHOD_OPTIONS, REQUEST_KIND_ALL_VALUE, REQUEST_KIND_FILTER_OPTIONS } from '@/modules/log/model'
 import { parseRequestLogRouteQuery } from '@/modules/dashboard/activity'
 import type { TableColumn } from '@/types/common'
-import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogSelfDetail, RequestLogSelfScope } from '@/types/log'
+import type { ExecutionTimeScope, RequestKind, RequestLog, RequestLogChangeSummaryItem, RequestLogSelfDetail, RequestLogSelfScope } from '@/types/log'
 import { useI18n } from 'vue-i18n'
 
 const props = withDefaults(
@@ -399,43 +407,30 @@ const getExecutionTimeScopeText = (scope?: ExecutionTimeScope) => {
 
 const normalizeChangeText = (value?: string) => value?.trim() || t('log.request.changeUnset')
 
-const formatSelfChangeSummary = (detail: Pick<RequestLogSelfDetail, 'change_summary' | 'created_at'>, includeTime = true) => {
-    const summary = detail.change_summary
-    if (!summary?.has_changes) return ''
-
-    const changes = summary.items.map((item) => {
-        const label = item.label.trim() || t('log.request.changeUnknownField')
-        switch (item.change_type) {
-            case 'created':
-                return t('log.request.changeCreated', { label, after: normalizeChangeText(item.after_text) })
-            case 'updated':
-                return t('log.request.changeUpdated', {
-                    label,
-                    before: normalizeChangeText(item.before_text),
-                    after: normalizeChangeText(item.after_text),
-                })
-            case 'removed':
-                return t('log.request.changeRemoved', { label, before: normalizeChangeText(item.before_text) })
-            case 'action':
-                return label
-            default:
-                return t('log.request.changeProtected', { label })
-        }
-    })
-
-    if (summary.omitted_count > 0) {
-        changes.push(t('log.request.changeOmitted', { count: summary.omitted_count }))
+const formatSelfChangeItem = (item: RequestLogChangeSummaryItem) => {
+    const label = item.label.trim() || t('log.request.changeUnknownField')
+    switch (item.change_type) {
+        case 'created':
+            return t('log.request.changeCreated', { label, after: normalizeChangeText(item.after_text) })
+        case 'updated':
+            return t('log.request.changeUpdated', { label, before: normalizeChangeText(item.before_text), after: normalizeChangeText(item.after_text) })
+        case 'removed':
+            return t('log.request.changeRemoved', { label, before: normalizeChangeText(item.before_text) })
+        case 'action':
+            return label
+        default:
+            return t('log.request.changeProtected', { label })
     }
-    if (changes.length === 0) {
-        changes.push(t('log.request.changeUnknown'))
-    }
-    const text = changes.join(t('log.request.changeSeparator'))
-    return includeTime ? t('log.request.changeSummaryAt', { time: detail.created_at || '-', changes: text }) : text
 }
 
 const formatSelfOperationSummary = (row: RequestLog) => {
-    const changeText = formatSelfChangeSummary(row, false)
-    if (changeText) return changeText
+    const summary = row.change_summary
+    if (summary?.has_changes) {
+        if (summary.items.length === 1 && summary.omitted_count === 0 && summary.items[0].change_type === 'action') {
+            return summary.items[0].label
+        }
+        return t('log.request.changeCount', { count: summary.items.length + summary.omitted_count })
+    }
     if (row.method?.toUpperCase() === 'GET') return t('log.request.viewedOperation', { operation: row.operation_name || t('log.request.unknownOperation') })
     return t('log.request.executedWithoutChange', { operation: row.operation_name || t('log.request.unknownOperation') })
 }
@@ -531,7 +526,6 @@ const tableTitle = computed(() => {
     width: 100%;
 }
 .detail-content {
-    padding: var(--xl-space-5);
     .json-content {
         background-color: var(--el-fill-color-light);
         padding: 15px;
@@ -556,11 +550,33 @@ const tableTitle = computed(() => {
         font-weight: 600;
     }
 
-    p {
+    &__items {
+        display: grid;
+        gap: var(--xl-space-2);
         margin: 0;
-        line-height: 1.7;
-        overflow-wrap: anywhere;
+        padding: 0;
+        list-style: none;
+
+        li {
+            padding: var(--xl-space-2) var(--xl-space-3);
+            border-radius: var(--xl-radius-sm);
+            background: var(--el-bg-color);
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
     }
+
+    &__note {
+        margin: var(--xl-space-2) 0 0;
+        color: var(--el-text-color-secondary);
+    }
+}
+
+.self-list-summary {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .self-terminal {

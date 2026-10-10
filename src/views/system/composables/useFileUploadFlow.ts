@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useFileUpload, type UploadTask } from '@/composables/useFileUpload'
@@ -25,6 +25,8 @@ export const buildFolderIndexKey = (parentId: number | string | null | undefined
 export const isSameUploadTaskBatch = (currentTasks: UploadTask[], expectedTasks: UploadTask[]) =>
     currentTasks.length === expectedTasks.length && expectedTasks.every((task, index) => currentTasks[index]?.id === task.id)
 
+const MAX_PARALLEL_FOLDER_CREATES = 5
+
 const isExternalFileDragEvent = (event?: DragEvent) => {
     const types = Array.from(event?.dataTransfer?.types || [])
     return types.includes('Files')
@@ -36,8 +38,26 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
     const uploadDirectoryInputRef = ref<HTMLInputElement>()
     const isDraggingUpload = ref(false)
     const uploadQueueExpanded = ref(false)
+    const preparingDirectory = ref(false)
+    const retryingUpload = ref(false)
+    const folderPathsByTaskId = new Map<string, string>()
 
     const { uploadTasks, uploading, uploadFinishedCount, uploadFinished, createUploadTask, uploadOneTask, runUploadQueue, clearTasks } = useFileUpload()
+
+    const uploadBusy = () => uploading.value || preparingDirectory.value || retryingUpload.value
+    const rejectConcurrentUpload = () => {
+        if (!uploadBusy()) return false
+        ElMessage.warning(t('system.file.uploadInProgress'))
+        return true
+    }
+
+    const preventUnloadDuringUpload = (event: BeforeUnloadEvent) => {
+        if (!uploadBusy()) return
+        event.preventDefault()
+        event.returnValue = ''
+    }
+    onMounted(() => window.addEventListener('beforeunload', preventUnloadDuringUpload))
+    onBeforeUnmount(() => window.removeEventListener('beforeunload', preventUnloadDuringUpload))
 
     const toggleUploadQueueExpanded = () => {
         uploadQueueExpanded.value = !uploadQueueExpanded.value
@@ -64,6 +84,8 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
 
     const uploadFilesInQueue = async (files: File[]) => {
         if (files.length === 0) return
+        if (rejectConcurrentUpload()) return
+        folderPathsByTaskId.clear()
         const uploadOptions = { folderId: options.selectedFolderId.value, enableMultipart: true }
         const currentTasks = files.map((file) => createUploadTask(file, { uploadOptions }))
         uploadTasks.value = currentTasks
@@ -83,15 +105,39 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
 
     const retryUploadTask = async (task: UploadTask) => {
         if (task.status !== 'error') return
-        await uploadOneTask(task, task.uploadOptions)
-        if (!uploadTasks.value.some((item) => item.id === task.id)) return
-        await options.getList()
-        if (uploadTasks.value.length > 0 && uploadTasks.value.every((item) => item.status === 'success' || item.status === 'reuse')) {
-            showUploadSummary(uploadTasks.value)
-            const snapshot = uploadTasks.value
-            window.setTimeout(() => {
-                if (uploadTasks.value === snapshot && !uploading.value) clearTasks()
-            }, 1200)
+        if (rejectConcurrentUpload()) return
+        retryingUpload.value = true
+        try {
+            const relativeFolderPath = folderPathsByTaskId.get(task.id)
+            if (relativeFolderPath && task.folderId === undefined) {
+                try {
+                    await options.loadFolderTree()
+                    task.folderId = await ensureFolderPathExists(
+                        relativeFolderPath,
+                        task.uploadOptions?.folderId ?? null,
+                        buildFolderIndex(options.folderTree.value as FolderTreeNode[]),
+                        new Map([['', task.uploadOptions?.folderId ?? null]]),
+                        new Map()
+                    )
+                } catch (error) {
+                    task.error = t('system.file.uploadFolderFailed')
+                    Logger.error('重试创建上传目录失败:', error)
+                    return
+                }
+            }
+            await uploadOneTask(task, task.uploadOptions)
+            const currentTask = uploadTasks.value.find((item) => item.id === task.id)
+            if (!currentTask) return
+            if (currentTask.status === 'success' || currentTask.status === 'reuse') await options.getList()
+            if (uploadTasks.value.length > 0 && uploadTasks.value.every((item) => item.status === 'success' || item.status === 'reuse')) {
+                showUploadSummary(uploadTasks.value)
+                const snapshot = uploadTasks.value
+                window.setTimeout(() => {
+                    if (uploadTasks.value === snapshot && !uploading.value) clearTasks()
+                }, 1200)
+            }
+        } finally {
+            retryingUpload.value = false
         }
     }
 
@@ -113,11 +159,6 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
         const relativePath = typeof (file as File & { webkitRelativePath?: string }).webkitRelativePath === 'string' ? String((file as File & { webkitRelativePath?: string }).webkitRelativePath) : ''
         if (!relativePath.includes('/')) return ''
         return relativePath.split('/').slice(0, -1).join('/')
-    }
-
-    const extractRelativeDisplayName = (file: File) => {
-        const relativePath = typeof (file as File & { webkitRelativePath?: string }).webkitRelativePath === 'string' ? String((file as File & { webkitRelativePath?: string }).webkitRelativePath) : ''
-        return relativePath || file.name
     }
 
     const ensureFolderPathExists = async (
@@ -193,51 +234,66 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
 
     const uploadDirectoryInQueue = async (files: File[]) => {
         if (files.length === 0) return
+        if (rejectConcurrentUpload()) return
+        preparingDirectory.value = true
 
-        const baseFolderId = options.selectedFolderId.value
-        await options.loadFolderTree()
-        const folderIndex = buildFolderIndex(options.folderTree.value as FolderTreeNode[])
-        const createdPathIds = new Map<string, number | string | null>([['', baseFolderId]])
-        const pendingPathIds = new Map<string, Promise<number | string | null>>()
-        const relativeFolderPaths = Array.from(new Set(files.map(extractRelativeFolderPath).filter(Boolean))).sort((left, right) => left.split('/').length - right.split('/').length)
+        try {
+            const baseFolderId = options.selectedFolderId.value
+            await options.loadFolderTree()
+            const folderIndex = buildFolderIndex(options.folderTree.value as FolderTreeNode[])
+            const createdPathIds = new Map<string, number | string | null>([['', baseFolderId]])
+            const pendingPathIds = new Map<string, Promise<number | string | null>>()
+            const uploadOptions = { folderId: baseFolderId, enableMultipart: true }
+            const currentTasks = files.map((file) => createUploadTask(file, { name: file.name, uploadOptions }))
+            folderPathsByTaskId.clear()
+            currentTasks.forEach((task, index) => folderPathsByTaskId.set(task.id, extractRelativeFolderPath(files[index])))
+            uploadTasks.value = currentTasks
+            uploadQueueExpanded.value = false
 
-        const byDepth = new Map<number, string[]>()
-        for (const p of relativeFolderPaths) {
-            const depth = p.split('/').length
-            if (!byDepth.has(depth)) byDepth.set(depth, [])
-            byDepth.get(depth)!.push(p)
-        }
-        for (const paths of [...byDepth.values()].sort((a, b) => a[0].split('/').length - b[0].split('/').length)) {
-            await Promise.all(paths.map((p) => ensureFolderPathExists(p, baseFolderId, folderIndex, createdPathIds, pendingPathIds)))
-        }
+            const relativeFolderPaths = Array.from(new Set(files.map(extractRelativeFolderPath).filter(Boolean))).sort((left, right) => left.split('/').length - right.split('/').length)
+            const byDepth = new Map<number, string[]>()
+            for (const path of relativeFolderPaths) {
+                const depth = path.split('/').length
+                if (!byDepth.has(depth)) byDepth.set(depth, [])
+                byDepth.get(depth)!.push(path)
+            }
+            for (const paths of [...byDepth.values()].sort((a, b) => a[0].split('/').length - b[0].split('/').length)) {
+                for (let offset = 0; offset < paths.length; offset += MAX_PARALLEL_FOLDER_CREATES) {
+                    const batch = paths.slice(offset, offset + MAX_PARALLEL_FOLDER_CREATES)
+                    const results = await Promise.allSettled(batch.map((path) => ensureFolderPathExists(path, baseFolderId, folderIndex, createdPathIds, pendingPathIds)))
+                    results.forEach((result, index) => {
+                        if (result.status === 'rejected') Logger.error(`创建上传目录 ${batch[index]} 失败:`, result.reason)
+                    })
+                }
+            }
 
-        const uploadOptions = { enableMultipart: true }
-        const currentTasks = [] as ReturnType<typeof createUploadTask>[]
-        for (const file of files) {
-            const relativeFolderPath = extractRelativeFolderPath(file)
-            const targetFolderId = relativeFolderPath ? (createdPathIds.get(relativeFolderPath) ?? baseFolderId) : baseFolderId
-            currentTasks.push(
-                createUploadTask(file, {
-                    name: extractRelativeDisplayName(file),
-                    folderId: targetFolderId,
-                    uploadOptions,
-                })
-            )
-        }
+            const readyTasks = [] as ReturnType<typeof createUploadTask>[]
+            for (const task of currentTasks) {
+                const relativeFolderPath = folderPathsByTaskId.get(task.id) || ''
+                if (relativeFolderPath && !createdPathIds.has(relativeFolderPath)) {
+                    task.status = 'error'
+                    task.error = t('system.file.uploadFolderFailed')
+                    continue
+                }
+                task.folderId = createdPathIds.get(relativeFolderPath) ?? baseFolderId
+                readyTasks.push(task)
+            }
 
-        uploadTasks.value = currentTasks
-        uploadQueueExpanded.value = false
-        await runUploadQueue(currentTasks, uploadOptions)
-        if (!isCurrentTaskBatch(currentTasks)) return
-        await options.loadFolderTree()
-        showUploadSummary(currentTasks)
-        if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
-            await options.getList()
-        }
-        if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
-            window.setTimeout(() => {
-                if (isCurrentTaskBatch(currentTasks) && !uploading.value) clearTasks()
-            }, 1200)
+            preparingDirectory.value = false
+            if (readyTasks.length > 0) await runUploadQueue(readyTasks, uploadOptions)
+            if (!isCurrentTaskBatch(currentTasks)) return
+            await options.loadFolderTree()
+            showUploadSummary(currentTasks)
+            if (currentTasks.some((task) => task.status === 'success' || task.status === 'reuse')) {
+                await options.getList()
+            }
+            if (currentTasks.every((task) => task.status === 'success' || task.status === 'reuse')) {
+                window.setTimeout(() => {
+                    if (isCurrentTaskBatch(currentTasks) && !uploading.value) clearTasks()
+                }, 1200)
+            }
+        } finally {
+            preparingDirectory.value = false
         }
     }
 
@@ -256,6 +312,7 @@ export function useFileUploadFlow(options: UseFileUploadFlowOptions) {
             await uploadDirectoryInQueue(files)
         } catch (error) {
             Logger.error('上传目录失败:', error)
+            ElMessage.error(t('system.file.uploadFolderFailed'))
         }
     }
 

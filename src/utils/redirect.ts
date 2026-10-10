@@ -1,5 +1,7 @@
 export function normalizeRedirectPath(redirect: unknown, fallback = '/') {
     if (typeof redirect !== 'string') return fallback
-    if (!redirect.startsWith('/') || redirect.startsWith('//')) return fallback
-    return redirect
+    const trimmed = redirect.trim()
+    if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return fallback
+    if (trimmed === '/login' || trimmed.startsWith('/login?') || trimmed.startsWith('/login/')) return fallback
+    return trimmed
 }

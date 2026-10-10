@@ -49,9 +49,11 @@ export function useAdminUserList() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
     } = useListPage<AdminUser, typeof queryWhere>({
         query: queryWhere,
+        sortFields: ['id', 'username', 'nickname', 'created_at', 'updated_at'],
         queryFormRef,
         transformParams: (query) => ({
             ...query,
@@ -136,6 +138,7 @@ export function useAdminUserList() {
         getList,
         getDepartmentOptions,
         handleSearch,
+        handleSortChange,
         handleReset,
         createToggleFullInfo,
         isFullInfoLoading,

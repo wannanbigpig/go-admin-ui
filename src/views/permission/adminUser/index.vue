@@ -1,6 +1,6 @@
 <template>
     <div>
-        <xl-pro-table :search-model="queryWhere" :columns="columns" :search-schema="searchSchema" :loading="loading" :data="adminUserList" :pagination="pagination" @search="onSearch" @reset="handleReset">
+        <xl-pro-table :search-model="queryWhere" :columns="columns" :search-schema="searchSchema" :loading="loading" :data="adminUserList" :pagination="pagination" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
             <template #actions>
                 <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" code="adminUser:add" @click="openEditDrawer(1)" />
             </template>
@@ -29,8 +29,8 @@
             </template>
         </xl-pro-table>
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="40%">
-            <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules(formData.id)" :key="currentIndex ?? 0">
+        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" :loading="detailLoading" size="md">
+            <el-form v-loading="detailLoading" ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="getDynamicRules(formData.id)" :key="currentIndex ?? 0">
                 <el-row>
                     <el-col :span="12">
                         <el-form-item :label="t('common.labels.avatar')" prop="avatar">
@@ -118,7 +118,7 @@
         </xl-drawer>
 
         <!-- 绑定角色抽屉 -->
-        <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.adminUser.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="40%">
+        <xl-drawer v-model="showBindRoleDrawer" :title="t('permission.adminUser.bindRoleTitle')" :formRef="bindRoleFormRef" :onConfirm="bindRoleConfirmSubmit" :isSubmitting="isBindingRole" size="md">
             <el-skeleton v-if="roleOptionsLoading" animated />
             <el-form v-else ref="bindRoleFormRef" size="default" :model="bindRoleData" label-width="auto" :rules="bindRoleRules">
                 <el-form-item :label="t('permission.adminUser.title')">
@@ -182,6 +182,7 @@ let {
     getList,
     getDepartmentOptions,
     handleSearch,
+    handleSortChange,
     handleReset,
     createToggleFullInfo,
     isFullInfoLoading,
@@ -190,7 +191,7 @@ let {
 } = useAdminUserList()
 /* eslint-enable prefer-const */
 
-const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, formData, isEditMode, isRootAdminEditing, getDynamicRules, openEditDrawer, editConfirmSubmit } = useAdminUserForm({ refreshList: getList })
+const { showDrawer, formDataRef, formTitle, currentIndex, isSubmitting, detailLoading, formData, isEditMode, isRootAdminEditing, getDynamicRules, openEditDrawer, editConfirmSubmit } = useAdminUserForm({ refreshList: getList })
 
 const { showBindRoleDrawer, bindRoleFormRef, isBindingRole, currentAdminUserName, roleOptions, roleOptionsLoading, bindRoleData, bindRoleRules, filterRole, handleBindRole, bindRoleConfirmSubmit } =
     useAdminUserRoleBinding({
@@ -293,11 +294,12 @@ const searchSchema = computed(() => [
 ])
 
 const columns = computed<ProTableColumns<AdminUser>>(() => [
-    { prop: 'id', align: 'center', h_label: t('common.labels.id') },
+    { prop: 'id', sortable: 'custom', align: 'center', h_label: t('common.labels.id') },
     { prop: 'avatar', align: 'center', h_label: t('common.labels.avatar'), width: 100, customRow: true, avatar: true },
-    { prop: 'nickname', h_label: t('common.labels.nickname'), width: 160, overflow: true },
+    { prop: 'nickname', sortable: 'custom', h_label: t('common.labels.nickname'), width: 160, overflow: true },
     {
         prop: 'username',
+        sortable: 'custom',
         h_label: t('common.labels.username'),
         width: 120,
         overflow: true,
@@ -360,8 +362,8 @@ const columns = computed<ProTableColumns<AdminUser>>(() => [
         } as TagMap,
         h_tip: t('permission.adminUser.statusTip'),
     },
-    { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
-    { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
+    { prop: 'created_at', sortable: 'custom', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
+    { prop: 'updated_at', sortable: 'custom', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
     { prop: 'last_login', align: 'center', h_label: t('permission.adminUser.lastLoginAt'), width: 160 },
     { prop: 'last_ip', align: 'center', h_label: t('permission.adminUser.lastLoginIp'), width: 150 },
 ])

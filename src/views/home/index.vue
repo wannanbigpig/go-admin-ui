@@ -14,7 +14,7 @@
                             </div>
                             <el-alert v-if="personalFailed && !personalLoading" class="welcome-state" type="error" :title="t('home.dashboard.personalLoadFailed')" :closable="false" show-icon>
                                 <template #default>
-                                    <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
+                                    <el-button link type="primary" :loading="personalLoading" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
                                 </template>
                             </el-alert>
                         </div>
@@ -80,7 +80,7 @@
             <el-col v-if="overviewFailed" :span="24">
                 <el-alert type="error" :title="t('home.dashboard.overviewLoadFailed')" :closable="false" show-icon>
                     <template #default>
-                        <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
+                        <el-button link type="primary" :loading="dashboardLoading" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
                     </template>
                 </el-alert>
             </el-col>
@@ -121,7 +121,7 @@
             <el-col :span="24">
                 <el-alert type="error" :title="t('home.dashboard.statisticsLoadFailed')" :closable="false" show-icon>
                     <template #default>
-                        <el-button link type="primary" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
+                        <el-button link type="primary" :loading="dashboardLoading" @click="refreshDashboard">{{ t('home.dashboard.retry') }}</el-button>
                     </template>
                 </el-alert>
             </el-col>
@@ -271,7 +271,7 @@
                     <el-skeleton v-if="monitorLoading && !dashboardMonitor" :rows="4" animated />
                     <el-alert v-else-if="monitorFailed" type="error" :title="t('home.dashboard.monitorLoadFailed')" :closable="false" show-icon>
                         <template #default>
-                            <el-button link type="primary" @click="fetchMonitor">{{ t('home.dashboard.retry') }}</el-button>
+                            <el-button link type="primary" :loading="monitorLoading" @click="fetchMonitor">{{ t('home.dashboard.retry') }}</el-button>
                         </template>
                     </el-alert>
                     <el-row v-else-if="dashboardMonitor" :gutter="16">

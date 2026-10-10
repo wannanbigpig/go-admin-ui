@@ -24,6 +24,7 @@ export default {
     },
     profile: {
         currentPasswordRequired: '修改密码时请输入当前密码',
+        newPasswordRequired: '请输入新密码',
         nicknameRequired: '昵称不能为空',
         nicknameLength: '昵称长度应在 2-20 个字符之间',
         phoneInvalid: '请输入正确的手机号码',

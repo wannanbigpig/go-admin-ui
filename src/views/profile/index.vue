@@ -105,6 +105,7 @@
                                         <el-icon class="eye-icon" @click="phoneVisible = !phoneVisible">
                                             <component :is="phoneVisible ? View : Hide" />
                                         </el-icon>
+                                        <el-button link type="primary" @click="openPhoneDrawer">{{ t('profile.changePhone') }}</el-button>
                                     </div>
                                 </div>
                             </div>
@@ -142,7 +143,7 @@
         </div>
 
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting">
+        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :before-close="confirmProfileClose" :isSubmitting="isSubmitting" size="md">
             <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :rules="formRules" :key="formKey">
                 <el-row>
                     <el-col :span="12">
@@ -152,54 +153,73 @@
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
-                    <el-col :span="12">
+                    <el-col :xs="24" :sm="12">
                         <el-form-item :label="t('common.labels.nickname')" prop="nickname">
                             <el-input v-model.trim="formData.nickname" :placeholder="t('common.placeholders.inputNickname')"></el-input>
                         </el-form-item>
                     </el-col>
-                    <el-col :span="12">
+                    <el-col :xs="24" :sm="12">
                         <el-form-item :label="t('common.labels.username')" prop="username">
                             <el-input v-model.trim="formData.username" :placeholder="t('common.placeholders.inputUsername')" disabled></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
-                    <el-col :span="12">
-                        <el-form-item :label="t('common.labels.phone')" prop="phone_number">
-                            <el-input v-model.trim="formData.phone_number" :placeholder="t('common.placeholders.inputPhone')" />
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
+                    <el-col :span="24">
                         <el-form-item :label="t('common.labels.email')" prop="email">
                             <el-input v-model.trim="formData.email" :placeholder="t('common.placeholders.inputEmail')"></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
                 <el-divider />
-                <el-row :gutter="20">
-                    <el-col :xs="24" :md="8">
-                        <el-form-item :label="t('profile.currentPassword')" prop="current_password">
-                            <el-input v-model="formData.current_password" :placeholder="t('profile.currentPasswordPlaceholder')" type="password" show-password autocomplete="current-password"></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :xs="24" :md="8">
-                        <el-form-item :label="t('profile.newPassword')" prop="password">
-                            <el-input v-model="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password autocomplete="new-password"></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :xs="24" :md="8">
-                        <el-form-item :label="t('common.labels.confirmPassword')" prop="confirm_password">
-                            <el-input v-model="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password autocomplete="new-password"></el-input>
-                        </el-form-item>
-                    </el-col>
-                </el-row>
+                <el-form-item label="" prop="change_password" class="change-password-toggle">
+                    <div class="change-password-row">
+                        <el-switch v-model="formData.change_password" @update:model-value="toggleChangePassword" />
+                        <span class="change-password-label">{{ t('profile.changePassword') }}</span>
+                        <span class="change-password-tip">{{ t('profile.changePasswordTip') }}</span>
+                    </div>
+                </el-form-item>
+                <template v-if="showPasswordFields">
+                    <el-form-item :label="t('profile.currentPassword')" :label-width="passwordLabelWidth" prop="current_password">
+                        <el-input v-model="formData.current_password" :placeholder="t('profile.currentPasswordPlaceholder')" type="password" show-password autocomplete="current-password"></el-input>
+                    </el-form-item>
+                    <el-form-item :label="t('profile.newPassword')" :label-width="passwordLabelWidth" prop="password">
+                        <el-input v-model="formData.password" :placeholder="t('profile.newPasswordPlaceholder')" type="password" show-password autocomplete="new-password"></el-input>
+                    </el-form-item>
+                    <el-form-item :label="t('common.labels.confirmPassword')" :label-width="passwordLabelWidth" prop="confirm_password">
+                        <el-input v-model="formData.confirm_password" :placeholder="t('profile.confirmNewPasswordPlaceholder')" type="password" show-password autocomplete="new-password"></el-input>
+                    </el-form-item>
+                </template>
+                <el-form-item v-if="showPasswordFields && smsVerificationRequired" :label="t('profile.smsCode')" :label-width="passwordLabelWidth">
+                    <div class="profile-sms-code">
+                        <el-input v-model.trim="formData.sms_code" maxlength="6" :placeholder="t('profile.smsCodePlaceholder')" />
+                        <el-button :loading="codeSending" @click="sendPasswordCode">{{ t('profile.sendCodeToBoundPhone') }}</el-button>
+                    </div>
+                </el-form-item>
+            </el-form>
+        </xl-drawer>
+
+        <xl-drawer v-model="showPhoneDrawer" :title="t('profile.changePhone')" :formRef="phoneDataRef" :onConfirm="changePhoneConfirm" :isSubmitting="phoneSaving" :withReset="false" size="min(100vw, var(--xl-drawer-md))">
+            <el-form ref="phoneDataRef" :model="phoneData" :rules="phoneRules" label-width="auto">
+                <el-form-item :label="t('profile.newPhone')" prop="phone_number">
+                    <el-input v-model.trim="phoneData.phone_number" :placeholder="t('common.placeholders.inputPhone')" />
+                </el-form-item>
+                <el-form-item :label="t('profile.currentPassword')" prop="current_password">
+                    <el-input v-model="phoneData.current_password" type="password" show-password autocomplete="current-password" :placeholder="t('profile.currentPasswordPlaceholder')" />
+                </el-form-item>
+                <el-form-item v-if="smsVerificationRequired" :label="t('profile.newPhoneCode')">
+                    <div class="profile-sms-code">
+                        <el-input v-model.trim="phoneData.sms_code" maxlength="6" :placeholder="t('profile.smsCodePlaceholder')" />
+                        <el-button :loading="phoneCodeSending" @click="sendPhoneCode">{{ t('profile.sendCode') }}</el-button>
+                    </div>
+                </el-form-item>
             </el-form>
         </xl-drawer>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import AvatarUpload from '@/components/avatarUpload/index.vue'
 import { getImageUrl } from '@/utils/helper'
@@ -208,8 +228,10 @@ import { useProfilePage } from '@/modules/profile/useProfilePage'
 import { useI18n } from 'vue-i18n'
 import { User, Phone, Message, OfficeBuilding, Calendar, Location, Clock, Edit, Cpu, View, Hide } from '@element-plus/icons-vue'
 
-const { t } = useI18n()
-const { userInfo, showDrawer, formDataRef, formTitle, isSubmitting, formKey, formData, formRules, formatDepartments, formatDateTime, openEditDrawer, editConfirmSubmit } = useProfilePage()
+const { t, locale } = useI18n()
+// 动态密码字段不参与上方资料表单的自动标签宽度计算。
+const passwordLabelWidth = computed(() => locale.value === 'zh-CN' ? '90px' : '150px')
+const { userInfo, showDrawer, formDataRef, formTitle, isSubmitting, formKey, formData, formRules, showPasswordFields, smsVerificationRequired, codeSending, sendPasswordCode, showPhoneDrawer, phoneDataRef, phoneData, phoneRules, phoneSaving, phoneCodeSending, openPhoneDrawer, sendPhoneCode, changePhoneConfirm, formatDepartments, formatDateTime, openEditDrawer, editConfirmSubmit, confirmProfileClose, toggleChangePassword } = useProfilePage()
 
 const phoneVisible = ref(false)
 const emailVisible = ref(false)
@@ -237,9 +259,52 @@ const maskEmail = (email?: string) => {
 
 <style lang="scss" scoped>
 .xl-container {
-    padding: 24px;
-    background-color: var(--el-fill-color-blank);
     min-height: calc(100vh - 120px);
+}
+
+.change-password-toggle {
+    margin-bottom: 12px;
+}
+
+.change-password-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.change-password-label {
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+    font-weight: 500;
+}
+
+.change-password-tip {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+}
+
+.profile-sms-code {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+
+    .el-input {
+        min-width: 0;
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-sms-code {
+        flex-direction: column;
+
+        .el-button {
+            width: 100%;
+            margin: 0;
+        }
+    }
 }
 
 .profile-layout {
@@ -483,28 +548,28 @@ const maskEmail = (email?: string) => {
         transition: transform 0.3s ease;
 
         &.nickname-icon {
-            background-color: rgba(64, 158, 255, 0.1);
-            color: #409eff;
+            background-color: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
         }
 
         &.username-icon {
-            background-color: rgba(103, 194, 58, 0.1);
-            color: #67c23a;
+            background-color: var(--el-color-success-light-9);
+            color: var(--el-color-success);
         }
 
         &.phone-icon {
-            background-color: rgba(230, 162, 60, 0.1);
-            color: #e6a23c;
+            background-color: var(--el-color-warning-light-9);
+            color: var(--el-color-warning);
         }
 
         &.email-icon {
-            background-color: rgba(245, 108, 108, 0.1);
-            color: #f56c6c;
+            background-color: var(--el-color-danger-light-9);
+            color: var(--el-color-danger);
         }
 
         &.dept-icon {
-            background-color: rgba(144, 147, 153, 0.1);
-            color: #909399;
+            background-color: var(--el-color-info-light-9);
+            color: var(--el-color-info);
         }
     }
 

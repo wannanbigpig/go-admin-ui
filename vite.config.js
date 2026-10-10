@@ -10,6 +10,7 @@ import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import viteCompression from 'vite-plugin-compression'
+import { createBuildInfo } from './scripts/release-policy.mjs'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 const elementPlusComponentsDir = resolve(import.meta.dirname, 'node_modules/element-plus/es/components')
@@ -36,6 +37,9 @@ const manualChunks = (id) => {
     ) {
         return 'vendor-vue'
     }
+    if (moduleId.includes('/node_modules/element-plus/') || moduleId.includes('/node_modules/@element-plus/')) {
+        return 'vendor-element-plus'
+    }
     if (moduleId.includes('/node_modules/axios/') || moduleId.includes('/node_modules/nprogress/')) {
         return 'vendor-network'
     }
@@ -44,6 +48,7 @@ const manualChunks = (id) => {
 // ==================== 常量定义 ====================
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
+    const buildInfo = createBuildInfo(resolve(import.meta.dirname), pkg.version)
     /** 是否自动打开浏览器（从环境变量读取，默认为 true） */
     const autoOpenBrowser = env.AUTO_OPEN_BROWSER === 'true' || env.AUTO_OPEN_BROWSER === undefined
 
@@ -88,6 +93,12 @@ export default defineConfig(({ mode }) => {
 
         // ==================== 插件配置 ====================
         plugins: [
+            {
+                name: 'build-identity',
+                generateBundle() {
+                    this.emitFile({ type: 'asset', fileName: 'build-info.json', source: JSON.stringify(buildInfo, null, 2) })
+                },
+            },
             // Vue 3 支持
             vue(),
 

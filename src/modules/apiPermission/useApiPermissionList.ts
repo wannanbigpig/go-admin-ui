@@ -22,9 +22,11 @@ export function useApiPermissionList() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
     } = useListPage<ApiPermission, typeof queryWhere>({
         query: queryWhere,
+        sortFields: ['code', 'route', 'method', 'sort'],
         queryFormRef,
         transformParams: (query) => ({
             ...query,
@@ -44,6 +46,7 @@ export function useApiPermissionList() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
     }
 }

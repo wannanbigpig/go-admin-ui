@@ -7,6 +7,7 @@ export default {
     unknown: '未知',
     noData: '暂无数据',
     actions: {
+        close: '关闭',
         search: '查询',
         reset: '重置',
         cancel: '取消',

@@ -1,6 +1,6 @@
 <template>
     <div>
-        <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="roleList" :pagination="pagination" row-key="id" @search="onSearch" @reset="handleReset">
+        <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="roleList" :pagination="pagination" row-key="id" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
             <template #actions>
                 <xl-action-button v-permission="'role:add'" code="role:add" :show-icon="false" type="primary" @click="openCreateDrawer" />
             </template>
@@ -14,8 +14,8 @@
         </xl-pro-table>
 
         <!-- 编辑抽屉 -->
-        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" size="40%">
-            <el-form ref="formDataRef" size="default" :model="formData" label-width="auto" :key="currentIndex ?? 0">
+        <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="editConfirmSubmit" :isSubmitting="isSubmitting" :loading="detailLoading" :onReset="resetEditForm" size="md">
+            <el-form v-loading="detailLoading" ref="formDataRef" size="default" :model="formData" label-width="auto" :key="currentIndex ?? 0">
                 <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item :label="t('permission.role.name')" prop="name" :rules="[{ required: true, message: t('validation.role.nameInputRequired'), trigger: 'blur' }]">
@@ -55,7 +55,7 @@
                     <DeptTreeSelect v-model="formData.dept_ids" :disabled="isSuperAdminEditing" :placeholder="t('common.placeholders.selectDepartment')" />
                 </el-form-item>
                 <el-form-item :label="t('permission.role.menuPermission')" prop="menu_list">
-                    <div style="width: 100%; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 10px">
+                    <div style="width: 100%; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 12px">
                         <el-skeleton v-if="menuTreeLoading" animated />
                         <el-tree
                             v-else
@@ -103,7 +103,7 @@ const onSearch = (model: Record<string, unknown>) => {
 }
 
 /* eslint-disable prefer-const */
-let { loading, roleList, queryWhere, pagination, getList, handleSearch, handleReset } = useRoleList()
+let { loading, roleList, queryWhere, pagination, getList, handleSearch, handleSortChange, handleReset } = useRoleList()
 
 /* eslint-enable prefer-const */
 
@@ -113,6 +113,8 @@ const {
     formTitle,
     currentIndex,
     isSubmitting,
+    detailLoading,
+    resetEditForm,
     menuTreeRef,
     formData,
     isEditMode,
@@ -177,19 +179,21 @@ onMounted(() => {
 })
 
 const columns = computed<ProTableColumns<Role>>(() => [
-    { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80 },
+    { prop: 'id', sortable: 'custom', align: 'center', h_label: t('common.labels.id'), width: 80 },
     {
         prop: 'name',
+        sortable: 'custom',
         h_label: t('permission.role.name'),
         label: t('permission.role.name'),
         width: 200,
         overflow: true,
         search: { type: 'input', placeholder: t('permission.role.namePlaceholder'), span: 4 },
     },
-    { prop: 'code', h_label: t('permission.role.code'), width: 150 },
+    { prop: 'code', sortable: 'custom', h_label: t('permission.role.code'), width: 180, overflow: true },
     { prop: 'description', h_label: t('permission.role.description'), minWidth: 200, overflow: true },
     {
         prop: 'sort',
+        sortable: 'custom',
         h_label: t('common.labels.sort'),
         align: 'center',
         width: 100,
@@ -205,7 +209,7 @@ const columns = computed<ProTableColumns<Role>>(() => [
             [ROLE_STATUS.DISABLED]: { type: 'danger', text: t('common.status.disabled') },
         },
     },
-    { prop: 'created_at', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
-    { prop: 'updated_at', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
+    { prop: 'created_at', sortable: 'custom', align: 'center', h_label: t('common.labels.createdAt'), width: 160 },
+    { prop: 'updated_at', sortable: 'custom', align: 'center', h_label: t('common.labels.updatedAt'), width: 160 },
 ])
 </script>

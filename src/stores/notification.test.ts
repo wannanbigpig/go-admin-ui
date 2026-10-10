@@ -6,6 +6,7 @@ const hoisted = vi.hoisted(() => {
     const mockGetNotificationList = vi.fn()
     const mockGetNotificationUnreadCount = vi.fn()
     const mockMarkNotificationRead = vi.fn()
+    const mockDeleteNotification = vi.fn()
     const mockGetWsTicket = vi.fn()
     const mockRouter = {
         push: vi.fn(),
@@ -14,6 +15,7 @@ const hoisted = vi.hoisted(() => {
         mockGetNotificationList,
         mockGetNotificationUnreadCount,
         mockMarkNotificationRead,
+        mockDeleteNotification,
         mockGetWsTicket,
         mockRouter,
     }
@@ -23,6 +25,7 @@ vi.mock('@/api/system', () => ({
     getNotificationList: hoisted.mockGetNotificationList,
     getNotificationUnreadCount: hoisted.mockGetNotificationUnreadCount,
     markNotificationRead: hoisted.mockMarkNotificationRead,
+    deleteNotification: hoisted.mockDeleteNotification,
     markAllNotificationsRead: vi.fn(),
     getWsTicket: hoisted.mockGetWsTicket,
 }))
@@ -92,6 +95,7 @@ describe('stores/notification.ts', () => {
         hoisted.mockGetNotificationList.mockReset()
         hoisted.mockGetNotificationUnreadCount.mockReset()
         hoisted.mockMarkNotificationRead.mockReset()
+        hoisted.mockDeleteNotification.mockReset()
         hoisted.mockGetWsTicket.mockReset()
         hoisted.mockRouter.push.mockReset()
         hoisted.mockGetNotificationList.mockResolvedValue({ list: [], total: 0 })
@@ -106,6 +110,57 @@ describe('stores/notification.ts', () => {
             value: originalWebSocket,
             configurable: true,
         })
+    })
+
+    it('ignores an unread-count response that predates a realtime notification', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+        let resolveCount!: (value: { unread_count: number }) => void
+        hoisted.mockGetNotificationUnreadCount.mockReturnValueOnce(new Promise((resolve) => { resolveCount = resolve }))
+        const pending = store.refreshUnreadCount()
+        mockSockets[0].emitMessage(JSON.stringify({ type: 'message_created', message: { id: 99, title: 'new', content: 'new notification' }, unread_count: 1 }))
+        resolveCount({ unread_count: 0 })
+        await pending
+        expect(store.unreadCount).toBe(1)
+        expect(store.notifications.map((item) => item.id)).toEqual(['99'])
+    })
+
+    it('keeps the newest unread-count request when responses return out of order', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+        let resolveOld!: (value: { unread_count: number }) => void
+        hoisted.mockGetNotificationUnreadCount.mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve }))
+        const oldRequest = store.refreshUnreadCount()
+        hoisted.mockGetNotificationUnreadCount.mockResolvedValueOnce({ unread_count: 2 })
+        await store.refreshUnreadCount()
+        resolveOld({ unread_count: 0 })
+        await oldRequest
+        expect(store.unreadCount).toBe(2)
+    })
+
+    it.each(['manual', 'automatic'])('reloads missed notifications after %s reconnect', async (mode) => {
+        vi.useFakeTimers()
+        try {
+            const store = useNotificationStore()
+            store.start('valid-token', 'zh-CN')
+            await vi.advanceTimersByTimeAsync(0)
+            expect(hoisted.mockGetNotificationList).toHaveBeenCalledTimes(1)
+            hoisted.mockGetNotificationList.mockResolvedValue({ list: [{ id: 99, title: 'missed', message: 'while offline' }], total: 1 })
+            hoisted.mockGetNotificationUnreadCount.mockResolvedValue({ unread_count: 1 })
+            if (mode === 'manual') store.reconnect()
+            else mockSockets[0].onclose?.({ code: 1006 } as CloseEvent)
+            await vi.advanceTimersByTimeAsync(mode === 'manual' ? 1 : 3001)
+            expect(store.connectionStatus).toBe('connected')
+            expect(hoisted.mockGetNotificationList).toHaveBeenCalledTimes(2)
+            expect(hoisted.mockGetNotificationUnreadCount).toHaveBeenCalledTimes(2)
+            expect(store.notifications.map((item) => item.id)).toEqual(['99'])
+            expect(store.unreadCount).toBe(1)
+        } finally {
+            useNotificationStore().stop()
+            vi.useRealTimers()
+        }
     })
 
     it('loadNotifications 应当能把后端的文件下载 action_url 自动规一化为前端路由，以防止 404', async () => {
@@ -136,6 +191,7 @@ describe('stores/notification.ts', () => {
         await store.loadNotifications()
 
         expect(store.notifications.length).toBe(1)
+        expect(hoisted.mockGetNotificationList).toHaveBeenCalledWith({ page: 1, per_page: 50, is_read: 0 })
         // 关键断言：action_url 必须已被清洗为前端路由
         expect(store.notifications[0].action_url).toBe('/my-exports')
     })
@@ -158,6 +214,17 @@ describe('stores/notification.ts', () => {
         expect(success).toBe(true)
         expect(hoisted.mockMarkNotificationRead).toHaveBeenCalledWith({ id: 123 })
         expect(store.unreadCount).toBe(3)
+    })
+
+    it('标记已读后立即从弹窗移除通知', async () => {
+        const store = useNotificationStore()
+        store.notifications.push({ id: '123', title: 'title', message: 'message', level: 'info', source: 'websocket', read: false, created_at: '2026-09-28' })
+        store.unreadCount = 1
+        hoisted.mockMarkNotificationRead.mockResolvedValue({ updated: true, unread_count: 0 })
+
+        expect(await store.markRead('123')).toBe(true)
+        expect(store.notifications).toEqual([])
+        expect(store.unreadCount).toBe(0)
     })
 
     it('markRead 调用后端失败时应回滚本地缓存状态', async () => {
@@ -205,7 +272,38 @@ describe('stores/notification.ts', () => {
             })
         )
 
-        expect(store.notifications[0].read).toBe(true)
+        expect(store.notifications).toEqual([])
+        expect(store.unreadCount).toBe(0)
+    })
+
+    it('弹窗列表只保留未读通知，删除后同步移除并更新未读数', async () => {
+        const store = useNotificationStore()
+        hoisted.mockGetNotificationList.mockResolvedValue({
+            list: [
+                { id: 123, title: '未读', message: 'A', created_at: '2026-09-28', is_read: false },
+                { id: 124, title: '已读', message: 'B', created_at: '2026-09-27', is_read: true },
+            ],
+            total: 2,
+        })
+        store.start('valid-token', 'zh-CN')
+        await store.loadNotifications()
+        expect(store.notifications.map((item) => item.id)).toEqual(['123'])
+
+        hoisted.mockDeleteNotification.mockResolvedValue({ deleted: true, unread_count: 0 })
+        expect(await store.deleteNotification('123')).toBe(true)
+        expect(hoisted.mockDeleteNotification).toHaveBeenCalledWith({ id: 123 })
+        expect(store.notifications).toEqual([])
+        expect(store.unreadCount).toBe(0)
+    })
+
+    it('删除事件应从弹窗移除通知', async () => {
+        const store = useNotificationStore()
+        store.start('valid-token', 'zh-CN')
+        await vi.waitFor(() => expect(store.connectionStatus).toBe('connected'))
+        store.notifications.push({ id: '123', title: 'title', message: 'message', level: 'info', source: 'websocket', read: false, created_at: '2026-09-28' })
+        store.unreadCount = 1
+        mockSockets[0].emitMessage(JSON.stringify({ type: 'message_deleted', message_id: '123', unread_count: 0 }))
+        expect(store.notifications).toEqual([])
         expect(store.unreadCount).toBe(0)
     })
 
@@ -426,6 +524,18 @@ describe('stores/notification.ts', () => {
             vi.useRealTimers()
         }
     })
+    it('全部已读失败返回 false 并保留未读状态，成功返回 true', async () => {
+        const store = useNotificationStore()
+        const { markAllNotificationsRead } = await import('@/api/system')
+        store.unreadCount = 1
+        vi.mocked(markAllNotificationsRead).mockRejectedValueOnce(new Error('unavailable'))
+        await expect(store.markAllRead()).resolves.toBe(false)
+        expect(store.unreadCount).toBe(1)
+        vi.mocked(markAllNotificationsRead).mockResolvedValueOnce({})
+        await expect(store.markAllRead()).resolves.toBe(true)
+        expect(store.unreadCount).toBe(0)
+    })
+
     it('stop 清除私有通知，旧的全部已读失败不得恢复上一账号列表', async () => {
         const store = useNotificationStore()
         hoisted.mockGetNotificationList.mockResolvedValue({ list: [{ id: 1, title: 'account A private', message: 'secret', created_at: '2026-09-16' }], total: 1 })

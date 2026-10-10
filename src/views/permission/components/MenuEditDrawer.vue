@@ -1,5 +1,5 @@
 <template>
-    <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="handleSubmit" :isSubmitting="isSubmitting" :withReset="false" size="40%">
+    <xl-drawer v-model="showDrawer" :title="formTitle" :formRef="formDataRef" :onConfirm="handleSubmit" :isSubmitting="isSubmitting" :withReset="false" size="md">
         <template #footer v-if="step === 1">
             <el-divider />
             <div style="display: flex; justify-content: flex-end">

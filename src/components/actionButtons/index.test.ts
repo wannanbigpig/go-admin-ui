@@ -78,4 +78,40 @@ describe('components/actionButtons/index.vue', () => {
         await wrapper.setProps({ buttons: createButtons() })
         expect(wrapper.text()).not.toContain('Update')
     })
+
+    it('显式无需按钮权限的操作仍遵守行级可见条件', async () => {
+        hoisted.permissionState.isShow = false
+        hoisted.mockCheckPermission.mockClear()
+        const onClick = vi.fn()
+        const wrapper = mount(ActionButtons, {
+            props: {
+                buttons: [{
+                    permission: null,
+                    text: 'Detail',
+                    showIcon: false,
+                    visible: (row: object) => 'allowed' in row && row.allowed === true,
+                    click: onClick,
+                }],
+                scope: { row: { allowed: true }, $index: 0 },
+            },
+            global: {
+                stubs: {
+                    XlActionButton: ActionButtonStub,
+                    ElDropdown: true,
+                    ElDropdownItem: true,
+                    ElDropdownMenu: true,
+                    ElButton: true,
+                    ElIcon: true,
+                },
+            },
+        })
+
+        expect(wrapper.text()).toContain('Detail')
+        expect(hoisted.mockCheckPermission).not.toHaveBeenCalled()
+        await wrapper.find('button').trigger('click')
+        expect(onClick).toHaveBeenCalledWith({ allowed: true }, 0)
+
+        await wrapper.setProps({ scope: { row: { allowed: false }, $index: 0 } })
+        expect(wrapper.text()).not.toContain('Detail')
+    })
 })

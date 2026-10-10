@@ -57,6 +57,27 @@ describe('composables/useFileUpload.ts', () => {
         hoisted.mockUploadSystemFile.mockResolvedValue({ id: 1 } as SystemFile)
     })
 
+    it.each(['success', 'failure'])('marks a retried task busy before upload capabilities resolve (%s)', async (outcome) => {
+        let resolveCapabilities!: (value: object) => void
+        let rejectCapabilities!: (error: Error) => void
+        hoisted.mockFetchUploadOptions.mockReturnValueOnce(new Promise((resolve, reject) => {
+            resolveCapabilities = resolve
+            rejectCapabilities = reject
+        }))
+        const upload = useFileUpload()
+        const task = upload.createUploadTask(new File(['test'], 'test.txt'))
+        task.status = 'error'
+        upload.uploadTasks.value = [task]
+        const pending = upload.uploadOneTask(task)
+        expect(upload.uploading.value).toBe(true)
+        expect(upload.uploadTasks.value[0].status).toBe('pending')
+        if (outcome === 'success') resolveCapabilities({ max_file_size_mb: 10 })
+        else rejectCapabilities(new Error('capabilities unavailable'))
+        await pending
+        expect(upload.uploading.value).toBe(false)
+        expect(upload.uploadTasks.value[0].status).toBe(outcome === 'success' ? 'success' : 'error')
+    })
+
     it('批量直传 complete 漏项时应将对应任务标记为 error', async () => {
         hoisted.mockFetchUploadOptions.mockResolvedValue({ active_driver: 'aliyun_oss', max_file_size_mb: 0, supports_direct_upload: true, supports_multipart_upload: true })
         hoisted.mockResolveDriver.mockResolvedValue('aliyun_oss')

@@ -7,6 +7,7 @@ export default {
     unknown: 'Unknown',
     noData: 'No Data',
     actions: {
+        close: 'Close',
         search: 'Search',
         reset: 'Reset',
         cancel: 'Cancel',

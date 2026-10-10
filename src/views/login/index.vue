@@ -410,7 +410,16 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
         ElMessage.success(t('login.loginSuccess'))
         const redirectQuery = router.currentRoute.value.query.redirect
         const targetPath = normalizeRedirectPath(redirectQuery, authStore.firstPath || '/')
-        await router.push(targetPath)
+        try {
+            await router.replace(targetPath)
+        } catch (navError) {
+            Logger.warn('登录成功后跳转目标路由失败，回退到首页:', navError)
+            try {
+                await router.replace('/')
+            } catch {
+                // 忽略重定向首页二次异常
+            }
+        }
     } catch (error) {
         if (credentialsSubmitted) loginError.value = t(loginMode.value === 'sms' ? 'login.smsLoginFailed' : 'login.loginFailed')
         Logger.error('登录失败:', error)
@@ -621,7 +630,7 @@ onBeforeUnmount(() => {
         padding: 11px;
         border: 1px solid rgba(255, 255, 255, 0.82);
         border-radius: 18px;
-        background: #fff;
+        background: var(--el-color-white);
         box-shadow: 0 12px 28px rgba(37, 99, 235, 0.13);
 
         img {
@@ -633,7 +642,7 @@ onBeforeUnmount(() => {
 
     h1 {
         margin: 0 0 6px;
-        color: #172033;
+        color: var(--el-text-color-primary);
         font-size: 26px;
         font-weight: 750;
         line-height: 1.35;
@@ -642,7 +651,7 @@ onBeforeUnmount(() => {
 
     .app-subtitle {
         margin: 0;
-        color: #64748b;
+        color: var(--el-text-color-secondary);
         font-size: var(--xl-font-sm);
         line-height: 1.6;
         letter-spacing: 0.08em;

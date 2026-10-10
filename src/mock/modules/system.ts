@@ -337,6 +337,9 @@ let mockTrashFiles: MockTrashFile[] = [
     },
 ]
 
+let todoMockGroups: Array<{ id: number; name: string }> = []
+let nextTodoMockGroupID = 1
+
 export const systemMock: MockRoute[] = [
     {
         pattern: /^\/v1\/todo\/list$/,
@@ -355,9 +358,45 @@ export const systemMock: MockRoute[] = [
         handler: () => ({ pending: 0, processing: 0, overdue: 0, due_today: 0 }),
     },
     {
+        pattern: /^\/v1\/todo\/groups$/,
+        method: 'GET',
+        handler: () => ({ groups: todoMockGroups }),
+    },
+    {
+        pattern: /^\/v1\/todo\/group\/create$/,
+        method: 'POST',
+        handler: (data: unknown) => {
+            const group = { id: nextTodoMockGroupID++, name: String((data as { name?: string }).name || '') }
+            todoMockGroups = [...todoMockGroups, group]
+            return group
+        },
+    },
+    {
+        pattern: /^\/v1\/todo\/group\/rename$/,
+        method: 'POST',
+        handler: (data: unknown) => {
+            const input = data as { id: number; name: string }
+            todoMockGroups = todoMockGroups.map((group) => group.id === input.id ? { ...group, name: input.name } : group)
+            return todoMockGroups.find((group) => group.id === input.id)
+        },
+    },
+    {
+        pattern: /^\/v1\/todo\/group\/delete$/,
+        method: 'POST',
+        handler: (data: unknown) => {
+            todoMockGroups = todoMockGroups.filter((group) => group.id !== (data as { id: number }).id)
+            return {}
+        },
+    },
+    {
+        pattern: /^\/v1\/todo\/group\/move$/,
+        method: 'POST',
+        handler: (data: unknown) => data,
+    },
+    {
         pattern: /^\/v1\/todo\/reminder-preference$/,
         method: 'GET',
-        handler: () => ({ in_app_enabled: true, sms_enabled: false, sms_available: true }),
+        handler: () => ({ in_app_enabled: true, sms_enabled: false, sms_available: true, lead_minutes: 1440 }),
     },
     {
         pattern: /^\/v1\/todo\/reminder-preference$/,
@@ -1010,7 +1049,7 @@ export const systemMock: MockRoute[] = [
             const p = toParams(params)
             const ids = Array.isArray(p.ids) ? p.ids.map(Number) : []
             mockTrashFiles = mockTrashFiles.filter((f) => !ids.includes(f.id))
-            return {}
+            return { total: ids.length, destroyed: ids.length, failed: 0, failures: [] }
         },
     },
     {
@@ -1068,6 +1107,14 @@ export const systemMock: MockRoute[] = [
                     execution_time_scope: 'request',
                     response_status: 200,
                     created_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+                    change_summary: {
+                        has_changes: true,
+                        items: [
+                            { label: '昵称', change_type: 'updated', before_text: '管理员', after_text: '超级管理员' },
+                            { label: '密码', change_type: 'changed' },
+                        ],
+                        omitted_count: 0,
+                    },
                 },
                 {
                     id: 3,

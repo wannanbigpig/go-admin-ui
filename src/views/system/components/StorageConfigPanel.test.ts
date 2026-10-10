@@ -84,6 +84,24 @@ describe('storage config panel', () => {
         mocks.validateForm.mockResolvedValue(true)
     })
 
+    it('blocks save and test after initial load failure until retry succeeds', async () => {
+        mocks.fetchConfig.mockRejectedValueOnce(new Error('temporary load failure'))
+        const wrapper = mountPanel()
+        await flushPromises()
+        const vm = wrapper.vm as unknown as { handleSave: () => Promise<void>; handleTest: () => Promise<void>; loadConfig: () => Promise<void> }
+        expect(wrapper.findComponent({ name: 'ElForm' }).exists()).toBe(false)
+        await vm.handleSave()
+        await vm.handleTest()
+        expect(mocks.updateConfig).not.toHaveBeenCalled()
+        expect(mocks.testConfig).not.toHaveBeenCalled()
+        expect(mocks.validateForm).not.toHaveBeenCalled()
+        await vm.loadConfig()
+        await flushPromises()
+        await vm.handleSave()
+        expect(mocks.updateConfig).toHaveBeenCalledWith(expect.objectContaining({ active_driver: baseConfig.active_driver }))
+        wrapper.unmount()
+    })
+
     it('preserves unknown provider configuration while showing the fallback state', async () => {
         const customConfig = structuredClone(baseConfig)
         customConfig.active_driver = 'custom_s3'

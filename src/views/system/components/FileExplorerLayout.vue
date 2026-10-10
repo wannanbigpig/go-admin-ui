@@ -41,20 +41,33 @@ const updateLayout = () => {
     if (!isCompact.value) sidebarDrawerVisible.value = false
 }
 
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
+const handleResize = () => {
+    if (resizeTimer) clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => {
+        updateLayout()
+        resizeTimer = null
+    }, 100)
+}
+
 onMounted(() => {
     updateLayout()
-    window.addEventListener('resize', updateLayout)
+    window.addEventListener('resize', handleResize)
 })
 
 onBeforeUnmount(() => {
-    window.removeEventListener('resize', updateLayout)
+    window.removeEventListener('resize', handleResize)
+    if (resizeTimer) {
+        clearTimeout(resizeTimer)
+        resizeTimer = null
+    }
 })
 </script>
 
 <style scoped lang="scss">
 .file-explorer-layout {
     height: calc(100vh - 120px);
-    padding: 10px;
+    padding: 0;
 }
 
 .file-explorer-container {

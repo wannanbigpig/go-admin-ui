@@ -65,7 +65,7 @@ export interface TableColumn<T = unknown> {
     copy?: boolean
     hidden?: boolean
     getFullInfo?: (row: T, item: TableColumn<T>) => void
-    formatter?: (row: T) => unknown
+    formatter?: (row: T, column?: TableColumn<T>, cellValue?: unknown, index?: number) => unknown
 }
 
 declare global {

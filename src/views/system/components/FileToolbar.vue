@@ -35,7 +35,7 @@
                 @update:model-value="(val: string) => emit('update:searchName', val)"
                 @input="emit('search')"
             />
-            <xl-action-button v-permission="'file:list'" :text="t('system.file.exportList')" :loading="exporting" @click="emit('export')" />
+            <xl-action-button v-permission="'file:list'" :text="t('system.file.exportList')" :tooltip-content="t('system.file.exportLimitHint')" :loading="exporting" @click="emit('export')" />
             <xl-action-button v-permission="'file:create'" :text="t('system.file.selectUploadFolder')" @click="emit('upload-directory')" />
             <xl-action-button v-permission="'file:create'" type="primary" :text="t('system.file.selectUploadFiles')" @click="emit('upload-files')" />
         </div>

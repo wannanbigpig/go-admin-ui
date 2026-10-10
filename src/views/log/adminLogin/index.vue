@@ -1,61 +1,39 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
-            <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
-                <el-row id="searchForm" :gutter="20">
-                    <el-col :span="4">
-                        <el-form-item :label="t('log.login.username')" prop="username">
-                            <el-input :placeholder="t('log.login.inputUsername')" v-model.trim="queryWhere.username" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('log.login.ipAddress')" prop="ip">
-                            <el-input :placeholder="t('log.login.inputIp')" v-model.trim="queryWhere.ip" clearable></el-input>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-form-item :label="t('log.login.loginStatus')" prop="login_status">
-                            <el-select v-model="queryWhere.login_status" clearable :placeholder="t('log.login.selectStatus')">
-                                <el-option :label="t('common.status.success')" :value="1" />
-                                <el-option :label="t('common.status.failed')" :value="0" />
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="8">
-                        <el-form-item :label="t('log.login.loginTime')" prop="dateRange">
-                            <xl-date-range-picker v-model="dateRange" />
-                        </el-form-item>
-                    </el-col>
-                    <xl-collapsible-search-btn :loading="loading" :maxShow="4" @search="handleSearch" @reset="handleReset" :modelRef="queryFormRef" nodeName="#searchForm > .el-col" />
-                </el-row>
-            </el-form>
-        </div>
-
-        <div class="xl-container">
-            <xl-table-list :loading="loading" :data="logList" :tableTitle="tableTitle" :pagination="pagination">
-                <template #td="{ item, val }">
-                    <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
-                        {{ item.tag[val as keyof typeof item.tag]?.text || val }}
-                    </el-tag>
-                    <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
-                        <span @click="copyText(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
-                    </el-tooltip>
-                    <span v-else>
-                        {{ val }}
-                    </span>
-                </template>
-                <template #operation>
-                    <el-table-column width="100" :label="t('common.labels.operation')" align="center" fixed="right">
-                        <template #default="scope">
-                            <xl-action-button v-permission="'adminLoginLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
-                        </template>
-                    </el-table-column>
-                </template>
-            </xl-table-list>
-        </div>
+        <xl-pro-table
+            :search-model="searchModel"
+            :table-title="tableTitle"
+            :search-schema="searchSchema"
+            :loading="loading"
+            :data="logList"
+            :pagination="pagination"
+            :search-max-show="4"
+            @search="onSearch"
+            @reset="onReset"
+            @sort-change="handleSortChange"
+        >
+            <template #td="{ item, val }">
+                <el-tag v-if="item.tag" :type="item.tag[val as keyof typeof item.tag]?.type || 'info'">
+                    {{ item.tag[val as keyof typeof item.tag]?.text || val }}
+                </el-tag>
+                <el-tooltip v-else-if="item.copy" trigger="click" effect="customized" :content="t('common.actions.copySuccess')" placement="left">
+                    <span @click="copyText(String(val))" class="xl-cursor-pointer"> {{ val }}</span>
+                </el-tooltip>
+                <span v-else>
+                    {{ val }}
+                </span>
+            </template>
+            <template #operation>
+                <el-table-column width="100" :label="t('common.labels.operation')" align="center" fixed="right">
+                    <template #default="scope">
+                        <xl-action-button v-permission="'adminLoginLog:detail'" :button-info="detailButtonInfo" type="primary" link :show-icon="false" @click="openDetailDrawer(scope.row)" />
+                    </template>
+                </el-table-column>
+            </template>
+        </xl-pro-table>
 
         <!-- 详情抽屉 -->
-        <el-drawer v-model="showDetailDrawer" :title="t('log.login.detailTitle')" direction="rtl" size="50%">
+        <el-drawer v-model="showDetailDrawer" :title="t('log.login.detailTitle')" direction="rtl" size="var(--xl-drawer-md)">
             <div v-loading="detailLoading" :element-loading-text="t('log.login.loadingText')" class="detail-content">
                 <template v-if="currentDetail">
                     <el-descriptions :column="2" border>
@@ -105,14 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
-import xlTableList from '@/components/tableList/index.vue'
-import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
+import xlProTable from '@/components/proTable/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { usePermission } from '@/composables/usePermission'
 import { useClipboard } from '@/composables/useClipboard'
 import { useAdminLoginLogPage } from '@/modules/log/useAdminLoginLogPage'
+import type { ProTableSearchSchema } from '@/components/proTable/types'
 import type { TableColumn } from '@/types/common'
 import type { LoginLog } from '@/types/log'
 import { useI18n } from 'vue-i18n'
@@ -122,17 +99,75 @@ const { copyText } = useClipboard()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
 const { t } = useI18n()
 
-const { loading, logList, pagination, queryFormRef, queryWhere, dateRange, showDetailDrawer, currentDetail, detailLoading, formatIpAddress, handleSearch, handleReset, getList, openDetailDrawer } = useAdminLoginLogPage()
+const { loading, logList, pagination, queryWhere, dateRange, showDetailDrawer, currentDetail, detailLoading, formatIpAddress, handleSearch, handleSortChange, handleReset, getList, openDetailDrawer } = useAdminLoginLogPage()
+
+const searchModel = reactive({
+    username: '',
+    ip: '',
+    login_status: '',
+    dateRange: [] as string[],
+})
+
+const onSearch = (model: Record<string, unknown>) => {
+    queryWhere.username = (model.username as string) || null
+    queryWhere.ip = (model.ip as string) || null
+    queryWhere.login_status = model.login_status !== undefined && model.login_status !== '' ? (model.login_status as number) : null
+    if (Array.isArray(model.dateRange) && model.dateRange.length === 2) {
+        dateRange.value = model.dateRange as [string, string]
+    } else {
+        dateRange.value = []
+    }
+    handleSearch()
+}
+
+const onReset = () => {
+    dateRange.value = []
+    handleReset()
+}
 
 onMounted(() => {
     getList()
 })
 
+const searchSchema = computed<ProTableSearchSchema>(() => [
+    {
+        prop: 'username',
+        label: t('log.login.username'),
+        type: 'input',
+        placeholder: t('log.login.inputUsername'),
+        span: 4,
+    },
+    {
+        prop: 'ip',
+        label: t('log.login.ipAddress'),
+        type: 'input',
+        placeholder: t('log.login.inputIp'),
+        span: 4,
+    },
+    {
+        prop: 'login_status',
+        label: t('log.login.loginStatus'),
+        type: 'select',
+        placeholder: t('log.login.selectStatus'),
+        options: [
+            { label: t('common.status.success'), value: 1 },
+            { label: t('common.status.failed'), value: 0 },
+        ],
+        span: 4,
+    },
+    {
+        prop: 'dateRange',
+        label: t('log.login.loginTime'),
+        type: 'daterange',
+        span: 8,
+    },
+])
+
 const tableTitle = computed(
     () =>
         [
-            { prop: 'id', align: 'center', h_label: t('common.labels.id'), width: 80 },
-            { prop: 'username', h_label: t('log.login.username'), minWidth: 120, overflow: true },
+            { prop: 'id', sortable: 'custom', align: 'center', h_label: t('common.labels.id'), width: 80 },
+            { prop: 'username', sortable: 'custom', h_label: t('log.login.username'), minWidth: 120, overflow: true },
             {
                 prop: 'type',
                 h_label: t('log.login.type'),
@@ -158,7 +193,7 @@ const tableTitle = computed(
             { prop: 'ip', h_label: t('log.login.ipAddress'), minWidth: 130, customRow: true, copy: true },
             { prop: 'os', h_label: t('log.login.os'), width: 120, overflow: true },
             { prop: 'browser', h_label: t('log.login.browser'), width: 120, overflow: true },
-            { prop: 'execution_time', h_label: t('log.login.durationMs'), align: 'center', width: 100 },
+            { prop: 'execution_time', sortable: 'custom', h_label: t('log.login.durationMs'), align: 'center', width: 100 },
             {
                 prop: 'is_revoked',
                 h_label: t('log.login.revoked'),
@@ -170,7 +205,7 @@ const tableTitle = computed(
                     1: { type: 'danger', text: t('common.yes') },
                 },
             },
-            { prop: 'created_at', h_label: t('log.login.time'), align: 'center', width: 160 },
+            { prop: 'created_at', sortable: 'custom', h_label: t('log.login.time'), align: 'center', width: 160 },
         ] as TableColumn<LoginLog>[]
 )
 </script>

@@ -93,6 +93,24 @@ describe('sms config panel', () => {
         mocks.prompt.mockResolvedValue({ value: '+86 13800138000' })
     })
 
+    it('blocks save and test after initial load failure until retry succeeds', async () => {
+        mocks.fetchConfig.mockRejectedValueOnce(new Error('temporary load failure'))
+        const wrapper = mountPanel()
+        await flushPromises()
+        const vm = wrapper.vm as unknown as { handleSave: () => Promise<void>; handleTest: () => Promise<void>; loadConfig: () => Promise<void> }
+        expect(wrapper.findComponent({ name: 'ElForm' }).exists()).toBe(false)
+        await vm.handleSave()
+        await vm.handleTest()
+        expect(mocks.updateConfig).not.toHaveBeenCalled()
+        expect(mocks.testConfig).not.toHaveBeenCalled()
+        expect(mocks.validateForm).not.toHaveBeenCalled()
+        await vm.loadConfig()
+        await flushPromises()
+        await vm.handleSave()
+        expect(mocks.updateConfig).toHaveBeenCalledWith(expect.objectContaining({ enabled: config.enabled }))
+        wrapper.unmount()
+    })
+
     it('binds test and save actions to their dedicated permissions', async () => {
         const wrapper = mountPanel()
         await flushPromises()

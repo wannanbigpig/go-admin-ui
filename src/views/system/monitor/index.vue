@@ -165,6 +165,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
 import { subscribeChannel, unsubscribeChannel } from '@/stores/notification'
+import { formatFileSize } from '@/utils/helper'
 
 const { t } = useI18n()
 const data = ref<DashboardMonitor | null>(null)
@@ -208,11 +209,7 @@ onUnmounted(() => {
 })
 
 const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    return formatFileSize(bytes)
 }
 
 const formatDuration = (ns: number): string => {
@@ -281,24 +278,25 @@ const getLoadClass = (load: number, cores: number): string => {
 
     .load-label {
         font-size: 14px;
-        color: #909399;
+        color: var(--el-text-color-secondary);
         margin-bottom: 8px;
     }
 
     .load-value {
         font-size: 32px;
         font-weight: 600;
+        color: var(--el-text-color-primary);
 
         &.success {
-            color: #67c23a;
+            color: var(--el-color-success);
         }
 
         &.warning {
-            color: #e6a23c;
+            color: var(--el-color-warning);
         }
 
         &.danger {
-            color: #f56c6c;
+            color: var(--el-color-danger);
         }
     }
 }
@@ -310,20 +308,20 @@ const getLoadClass = (load: number, cores: number): string => {
     .stat-value {
         font-size: 36px;
         font-weight: 600;
-        color: #303133;
+        color: var(--el-text-color-primary);
 
         &.warning {
-            color: #e6a23c;
+            color: var(--el-color-warning);
         }
 
         &.primary {
-            color: #409eff;
+            color: var(--el-color-primary);
         }
     }
 
     .stat-label {
         font-size: 14px;
-        color: #909399;
+        color: var(--el-text-color-secondary);
         margin-top: 8px;
     }
 }

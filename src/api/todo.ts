@@ -1,9 +1,15 @@
 import { get, post } from '@/utils/request'
 import type { PageData } from '@/types/common'
-import type { TodoItem, TodoListQuery, TodoReminderPreference, TodoReminderPreferencePayload, TodoStatus, TodoSummary, TodoWritePayload } from '@/types/todo'
+import type { TodoGroup, TodoItem, TodoListQuery, TodoReminderPreference, TodoReminderPreferencePayload, TodoStatus, TodoSummary, TodoWritePayload } from '@/types/todo'
 
-export const getTodoList = (params?: TodoListQuery) => get<PageData<TodoItem>>('/v1/todo/list', params as Record<string, unknown>)
-export const getTodoSummary = () => get<TodoSummary>('/v1/todo/summary')
+export const getTodoList = (params?: TodoListQuery) => get<PageData<TodoItem> & { summary?: TodoSummary | null }>('/v1/todo/list', params as Record<string, unknown>)
+export const getTodoSummary = (groupID?: number) =>
+    groupID === undefined ? get<TodoSummary>('/v1/todo/summary') : get<TodoSummary>('/v1/todo/summary', { group_id: groupID })
+export const getTodoGroups = () => get<{ groups: TodoGroup[] }>('/v1/todo/groups')
+export const createTodoGroup = (name: string) => post<TodoGroup>('/v1/todo/group/create', { name })
+export const renameTodoGroup = (id: number, name: string) => post<TodoGroup>('/v1/todo/group/rename', { id, name })
+export const deleteTodoGroup = (id: number) => post<unknown>('/v1/todo/group/delete', { id })
+export const moveTodoGroup = (id: number | string, group_id: number) => post<TodoItem>('/v1/todo/group/move', { id, group_id })
 export const getTodoReminderPreference = () => get<TodoReminderPreference>('/v1/todo/reminder-preference')
 export const updateTodoReminderPreference = (data: TodoReminderPreferencePayload) => post<TodoReminderPreference>('/v1/todo/reminder-preference', data)
 export const createTodo = (data: TodoWritePayload) => post<TodoItem>('/v1/todo/create', data)

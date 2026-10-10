@@ -1,7 +1,8 @@
 <template>
     <div class="sidebar-logo-container" :class="{ collapse: settingStore.isCollapse }">
         <router-link class="sidebar-logo-link" to="/">
-            <img src="@/assets/images/gin-layout-mark.svg" class="sidebar-logo" alt="Gin Layout" />
+            <img src="@/assets/images/gin-layout-mark.svg" class="sidebar-logo sidebar-logo--light" alt="Gin Layout" />
+            <img src="@/assets/images/gin-layout-mark-dark.svg" class="sidebar-logo sidebar-logo--dark" alt="Gin Layout" />
             <span class="sidebar-title animate__animated" :class="{ animate__bounceInLeft: !settingStore.isCollapse }"> X-L-Admin </span>
         </router-link>
     </div>
@@ -23,14 +24,13 @@ const settingStore = useSettingStore()
     position: relative;
 
     .sidebar-logo-link {
-        display: grid;
-        grid-template-columns: 32px minmax(0, 1fr);
+        display: flex;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
         width: 100%;
         height: $xl-side-logo-height;
-        padding: 0 18px;
-        gap: 12px;
+        padding: 0 14px;
+        gap: 10px;
         transition: padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
 
         .sidebar-logo {
@@ -42,8 +42,13 @@ const settingStore = useSettingStore()
             padding: 4px;
             border: 1px solid var(--el-border-color-lighter);
             border-radius: 8px;
-            background: #fff;
+            background: var(--el-bg-color-overlay, #ffffff);
             align-self: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo--dark {
+            display: none;
         }
 
         .sidebar-title {
@@ -92,5 +97,13 @@ const settingStore = useSettingStore()
             max-width: 0;
         }
     }
+}
+
+:global(html.dark .sidebar-logo-container .sidebar-logo-link .sidebar-logo--light) {
+    display: none;
+}
+
+:global(html.dark .sidebar-logo-container .sidebar-logo-link .sidebar-logo--dark) {
+    display: block;
 }
 </style>

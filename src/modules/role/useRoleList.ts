@@ -20,9 +20,11 @@ export function useRoleList() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
     } = useListPage<Role, typeof queryWhere>({
         query: queryWhere,
+        sortFields: ['id', 'name', 'code', 'sort', 'created_at', 'updated_at'],
         queryFormRef,
         transformParams: (query) => ({
             ...query,
@@ -43,6 +45,7 @@ export function useRoleList() {
         pagination,
         getList,
         handleSearch,
+        handleSortChange,
         handleReset,
     }
 }

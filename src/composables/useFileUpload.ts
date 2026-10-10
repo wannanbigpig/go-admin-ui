@@ -161,6 +161,7 @@ export function useFileUpload() {
             options = { ...options, signal: ownedController.signal }
         }
         const task = uploadTasks.value.find((item) => item.id === rawTask.id) || rawTask
+        task.status = 'pending'
         task.error = ''
         task.result = undefined
         task.progress = 0

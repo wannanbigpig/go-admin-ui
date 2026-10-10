@@ -1,7 +1,7 @@
 import { get, post, request, upload } from '@/utils/request'
 import type { AxiosRequestConfig } from 'axios'
 import type { PageData } from '@/types/common'
-import type { ExportRecord, ExportTaskSubmitResult } from '@/types/exportCenter'
+import type { ExportRecord, ExportSummary, ExportTaskSubmitResult } from '@/types/exportCenter'
 import type { AppNotification, NotificationReadPayload, NotificationSendPayload, NotificationSendResult, NotificationUnreadCount, WsTicketResult } from '@/types/notification'
 import type {
     SystemConfig,
@@ -28,6 +28,7 @@ import type {
     SystemFileFolderPayload,
     SystemFileBatchDeletePayload,
     SystemFileBatchDeleteResult,
+    SystemFileBatchDestroyResult,
     SystemFileMovePayload,
     SystemFileLocalUploadBatchResult,
     SystemFileUploadCompletePayload,
@@ -163,7 +164,11 @@ export function getCronTaskStateList(params?: Record<string, unknown>) {
 }
 
 export function getExportRecordList(params?: Record<string, unknown>) {
-    return get<PageData<ExportRecord>>('/v1/system/export/list', params)
+    return get<PageData<ExportRecord> & { summary?: ExportSummary | null }>('/v1/system/export/list', params)
+}
+
+export function getMyExportSummary() {
+    return request<ExportSummary>('/v1/system/export/summary', 'GET', { silent: true })
 }
 
 export function getWsTicket() {
@@ -180,6 +185,10 @@ export function getNotificationUnreadCount() {
 
 export function markNotificationRead(data: NotificationReadPayload) {
     return post<NotificationUnreadCount & { updated?: boolean }>('/v1/system/notification/read', data)
+}
+
+export function deleteNotification(data: NotificationReadPayload) {
+    return post<NotificationUnreadCount & { deleted: boolean }>('/v1/system/notification/delete', data)
 }
 
 export function markAllNotificationsRead() {
@@ -227,7 +236,7 @@ export function destroySystemFile(data: { id: number | string }) {
 }
 
 export function destroySystemFileBatch(data: { ids: (number | string)[] }) {
-    return post<unknown>('/v1/system/file/trash/batch-destroy', data)
+    return post<SystemFileBatchDestroyResult>('/v1/system/file/trash/batch-destroy', data)
 }
 
 export function getSystemFileReferences(params: { id?: number | string; file_id?: number | string; uuid?: string }) {

@@ -1,21 +1,22 @@
 <template>
     <div class="sms-panel">
-        <div class="sms-header">
-            <div>
-                <h3>{{ t('system.sms.title') }}</h3>
-                <p>{{ t('system.sms.description') }}</p>
+        <div class="panel-header">
+            <div class="panel-title-wrapper">
+                <span class="panel-title-bar"></span>
+                <h3 class="panel-title">{{ t('system.sms.title') }}</h3>
             </div>
-            <div class="sms-actions">
-                <xl-action-button v-permission="'sms:test'" code="sms:test" :text="t('system.sms.test')" type="primary" :show-icon="false" :loading="testing" @click="handleTest" />
-                <xl-action-button v-permission="'sms:update'" code="sms:update" :text="t('system.sms.save')" type="primary" :show-icon="false" :loading="saving" @click="handleSave" />
-            </div>
+            <p class="panel-description">{{ t('system.sms.description') }}</p>
         </div>
 
         <el-alert v-if="hasUnsavedChanges" class="sms-unsaved-alert" type="warning" :title="t('system.sms.unsavedChanges')" :closable="false" show-icon />
 
         <el-skeleton v-if="loading" animated :rows="10" />
 
-        <el-form v-else ref="formRef" :model="formData" :rules="formRules" :validate-on-rule-change="false" label-width="190px" class="sms-form">
+        <el-alert v-else-if="loadError" :title="t('system.sms.loadFailed')" type="error" :closable="false" show-icon>
+            <el-button @click="loadConfig">{{ t('common.actions.retry') }}</el-button>
+        </el-alert>
+
+        <el-form v-else-if="configLoaded" ref="formRef" :model="formData" :rules="formRules" :validate-on-rule-change="false" scroll-to-error :scroll-into-view-options="{ block: 'center', behavior: 'smooth' }" label-width="190px" class="sms-form">
             <el-form-item :label="t('system.sms.enabled')" prop="enabled">
                 <el-switch v-model="formData.enabled" />
             </el-form-item>
@@ -147,6 +148,11 @@
                     </el-form-item>
                 </el-col>
             </el-row>
+
+            <div class="panel-actions-bottom">
+                <xl-action-button v-permission="'sms:test'" code="sms:test" :text="t('system.sms.test')" type="default" :show-icon="false" :loading="testing" :disabled="!configLoaded || loading || saving" @click="handleTest" />
+                <xl-action-button v-permission="'sms:update'" code="sms:update" :text="t('system.sms.save')" type="primary" :show-icon="false" :loading="saving" :disabled="!configLoaded || loading || testing" @click="handleSave" />
+            </div>
         </el-form>
     </div>
 </template>
@@ -221,6 +227,8 @@ const createDefaultConfig = (): SmsConfig => {
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const configLoaded = ref(false)
+const loadError = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const formData = reactive(createDefaultConfig())
@@ -385,10 +393,14 @@ const hasUnsavedChanges = computed(() => savedConfigSignature.value !== '' && JS
 
 const loadConfig = async () => {
     loading.value = true
+    configLoaded.value = false
+    loadError.value = false
     try {
         applyConfig(await fetchSmsConfig())
         savedConfigSignature.value = JSON.stringify(buildPayload())
+        configLoaded.value = true
     } catch (error) {
+        loadError.value = true
         Logger.error('获取短信配置失败:', error)
     } finally {
         loading.value = false
@@ -396,6 +408,7 @@ const loadConfig = async () => {
 }
 
 const handleSave = async () => {
+    if (!configLoaded.value || loading.value || saving.value || testing.value) return
     if (saving.value || !(await validateFormSafely(formRef.value, 'system-sms-form'))) return
     saving.value = true
     try {
@@ -410,6 +423,7 @@ const handleSave = async () => {
 }
 
 const handleTest = async () => {
+    if (!configLoaded.value || loading.value || saving.value || testing.value) return
     if (testing.value || !(await validateFormSafely(formRef.value, 'system-sms-test-form'))) return
     testing.value = true
     try {
@@ -441,34 +455,54 @@ onMounted(loadConfig)
 <style scoped lang="scss">
 .sms-panel {
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: var(--xl-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
-.sms-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--xl-space-4);
-    margin-bottom: 18px;
+.panel-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
 
-    h3 {
-        margin: 0 0 6px;
-        font-size: var(--xl-font-xl);
-        font-weight: 600;
+    .panel-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
-    p {
+    .panel-title-bar {
+        width: 4px;
+        height: 18px;
+        background-color: var(--el-color-primary);
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .panel-title {
         margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1.4;
+        color: var(--el-text-color-primary);
+    }
+
+    .panel-description {
+        margin: 8px 0 0 14px;
+        font-size: 13px;
         color: var(--el-text-color-secondary);
         line-height: 1.5;
     }
 }
 
-.sms-actions {
+.panel-actions-bottom {
     display: flex;
-    flex-shrink: 0;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .sms-form {
@@ -524,15 +558,5 @@ onMounted(loadConfig)
     color: var(--el-text-color-secondary);
     font-size: var(--xl-font-sm);
     line-height: 1.4;
-}
-
-@media (max-width: 768px) {
-    .sms-header {
-        flex-direction: column;
-    }
-
-    .sms-actions {
-        width: 100%;
-    }
 }
 </style>

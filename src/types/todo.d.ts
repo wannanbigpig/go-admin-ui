@@ -13,6 +13,7 @@ export interface TodoItem extends WithId {
     source?: string
     source_type?: string
     source_key?: string
+    group_id?: number
     action_url?: string
     is_overdue?: boolean
     can_edit?: boolean
@@ -27,13 +28,17 @@ export interface TodoListQuery {
     per_page?: number
     keyword?: string
     status?: TodoStatus | string
+    group_id?: number
     due_scope?: TodoDueScope | string
     order_by?: string
 }
 
 export interface TodoSummary {
+    total: number
     pending: number
     processing: number
+    completed: number
+    canceled: number
     overdue: number
     due_today: number
 }
@@ -42,13 +47,20 @@ export interface TodoReminderPreference {
     in_app_enabled: boolean
     sms_enabled: boolean
     sms_available: boolean
+    lead_minutes: number
 }
 
-export type TodoReminderPreferencePayload = Pick<TodoReminderPreference, 'in_app_enabled' | 'sms_enabled'>
+export type TodoReminderPreferencePayload = Pick<TodoReminderPreference, 'in_app_enabled' | 'sms_enabled' | 'lead_minutes'>
+
+export interface TodoGroup {
+    id: number
+    name: string
+}
 
 export interface TodoWritePayload {
     title: string
     description?: string
     priority: TodoPriority
     due_at?: string
+    group_id?: number
 }

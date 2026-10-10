@@ -771,16 +771,26 @@ export async function updateRequestLogMaskConfig(data: RequestLogMaskConfig) {
     return normalizeDetailData(response, data)
 }
 
+export async function fetchSystemFileBlob(uuid: string, variant?: 'thumb', signal?: AbortSignal) {
+    return request<Blob>(`/v1/file/${encodeURIComponent(uuid)}${variant ? `?variant=${variant}` : ''}`, 'GET', {
+        responseType: 'blob',
+        signal,
+        silent: variant === 'thumb',
+    })
+}
+
 export async function downloadSystemFileBlob(uuid: string, fileName?: string) {
     if (!uuid) return
-    const blob = await request<Blob>(`/v1/file/${encodeURIComponent(uuid)}`, 'GET', {
-        responseType: 'blob',
-    })
+    const blob = await fetchSystemFileBlob(uuid)
+    downloadFileBlob(blob, fileName || uuid)
+}
+
+export function downloadFileBlob(blob: Blob, fileName: string) {
     const objectUrl = URL.createObjectURL(blob)
     try {
         const anchor = document.createElement('a')
         anchor.href = objectUrl
-        anchor.download = fileName || uuid
+        anchor.download = fileName
         document.body.appendChild(anchor)
         anchor.click()
         document.body.removeChild(anchor)

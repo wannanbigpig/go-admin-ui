@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-10">
+        <div class="xl-container xl-m-bottom-16">
             <el-form ref="runQueryFormRef" class="xl-search-form" :model="runQuery" @submit.prevent="handleRunSearch" @keydown.enter.prevent="handleRunSearch">
                 <el-row id="runSearchForm" :gutter="20">
                     <el-col :span="5">
@@ -53,7 +53,7 @@
 
         <div class="xl-container">
             <el-alert class="xl-m-bottom-10" :title="t('system.task.detailSamplingTip')" type="info" show-icon />
-            <xl-table-list :loading="runLoading" :data="runList" :tableTitle="runTableTitle" :pagination="runPagination">
+            <xl-table-list :loading="runLoading" :data="runList" :tableTitle="runTableTitle" :pagination="runPagination" @sort-change="handleRunSortChange">
                 <template #td="{ item, val }">
                     <template v-if="item.tag">
                         <el-tag v-if="val !== undefined && val !== null && val !== '' && val !== '-' && item.tag[val as string | number]" :type="item.tag[val as string | number]?.type || 'info'">
@@ -72,7 +72,7 @@
             </xl-table-list>
         </div>
 
-        <el-drawer v-model="showRunDetailDrawer" :title="t('system.task.runDetailTitle')" size="min(960px, 92vw)" destroy-on-close>
+        <el-drawer v-model="showRunDetailDrawer" :title="t('system.task.runDetailTitle')" size="var(--xl-drawer-lg)" destroy-on-close>
             <!-- 基本信息 -->
             <div class="section-title xl-m-bottom-10">
                 <div class="section-title-line"></div>
@@ -203,7 +203,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onActivated, onDeactivated, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -245,6 +245,9 @@ const showRunDetailDrawer = ref(false)
 const currentRunDetail = ref<TaskRun | null>(null)
 const runEvents = ref<TaskRunEvent[]>([])
 const runEventsLoading = ref(false)
+const panelActivated = ref(true)
+let detailRequestVersion = 0
+const isCurrentDetailRequest = (version: number) => version === detailRequestVersion && showRunDetailDrawer.value && props.active && panelActivated.value
 
 const drilldown = parseTaskRunDrilldownQuery(route.query as Record<string, unknown>)
 Object.assign(runQuery, drilldown.filters)
@@ -256,9 +259,12 @@ const {
     pagination: runPagination,
     getList: getRunList,
     handleSearch: handleRunSearch,
+    handleSortChange: handleRunSortChange,
     handleReset: rawHandleRunReset,
 } = useListPage<TaskRun, typeof runQuery>({
     query: runQuery,
+    defaultQuery: createTaskRunQuery(),
+    sortFields: ['id', 'task_code', 'duration_ms', 'started_at', 'finished_at'],
     queryFormRef: runQueryFormRef,
     transformParams: (query) => {
         const params = { ...query }
@@ -335,46 +341,62 @@ const runListPolling = useIntervalPolling(
     },
     {
         interval: 5000,
-        when: () => props.active && hasActiveRunStatus(runList.value),
+        when: () => props.active && panelActivated.value && hasActiveRunStatus(runList.value),
         pauseWhenHidden: true,
     }
 )
 
 const detailPolling = useIntervalPolling(
     async ({ signal }) => {
-        if (!currentRunDetail.value || !showRunDetailDrawer.value) return
+        if (!props.active || !panelActivated.value || !currentRunDetail.value || !showRunDetailDrawer.value || runEventsLoading.value) return
         if (!['pending', 'running', 'retrying'].includes(currentRunDetail.value.status)) return
+        const version = detailRequestVersion
+        const runId = currentRunDetail.value.id
         try {
-            const [detail, events] = await Promise.all([fetchTaskRunDetail(currentRunDetail.value.id), fetchTaskRunEvents(currentRunDetail.value.id)])
-            if (signal.aborted) return
+            const [detail, events] = await Promise.all([fetchTaskRunDetail(runId), fetchTaskRunEvents(runId)])
+            if (signal.aborted || !isCurrentDetailRequest(version) || currentRunDetail.value?.id !== runId) return
             currentRunDetail.value = detail
             runEvents.value = events
         } catch (error) {
-            if (signal.aborted) return
+            if (signal.aborted || !isCurrentDetailRequest(version)) return
             Logger.error('轮询任务执行详情失败:', error)
         }
     },
     {
         interval: 5000,
-        when: () => !!currentRunDetail.value && showRunDetailDrawer.value,
+        when: () => props.active && panelActivated.value && !!currentRunDetail.value && showRunDetailDrawer.value && !runEventsLoading.value,
         pauseWhenHidden: true,
     }
 )
 
+const invalidateDetailRequest = () => {
+    detailRequestVersion += 1
+    detailPolling.stop()
+    runEventsLoading.value = false
+}
+
 const handleRunDetail = async (row: TaskRun) => {
+    const version = ++detailRequestVersion
+    detailPolling.stop()
+    currentRunDetail.value = row
+    runEvents.value = []
+    showRunDetailDrawer.value = true
+    runEventsLoading.value = true
     try {
-        runEvents.value = []
-        currentRunDetail.value = await fetchTaskRunDetail(row.id)
-        showRunDetailDrawer.value = true
-        runEventsLoading.value = true
-        runEvents.value = await fetchTaskRunEvents(row.id)
-        if (['pending', 'running', 'retrying'].includes(currentRunDetail.value.status)) {
+        const detail = await fetchTaskRunDetail(row.id)
+        if (!isCurrentDetailRequest(version)) return
+        currentRunDetail.value = detail
+        const events = await fetchTaskRunEvents(row.id)
+        if (!isCurrentDetailRequest(version)) return
+        runEvents.value = events
+        if (props.active && panelActivated.value && ['pending', 'running', 'retrying'].includes(detail.status)) {
             detailPolling.start()
         }
     } catch (error) {
+        if (!isCurrentDetailRequest(version)) return
         Logger.error('获取任务执行详情失败:', error)
     } finally {
-        runEventsLoading.value = false
+        if (isCurrentDetailRequest(version)) runEventsLoading.value = false
     }
 }
 
@@ -439,8 +461,8 @@ const runActionButtons = computed(() => [
 const runTableTitle = computed(
     () =>
         [
-            { prop: 'id', h_label: t('common.labels.id'), width: 80, align: 'center' },
-            { prop: 'task_code', h_label: t('system.task.code'), minWidth: 160, overflow: true },
+            { prop: 'id', sortable: 'custom', h_label: t('common.labels.id'), width: 80, align: 'center' },
+            { prop: 'task_code', sortable: 'custom', h_label: t('system.task.code'), minWidth: 160, overflow: true },
             {
                 prop: 'kind',
                 h_label: t('system.task.kind'),
@@ -479,24 +501,28 @@ const runTableTitle = computed(
             { prop: 'max_retry', h_label: t('system.task.maxRetry'), width: 90, align: 'center' },
             { prop: 'retry_seq', h_label: t('system.task.retrySeq'), width: 90, align: 'center', formatter: (row) => row.retry_seq || '-' },
             { prop: 'retry_of_run_id', h_label: t('system.task.retryOfRunId'), width: 120, align: 'center', formatter: (row) => row.retry_of_run_id || '-' },
-            { prop: 'duration_ms', h_label: t('system.task.durationMs'), width: 110, align: 'center' },
-            { prop: 'started_at', h_label: t('system.task.startedAt'), width: 160, align: 'center' },
-            { prop: 'finished_at', h_label: t('system.task.finishedAt'), width: 160, align: 'center' },
+            { prop: 'duration_ms', sortable: 'custom', h_label: t('system.task.durationMs'), width: 110, align: 'center' },
+            { prop: 'started_at', sortable: 'custom', h_label: t('system.task.startedAt'), width: 160, align: 'center' },
+            { prop: 'finished_at', sortable: 'custom', h_label: t('system.task.finishedAt'), width: 160, align: 'center' },
             { prop: 'error_message', h_label: t('system.task.errorMessage'), minWidth: 180, overflow: true },
         ] as TableColumn<TaskRun>[]
 )
 
 watch(showRunDetailDrawer, (val) => {
-    if (!val) detailPolling.stop()
-})
+    if (!val) invalidateDetailRequest()
+}, { flush: 'sync' })
 
 watch(
     () => props.active,
     (val) => {
         if (val) {
             runListPolling.resume()
+            if (panelActivated.value && showRunDetailDrawer.value && currentRunDetail.value && !runEventsLoading.value) {
+                void handleRunDetail(currentRunDetail.value)
+            }
         } else {
             runListPolling.pause()
+            invalidateDetailRequest()
         }
     }
 )
@@ -512,21 +538,25 @@ onMounted(async () => {
 })
 
 onActivated(() => {
+    panelActivated.value = true
     if (!hasActivated) {
         hasActivated = true
         return
     }
     void getRunList()
     if (props.active) runListPolling.resume()
-    if (showRunDetailDrawer.value && currentRunDetail.value && ['pending', 'running', 'retrying'].includes(currentRunDetail.value.status)) {
-        detailPolling.resume()
+    if (props.active && showRunDetailDrawer.value && currentRunDetail.value && !runEventsLoading.value) {
+        void handleRunDetail(currentRunDetail.value)
     }
 })
 
 onDeactivated(() => {
+    panelActivated.value = false
     runListPolling.pause()
-    detailPolling.pause()
+    invalidateDetailRequest()
 })
+
+onBeforeUnmount(invalidateDetailRequest)
 </script>
 
 <style scoped lang="scss">

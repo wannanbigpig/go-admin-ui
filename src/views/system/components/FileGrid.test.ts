@@ -4,6 +4,7 @@ import FileGrid from './FileGrid.vue'
 import type { SystemFile, SystemFileFolder } from '@/types/system'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/utils/helper', () => ({ formatFileSize: () => '1 KB' }))
+vi.mock('@/modules/system/service', () => ({ fetchSystemFileBlob: vi.fn() }))
 
 describe('file grid context menu', () => {
     let wrapper: VueWrapper

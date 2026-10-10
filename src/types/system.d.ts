@@ -281,6 +281,13 @@ export interface SystemFileBatchDeleteResult {
     failures?: SystemFileBatchDeleteFailure[]
 }
 
+export interface SystemFileBatchDestroyResult {
+    total: number
+    destroyed: number
+    failed: number
+    failures?: Array<{ id: number | string; code?: number; message: string }>
+}
+
 export interface SystemFileLocalUploadFailure {
     index?: number
     code?: number

@@ -1,4 +1,4 @@
-import { computed, reactive, ref, type Ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch, type Ref } from 'vue'
 import { Logger } from '@/utils/logger'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useSubmitLock } from '@/composables/useSubmitLock'
@@ -20,6 +20,14 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     const formTitle = ref('')
     const currentIndex = ref<number | null>(null)
     const { isSubmitting, runWithSubmitLock } = useSubmitLock()
+    let detailRequestVersion = 0
+    const detailLoading = ref(false)
+    watch(showDrawer, (visible) => {
+        if (!visible) {
+            detailRequestVersion += 1
+            detailLoading.value = false
+        }
+    }, { flush: 'sync' })
 
     const initialFormData = createDepartmentForm()
     const formData = reactive({ ...initialFormData }) as Department
@@ -49,8 +57,8 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
         if (!isEditMode.value || !formData.id) {
             return departmentOptions.value
         }
-        const excludeIds = getChildrenIds(formData.id)
-        return departmentOptions.value.filter((dept: Department) => !excludeIds.includes(dept.id))
+        const excludeIds = new Set(getChildrenIds(formData.id).map(String))
+        return departmentOptions.value.filter((dept: Department) => !excludeIds.has(String(dept.id)))
     })
 
     const handleAddChild = (parentRow: Department) => {
@@ -58,13 +66,18 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
     }
 
     const openEditDrawer = async (type: number, row: Department | null, index: number | null, fixedParentId: number | string | null = null) => {
+        const requestVersion = ++detailRequestVersion
+        detailLoading.value = true
+        originalFormData.value = null
         resetFormData()
         currentIndex.value = index
+        showDrawer.value = true
 
         if (type === DEPARTMENT_EDIT_TYPE.EDIT && row) {
             formTitle.value = translate('permission.department.editTitle')
             try {
                 const deptData = await fetchDepartmentDetail(row.id)
+                if (requestVersion !== detailRequestVersion) return
                 Object.assign(formData, {
                     id: deptData.id,
                     name: deptData.name || '',
@@ -74,7 +87,9 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
                 })
                 saveOriginalData()
             } catch (error) {
+                if (requestVersion !== detailRequestVersion) return
                 Logger.error('获取部门详情失败:', error)
+                showDrawer.value = false
                 return
             }
         } else {
@@ -85,30 +100,31 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
             }
         }
 
-        showDrawer.value = true
-
-        setTimeout(() => {
-            if (formDataRef.value) {
-                formDataRef.value.clearValidate()
-            }
-        }, 50)
+        await nextTick()
+        if (requestVersion !== detailRequestVersion) return
+        formDataRef.value?.setInitialValues(formData)
+        formDataRef.value?.clearValidate()
+        detailLoading.value = false
     }
 
     const editConfirmSubmit = async () => {
+        if (detailLoading.value || isSubmitting.value) return
+        const requestVersion = detailRequestVersion
+        const wasEditing = isEditMode.value
         const valid = await validateFormSafely(formDataRef.value, translate('validation.department.formName'))
-        if (!valid) return
+        if (!valid || requestVersion !== detailRequestVersion) return
 
         await runWithSubmitLock(async () => {
             const submitData = { ...formData }
-            if (isEditMode.value) {
+            if (wasEditing) {
                 await updateDepartmentItem(submitData)
             } else {
                 await createDepartmentItem(submitData)
             }
 
             // 写成功后先关抽屉+提示，再刷新列表，避免列表刷新把提交按钮卡在"提交中"。
-            showDrawer.value = false
-            ElMessage.success(isEditMode.value ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
+            if (requestVersion === detailRequestVersion) showDrawer.value = false
+            ElMessage.success(wasEditing ? translate('common.result.editSuccess') : translate('common.result.addSuccess'))
             await refreshList()
         }).catch((error) => {
             Logger.error('提交失败:', error)
@@ -121,6 +137,7 @@ export function useDepartmentForm({ departmentOptions, getChildrenIds, refreshLi
         formTitle,
         currentIndex,
         isSubmitting,
+        detailLoading,
         formData,
         isEditMode,
         isProtectedEditingDepartment,

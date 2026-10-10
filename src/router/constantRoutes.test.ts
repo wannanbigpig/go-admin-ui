@@ -21,8 +21,11 @@ describe('router/constantRoutes', () => {
         })
     })
 
-    it('业务待办依赖后端动态菜单，不注册静态路由绕过菜单边界', () => {
-        const paths = constantRoutes.flatMap((route) => [route.path, ...(route.children || []).map((child) => child.path)])
-        expect(paths).not.toContain('/todo/list')
+    it('个人待办与导出中心一样作为登录后的隐藏辅助路由', () => {
+        const layout = constantRoutes.find((route) => route.name === 'Layout')
+        expect(layout?.children?.find((route) => route.path === '/todo/list')).toMatchObject({
+            name: 'MyTodos',
+            meta: { show: false, titleKey: 'todo.title' },
+        })
     })
 })

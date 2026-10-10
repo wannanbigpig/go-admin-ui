@@ -5,19 +5,21 @@
         role="button"
         tabindex="0"
         :aria-label="t('layout.toggleSidebar')"
+        :title="settingStore.isCollapse ? t('common.actions.expand') : t('common.actions.collapse')"
         @click="handleToggleCollapse"
         @keydown.enter="handleToggleCollapse"
     >
-        <el-icon v-if="settingStore.isCollapse">
-            <i-ant-design-right-outlined class="collapse-btn-icon" />
-        </el-icon>
-        <el-icon v-else>
-            <i-ant-design-left-outlined class="collapse-btn-icon" />
+        <svg class="collapse-btn-bg" viewBox="0 0 10 50" preserveAspectRatio="none">
+            <path d="M 0,0 C 0,8 9.5,15 9.5,25 C 9.5,35 0,42 0,50 Z" class="collapse-btn-path" />
+        </svg>
+        <el-icon class="collapse-btn-icon">
+            <i-ant-design-right-outlined v-if="settingStore.isCollapse" />
+            <i-ant-design-left-outlined v-else />
         </el-icon>
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useSettingStore } from '@/stores/setting'
 import { useI18n } from 'vue-i18n'
 
@@ -40,43 +42,72 @@ const handleToggleCollapse = () => {
 
 <style lang="scss" scoped>
 .collapse-btn {
-    width: $xl-collapse-btn-width;
-    height: $xl-collapse-btn-height;
-    border-radius: 40px;
     position: fixed;
-    top: 100px;
-    left: calc(var(--xl-aside-width) - $xl-collapse-btn-width / 2);
-    z-index: var(--xl-collapse-btn-z-index);
-    background: var(--xl-bg-color);
-    inset-inline-end: -13px;
-    transition:
-        left 320ms cubic-bezier(0.22, 1, 0.36, 1),
-        transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-        width 320ms cubic-bezier(0.22, 1, 0.36, 1),
-        box-shadow 220ms ease;
+    top: 50px;
+    left: calc(var(--xl-aside-width) - 1px);
+    width: 10px;
+    height: 50px;
+    z-index: var(--xl-collapse-btn-z-index, 100);
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: var(--el-text-color-secondary);
-    box-shadow:
-        0 2px 8px -2px rgba(0, 0, 0, 0.1),
-        0 1px 4px -1px rgba(25, 15, 15, 0.2),
-        0 0 1px 0 rgba(0, 0, 0, 0.3);
+    justify-content: flex-start;
+    padding-left: 1px;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+    transition:
+        left 320ms cubic-bezier(0.22, 1, 0.36, 1),
+        width 200ms ease,
+        transform 200ms ease;
 
-    .collapse-btn-icon {
-        width: 14px;
-        height: 14px;
+    .collapse-btn-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        filter: drop-shadow(2px 0 4px rgba(0, 0, 0, 0.05));
+
+        .collapse-btn-path {
+            fill: var(--el-bg-color-overlay, #ffffff);
+            stroke: var(--el-border-color-light);
+            stroke-width: 1;
+            transition:
+                fill 200ms ease,
+                stroke 200ms ease;
+        }
     }
 
-    &:hover {
-        box-shadow:
-            0 4px 16px 2px rgba(0, 0, 0, 0.1),
-            0 2px 8px 1px rgba(25, 15, 15, 0.2),
-            0 0 2px 0 rgba(0, 0, 0, 0.3);
+    .collapse-btn-icon {
+        position: relative;
+        z-index: 1;
+        font-size: 8px;
+        width: 8px;
+        height: 8px;
+        color: var(--el-text-color-secondary);
+        transition:
+            color 200ms ease,
+            transform 200ms ease;
+    }
+
+    &:hover,
+    &:focus-visible {
+        width: 14px;
+
+        .collapse-btn-path {
+            fill: var(--el-color-primary);
+            stroke: var(--el-color-primary);
+        }
+
+        .collapse-btn-icon {
+            color: #ffffff;
+            transform: scale(1.15);
+        }
     }
 
     &.collapse {
-        left: calc(var(--xl-aside-min-width) - 15px);
+        left: calc(var(--xl-aside-min-width) - 1px);
     }
 }
 </style>

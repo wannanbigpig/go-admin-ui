@@ -1,6 +1,6 @@
 <template>
     <div class="task-stats-wrapper">
-        <section class="xl-container xl-m-bottom-10 stats-page-heading">
+        <section class="xl-container xl-m-bottom-16 stats-page-heading">
             <div>
                 <h2>{{ t('system.task.statsPageTitle') }}</h2>
                 <p>{{ t('system.task.statsPageDescription') }}</p>
@@ -11,7 +11,7 @@
             </div>
         </section>
 
-        <div class="xl-container xl-m-bottom-10 search-panel">
+        <div class="xl-container xl-m-bottom-16 search-panel">
             <el-form ref="statsQueryFormRef" class="xl-search-form" :model="statsQuery" @submit.prevent="handleStatsSearch" @keydown.enter.prevent="handleStatsSearch">
                 <el-row id="taskStatsSearchForm" :gutter="16">
                     <el-col :xs="24" :sm="12" :md="6" :lg="5">
@@ -43,7 +43,7 @@
             </el-form>
         </div>
 
-        <section class="xl-container xl-m-bottom-10 stats-overview-panel">
+        <section class="xl-container xl-m-bottom-16 stats-overview-panel">
             <el-alert class="stats-truth-tip" :title="t('system.task.statsTruthTip')" type="info" show-icon :closable="false" />
 
             <div class="metric-grid">
@@ -58,19 +58,21 @@
                     @keydown.enter.prevent="openSummaryDetails(item.drilldownStatus)"
                 >
                     <div class="metric-card__topline">
-                        <span class="metric-card__icon"
-                            ><el-icon><component :is="item.icon" /></el-icon
-                        ></span>
+                        <div class="metric-card__header-left">
+                            <span class="metric-card__icon"
+                                ><el-icon><component :is="item.icon" /></el-icon
+                            ></span>
+                            <span class="metric-card__label">{{ item.title }}</span>
+                        </div>
                         <span v-if="item.drilldownStatus" class="metric-card__link">{{ t('system.task.viewDetails') }} <i-ep-arrow-right /></span>
                     </div>
-                    <span class="metric-card__label">{{ item.title }}</span>
                     <el-statistic class="metric-card__value" :value="item.value" :precision="item.precision" :suffix="item.suffix" />
                     <span class="metric-card__hint">{{ item.hint }}</span>
                 </article>
             </div>
         </section>
 
-        <section class="stats-main-grid xl-m-bottom-10">
+        <section class="stats-main-grid xl-m-bottom-16">
             <div class="xl-container trend-panel">
                 <header class="panel-heading">
                     <div>
@@ -153,7 +155,7 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import { useDictOptions } from '@/composables/useDictOptions'
-import { initDashboardChart, type DashboardChart } from '@/modules/dashboard/echarts'
+import type { DashboardChart } from '@/modules/dashboard/echarts'
 import { createTaskRunStatsQuery } from '@/modules/system/model'
 import { buildTaskRunDrilldownQuery, type TaskRunDrilldownStatus } from '@/modules/system/taskRunDrilldown'
 import { SYSTEM_DICT_TYPES, taskKindFallbackOptions, taskSourceFallbackOptions } from '@/modules/system/dictOptions'
@@ -358,11 +360,20 @@ const chartColor = (variable: string, fallback: string) => {
     return value || fallback
 }
 
+let initChart: ((el: HTMLElement) => DashboardChart) | null = null
+const ensureEcharts = async () => {
+    if (initChart) return
+    const module = await import('@/modules/dashboard/echarts')
+    initChart = module.initDashboardChart
+}
+
 const renderTrendChart = async () => {
     await nextTick()
     if (!trendChartRef.value) return
     if (!trendChart) {
-        trendChart = initDashboardChart(trendChartRef.value)
+        await ensureEcharts()
+        if (!trendChartRef.value || !initChart) return
+        trendChart = initChart(trendChartRef.value)
     }
 
     const textColor = chartColor('--el-text-color-secondary', '#909399')
@@ -462,7 +473,14 @@ const handleStatsReset = async () => {
     await loadStats()
 }
 
-const resizeChart = () => trendChart?.resize()
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
+const resizeChart = () => {
+    if (resizeTimer) clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => {
+        trendChart?.resize()
+        resizeTimer = null
+    }, 150)
+}
 
 onMounted(async () => {
     await Promise.all([loadTaskKindOptions(), loadTaskSourceOptions()])
@@ -476,6 +494,10 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart)
+    if (resizeTimer) {
+        clearTimeout(resizeTimer)
+        resizeTimer = null
+    }
     themeObserver?.disconnect()
     trendChart?.dispose()
     trendChart = null
@@ -542,7 +564,7 @@ onBeforeUnmount(() => {
 .metric-card {
     position: relative;
     min-width: 0;
-    padding: 18px;
+    padding: 14px 16px;
     overflow: hidden;
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 10px;
@@ -554,10 +576,10 @@ onBeforeUnmount(() => {
 
     &::after {
         position: absolute;
-        right: -26px;
-        bottom: -42px;
-        width: 108px;
-        height: 108px;
+        right: -20px;
+        bottom: -32px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         background: var(--metric-soft-color);
         content: '';
@@ -602,19 +624,28 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 34px;
+    gap: 8px;
+    min-height: 28px;
+}
+
+.metric-card__header-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 
 .metric-card__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
     color: var(--metric-color);
     background: var(--metric-soft-color);
-    font-size: 17px;
+    font-size: 15px;
+    flex-shrink: 0;
 }
 
 .metric-card__link {
@@ -623,6 +654,7 @@ onBeforeUnmount(() => {
     gap: 3px;
     color: var(--el-color-danger);
     font-size: 12px;
+    flex-shrink: 0;
 }
 
 .metric-card__label,
@@ -633,26 +665,30 @@ onBeforeUnmount(() => {
 }
 
 .metric-card__label {
-    margin-top: 16px;
+    margin-top: 0;
     color: var(--el-text-color-secondary);
     font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .metric-card__value {
     position: relative;
     z-index: 1;
-    margin-top: 5px;
+    margin-top: 8px;
 
     :deep(.el-statistic__content) {
         color: var(--el-text-color-primary);
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
-        line-height: 1.25;
+        line-height: 1.2;
     }
 }
 
 .metric-card__hint {
-    margin-top: 8px;
+    margin-top: 4px;
     overflow: hidden;
     color: var(--el-text-color-placeholder);
     font-size: 12px;

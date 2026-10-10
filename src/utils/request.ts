@@ -85,6 +85,7 @@ export const normalizeApiData = (data: unknown): unknown => {
             page: Number(data.current_page ?? data.page ?? 1),
             pageSize: Number(data.per_page ?? data.pageSize ?? 10),
             ...(data.last_page !== undefined ? { last_page: Number(data.last_page) } : {}),
+            ...(data.summary !== undefined ? { summary: data.summary } : {}),
         }
     }
 
@@ -119,6 +120,7 @@ const isMockEnabled = () => {
 }
 
 const tryGetMock = async (url: string, method: string, dataOrParams: unknown) => {
+    if (!import.meta.env.DEV) return { matched: false } as const
     if (!isMockEnabled()) return { matched: false } as const
 
     try {
@@ -328,6 +330,11 @@ service.interceptors.response.use(
                 headers: error.response.headers || {},
             } as AxiosResponse<ApiResponse<unknown>>
             return handleApiResponse(syntheticResponse, authErrorMode) as Promise<never>
+        }
+
+        // 静默请求仍向调用方拒绝，但不由全局层重复提示传输或网关错误。
+        if (getAxiosRequestConfig(error)?.silent) {
+            return Promise.reject(error)
         }
 
         // 处理网络错误

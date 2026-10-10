@@ -281,8 +281,7 @@ const openNotificationCenter = async () => {
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--xl-space-4);
-    margin-bottom: 10px;
-    padding: 20px;
+    margin-bottom: 16px;
 }
 
 .notification-manage-page__title {
@@ -312,7 +311,7 @@ const openNotificationCenter = async () => {
 }
 
 .notification-manage-page__main {
-    padding: 20px;
+    padding: 0;
 }
 
 .notification-manage-form {
@@ -334,7 +333,7 @@ const openNotificationCenter = async () => {
 .notification-preview-card {
     border: 1px solid var(--el-border-color-light);
     border-radius: var(--xl-radius-lg);
-    background: color-mix(in srgb, var(--el-color-primary-light-9) 45%, white);
+    background: color-mix(in srgb, var(--el-color-primary-light-9) 45%, var(--el-bg-color-overlay));
     padding: var(--xl-space-4);
 }
 

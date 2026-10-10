@@ -24,6 +24,7 @@ export default {
     },
     profile: {
         currentPasswordRequired: 'Current password is required when changing your password',
+        newPasswordRequired: 'New password is required',
         nicknameRequired: 'Nickname is required',
         nicknameLength: 'Nickname length must be between 2 and 20',
         phoneInvalid: 'Please enter a valid phone number',

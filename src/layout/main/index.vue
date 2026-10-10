@@ -8,7 +8,7 @@
             mode="out-in"
             appear
         >
-            <div class="xl-main-inner" :key="refreshStore.key">
+            <div class="xl-main-inner" :key="`${route.path}-${refreshStore.key}`">
                 <div class="xl-main-content" id="main-content" tabindex="-1">
                     <Suspense>
                         <component :is="Component" @vue:updated="renderComplete" />
@@ -92,7 +92,7 @@ watch(
 .xl-main-inner {
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - $xl-header-height - $xl-main-padding * 2 - $xl-main-inner-padding * 2);
+    min-height: calc(100vh - $xl-header-height - $xl-main-padding * 2);
 }
 
 .xl-main-content {

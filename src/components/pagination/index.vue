@@ -2,11 +2,9 @@
     <el-pagination
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        :current-page="currentPageValue"
-        :page-size="pageSizeValue"
+        v-model:current-page="currentPageValue"
+        v-model:page-size="pageSizeValue"
         :total="total"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
         class="xl-pagination"
     />
 </template>
@@ -50,10 +48,16 @@ const emit = defineEmits<{
 
 // ==================== 计算属性 ====================
 /** 当前页码（兼容旧属性名） */
-const currentPageValue = computed(() => props.currentPage ?? props.page ?? 1)
+const currentPageValue = computed({
+    get: () => props.currentPage ?? props.page ?? 1,
+    set: (page: number) => handleCurrentChange(page),
+})
 
 /** 每页显示条数（兼容旧属性名） */
-const pageSizeValue = computed(() => props.pageSize ?? props.page_size ?? 10)
+const pageSizeValue = computed({
+    get: () => props.pageSize ?? props.page_size ?? 10,
+    set: (size: number) => handleSizeChange(size),
+})
 
 const instance = getCurrentInstance()
 const hasSizeChangeListener = computed(() => {
@@ -95,7 +99,7 @@ const handleCurrentChange = (page: number) => {
 
 <style lang="scss" scoped>
 .xl-pagination {
-    margin-top: 10px;
+    margin-top: 16px;
     justify-content: flex-end;
 }
 </style>

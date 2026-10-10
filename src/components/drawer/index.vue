@@ -1,18 +1,17 @@
 <template>
-    <el-drawer v-model="model" :direction="direction" :size="resolvedSize" @closed="handleClosed">
-        <template #header>
-            <h4>{{ title }}</h4>
+    <el-drawer v-model="model" :title="title" :direction="direction" :size="resolvedSize" :before-close="handleBeforeClose">
+        <template #header="{ titleId, titleClass }">
+            <h4 :id="titleId" :class="titleClass">{{ title }}</h4>
         </template>
         <template #default>
             <slot />
         </template>
         <template #footer>
             <slot name="footer">
-                <el-divider />
                 <div class="drawer-footer">
-                    <el-button v-if="withReset" type="warning" @click="handleReset">{{ t('common.actions.reset') }}</el-button>
+                    <el-button v-if="withReset" type="warning" :disabled="isSubmitting || loading" @click="handleReset">{{ t('common.actions.reset') }}</el-button>
                     <el-button @click="handleCancel">{{ t('common.actions.cancel') }}</el-button>
-                    <el-button type="primary" :disabled="isSubmitting" :loading="isSubmitting" @click="handleConfirm">
+                    <el-button type="primary" :disabled="isSubmitting || loading" :loading="isSubmitting" @click="handleConfirm">
                         {{ isSubmitting ? t('common.actions.submitting') : t('common.actions.submit') }}
                     </el-button>
                 </div>
@@ -35,10 +34,12 @@ interface Props {
     title?: string
     withReset?: boolean
     isSubmitting?: boolean
+    loading?: boolean
     size?: DrawerSizeToken | string | number
     onConfirm?: () => void | Promise<void>
     onReset?: () => void
     onCancel?: () => void
+    beforeClose?: (done: () => void) => void
     formRef?: FormInstance | null
 }
 
@@ -47,6 +48,7 @@ const props = withDefaults(defineProps<Props>(), {
     title: '',
     withReset: true,
     isSubmitting: false,
+    loading: false,
     size: 'md',
     formRef: null,
 })
@@ -72,6 +74,7 @@ const model = defineModel<boolean>()
 
 // ==================== 方法 ====================
 const handleReset = () => {
+    if (props.isSubmitting || props.loading) return
     if (props.onReset) {
         props.onReset()
     } else if (props.formRef?.resetFields) {
@@ -81,15 +84,19 @@ const handleReset = () => {
     }
 }
 
-const handleCancel = () => {
-    if (props.onCancel) {
-        props.onCancel()
-    } else {
-        model.value = false
-    }
+const handleBeforeClose = (done: () => void) => {
+    if (props.beforeClose) props.beforeClose(done)
+    else done()
 }
 
+const handleCancel = () =>
+    handleBeforeClose(() => {
+        if (props.onCancel) props.onCancel()
+        else model.value = false
+    })
+
 const handleConfirm = async () => {
+    if (props.isSubmitting || props.loading) return
     if (props.onConfirm) {
         try {
             await props.onConfirm()
@@ -100,18 +107,14 @@ const handleConfirm = async () => {
         Logger.error(t('validation.drawer.onConfirmRequired'))
     }
 }
-
-const handleClosed = () => {
-    const activeElement = document.activeElement
-    if (activeElement instanceof HTMLElement) {
-        activeElement.blur()
-    }
-}
 </script>
 
 <style lang="scss" scoped>
 .drawer-footer {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    border-top: 1px solid var(--el-border-color-lighter);
+    padding-top: 16px;
 }
 </style>

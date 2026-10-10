@@ -7,6 +7,7 @@ import type { FormInstance } from 'element-plus'
 
 export function useDepartmentTreeList(_tableListRef: unknown) {
     const loading = ref(false)
+    let requestVersion = 0
     const departmentList = shallowRef<Department[]>([])
     const departmentOptions = shallowRef<(Department & { label: string })[]>([])
     const queryFormRef = ref<FormInstance>()
@@ -15,17 +16,22 @@ export function useDepartmentTreeList(_tableListRef: unknown) {
     })
 
     const getList = async () => {
+        const version = ++requestVersion
         loading.value = true
         try {
-            const deptData = await fetchDepartmentList(queryWhere)
+            const deptData = await fetchDepartmentList({ ...queryWhere })
+            if (version !== requestVersion) return
             if (Array.isArray(deptData)) {
                 departmentList.value = deptData
                 departmentOptions.value = flattenDepartmentTree(deptData)
             }
         } catch (error) {
+            if (version !== requestVersion) return
+            departmentList.value = []
+            departmentOptions.value = []
             Logger.error('获取部门列表失败:', error)
         } finally {
-            loading.value = false
+            if (version === requestVersion) loading.value = false
         }
     }
 
@@ -42,9 +48,11 @@ export function useDepartmentTreeList(_tableListRef: unknown) {
 
     const getChildrenIds = (deptId: number | string): (number | string)[] => {
         const result: (number | string)[] = [deptId]
+        const visited = new Set([String(deptId)])
         const findChildren = (pid: number | string) => {
-            departmentList.value.forEach((dept) => {
-                if (dept.pid === pid) {
+            departmentOptions.value.forEach((dept) => {
+                if (String(dept.pid) === String(pid) && !visited.has(String(dept.id))) {
+                    visited.add(String(dept.id))
                     result.push(dept.id)
                     findChildren(dept.id)
                 }

@@ -83,11 +83,31 @@ export interface SmsLoginPayload {
 
 export interface UpdateProfilePayload {
     nickname?: string
-    phone_number?: string
     email?: string
     avatar?: string
     current_password?: string
     password?: string
+    sms_challenge_id?: string
+    sms_code?: string
+}
+
+export interface ProfileSecurityOptions {
+    sms_verification_required: boolean
+}
+
+export interface ProfileCodePayload {
+    purpose: 'phone' | 'password'
+    country_code?: string
+    phone_number?: string
+    current_password?: string
+}
+
+export interface ChangePhonePayload {
+    country_code: string
+    phone_number: string
+    current_password: string
+    sms_challenge_id?: string
+    sms_code?: string
 }
 
 export interface CaptchaResult {

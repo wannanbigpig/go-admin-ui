@@ -10,6 +10,7 @@
             :search-max-show="3"
             @search="onSearch"
             @reset="handleReset"
+            @sort-change="handleSortChange"
         >
             <template #td="{ item, val }">
                 <el-icon v-if="item.icon" :color="item.icon[val as string | number]?.color">
@@ -169,7 +170,7 @@ const onSearch = (model: Record<string, unknown>) => {
 }
 
 /* eslint-disable prefer-const */
-let { loading, permissionList, pagination, queryWhere, handleSearch, handleReset, getList } = useApiPermissionList()
+let { loading, permissionList, pagination, queryWhere, handleSearch, handleSortChange, handleReset, getList } = useApiPermissionList()
 /* eslint-enable prefer-const */
 const { showDrawer, currentRowRef, currentRow, currentIndex, isSubmitting, sortNumericValue, editFormRules, handleSortNumberChange, openEditDrawer, editConfirmSubmit } = useApiPermissionForm({ refreshList: getList })
 
@@ -219,6 +220,7 @@ const columns = computed<ProTableColumns<ApiPermission>>(
         [
             {
                 prop: 'code',
+                sortable: 'custom',
                 h_label: 'CODE',
                 width: 150,
                 overflow: true,
@@ -227,9 +229,10 @@ const columns = computed<ProTableColumns<ApiPermission>>(
                 customRow: true,
             },
             { prop: 'name', h_label: t('permission.api.name'), minWidth: 220, overflow: true },
-            { prop: 'route', h_label: t('permission.api.route'), minWidth: 280, overflow: true },
+            { prop: 'route', sortable: 'custom', h_label: t('permission.api.route'), minWidth: 280, overflow: true },
             {
                 prop: 'method',
+                sortable: 'custom',
                 h_label: t('permission.api.method'),
                 width: 100,
                 type: 'tag',
@@ -268,6 +271,7 @@ const columns = computed<ProTableColumns<ApiPermission>>(
             },
             {
                 prop: 'sort',
+                sortable: 'custom',
                 h_label: t('permission.api.weight'),
                 align: 'center',
                 width: 90,
