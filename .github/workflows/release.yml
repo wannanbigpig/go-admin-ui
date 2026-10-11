@@ -22,6 +22,8 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Initialize public build defaults
+        run: cp .env.example .env
       - name: Verify tag version
         shell: bash
         run: |
@@ -48,6 +50,13 @@ jobs:
       - run: pnpm run test:release
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm run test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ github.ref_name }}
+          path: test-results/
+          if-no-files-found: ignore
       - run: pnpm run build:production
       - name: Pack static files
         run: |

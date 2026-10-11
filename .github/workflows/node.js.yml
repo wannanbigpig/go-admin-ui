@@ -44,6 +44,8 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
     - run: pnpm install --frozen-lockfile
+    - name: Initialize public build defaults
+      run: cp .env.example .env
     - run: pnpm run lint --no-cache
     - run: pnpm run type-check
     - run: pnpm run check:error-codes

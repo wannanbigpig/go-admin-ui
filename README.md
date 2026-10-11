@@ -132,7 +132,7 @@ corepack pnpm run test:coverage
 
 ## 环境变量重点
 
-项目已提供 `.env.example`、`.env.development`、`.env.location`、`.env.production`。当前代码实际使用的关键变量包括：
+仓库提供 `.env.example`，本地先复制为 `.env`，再按需创建 `.env.development`、`.env.location`、`.env.production` 覆盖各环境；这些环境文件不提交到 Git。CI 和 Release 构建使用 `.env.example` 的公开默认值。当前代码实际使用的关键变量包括：
 
 - `VITE_APP_TITLE`
 - `VITE_ENABLE_I18N`

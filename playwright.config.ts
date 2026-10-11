@@ -17,7 +17,7 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: 'AUTO_OPEN_BROWSER=false VITE_ENABLE_MOCK=true VITE_ENABLE_MOCK_FALLBACK=true pnpm exec vite --mode development --host 127.0.0.1 --port 3017 --strictPort',
+        command: 'AUTO_OPEN_BROWSER=false VITE_ENABLE_I18N=true VITE_ENABLE_MOCK=true VITE_ENABLE_MOCK_FALLBACK=true pnpm exec vite --mode development --host 127.0.0.1 --port 3017 --strictPort',
         url: 'http://127.0.0.1:3017/login',
         reuseExistingServer: false,
         timeout: 120_000,
