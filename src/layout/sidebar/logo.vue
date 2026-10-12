@@ -26,7 +26,7 @@ const settingStore = useSettingStore()
     .sidebar-logo-link {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         width: 100%;
         height: $xl-side-logo-height;
         padding: 0 14px;
