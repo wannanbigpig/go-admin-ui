@@ -1,6 +1,8 @@
 export default {
     title: '日志管理',
     request: {
+        myPageDescription: '查看本人的操作结果与数据变更，跟踪近期活动。',
+        pageDescription: '查询操作结果、执行耗时与审计变更，定位异常请求。',
         title: '操作日志',
         myTitle: '我的操作日志',
         operationName: '操作名称',
@@ -93,6 +95,7 @@ export default {
         jwtId: 'JWT ID',
     },
     login: {
+        pageDescription: '查询账号登录、令牌刷新与会话撤销记录，排查登录异常。',
         title: '登录日志',
         username: '用户名',
         ipAddress: 'IP地址',
@@ -123,6 +126,7 @@ export default {
         restore: '还原',
     },
     session: {
+        pageDescription: '查看登录会话及到期状态，按需强制下线。',
         title: '在线会话',
         uid: '用户ID',
         uidPlaceholder: '请输入用户ID',

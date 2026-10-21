@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('permission.role.title')" :description="t('permission.role.pageDescription')" />
         <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="roleList" :pagination="pagination" row-key="id" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
             <template #actions>
                 <xl-action-button v-permission="'role:add'" code="role:add" :show-icon="false" type="primary" @click="openCreateDrawer" />
@@ -75,6 +76,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'

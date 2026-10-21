@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('log.session.title')" :description="t('log.session.pageDescription')" />
         <xl-pro-table
             :search-model="searchModel"
             :table-title="tableTitle"
@@ -38,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'
@@ -68,7 +70,7 @@ const {
     handleReset: rawHandleReset,
 } = useListPage<OnlineSession, typeof queryWhere>({
     query: queryWhere,
-    sortFields: ['uid', 'token_expires', 'created_at'],
+    sortFields: ['token_expires', 'created_at'],
     transformParams: (query) => {
         const params = { ...query }
         const selectedDateRange = dateRange.value.length === 2 ? dateRange.value : null
@@ -176,29 +178,26 @@ const searchSchema = computed<ProTableSearchSchema>(() => [
     },
 ])
 
-const tableTitle = computed<TableColumn<OnlineSession>[]>(
-    () =>
-        [
-            { prop: 'username', h_label: t('log.session.username'), minWidth: 120, overflow: true },
-            { prop: 'uid', sortable: 'custom', h_label: t('log.session.uid'), width: 90, align: 'center' },
-            { prop: 'ip', h_label: t('log.session.ip'), minWidth: 130, overflow: true },
-            { prop: 'os', h_label: t('log.session.os'), width: 120, overflow: true },
-            { prop: 'browser', h_label: t('log.session.browser'), width: 120, overflow: true },
-            {
-                prop: 'is_revoked',
-                h_label: t('log.session.revoked'),
-                width: 100,
-                align: 'center',
-                customRow: true,
-                tag: {
-                    0: { type: 'success', text: t('common.no') },
-                    1: { type: 'danger', text: t('common.yes') },
-                },
-            },
-            { prop: 'token_expires', sortable: 'custom', h_label: t('log.session.tokenExpires'), width: 160, align: 'center' },
-            { prop: 'created_at', sortable: 'custom', h_label: t('log.session.loginTime'), width: 160, align: 'center' },
-        ]
-)
+const tableTitle = computed<TableColumn<OnlineSession>[]>(() => [
+    { prop: 'uid', h_label: t('log.session.uid'), width: 90, align: 'center' },
+    { prop: 'username', h_label: t('log.session.username'), minWidth: 120, overflow: true },
+    { prop: 'ip', h_label: t('log.session.ip'), minWidth: 130, overflow: true },
+    { prop: 'os', h_label: t('log.session.os'), width: 120, overflow: true },
+    { prop: 'browser', h_label: t('log.session.browser'), width: 120, overflow: true },
+    {
+        prop: 'is_revoked',
+        h_label: t('log.session.revoked'),
+        width: 100,
+        align: 'center',
+        customRow: true,
+        tag: {
+            0: { type: 'success', text: t('common.no') },
+            1: { type: 'danger', text: t('common.yes') },
+        },
+    },
+    { prop: 'token_expires', sortable: 'custom', h_label: t('log.session.tokenExpires'), width: 160, align: 'center' },
+    { prop: 'created_at', sortable: 'custom', h_label: t('log.session.loginTime'), width: 160, align: 'center' },
+])
 
 onMounted(() => {
     getList()

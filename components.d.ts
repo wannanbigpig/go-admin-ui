@@ -142,6 +142,7 @@ declare module 'vue' {
     ILucideSunMoon: typeof import('~icons/lucide/sun-moon')['default']
     ILucideUser: typeof import('~icons/lucide/user')['default']
     ILucideUserCog: typeof import('~icons/lucide/user-cog')['default']
+    PageHeading: typeof import('./src/components/pageHeading/index.vue')['default']
     Pagination: typeof import('./src/components/pagination/index.vue')['default']
     ProTable: typeof import('./src/components/proTable/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

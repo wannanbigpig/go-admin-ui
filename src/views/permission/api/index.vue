@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('permission.api.title')" :description="t('permission.api.pageDescription')" />
         <xl-pro-table
             :search-model="queryWhere"
             :columns="columns"
@@ -117,6 +118,7 @@
 </style>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { Icon as XlIcon } from '@iconify/vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'

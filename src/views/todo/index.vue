@@ -1,5 +1,6 @@
 <template>
     <div class="todo-page">
+        <PageHeading :title="t('todo.title')" :description="t('todo.subtitle')" />
         <el-alert v-if="failed || summaryFailed || groupsFailed" class="load-error" :title="groupsFailed ? t('todo.group.loadFailed') : t('todo.loadFailed')" type="error" :closable="false" show-icon>
             <template #default>
                 <el-button link type="primary" @click="reloadPage">{{ t('todo.retry') }}</el-button>
@@ -224,6 +225,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowDown, Calendar, Clock, Timer, Warning } from '@element-plus/icons-vue'

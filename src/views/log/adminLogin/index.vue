@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('log.login.title')" :description="t('log.login.pageDescription')" />
         <xl-pro-table
             :search-model="searchModel"
             :table-title="tableTitle"
@@ -81,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import DetailGrid from '@/components/detailGrid/index.vue'
 import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import xlProTable from '@/components/proTable/index.vue'

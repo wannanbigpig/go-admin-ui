@@ -1,4 +1,5 @@
 export default {
+    pageDescription: 'Manage sample products to explore list queries, editing, and data permissions.',
     title: 'Reference Products',
     addTitle: 'Add Product',
     editTitle: 'Edit Product',

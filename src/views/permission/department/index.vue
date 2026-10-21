@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('permission.department.title')" :description="t('permission.department.pageDescription')" />
         <div class="xl-container xl-m-bottom-16">
             <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearchWrapper" @keydown.enter.prevent="handleSearchWrapper">
                 <el-row id="searchForm" :gutter="20">
@@ -103,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'

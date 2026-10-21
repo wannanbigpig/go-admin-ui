@@ -1,6 +1,12 @@
 export default {
     title: '系统管理',
     config: {
+        tabDescriptions: {
+            normal: '维护通用业务参数及其类型、分组和生效状态。',
+            storage: '配置文件存储驱动、访问地址及上传限制。',
+            sms: '配置短信供应商、发送场景及发送限制。',
+            audit_mask: '配置请求日志与操作审计中的敏感字段脱敏规则。',
+        },
         title: '系统参数',
         tabs: {
             normal: '普通参数',
@@ -94,6 +100,10 @@ export default {
         responseBody: '响应体字段',
     },
     dict: {
+        tabDescriptions: {
+            type: '维护字典分类和类型编码，统一业务选项的分组。',
+            item: '维护字典选项的标签、取值、状态及展示顺序。',
+        },
         title: '字典管理',
         typeTab: '字典类型',
         itemTab: '字典项',
@@ -357,6 +367,7 @@ export default {
         exportTempFileTtl: '临时文件保留时间（天）',
     },
     task: {
+        exportPageDescription: '查看个人导出任务的进度、有效期并下载结果文件。',
         baseInfo: '基本信息',
         triggerInfo: '触发信息',
         executionInfo: '执行信息',
@@ -679,6 +690,7 @@ export default {
         viewDetail: '查看详情',
     },
     monitor: {
+        pageDescription: '查看主机资源、Go 运行时与应用运行状态。',
         title: '系统监控',
         cpu: 'CPU',
         cpuCores: '{cores} 核心',

@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('permission.menu.title')" :description="t('permission.menu.pageDescription')" />
         <div class="xl-container xl-m-bottom-16">
             <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
                 <el-row id="searchForm" :gutter="20">
@@ -61,6 +62,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { Icon as XlIcon } from '@iconify/vue'
 import xlTableList from '@/components/tableList/index.vue'
 import xlActionButtons from '@/components/actionButtons/index.vue'

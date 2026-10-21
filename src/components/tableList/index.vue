@@ -32,8 +32,8 @@
                         :prop="String(item.prop)"
                         :label="item.h_label"
                         :align="item.align || 'left'"
-                        :width="item.width"
-                        :min-width="item.minWidth"
+                        :width="getColumnWidth(item)"
+                        :min-width="getColumnMinWidth(item)"
                         :sortable="item.sortable"
                         :show-overflow-tooltip="item.overflow"
                     >
@@ -135,6 +135,14 @@ const showPagination = computed(() => props.pagination && typeof props.paginatio
 const currentPage = computed(() => props.pagination.currentPage ?? props.pagination.page ?? 1)
 const pageSize = computed(() => props.pagination.pageSize ?? 10)
 const hasTableTitle = computed(() => props.tableTitle.length > 0)
+// 按表格的 14px 字号保守预留标题、单元格内边距及图标宽度，避免固定窄列挤换行。
+const getHeaderMinWidth = (item: TableColumn<T>) => {
+    const labelWidth = Array.from(item.h_label).reduce((width, char) => width + ((char.codePointAt(0) ?? 0) > 255 ? 14 : 8), 0)
+    return labelWidth + 32 + (item.sortable ? 24 : 0) + (item.h_tip ? 20 : 0)
+}
+const getColumnWidth = (item: TableColumn<T>) => (item.width === undefined ? undefined : Math.max(Number.parseInt(String(item.width), 10) || 0, getHeaderMinWidth(item)))
+const getColumnMinWidth = (item: TableColumn<T>) => Math.max(Number.parseInt(String(item.minWidth ?? 0), 10) || 0, getHeaderMinWidth(item))
+
 const rowSelectable = (row: T, index: number) => {
     return typeof props.selectable === 'function' ? props.selectable(row, index) : true
 }

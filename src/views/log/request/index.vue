@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t(isSelfMode ? 'log.request.myTitle' : 'log.request.title')" :description="t(isSelfMode ? 'log.request.myPageDescription' : 'log.request.pageDescription')" />
         <xl-pro-table :loading="loading" :data="logList" :table-title="tableTitle" :pagination="pagination" @sort-change="handleSortChange">
             <template #search>
                 <el-form class="xl-search-form" ref="queryFormRef" size="default" :model="queryWhere" @submit.prevent="handleSearch" @keydown.enter.prevent="handleSearch">
@@ -248,6 +249,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import DetailGrid from '@/components/detailGrid/index.vue'
 import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'

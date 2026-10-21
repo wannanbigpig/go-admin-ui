@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading v-if="visibleTabs.length" :title="t('system.config.title')" :description="t(`system.config.tabDescriptions.${activeTab}`)" />
         <el-tabs v-if="visibleTabs.length" v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-16">
             <el-tab-pane v-for="tab in visibleTabs" :key="tab.name" :label="tab.label" :name="tab.name">
                 <template v-if="activeTab === tab.name">
@@ -85,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'

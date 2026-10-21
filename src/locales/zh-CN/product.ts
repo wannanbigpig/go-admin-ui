@@ -1,4 +1,5 @@
 export default {
+    pageDescription: '维护示例产品数据，演示列表查询、编辑和数据权限。',
     title: '产品示例',
     addTitle: '新增产品',
     editTitle: '编辑产品',

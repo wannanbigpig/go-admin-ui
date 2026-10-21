@@ -8,6 +8,7 @@ export default {
         boundRoles: '已绑定角色',
     },
     api: {
+        pageDescription: '查看接口目录、请求方法与鉴权要求。',
         title: '接口权限',
         editTitle: '编辑接口',
         addTitle: '新增接口权限',
@@ -45,6 +46,7 @@ export default {
         },
     },
     adminUser: {
+        pageDescription: '管理后台账号，维护所属部门、角色与账号状态。',
         title: '管理员',
         addTitle: '新增管理员',
         editTitle: '编辑管理员',
@@ -58,6 +60,7 @@ export default {
         lastLoginIp: '最后登录 IP',
     },
     department: {
+        pageDescription: '维护组织层级，为账号归属和数据权限提供依据。',
         title: '部门',
         addTitle: '新增部门',
         editTitle: '编辑部门',
@@ -74,6 +77,7 @@ export default {
         roleFilterPlaceholder: '角色名称',
     },
     role: {
+        pageDescription: '配置菜单、操作权限及数据可见范围。',
         title: '角色',
         addTitle: '新增角色',
         editTitle: '编辑角色',
@@ -98,6 +102,7 @@ export default {
         },
     },
     menu: {
+        pageDescription: '维护导航目录、页面入口与操作按钮。',
         title: '菜单管理',
         addTitle: '新增菜单',
         editTitle: '编辑菜单',

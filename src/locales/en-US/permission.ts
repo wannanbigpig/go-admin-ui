@@ -8,6 +8,7 @@ export default {
         boundRoles: 'Bound Roles',
     },
     api: {
+        pageDescription: 'View the API catalog, request methods, and authentication requirements.',
         title: 'API Permission',
         editTitle: 'Edit API',
         addTitle: 'Add API Permission',
@@ -45,6 +46,7 @@ export default {
         },
     },
     adminUser: {
+        pageDescription: 'Manage admin accounts, department membership, roles, and account status.',
         title: 'Admin User',
         addTitle: 'Add Admin User',
         editTitle: 'Edit Admin User',
@@ -58,6 +60,7 @@ export default {
         lastLoginIp: 'Last Login IP',
     },
     department: {
+        pageDescription: 'Maintain the organization hierarchy for account membership and data access.',
         title: 'Department',
         addTitle: 'Add Department',
         editTitle: 'Edit Department',
@@ -74,6 +77,7 @@ export default {
         roleFilterPlaceholder: 'Role Name',
     },
     role: {
+        pageDescription: 'Configure menu access, action permissions, and data visibility.',
         title: 'Role',
         addTitle: 'Add Role',
         editTitle: 'Edit Role',
@@ -98,6 +102,7 @@ export default {
         },
     },
     menu: {
+        pageDescription: 'Manage navigation groups, page entries, and action buttons.',
         title: 'Menu Management',
         addTitle: 'Add Menu',
         editTitle: 'Edit Menu',

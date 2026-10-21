@@ -1,9 +1,6 @@
 <template>
     <div>
-        <div class="xl-container xl-m-bottom-16 task-page-heading">
-            <h2>{{ t('system.task.operationsTitle') }}</h2>
-            <p>{{ activeTabDescription }}</p>
-        </div>
+        <PageHeading :title="t('system.task.operationsTitle')" :description="activeTabDescription" />
 
         <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-16">
             <el-tab-pane :label="t('system.task.definitionTab')" name="definition">
@@ -26,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -83,20 +81,3 @@ watch(
     { immediate: true }
 )
 </script>
-
-<style scoped lang="scss">
-.task-page-heading {
-    h2 {
-        margin: 0;
-        color: var(--el-text-color-primary);
-        font-size: var(--xl-font-xl);
-    }
-
-    p {
-        margin: 6px 0 0;
-        color: var(--el-text-color-secondary);
-        font-size: var(--xl-font-sm);
-        line-height: 1.5;
-    }
-}
-</style>

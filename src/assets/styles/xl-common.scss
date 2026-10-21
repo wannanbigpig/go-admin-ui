@@ -30,6 +30,10 @@
     width: 100%;
 }
 
+.el-table th.el-table__cell > .cell {
+    white-space: nowrap;
+}
+
 .xl-table-cell {
     background: var(--xl-main-bg-color) !important;
     color: var(--el-text-color-secondary);
@@ -147,6 +151,8 @@ $xl-margin-steps: (0, 4, 8, 10, 12, 16, 20, 24, 32);
 .xl-label-with-icon {
     display: inline-flex;
     align-items: center;
+    vertical-align: middle;
+    white-space: nowrap;
 
     .el-icon {
         margin-left: 3px;

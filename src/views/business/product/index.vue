@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('product.title')" :description="t('product.pageDescription')" />
         <xl-pro-table :search-model="queryWhere" :columns="columns" :loading="loading" :data="productList" :pagination="pagination" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
             <template #actions>
                 <xl-action-button v-permission="'product:create'" code="product:create" type="primary" :show-icon="false" @click="openCreateDrawer" />
@@ -48,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'

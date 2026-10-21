@@ -1,6 +1,8 @@
 export default {
     title: 'Log Management',
     request: {
+        myPageDescription: 'Review your operation results and data changes to track recent activity.',
+        pageDescription: 'Review operation results, execution times, and audit changes to investigate failed requests.',
         title: 'Request Log',
         myTitle: 'My Request Log',
         operationName: 'Operation Name',
@@ -93,6 +95,7 @@ export default {
         jwtId: 'JWT ID',
     },
     login: {
+        pageDescription: 'Review account logins, token refreshes, and session revocations to investigate sign-in issues.',
         title: 'Login Log',
         username: 'Username',
         ipAddress: 'IP Address',
@@ -123,6 +126,7 @@ export default {
         restore: 'Restore',
     },
     session: {
+        pageDescription: 'Review login sessions and expiry status, and revoke sessions when needed.',
         title: 'Online Sessions',
         uid: 'User ID',
         uidPlaceholder: 'Please input user ID',

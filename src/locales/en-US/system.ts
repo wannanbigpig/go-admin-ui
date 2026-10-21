@@ -1,6 +1,12 @@
 export default {
     title: 'System',
     config: {
+        tabDescriptions: {
+            normal: 'Manage general settings, value types, groups, and enabled status.',
+            storage: 'Configure file storage providers, access URLs, and upload limits.',
+            sms: 'Configure SMS providers, messaging scenarios, and sending limits.',
+            audit_mask: 'Configure sensitive field masking for request logs and operation audits.',
+        },
         title: 'System Config',
         tabs: {
             normal: 'General Params',
@@ -96,6 +102,10 @@ export default {
         responseBody: 'Response Body Fields',
     },
     dict: {
+        tabDescriptions: {
+            type: 'Manage dictionary categories and type codes to group business options.',
+            item: 'Manage dictionary option labels, values, status, and display order.',
+        },
         title: 'Dictionary',
         typeTab: 'Type',
         itemTab: 'Item',
@@ -360,6 +370,7 @@ export default {
         exportTempFileTtl: 'Temp File TTL (Days)',
     },
     task: {
+        exportPageDescription: 'Track your export jobs, check file expiry, and download completed results.',
         baseInfo: 'Basic Info',
         triggerInfo: 'Trigger Info',
         executionInfo: 'Execution Info',
@@ -682,6 +693,7 @@ export default {
         viewDetail: 'View Detail',
     },
     monitor: {
+        pageDescription: 'Review host resources, the Go runtime, and application health.',
         title: 'System Monitor',
         cpu: 'CPU',
         cpuCores: '{cores} Cores',

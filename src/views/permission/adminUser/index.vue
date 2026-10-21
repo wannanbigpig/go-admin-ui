@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('permission.adminUser.title')" :description="t('permission.adminUser.pageDescription')" />
         <xl-pro-table :search-model="queryWhere" :columns="columns" :search-schema="searchSchema" :loading="loading" :data="adminUserList" :pagination="pagination" @search="onSearch" @reset="handleReset" @sort-change="handleSortChange">
             <template #actions>
                 <xl-action-button v-permission="'adminUser:add'" :show-icon="false" type="primary" code="adminUser:add" @click="openEditDrawer(1)" />
@@ -140,6 +141,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlDrawer from '@/components/drawer/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'

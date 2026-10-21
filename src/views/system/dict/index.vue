@@ -1,5 +1,6 @@
 <template>
     <div>
+        <PageHeading :title="t('system.dict.title')" :description="t(`system.dict.tabDescriptions.${activeTab}`)" />
         <el-tabs v-model="activeTab" class="xl-container xl-tabs xl-m-bottom-16">
             <el-tab-pane :label="t('system.dict.typeTab')" name="type">
                 <xl-pro-table
@@ -168,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import xlProTable from '@/components/proTable/index.vue'

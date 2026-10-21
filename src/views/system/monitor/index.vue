@@ -1,5 +1,6 @@
 <template>
     <div class="monitor-container">
+        <PageHeading :title="t('system.monitor.title')" :description="t('system.monitor.pageDescription')" />
         <!-- 主机信息卡片 -->
         <el-row :gutter="16" class="xl-m-bottom-16">
             <el-col :span="8">
@@ -161,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeading from '@/components/pageHeading/index.vue'
 import DetailGrid from '@/components/detailGrid/index.vue'
 import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
