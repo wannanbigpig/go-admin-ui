@@ -1,6 +1,6 @@
 {
     "name": "x-l-admin-vue3",
-    "version": "0.10.2",
+    "version": "0.10.3",
     "private": true,
     "type": "module",
     "packageManager": "pnpm@12.4.1",
@@ -78,7 +78,7 @@
         "unplugin-element-plus": "^0.11.2",
         "unplugin-icons": "^24.0.0",
         "unplugin-vue-components": "^32.1.0",
-        "vite": "^8.3.0",
+        "vite": "^8.3.3",
         "vite-plugin-compression": "^0.5.1",
         "vitest": "^5.0.0",
         "vue-tsc": "^3.3.11"

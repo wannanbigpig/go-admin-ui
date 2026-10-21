@@ -3,4 +3,5 @@ allowBuilds:
   esbuild: true
   vue-demi: true
 overrides:
+  axios>follow-redirects: 1.16.1
   unplugin: 3.3.0
