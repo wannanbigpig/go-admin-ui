@@ -171,6 +171,10 @@ export function getMyExportSummary() {
     return request<ExportSummary>('/v1/system/export/summary', 'GET', { silent: true })
 }
 
+export function getExportRecordDetail(publicID: string) {
+    return get<ExportRecord>('/v1/system/export/detail', { public_id: publicID })
+}
+
 export function getWsTicket() {
     return post<WsTicketResult>('/v1/common/ws-ticket')
 }

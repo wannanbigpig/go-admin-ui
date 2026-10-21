@@ -6,23 +6,27 @@
         <div class="sr-only" aria-live="polite">{{ notificationStore.latestAnnouncement }}</div>
 
         <el-container class="common-layout">
-            <el-aside id="xl-aside" :class="{ collapse: settingStore.isCollapse }">
+            <el-aside v-if="!isMobile" id="xl-aside" :class="{ collapse: settingStore.isCollapse }">
                 <xl-aside />
             </el-aside>
             <el-container class="right-container">
                 <el-header class="xl-header">
-                    <xl-head />
+                    <xl-head :mobile-nav-open="mobileNavOpen" @toggle-navigation="mobileNavOpen = !mobileNavOpen" />
                 </el-header>
                 <el-main class="xl-main">
                     <xl-main-view />
                 </el-main>
             </el-container>
         </el-container>
+        <el-drawer v-if="isMobile" v-model="mobileNavOpen" direction="ltr" size="min(280px, 85vw)" :title="t('layout.navigationMenu')" class="mobile-navigation-drawer">
+            <div id="mobile-navigation"><xl-aside mobile @navigate="mobileNavOpen = false" /></div>
+        </el-drawer>
     </component>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElWatermark } from 'element-plus'
 import { useSettingStore } from '@/stores/setting'
 import { useI18n } from 'vue-i18n'
@@ -30,6 +34,7 @@ import { useNotificationStore } from '@/stores/notification'
 import XlAside from '@/layout/sidebar/index.vue'
 import XlMainView from '@/layout/main/index.vue'
 import XlHead from '@/layout/header/index.vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 defineOptions({
     name: 'MainLayout',
@@ -38,6 +43,18 @@ defineOptions({
 const settingStore = useSettingStore()
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
+const route = useRoute()
+const isMobile = useMediaQuery('(max-width: 768px)')
+const mobileNavOpen = ref(false)
+watch(isMobile, () => {
+    mobileNavOpen.value = false
+})
+watch(
+    () => route.fullPath,
+    () => {
+        mobileNavOpen.value = false
+    }
+)
 
 const watermarkConfig = computed(() => ({
     content: settingStore.watermarkContent || '',

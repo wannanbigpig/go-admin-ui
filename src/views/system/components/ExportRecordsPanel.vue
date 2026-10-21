@@ -2,15 +2,14 @@
     <div class="export-records-panel">
         <!-- 顶部 4 维指标看板 -->
         <div class="export-metrics-grid xl-m-bottom-16">
-            <div
+            <button
                 v-for="card in exportMetricCards"
                 :key="card.key"
                 class="export-metric-card"
                 :class="[`is-${card.tone}`, { 'is-active': activeFilterKey === card.key }]"
-                role="button"
-                tabindex="0"
+                type="button"
+                :aria-pressed="activeFilterKey === card.key"
                 @click="toggleExportFilter(card.key)"
-                @keydown.enter="toggleExportFilter(card.key)"
             >
                 <div class="export-metric-card__icon">
                     <el-icon :size="20"><component :is="card.icon" /></el-icon>
@@ -19,13 +18,13 @@
                     <span class="export-metric-card__label">{{ card.label }}</span>
                     <div class="export-metric-card__value-wrap">
                         <strong class="export-metric-card__value">{{ card.value }}</strong>
-                        <span class="export-metric-card__unit">{{ t('system.task.countUnit') }}</span>
+                        <span class="export-metric-card__unit">{{ t('system.task.exportItemUnit', Number(card.value) || 0) }}</span>
                     </div>
                 </div>
                 <div v-if="activeFilterKey === card.key" class="export-metric-card__badge">
                     {{ t('system.task.filtering') }}
                 </div>
-            </div>
+            </button>
         </div>
 
         <!-- 标准化 ProTable 数据表格与内建搜索 -->
@@ -37,7 +36,7 @@
             :data="exportList"
             :pagination="exportPagination"
             :search-max-show="3"
-            row-key="id"
+            row-key="public_id"
             @search="onSearch"
             @reset="onReset"
             @sort-change="onSortChange"
@@ -60,9 +59,7 @@
                             <el-icon v-else-if="row.status === 'failed'"><CircleClose /></el-icon>
                             <span>{{ getExportStatusLabel(row.status) }}</span>
                         </el-tag>
-                        <span class="cell-progress-num" :class="`is-${row.status}`">
-                            {{ getExportRecordProgress(row) || 0 }}%
-                        </span>
+                        <span class="cell-progress-num" :class="`is-${row.status}`"> {{ getExportRecordProgress(row) || 0 }}% </span>
                     </div>
                     <div class="cell-progress-bar-wrap">
                         <el-progress
@@ -119,13 +116,7 @@
         </xl-pro-table>
 
         <!-- 详情抽屉：现代化卡片式结构 -->
-        <el-drawer
-            v-model="showExportDetailDrawer"
-            :title="t('system.task.exportDetailTitle')"
-            size="var(--xl-drawer-md)"
-            destroy-on-close
-            class="export-detail-drawer"
-        >
+        <el-drawer v-model="showExportDetailDrawer" :title="t('system.task.exportDetailTitle')" size="var(--xl-drawer-md)" destroy-on-close class="export-detail-drawer">
             <template v-if="currentExportRecord">
                 <!-- 顶部状态看板 Hero 卡片 -->
                 <div class="export-detail-hero" :class="`is-${currentExportRecord.status}`">
@@ -143,9 +134,7 @@
                                 {{ getExportProgressDescription(currentExportRecord) }}
                             </span>
                         </div>
-                        <div class="hero-progress-num" :class="`is-${currentExportRecord.status}`">
-                            {{ getExportRecordProgress(currentExportRecord) || 0 }}%
-                        </div>
+                        <div class="hero-progress-num" :class="`is-${currentExportRecord.status}`">{{ getExportRecordProgress(currentExportRecord) || 0 }}%</div>
                     </div>
 
                     <!-- 精致高质感进度条（全状态均优雅呈现，已完成为100%温润绿，进行中为条纹动态蓝） -->
@@ -164,15 +153,15 @@
                     <div class="hero-meta-row">
                         <span class="hero-meta-item">
                             <el-icon><Tickets /></el-icon>
-                            <span>数据总量：{{ getExportCount(currentExportRecord) }} 条</span>
+                            <span>{{ t('system.task.exportTotalRows', { count: getExportCount(currentExportRecord) }) }}</span>
                         </span>
                         <span v-if="currentExportRecord.finished_at" class="hero-meta-item">
                             <el-icon><Timer /></el-icon>
-                            <span>完成时间：{{ currentExportRecord.finished_at }}</span>
+                            <span>{{ t('system.task.exportFinishedAt', { time: currentExportRecord.finished_at }) }}</span>
                         </span>
                         <span v-else-if="currentExportRecord.status === 'running'" class="hero-meta-item">
                             <el-icon class="is-loading"><Loading /></el-icon>
-                            <span>后台正在处理中...</span>
+                            <span>{{ t('system.task.exportProcessing') }}</span>
                         </span>
                     </div>
 
@@ -189,11 +178,11 @@
                     <el-icon class="section-icon"><Tickets /></el-icon>
                     <span class="section-title-text">{{ t('system.task.baseInfo') }}</span>
                 </div>
-                <el-descriptions :column="2" border size="default" class="detail-modern-descriptions xl-m-bottom-20">
-                    <el-descriptions-item :label="t('system.task.exportName')" :span="2">
+                <el-descriptions :column="detailColumns" border size="default" class="detail-modern-descriptions xl-m-bottom-20">
+                    <el-descriptions-item :label="t('system.task.exportName')" :span="detailColumns">
                         <span class="detail-strong-title">{{ getExportCellValue('export_name', currentExportRecord) }}</span>
                     </el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.exportPublicId')" :span="2">
+                    <el-descriptions-item :label="t('system.task.exportPublicId')" :span="detailColumns">
                         <div class="detail-id-box">
                             <code class="detail-code-mono">{{ currentExportRecord.public_id }}</code>
                             <el-tooltip :content="t('common.actions.copySuccess')" trigger="click" placement="top">
@@ -205,7 +194,7 @@
                         <el-tag size="small" effect="plain">{{ getExportCellValue('scene', currentExportRecord) }}</el-tag>
                     </el-descriptions-item>
                     <el-descriptions-item :label="t('system.task.exportCount')">
-                        <span class="detail-count-text">{{ getExportCount(currentExportRecord) }} 条</span>
+                        <span class="detail-count-text">{{ t('system.task.exportRowsValue', { count: getExportCount(currentExportRecord) }) }}</span>
                     </el-descriptions-item>
                     <el-descriptions-item :label="t('common.labels.createdAt')">
                         {{ currentExportRecord.created_at || '-' }}
@@ -236,7 +225,7 @@
                                 {{ t('system.task.fileExpired') }}
                             </el-tag>
                             <el-tag v-else-if="currentExportRecord.status === 'success'" size="small" type="success" effect="plain">
-                                可用
+                                {{ t('system.task.fileAvailable') }}
                             </el-tag>
                         </div>
                         <div class="artifact-card__meta-row">
@@ -244,7 +233,7 @@
                             <span class="meta-divider">·</span>
                             <span class="meta-item">
                                 <el-icon><Timer /></el-icon>
-                                <span>{{ t('system.task.fileExpiresAt') }}：{{ currentExportRecord.file_expires_at || '-' }}</span>
+                                <span>{{ t('system.task.exportExpiresAt', { time: currentExportRecord.file_expires_at || '-' }) }}</span>
                             </span>
                         </div>
                     </div>
@@ -254,7 +243,7 @@
                         </el-tag>
                         <el-tag v-else-if="currentExportRecord.status === 'success'" size="small" type="success" effect="light" class="artifact-ready-tag">
                             <el-icon><CircleCheck /></el-icon>
-                            <span>准备就绪</span>
+                            <span>{{ t('system.task.fileReady') }}</span>
                         </el-tag>
                     </div>
                 </div>
@@ -262,7 +251,7 @@
                 <div v-else class="export-artifact-empty">
                     <el-icon :size="28" class="empty-icon"><Document /></el-icon>
                     <span class="empty-text">
-                        {{ currentExportRecord.status === 'failed' ? t('system.task.exportFailedHint') : (t('system.task.filePending') || '文件生成中，完成后可在此下载') }}
+                        {{ currentExportRecord.status === 'failed' ? t('system.task.exportFailedHint') : t('system.task.filePending') }}
                     </span>
                 </div>
             </template>
@@ -271,12 +260,7 @@
             <template #footer>
                 <div class="drawer-footer-actions">
                     <el-button @click="showExportDetailDrawer = false">{{ t('common.actions.cancel') }}</el-button>
-                    <el-button
-                        v-if="currentExportRecord && canDownloadExportRecord(currentExportRecord)"
-                        type="primary"
-                        :icon="Download"
-                        @click="handleExportDownload(currentExportRecord)"
-                    >
+                    <el-button v-if="currentExportRecord && canDownloadExportRecord(currentExportRecord)" type="primary" :icon="Download" @click="handleExportDownload(currentExportRecord)">
                         {{ t('system.task.download') }}
                     </el-button>
                 </div>
@@ -286,19 +270,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onActivated, onDeactivated, reactive, ref, watch } from 'vue'
-import {
-    Download,
-    Document,
-    CircleCheck,
-    CircleClose,
-    Clock,
-    Loading,
-    Tickets,
-    Warning,
-    CopyDocument,
-    Timer,
-} from '@element-plus/icons-vue'
+import { computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { Download, Document, CircleCheck, CircleClose, Clock, Loading, Tickets, Warning, CopyDocument, Timer } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 import { useNotificationStore } from '@/stores/notification'
@@ -306,6 +279,7 @@ import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
 import { useListPage } from '@/composables/useListPage'
 import { useIntervalPolling } from '@/composables/useIntervalPolling'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import {
     applyExportProgressEvent,
     canDownloadExportRecord,
@@ -316,7 +290,7 @@ import {
     isExportRecordExpired,
     resolveExportRecordSort,
 } from '@/modules/exportCenter/model'
-import { fetchExportRecordListWithSummary } from '@/modules/exportCenter/service'
+import { fetchExportRecordDetail, fetchExportRecordListWithSummary } from '@/modules/exportCenter/service'
 import { downloadSystemFileBlob } from '@/modules/system/service'
 import { Logger } from '@/utils/logger'
 import type { TableColumn } from '@/types/common'
@@ -329,6 +303,8 @@ let hasActivated = false
 const { t } = useI18n()
 const { copyText } = useClipboard()
 const notificationStore = useNotificationStore()
+const compactDetail = useMediaQuery('(max-width: 600px)')
+const detailColumns = computed(() => (compactDetail.value ? 1 : 2))
 
 const handleCopyId = async (id?: string) => {
     if (!id) return
@@ -365,9 +341,7 @@ const exportMetricCards = computed(() => [
     {
         key: 'running',
         label: t('system.task.exportStatusOptions.running'),
-        value: exportSummary.value
-            ? (Number(exportSummary.value.running || 0) + Number(exportSummary.value.pending || 0))
-            : '-',
+        value: exportSummary.value?.running ?? '-',
         icon: Loading,
         tone: 'warning',
     },
@@ -381,9 +355,7 @@ const exportMetricCards = computed(() => [
     {
         key: 'failed',
         label: t('system.task.exportStatusOptions.failed'),
-        value: exportSummary.value
-            ? (Number(exportSummary.value.failed || 0) + Number(exportSummary.value.canceled || 0))
-            : '-',
+        value: exportSummary.value?.failed ?? '-',
         icon: Warning,
         tone: 'danger',
     },
@@ -409,18 +381,40 @@ const toggleExportFilter = (key: string) => {
 
 const getExportStatusTagType = (status?: string): '' | 'primary' | 'success' | 'warning' | 'danger' | 'info' => {
     switch (status) {
-        case 'pending': return 'info'
-        case 'running': return 'warning'
-        case 'retrying': return 'warning'
-        case 'success': return 'success'
-        case 'failed': return 'danger'
-        case 'canceled': return 'info'
-        default: return 'info'
+        case 'pending':
+            return 'info'
+        case 'running':
+            return 'warning'
+        case 'retrying':
+            return 'warning'
+        case 'success':
+            return 'success'
+        case 'failed':
+            return 'danger'
+        case 'canceled':
+            return 'info'
+        default:
+            return 'info'
     }
 }
 
 const showExportDetailDrawer = ref(false)
 const currentExportRecord = ref<ExportRecord | null>(null)
+let detailRequestVersion = 0
+
+const refreshExportDetail = async () => {
+    if (!showExportDetailDrawer.value || !currentExportRecord.value) return
+    const publicID = currentExportRecord.value.public_id
+    const requestVersion = ++detailRequestVersion
+    try {
+        const record = await fetchExportRecordDetail(publicID)
+        if (record && requestVersion === detailRequestVersion && showExportDetailDrawer.value && currentExportRecord.value?.public_id === publicID) {
+            currentExportRecord.value = record
+        }
+    } catch (error) {
+        if (requestVersion === detailRequestVersion) Logger.error('刷新导出详情失败:', error)
+    }
+}
 
 const {
     loading: exportLoading,
@@ -434,8 +428,19 @@ const {
     fetcher: fetchExportRecordListWithSummary,
     onSuccess: (result) => {
         exportSummary.value = (result as { summary?: ExportSummary | null }).summary ?? null
+        if (!showExportDetailDrawer.value || !currentExportRecord.value) return
+        const latest = result.list.find((record) => record.public_id === currentExportRecord.value?.public_id)
+        if (latest) {
+            detailRequestVersion++
+            currentExportRecord.value = latest
+        } else {
+            // 完成后记录可能离开当前状态筛选，详情仍需取得最终文件信息。
+            void refreshExportDetail()
+        }
     },
-    onError: () => { exportSummary.value = null },
+    onError: () => {
+        exportSummary.value = null
+    },
 })
 
 const onSearch = (model: Record<string, unknown>) => {
@@ -466,7 +471,7 @@ const onSortChange = ({ prop, order }: { prop: string; order: 'ascending' | 'des
     rawHandleSearch()
 }
 
-const shouldPollExportList = computed(() => props.active && hasActiveExportRecords(exportList.value))
+const shouldPollExportList = computed(() => props.active && (hasActiveExportRecords(exportList.value) || (showExportDetailDrawer.value && isActiveExportRecordStatus(currentExportRecord.value?.status))))
 
 const exportListPolling = useIntervalPolling(
     async ({ signal }) => {
@@ -552,8 +557,10 @@ const handleExportDownload = async (row: ExportRecord) => {
 }
 
 const handleExportDetail = (row: ExportRecord) => {
+    detailRequestVersion++
     currentExportRecord.value = row
     showExportDetailDrawer.value = true
+    void refreshExportDetail()
 }
 
 const exportActionButtons = (row: ExportRecord): ActionButtonConfig<ExportRecord>[] => [
@@ -589,10 +596,7 @@ const searchSchema = computed<ProTableSearchSchema>(() => [
         label: t('system.task.exportStatus'),
         type: 'select',
         placeholder: t('system.task.exportStatus'),
-        options: [
-            { label: t('system.task.allTasks'), value: '' },
-            ...exportStatusOptions.value,
-        ],
+        options: [{ label: t('system.task.allTasks'), value: '' }, ...exportStatusOptions.value],
         span: 6,
     },
     {
@@ -645,6 +649,7 @@ watch(
         exportList.value = applyExportProgressEvent(exportList.value, event)
         if (currentExportRecord.value && currentExportRecord.value.public_id === event.public_id) {
             currentExportRecord.value = applyExportProgressEvent([currentExportRecord.value], event)[0]
+            if (event.status && !isActiveExportRecordStatus(event.status)) void refreshExportDetail()
         }
     }
 )
@@ -665,11 +670,31 @@ onActivated(() => {
 onDeactivated(() => {
     exportListPolling.pause()
 })
+
+watch(showExportDetailDrawer, (visible) => {
+    if (!visible) detailRequestVersion++
+})
+onBeforeUnmount(() => {
+    detailRequestVersion++
+})
 </script>
 
 <style scoped lang="scss">
 .export-records-panel {
     width: 100%;
+}
+
+.export-count-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.export-count-sub {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 /* 顶部 4 维指标看板 */
@@ -680,6 +705,10 @@ onDeactivated(() => {
 }
 
 .export-metric-card {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    text-align: left;
     position: relative;
     display: flex;
     align-items: center;
@@ -696,6 +725,11 @@ onDeactivated(() => {
         border-color: var(--el-border-color);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px var(--xl-shadow-color, rgba(0, 0, 0, 0.05));
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--el-color-primary);
+        outline-offset: 3px;
     }
 
     &.is-active {

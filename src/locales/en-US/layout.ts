@@ -3,6 +3,7 @@ export default {
     skipToMain: 'Skip to main content',
     menuLoading: 'Loading menus...',
     menuEmpty: 'No menus available',
+    navigationMenu: 'Navigation',
     home: 'Home',
     profile: 'Profile',
     userRefresh: 'Refresh Cache',

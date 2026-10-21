@@ -330,4 +330,21 @@ const handleLanguageCommand = async (locale: LocaleCode) => {
         justify-content: center;
     }
 }
+@media (max-width: 768px) {
+    .xl-right-content {
+        gap: 0;
+        .xl-action-item {
+            margin: 0;
+        }
+        .xl-theme-trigger {
+            width: 32px;
+        }
+        .divider {
+            display: none;
+        }
+        .xl-user-dropdown .xl-user-info .user-name {
+            display: none;
+        }
+    }
+}
 </style>

@@ -53,6 +53,40 @@
     }
 }
 
+@media (max-width: 600px) {
+    .xl-search-form {
+        > .el-row > .el-col {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        .el-form-item {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .el-form-item .el-form-item__label {
+            justify-content: flex-start;
+            text-align: left;
+            width: auto !important;
+            height: auto;
+            padding: 0 0 6px;
+            line-height: 20px;
+        }
+        .el-form-item__content {
+            min-width: 0;
+            margin-left: 0 !important;
+        }
+        .el-input,
+        .el-select,
+        .el-date-editor {
+            width: 100%;
+        }
+        .xl-search-btn {
+            flex-wrap: wrap;
+        }
+    }
+}
+
 // ==================== Mixins ====================
 // 实际工程内仅使用 xl-m-bottom-10 / xl-m-right-10，
 // 收敛到设计系统常用集合 + 兼容值，避免生成 200+ 条死类。

@@ -1,6 +1,6 @@
 {
     "name": "x-l-admin-vue3",
-    "version": "0.10.1",
+    "version": "0.10.2",
     "private": true,
     "type": "module",
     "packageManager": "pnpm@12.4.1",

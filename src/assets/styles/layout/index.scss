@@ -6,11 +6,39 @@
     background-color: var(--xl-main-bg-color);
 
     .right-container {
+        min-width: 0;
         width: calc(100% - var(--xl-aside-width));
         overflow: auto;
         scrollbar-color: var(--el-scrollbar-bg-color) var(--el-fill-color-light);
         transition:
             0.3s width,
             0.3s margin-left ease-in-out;
+    }
+}
+
+@media (max-width: 768px) {
+    .common-layout .right-container {
+        width: 100%;
+    }
+    .right-container > .xl-main {
+        padding: 12px;
+    }
+    .right-container > .xl-header {
+        padding: 0 8px;
+    }
+    :global(.mobile-navigation-drawer .el-drawer__header) {
+        margin-bottom: 12px;
+    }
+    :global(.mobile-navigation-drawer .el-drawer__body) {
+        padding: 0;
+    }
+    :global(.mobile-navigation-drawer #mobile-navigation) {
+        height: 100%;
+    }
+    :global(.mobile-navigation-drawer .xl-scrollbar) {
+        height: calc(100% - 50px);
+    }
+    :global(.mobile-navigation-drawer .el-menu) {
+        border-right: 0;
     }
 }

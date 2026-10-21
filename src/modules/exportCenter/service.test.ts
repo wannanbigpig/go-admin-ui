@@ -1,9 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as systemApi from '@/api/system'
-import { fetchExportRecordListWithSummary } from './service'
+import { fetchExportRecordDetail, fetchExportRecordListWithSummary } from './service'
 
 describe('export record list', () => {
     afterEach(() => vi.restoreAllMocks())
+
+    it('按公共编号读取最终文件详情', async () => {
+        const record = { public_id: 'export-public-id', status: 'success' as const, download_ready: true, file_uuid: 'ready-file' }
+        const getDetail = vi.spyOn(systemApi, 'getExportRecordDetail').mockResolvedValue(record)
+        expect(await fetchExportRecordDetail(record.public_id)).toEqual(record)
+        expect(getDetail).toHaveBeenCalledWith(record.public_id)
+    })
 
     it('一次列表请求同时取得分页和全量汇总', async () => {
         const summary = { total: 5, pending: 1, running: 1, retrying: 0, success: 2, failed: 1, canceled: 0 }

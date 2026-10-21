@@ -1,6 +1,6 @@
 <template>
     <el-scrollbar class="xl-scrollbar">
-        <el-menu :default-active="activeMenu" class="el-menu-vertical-demo" :collapse-transition="false" :collapse="settingStore.isCollapse" :router="false" @select="handleMenuSelect">
+        <el-menu :default-active="activeMenu" class="el-menu-vertical-demo" :collapse-transition="false" :collapse="collapsed ?? settingStore.isCollapse" :router="false" @select="handleMenuSelect">
             <!-- 加载状态 -->
             <div v-if="loading" class="loading-text">{{ t('layout.menuLoading') }}</div>
             <template v-else>
@@ -25,6 +25,8 @@ const settingStore = useSettingStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const { t } = useI18n()
+withDefaults(defineProps<{ collapsed?: boolean }>(), { collapsed: undefined })
+const emit = defineEmits<{ navigate: [] }>()
 
 /** 当前激活的菜单项 */
 const activeMenu = ref('')
@@ -52,6 +54,7 @@ const blurActiveElement = () => {
 const handleMenuSelect = () => {
     // 导航由 linkItem 处理，这里主动移除焦点，避免焦点残留在即将隐藏的 popper 内触发 aria-hidden 警告
     blurActiveElement()
+    emit('navigate')
 }
 
 watch(

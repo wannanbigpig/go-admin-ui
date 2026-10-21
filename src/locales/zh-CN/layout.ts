@@ -3,6 +3,7 @@ export default {
     skipToMain: '跳过导航直接进入主内容',
     menuLoading: '菜单加载中...',
     menuEmpty: '暂无可用菜单',
+    navigationMenu: '导航菜单',
     home: '首页',
     profile: '个人中心',
     userRefresh: '刷新缓存',

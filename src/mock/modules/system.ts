@@ -1,4 +1,5 @@
 import type { MockRoute } from '../index'
+import type { ExportRecord, ExportSummary } from '@/types/exportCenter'
 
 // 模拟系统字典选项
 const dictOptionsMap: Record<string, unknown[]> = {
@@ -340,6 +341,67 @@ let mockTrashFiles: MockTrashFile[] = [
 let todoMockGroups: Array<{ id: number; name: string }> = []
 let nextTodoMockGroupID = 1
 
+const exportRecords: ExportRecord[] = [
+    {
+        public_id: 'cf70a3fa-d3f6-4a76-ac5c-f9ae04272001',
+        export_name: '请求日志',
+        scene: 'request_log',
+        status: 'failed',
+        stage: 'failed',
+        progress: 0,
+        total_count: 0,
+        processed_count: 0,
+        file_uuid: '',
+        file_name: '',
+        file_size: 0,
+        download_ready: false,
+        format: 'csv',
+        finished_at: '2026-06-10 16:56:54',
+        created_at: '2026-06-10 16:56:54',
+    },
+    {
+        public_id: 'cf70a3fa-d3f6-4a76-ac5c-f9ae04272002',
+        export_name: '请求日志',
+        scene: 'request_log',
+        status: 'success',
+        stage: 'download_ready',
+        progress: 100,
+        total_count: 10,
+        processed_count: 10,
+        file_uuid: '3181079ac2ea4ea780dc58373adbe656',
+        file_name: 'request_logs_20260610113047.csv',
+        file_size: 3383,
+        download_ready: true,
+        format: 'csv',
+        finished_at: '2026-06-10 11:30:47',
+        created_at: '2026-06-10 11:16:00',
+    },
+    ...(['pending', 'running', 'retrying', 'canceled'] as const).map((status, index) => ({
+        public_id: `cf70a3fa-d3f6-4a76-ac5c-f9ae0427200${index + 3}`,
+        export_name: '文件资源',
+        scene: 'file_list' as const,
+        status,
+        stage: status === 'running' ? 'processing' : status === 'canceled' ? 'canceled' : 'queued',
+        progress: status === 'running' ? 25 : 0,
+        total_count: 20,
+        processed_count: status === 'running' ? 5 : 0,
+        file_uuid: '',
+        file_name: '',
+        file_size: 0,
+        download_ready: false,
+        format: 'csv',
+        created_at: '2026-10-21 10:00:00',
+    })),
+]
+
+const exportSummary = (): ExportSummary => {
+    const result: ExportSummary = { total: exportRecords.length, pending: 0, running: 0, retrying: 0, success: 0, failed: 0, canceled: 0 }
+    for (const record of exportRecords) {
+        if (record.status) result[record.status]++
+    }
+    return result
+}
+
 export const systemMock: MockRoute[] = [
     {
         pattern: /^\/v1\/todo\/list$/,
@@ -376,7 +438,7 @@ export const systemMock: MockRoute[] = [
         method: 'POST',
         handler: (data: unknown) => {
             const input = data as { id: number; name: string }
-            todoMockGroups = todoMockGroups.map((group) => group.id === input.id ? { ...group, name: input.name } : group)
+            todoMockGroups = todoMockGroups.map((group) => (group.id === input.id ? { ...group, name: input.name } : group))
             return todoMockGroups.find((group) => group.id === input.id)
         },
     },
@@ -1221,48 +1283,35 @@ export const systemMock: MockRoute[] = [
     {
         pattern: /^\/v1\/system\/export\/list$/,
         method: 'GET',
-        handler: () => ({
-            total: 2,
-            per_page: 10,
-            current_page: 1,
-            last_page: 1,
-            data: [
-                {
-                    public_id: 'cf70a3fa-d3f6-4a76-ac5c-f9ae04272001',
-                    export_name: '请求日志',
-                    scene: 'request_log',
-                    status: 'failed',
-                    stage: 'failed',
-                    progress: 0,
-                    total_count: 0,
-                    processed_count: 0,
-                    file_uuid: '',
-                    file_name: '',
-                    file_size: 0,
-                    download_ready: false,
-                    format: 'csv',
-                    finished_at: '2026-06-10 16:56:54',
-                    created_at: '2026-06-10 16:56:54',
-                },
-                {
-                    public_id: 'cf70a3fa-d3f6-4a76-ac5c-f9ae04272002',
-                    export_name: '请求日志',
-                    scene: 'request_log',
-                    status: 'success',
-                    stage: 'download_ready',
-                    progress: 100,
-                    total_count: 10,
-                    processed_count: 10,
-                    file_uuid: '3181079ac2ea4ea780dc58373adbe656',
-                    file_name: 'request_logs_20260610113047.csv',
-                    file_size: 3383,
-                    download_ready: true,
-                    format: 'csv',
-                    finished_at: '2026-06-10 11:30:47',
-                    created_at: '2026-06-10 11:16:00',
-                },
-            ],
-        }),
+        handler: (params: unknown) => {
+            const query = (params || {}) as Record<string, unknown>
+            const page = Math.max(1, Number(query.page) || 1)
+            const perPage = Math.max(1, Number(query.per_page) || 10)
+            const rows = exportRecords.filter((record) => (!query.status || record.status === query.status) && (!query.scene || record.scene === query.scene) && (!query.public_id || record.public_id === query.public_id))
+            return {
+                total: rows.length,
+                per_page: perPage,
+                current_page: page,
+                last_page: Math.max(1, Math.ceil(rows.length / perPage)),
+                data: rows.slice((page - 1) * perPage, page * perPage),
+                summary: exportSummary(),
+            }
+        },
+    },
+    {
+        pattern: /^\/v1\/system\/export\/summary$/,
+        method: 'GET',
+        handler: exportSummary,
+    },
+    {
+        pattern: /^\/v1\/system\/export\/detail$/,
+        method: 'GET',
+        handler: (params: unknown) => {
+            const { public_id: publicID } = (params || {}) as Record<string, unknown>
+            const record = exportRecords.find((item) => item.public_id === publicID)
+            if (!record) throw new Error('Mock export record not found')
+            return { ...record }
+        },
     },
     {
         pattern: /^\/v1\/task\/cron\/state$/,

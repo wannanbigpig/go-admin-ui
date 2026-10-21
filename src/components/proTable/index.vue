@@ -13,10 +13,7 @@
                                 </el-select>
                             </template>
                             <template v-else-if="field.type === 'daterange'">
-                                <xl-date-range-picker
-                                    :model-value="getDateRangeValue(localModel[field.prop])"
-                                    @update:model-value="(value) => (localModel[field.prop] = value)"
-                                />
+                                <xl-date-range-picker :model-value="getDateRangeValue(localModel[field.prop])" @update:model-value="(value) => (localModel[field.prop] = value)" />
                             </template>
                             <template v-else>
                                 <el-input v-model.trim="localModel[field.prop]" :placeholder="field.placeholder" clearable />
@@ -443,6 +440,15 @@ defineExpose({
 
     .xl-pro-table__toolbar-actions {
         width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .xl-pro-table__search-btn {
+        width: 100%;
+        margin-left: 0;
+        padding: 0 10px;
+        justify-content: flex-start;
     }
 }
 </style>

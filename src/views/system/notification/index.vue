@@ -91,8 +91,8 @@
                     <!-- 分页部分嵌套在左栏底部 -->
                     <div class="sidebar-pagination" v-if="total > 0">
                         <el-pagination
-                            v-model:current-page="queryParams.page"
-                            v-model:page-size="queryParams.per_page"
+                            v-model:current-page="pagination.page"
+                            v-model:page-size="pagination.pageSize"
                             :total="total"
                             :pager-count="5"
                             layout="prev, pager, next"
@@ -152,7 +152,15 @@
         <!-- 移动端适配：抽屉详情展示 -->
         <el-drawer v-model="drawerVisible" :title="selectedNotification?.title || t('layout.notification.title')" direction="rtl" size="var(--xl-drawer-md)" :with-header="false" class="notification-mobile-drawer">
             <div v-if="selectedNotification" class="detail-content mobile-detail">
-                <div class="drawer-close-btn" role="button" tabindex="0" :aria-label="t('common.actions.close')" @click="drawerVisible = false" @keydown.enter="drawerVisible = false" @keydown.space.prevent="drawerVisible = false">
+                <div
+                    class="drawer-close-btn"
+                    role="button"
+                    tabindex="0"
+                    :aria-label="t('common.actions.close')"
+                    @click="drawerVisible = false"
+                    @keydown.enter="drawerVisible = false"
+                    @keydown.space.prevent="drawerVisible = false"
+                >
                     <el-icon size="20"><i-ep-close /></el-icon>
                 </div>
 
@@ -171,7 +179,9 @@
                 </div>
 
                 <div class="detail-footer-actions">
-                    <el-button v-if="!selectedNotification.read" :type="selectedNotification.action_url ? 'default' : 'primary'" size="default" @click="handleMarkRead(selectedNotification)">{{ t('system.notification.markRead') }}</el-button>
+                    <el-button v-if="!selectedNotification.read" :type="selectedNotification.action_url ? 'default' : 'primary'" size="default" @click="handleMarkRead(selectedNotification)">{{
+                        t('system.notification.markRead')
+                    }}</el-button>
                     <el-button v-if="selectedNotification.action_url" type="primary" size="default" @click="handleActionClick(selectedNotification)">
                         {{ selectedNotification.action_label || t('system.notification.goHandle') }}
                     </el-button>
@@ -190,6 +200,7 @@ import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import { useNotificationStore, normalizeNotification } from '@/stores/notification'
 import { getNotificationList } from '@/api/system'
 import { normalizeListData } from '@/modules/shared/response'
+import { useListPage } from '@/composables/useListPage'
 import { translate } from '@/locales'
 import { Logger } from '@/utils/logger'
 import router from '@/router'
@@ -203,10 +214,7 @@ const notificationStore = useNotificationStore()
 const { checkPermission } = usePermission()
 
 const queryFormRef = ref<FormInstance>()
-const loading = ref(false)
 const hasError = ref(false)
-const list = ref<AppNotification[]>([])
-const total = ref(0)
 
 // 响应式数据
 const selectedNotification = ref<AppNotification | null>(null)
@@ -217,12 +225,6 @@ const queryParams = reactive({
     is_read: undefined as number | undefined,
     page: 1,
     per_page: 15,
-})
-
-const pagination = reactive({
-    page: 1,
-    pageSize: 15,
-    total: 0,
 })
 
 const hasUnread = computed(() => list.value.some((item) => !item.read))
@@ -300,27 +302,31 @@ const selectNotification = (item: AppNotification) => {
     }
 }
 
-const fetchList = async () => {
-    loading.value = true
-    try {
+const {
+    loading,
+    items: list,
+    pagination,
+    getList: fetchList,
+} = useListPage<AppNotification, typeof queryParams>({
+    query: queryParams,
+    delayFirstFetch: false,
+    fetcher: async (query) => {
         const params: Record<string, unknown> = {
-            page: queryParams.page,
-            per_page: queryParams.per_page,
+            page: query.page,
+            per_page: query.per_page,
         }
-        if (queryParams.category) {
-            params.category = queryParams.category
+        if (query.category) {
+            params.category = query.category
         }
-        if (queryParams.is_read !== undefined && queryParams.is_read !== null) {
-            params.is_read = queryParams.is_read
+        if (query.is_read !== undefined && query.is_read !== null) {
+            params.is_read = query.is_read
         }
 
         const response = await getNotificationList(params)
         const normalized = normalizeListData<AppNotification>(response)
-        list.value = normalized.list.map((item) => normalizeNotification(item as unknown as Record<string, unknown>))
-        total.value = normalized.total
-        pagination.page = normalized.page ?? pagination.page
-        pagination.pageSize = normalized.pageSize ?? pagination.pageSize
-        pagination.total = normalized.total
+        return { ...normalized, list: normalized.list.map((item) => reactive(normalizeNotification(item as unknown as Record<string, unknown>))) }
+    },
+    onSuccess: () => {
         hasError.value = false
 
         // 保持选中同步或默认选中第一项
@@ -334,18 +340,16 @@ const fetchList = async () => {
         } else {
             selectedNotification.value = null
         }
-    } catch {
-        list.value = []
-        total.value = 0
+    },
+    onError: () => {
         hasError.value = true
         selectedNotification.value = null
-    } finally {
-        loading.value = false
-    }
-}
+    },
+})
+const total = computed(() => pagination.total)
 
 const handleSearch = async () => {
-    queryParams.page = 1
+    pagination.page = 1
     await fetchList()
 }
 
@@ -357,7 +361,7 @@ const handleReset = async () => {
 }
 
 const handlePageChange = async (page: number) => {
-    queryParams.page = page
+    pagination.page = page
     await fetchList()
 }
 
@@ -387,7 +391,7 @@ const handleDelete = async (item: AppNotification) => {
     if (!(await notificationStore.deleteNotification(item.id))) return
     if (selectedNotification.value?.id === item.id) selectedNotification.value = null
     drawerVisible.value = false
-    if (list.value.length === 1 && queryParams.page > 1) queryParams.page -= 1
+    if (list.value.length === 1 && pagination.page > 1) pagination.page -= 1
     await fetchList()
     ElMessage.success(t('common.result.deleteSuccess'))
 }
@@ -403,15 +407,11 @@ const handleActionClick = async (item: AppNotification) => {
 
 const handleMarkAllRead = async () => {
     try {
-        await ElMessageBox.confirm(
-            t('system.notification.markAllConfirmMessage'),
-            t('common.confirm.title'),
-            {
-                confirmButtonText: t('common.actions.confirm'),
-                cancelButtonText: t('common.actions.cancel'),
-                type: 'warning',
-            }
-        )
+        await ElMessageBox.confirm(t('system.notification.markAllConfirmMessage'), t('common.confirm.title'), {
+            confirmButtonText: t('common.actions.confirm'),
+            cancelButtonText: t('common.actions.cancel'),
+            type: 'warning',
+        })
     } catch {
         return
     }

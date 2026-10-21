@@ -13,8 +13,18 @@ export async function fetchExportRecordList(params?: Record<string, unknown>) {
 
 export async function fetchMyExportSummary() {
     return normalizeDetailData<ExportSummary>(await systemApi.getMyExportSummary(), {
-        total: 0, pending: 0, running: 0, retrying: 0, success: 0, failed: 0, canceled: 0,
+        total: 0,
+        pending: 0,
+        running: 0,
+        retrying: 0,
+        success: 0,
+        failed: 0,
+        canceled: 0,
     })
+}
+
+export async function fetchExportRecordDetail(publicID: string) {
+    return normalizeDetailData<ExportRecord | null>(await systemApi.getExportRecordDetail(publicID), null)
 }
 
 export async function fetchExportRecordListWithSummary(params?: Record<string, unknown>) {

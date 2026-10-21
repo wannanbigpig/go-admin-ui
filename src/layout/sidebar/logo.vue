@@ -1,18 +1,21 @@
 <template>
-    <div class="sidebar-logo-container" :class="{ collapse: settingStore.isCollapse }">
+    <div class="sidebar-logo-container" :class="{ collapse: isCollapsed }">
         <router-link class="sidebar-logo-link" to="/">
             <img src="@/assets/images/gin-layout-mark.svg" class="sidebar-logo sidebar-logo--light" alt="Gin Layout" />
             <img src="@/assets/images/gin-layout-mark-dark.svg" class="sidebar-logo sidebar-logo--dark" alt="Gin Layout" />
-            <span class="sidebar-title animate__animated" :class="{ animate__bounceInLeft: !settingStore.isCollapse }"> X-L-Admin </span>
+            <span class="sidebar-title animate__animated" :class="{ animate__bounceInLeft: !isCollapsed }"> X-L-Admin </span>
         </router-link>
     </div>
 </template>
 
 <script setup>
 import { useSettingStore } from '@/stores/setting'
+import { computed } from 'vue'
 
 // ==================== Store ====================
 const settingStore = useSettingStore()
+const props = defineProps({ collapsed: { type: Boolean, default: undefined } })
+const isCollapsed = computed(() => props.collapsed ?? settingStore.isCollapse)
 </script>
 
 <style lang="scss" scoped>
