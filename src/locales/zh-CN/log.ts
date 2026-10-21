@@ -116,6 +116,7 @@ export default {
         login: '登录',
         refresh: '刷新',
         loginAction: '登录操作',
+        sessionInfo: '会话信息',
         accessToken: 'Access Token',
         refreshToken: 'Refresh Token',
         format: '格式化',

@@ -178,31 +178,31 @@
                     <el-icon class="section-icon"><Tickets /></el-icon>
                     <span class="section-title-text">{{ t('system.task.baseInfo') }}</span>
                 </div>
-                <el-descriptions :column="detailColumns" border size="default" class="detail-modern-descriptions xl-m-bottom-20">
-                    <el-descriptions-item :label="t('system.task.exportName')" :span="detailColumns">
+                <DetailGrid class="xl-m-bottom-20">
+                    <DetailItem :label="t('system.task.exportName')" :span="2">
                         <span class="detail-strong-title">{{ getExportCellValue('export_name', currentExportRecord) }}</span>
-                    </el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.exportPublicId')" :span="detailColumns">
+                    </DetailItem>
+                    <DetailItem :label="t('system.task.exportPublicId')" :span="2">
                         <div class="detail-id-box">
                             <code class="detail-code-mono">{{ currentExportRecord.public_id }}</code>
                             <el-tooltip :content="t('common.actions.copySuccess')" trigger="click" placement="top">
                                 <el-button link type="primary" size="small" :icon="CopyDocument" @click="handleCopyId(currentExportRecord.public_id)" />
                             </el-tooltip>
                         </div>
-                    </el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.exportScene')">
+                    </DetailItem>
+                    <DetailItem :label="t('system.task.exportScene')">
                         <el-tag size="small" effect="plain">{{ getExportCellValue('scene', currentExportRecord) }}</el-tag>
-                    </el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.exportCount')">
+                    </DetailItem>
+                    <DetailItem :label="t('system.task.exportCount')">
                         <span class="detail-count-text">{{ t('system.task.exportRowsValue', { count: getExportCount(currentExportRecord) }) }}</span>
-                    </el-descriptions-item>
-                    <el-descriptions-item :label="t('common.labels.createdAt')">
+                    </DetailItem>
+                    <DetailItem :label="t('common.labels.createdAt')">
                         {{ currentExportRecord.created_at || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item :label="t('system.task.finishedAt')">
+                    </DetailItem>
+                    <DetailItem :label="t('system.task.finishedAt')">
                         {{ currentExportRecord.finished_at || '-' }}
-                    </el-descriptions-item>
-                </el-descriptions>
+                    </DetailItem>
+                </DetailGrid>
 
                 <!-- 产物文件区域：高质感文件卡片 -->
                 <div class="drawer-section-header">
@@ -270,6 +270,8 @@
 </template>
 
 <script setup lang="ts">
+import DetailGrid from '@/components/detailGrid/index.vue'
+import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import { computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { Download, Document, CircleCheck, CircleClose, Clock, Loading, Tickets, Warning, CopyDocument, Timer } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -279,7 +281,6 @@ import xlProTable from '@/components/proTable/index.vue'
 import xlActionButtons, { type ActionButtonConfig } from '@/components/actionButtons/index.vue'
 import { useListPage } from '@/composables/useListPage'
 import { useIntervalPolling } from '@/composables/useIntervalPolling'
-import { useMediaQuery } from '@/composables/useMediaQuery'
 import {
     applyExportProgressEvent,
     canDownloadExportRecord,
@@ -303,8 +304,6 @@ let hasActivated = false
 const { t } = useI18n()
 const { copyText } = useClipboard()
 const notificationStore = useNotificationStore()
-const compactDetail = useMediaQuery('(max-width: 600px)')
-const detailColumns = computed(() => (compactDetail.value ? 1 : 2))
 
 const handleCopyId = async (id?: string) => {
     if (!id) return
@@ -1094,21 +1093,6 @@ onBeforeUnmount(() => {
     }
 }
 
-/* 3. 基本信息 Descriptions */
-.detail-modern-descriptions {
-    :deep(.el-descriptions__label) {
-        width: 100px;
-        background-color: var(--el-fill-color-light) !important;
-        font-weight: 500;
-        color: var(--el-text-color-secondary);
-    }
-
-    :deep(.el-descriptions__content) {
-        color: var(--el-text-color-primary);
-        word-break: break-all;
-    }
-}
-
 .detail-strong-title {
     font-size: 14px;
     font-weight: 600;
@@ -1119,9 +1103,16 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+
+    .el-button {
+        flex-shrink: 0;
+    }
 }
 
 .detail-code-mono {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: monospace;
     font-size: 12px;
     color: var(--el-text-color-regular);

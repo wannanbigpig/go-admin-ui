@@ -82,35 +82,35 @@
 
         <!-- 运行时信息 -->
         <el-row :gutter="16" class="xl-m-bottom-16">
-            <el-col :span="12">
+            <el-col :xs="24" :md="12" class="monitor-info-column">
                 <el-card shadow="hover">
                     <template #header>
                         <span>{{ t('system.monitor.goRuntime') }}</span>
                     </template>
-                    <el-descriptions :column="2" border>
-                        <el-descriptions-item :label="t('system.monitor.goVersion')">{{ data?.runtime?.go_version || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.goroutines')">{{ data?.runtime?.goroutines || 0 }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.heapAlloc')">{{ formatBytes(data?.runtime?.heap_alloc || 0) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.heapInuse')">{{ formatBytes(data?.runtime?.heap_inuse || 0) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.heapSys')">{{ formatBytes(data?.runtime?.heap_sys || 0) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.heapReleased')">{{ formatBytes(data?.runtime?.heap_released || 0) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.gcCycles')">{{ data?.runtime?.gc_cycles || 0 }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.gcPauseTotal')">{{ formatDuration(data?.runtime?.gc_pause_total_ns || 0) }}</el-descriptions-item>
-                    </el-descriptions>
+                    <DetailGrid>
+                        <DetailItem :label="t('system.monitor.goVersion')">{{ data?.runtime?.go_version || '-' }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.goroutines')">{{ data?.runtime?.goroutines || 0 }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.heapAlloc')">{{ formatBytes(data?.runtime?.heap_alloc || 0) }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.heapInuse')">{{ formatBytes(data?.runtime?.heap_inuse || 0) }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.heapSys')">{{ formatBytes(data?.runtime?.heap_sys || 0) }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.heapReleased')">{{ formatBytes(data?.runtime?.heap_released || 0) }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.gcCycles')">{{ data?.runtime?.gc_cycles || 0 }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.gcPauseTotal')">{{ formatDuration(data?.runtime?.gc_pause_total_ns || 0) }}</DetailItem>
+                    </DetailGrid>
                 </el-card>
             </el-col>
-            <el-col :span="12">
+            <el-col :xs="24" :md="12" class="monitor-info-column">
                 <el-card shadow="hover">
                     <template #header>
                         <span>{{ t('system.monitor.hostInfo') }}</span>
                     </template>
-                    <el-descriptions :column="2" border>
-                        <el-descriptions-item :label="t('system.monitor.hostname')">{{ data?.host?.hostname || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.os')">{{ data?.host?.os || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.platform')">{{ data?.host?.platform || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.uptime')">{{ formatUptime(data?.host?.uptime || 0) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.monitor.updateTime')" :span="2">{{ data?.host?.updated_at || '-' }}</el-descriptions-item>
-                    </el-descriptions>
+                    <DetailGrid>
+                        <DetailItem :label="t('system.monitor.hostname')">{{ data?.host?.hostname || '-' }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.os')">{{ data?.host?.os || '-' }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.platform')">{{ data?.host?.platform || '-' }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.uptime')">{{ formatUptime(data?.host?.uptime || 0) }}</DetailItem>
+                        <DetailItem :label="t('system.monitor.updateTime')" :span="2">{{ data?.host?.updated_at || '-' }}</DetailItem>
+                    </DetailGrid>
                 </el-card>
             </el-col>
         </el-row>
@@ -161,6 +161,8 @@
 </template>
 
 <script setup lang="ts">
+import DetailGrid from '@/components/detailGrid/index.vue'
+import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getDashboardMonitor, type DashboardMonitor } from '@/api/dashboard'
@@ -256,6 +258,10 @@ const getLoadClass = (load: number, cores: number): string => {
 </script>
 
 <style scoped lang="scss">
+.monitor-info-column {
+    margin-bottom: var(--xl-space-4);
+}
+
 .monitor-container {
     padding: 0;
 }

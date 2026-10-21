@@ -168,43 +168,43 @@
         <el-drawer v-model="showDetailDrawer" :title="t('log.request.detailTitle')" direction="rtl" size="min(100vw, var(--xl-drawer-lg))">
             <div v-loading="detailLoading" :element-loading-text="t('log.request.loadingText')" class="detail-content">
                 <template v-if="currentDetail">
-                    <el-descriptions :column="2" border>
-                        <el-descriptions-item :label="t('log.request.operationName')" :span="2">{{ currentDetail.operation_name || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.requestId')" :span="2">{{ currentDetail.request_id || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.operationApi')" :span="2">
+                    <DetailGrid :title="t('common.labels.basicInfo')">
+                        <DetailItem :label="t('log.request.operationName')" :span="2">{{ currentDetail.operation_name || '-' }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.requestId')" :span="2">{{ currentDetail.request_id || '-' }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.operationApi')" :span="2">
                             <el-tag :type="getMethodTagType(currentDetail.method)" class="xl-m-right-10">{{ currentDetail.method || '-' }}</el-tag>
                             {{ currentDetail.base_url || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.requestKind')">
+                        </DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.requestKind')">
                             <el-tag v-if="currentDetail.request_kind" :type="getRequestKindTagType(currentDetail.request_kind)">
                                 {{ getRequestKindText(currentDetail.request_kind) }}
                             </el-tag>
                             <span v-else>-</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.operationStatus')">
+                        </DetailItem>
+                        <DetailItem :label="t('log.request.operationStatus')">
                             <el-tag :type="currentDetail.operation_status === 0 ? 'success' : 'danger'">
                                 {{ currentDetail.operation_status === 0 ? t('common.status.success') : t('common.status.failed') }}
                             </el-tag>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.duration')">{{ formatExecutionTimeDisplay(currentDetail) }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.executionTimeScope')">
+                        </DetailItem>
+                        <DetailItem :label="t('log.request.duration')">{{ formatExecutionTimeDisplay(currentDetail) }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.executionTimeScope')">
                             <el-tag v-if="currentDetail.execution_time_scope" size="small" effect="plain" :type="getExecutionTimeScopeTagType(currentDetail.execution_time_scope)">
                                 {{ getExecutionTimeScopeText(currentDetail.execution_time_scope) }}
                             </el-tag>
                             <span v-else>-</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.responseCode')">
+                        </DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.responseCode')">
                             <el-tag :type="getResponseStatusTagType(currentDetail.response_status)">{{ currentDetail.response_status || '-' }}</el-tag>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('common.labels.ipAddress')" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.operatorAccount')">{{ currentDetail.operator_account || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.operatorName')">{{ currentDetail.operator_name || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.jwtId')" :span="2">{{ adminDetail.jwt_id || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.os')">{{ currentDetail.os || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.browser')">{{ currentDetail.browser || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.request.createdAt')" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="adminDetail" :label="t('log.request.userAgent')" :span="2">{{ currentDetail.user_agent || '-' }}</el-descriptions-item>
-                    </el-descriptions>
+                        </DetailItem>
+                        <DetailItem :label="t('common.labels.ipAddress')" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.operatorAccount')">{{ currentDetail.operator_account || '-' }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.operatorName')">{{ currentDetail.operator_name || '-' }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.jwtId')" :span="2">{{ adminDetail.jwt_id || '-' }}</DetailItem>
+                        <DetailItem :label="t('log.login.os')">{{ currentDetail.os || '-' }}</DetailItem>
+                        <DetailItem :label="t('log.login.browser')">{{ currentDetail.browser || '-' }}</DetailItem>
+                        <DetailItem :label="t('log.request.createdAt')" :span="2">{{ currentDetail.created_at || '-' }}</DetailItem>
+                        <DetailItem v-if="adminDetail" :label="t('log.request.userAgent')" :span="2">{{ currentDetail.user_agent || '-' }}</DetailItem>
+                    </DetailGrid>
 
                     <section v-if="selfDetail?.change_summary?.has_changes" class="self-change-summary">
                         <div class="self-change-summary__title">{{ t('log.request.changeSummary') }}</div>
@@ -248,6 +248,8 @@
 </template>
 
 <script setup lang="ts">
+import DetailGrid from '@/components/detailGrid/index.vue'
+import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import xlCollapsibleSearchBtn from '@/components/collapsibleSearchBtn/index.vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlDateRangePicker from '@/components/dateRangePicker/index.vue'

@@ -78,80 +78,80 @@
                 <div class="section-title-line"></div>
                 <div>{{ t('system.task.baseInfo') }}</div>
             </div>
-            <el-descriptions v-if="currentRunDetail" :column="2" border class="custom-descriptions xl-m-bottom-20">
-                <el-descriptions-item :label="t('common.labels.id')">{{ currentRunDetail.id }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.code')">{{ currentRunDetail.task_code }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.kind')">
+            <DetailGrid v-if="currentRunDetail" class="xl-m-bottom-20">
+                <DetailItem :label="t('common.labels.id')">{{ currentRunDetail.id }}</DetailItem>
+                <DetailItem :label="t('system.task.code')">{{ currentRunDetail.task_code }}</DetailItem>
+                <DetailItem :label="t('system.task.kind')">
                     <el-tag size="small" :type="taskKindTagMap[currentRunDetail.kind]?.type || 'info'" effect="light">
                         {{ taskKindTagMap[currentRunDetail.kind]?.text || currentRunDetail.kind }}
                     </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="t('common.labels.status')">
+                </DetailItem>
+                <DetailItem :label="t('common.labels.status')">
                     <el-tag size="small" :type="taskRunStatusTagMap[currentRunDetail.status]?.type || 'info'" effect="light">
                         {{ taskRunStatusTagMap[currentRunDetail.status]?.text || currentRunDetail.status }}
                     </el-tag>
-                </el-descriptions-item>
-            </el-descriptions>
+                </DetailItem>
+            </DetailGrid>
 
             <!-- 触发信息 -->
             <div class="section-title xl-m-bottom-10">
                 <div class="section-title-line"></div>
                 <div>{{ t('system.task.triggerInfo') }}</div>
             </div>
-            <el-descriptions v-if="currentRunDetail" :column="2" border class="custom-descriptions xl-m-bottom-20">
-                <el-descriptions-item :label="t('system.task.source')">
+            <DetailGrid v-if="currentRunDetail" class="xl-m-bottom-20">
+                <DetailItem :label="t('system.task.source')">
                     <el-tag size="small" :type="taskSourceTagMap[currentRunDetail.source]?.type || 'info'" effect="light">
                         {{ taskSourceTagMap[currentRunDetail.source]?.text || currentRunDetail.source }}
                     </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.operator')">{{ formatTaskRunOperator(currentRunDetail) }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.sourceId')" :span="2">
-                    <span class="detail-nowrap">{{ currentRunDetail.source_id || '-' }}</span>
-                </el-descriptions-item>
-            </el-descriptions>
+                </DetailItem>
+                <DetailItem :label="t('system.task.operator')">{{ formatTaskRunOperator(currentRunDetail) }}</DetailItem>
+                <DetailItem :label="t('system.task.sourceId')" :span="2">
+                    <span>{{ currentRunDetail.source_id || '-' }}</span>
+                </DetailItem>
+            </DetailGrid>
 
             <!-- 执行信息 -->
             <div class="section-title xl-m-bottom-10">
                 <div class="section-title-line"></div>
                 <div>{{ t('system.task.executionInfo') }}</div>
             </div>
-            <el-descriptions v-if="currentRunDetail" :column="2" border class="custom-descriptions xl-m-bottom-20">
-                <el-descriptions-item :label="t('system.task.startedAt')">{{ currentRunDetail.started_at || '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.finishedAt')">{{ currentRunDetail.finished_at || '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.detailRecordMode')" :span="2">
+            <DetailGrid v-if="currentRunDetail" class="xl-m-bottom-20">
+                <DetailItem :label="t('system.task.startedAt')">{{ currentRunDetail.started_at || '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.finishedAt')">{{ currentRunDetail.finished_at || '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.detailRecordMode')" :span="2">
                     <el-tag v-if="currentRunDetail.detail_record_mode" size="small" :type="detailRecordModeTagMap[currentRunDetail.detail_record_mode]?.type || 'info'" effect="light">
                         {{ detailRecordModeTagMap[currentRunDetail.detail_record_mode]?.text || currentRunDetail.detail_record_mode }}
                     </el-tag>
                     <span v-else>-</span>
-                </el-descriptions-item>
-            </el-descriptions>
+                </DetailItem>
+            </DetailGrid>
 
             <!-- 重试信息 -->
             <div class="section-title xl-m-bottom-10">
                 <div class="section-title-line"></div>
                 <div>{{ t('system.task.retryInfo') }}</div>
             </div>
-            <el-descriptions v-if="currentRunDetail" :column="2" border class="custom-descriptions xl-m-bottom-20">
-                <el-descriptions-item :label="t('system.task.maxRetry')">{{ currentRunDetail.max_retry ?? '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.attempt')">{{ currentRunDetail.attempt ?? '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.retryCount')">{{ currentRunDetail.retry_count ?? 0 }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.latestRetryRunId')">{{ currentRunDetail.latest_retry_run_id || '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.latestRetryStatus')">
+            <DetailGrid v-if="currentRunDetail" class="xl-m-bottom-20">
+                <DetailItem :label="t('system.task.maxRetry')">{{ currentRunDetail.max_retry ?? '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.attempt')">{{ currentRunDetail.attempt ?? '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.retryCount')">{{ currentRunDetail.retry_count ?? 0 }}</DetailItem>
+                <DetailItem :label="t('system.task.latestRetryRunId')">{{ currentRunDetail.latest_retry_run_id || '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.latestRetryStatus')">
                     <el-tag v-if="currentRunDetail.latest_retry_status" size="small" :type="taskRunStatusTagMap[currentRunDetail.latest_retry_status]?.type || 'info'" effect="light">
                         {{ taskRunStatusTagMap[currentRunDetail.latest_retry_status]?.text || currentRunDetail.latest_retry_status }}
                     </el-tag>
                     <span v-else>-</span>
-                </el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.retryOfRunId')">{{ currentRunDetail.retry_of_run_id || '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.retryRootRunId')">{{ currentRunDetail.retry_root_run_id || '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.retrySeq')" :span="2">{{ currentRunDetail.retry_seq || '-' }}</el-descriptions-item>
-                <el-descriptions-item :label="t('system.task.canRetry')" :span="2">
+                </DetailItem>
+                <DetailItem :label="t('system.task.retryOfRunId')">{{ currentRunDetail.retry_of_run_id || '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.retryRootRunId')">{{ currentRunDetail.retry_root_run_id || '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.retrySeq')" :span="2">{{ currentRunDetail.retry_seq || '-' }}</DetailItem>
+                <DetailItem :label="t('system.task.canRetry')" :span="2">
                     <el-tag size="small" :type="currentRunDetail.can_retry ? 'success' : 'info'" effect="light">
                         {{ currentRunDetail.can_retry ? t('common.yes') : t('common.no') }}
                     </el-tag>
-                    <span v-if="!currentRunDetail.can_retry && currentRunDetail.retry_block_reason" class="retry-reason detail-nowrap">（{{ currentRunDetail.retry_block_reason }}）</span>
-                </el-descriptions-item>
-            </el-descriptions>
+                    <span v-if="!currentRunDetail.can_retry && currentRunDetail.retry_block_reason" class="retry-reason">（{{ currentRunDetail.retry_block_reason }}）</span>
+                </DetailItem>
+            </DetailGrid>
 
             <!-- 错误信息 -->
             <template v-if="currentRunDetail && currentRunDetail.error_message">
@@ -203,6 +203,8 @@
 </template>
 
 <script setup lang="ts">
+import DetailGrid from '@/components/detailGrid/index.vue'
+import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import { computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -508,9 +510,13 @@ const runTableTitle = computed(
         ] as TableColumn<TaskRun>[]
 )
 
-watch(showRunDetailDrawer, (val) => {
-    if (!val) invalidateDetailRequest()
-}, { flush: 'sync' })
+watch(
+    showRunDetailDrawer,
+    (val) => {
+        if (!val) invalidateDetailRequest()
+    },
+    { flush: 'sync' }
+)
 
 watch(
     () => props.active,
@@ -580,38 +586,15 @@ onBeforeUnmount(invalidateDetailRequest)
     }
 }
 
-.custom-descriptions {
-    :deep(.el-descriptions__label) {
-        background-color: var(--el-fill-color-light);
-        color: var(--el-text-color-secondary);
-        width: 130px;
-    }
+.text-danger {
+    color: var(--el-color-danger);
+}
 
-    :deep(.el-descriptions__content) {
-        color: var(--el-text-color-primary);
-        font-weight: 500;
-        vertical-align: middle;
-    }
-
-    .detail-nowrap {
-        display: inline-block;
-        max-width: 100%;
-        white-space: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        vertical-align: middle;
-    }
-
-    .text-danger {
-        color: var(--el-color-danger);
-    }
-
-    .retry-reason {
-        color: var(--el-text-color-secondary);
-        font-size: 13px;
-        margin-left: 4px;
-        font-weight: 400;
-    }
+.retry-reason {
+    color: var(--el-text-color-secondary);
+    font-size: var(--xl-font-sm);
+    margin-left: var(--xl-space-1);
+    font-weight: 400;
 }
 
 .custom-pre-container {

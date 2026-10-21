@@ -36,45 +36,43 @@
         <el-drawer v-model="showDetailDrawer" :title="t('log.login.detailTitle')" direction="rtl" size="var(--xl-drawer-md)">
             <div v-loading="detailLoading" :element-loading-text="t('log.login.loadingText')" class="detail-content">
                 <template v-if="currentDetail">
-                    <el-descriptions :column="2" border>
-                        <el-descriptions-item :label="t('log.login.username')" :span="2">{{ currentDetail.username || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.ipAddress')" :span="2">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.operationType')">
+                    <DetailGrid :title="t('common.labels.basicInfo')">
+                        <DetailItem :label="t('log.login.username')">{{ currentDetail.username || '-' }}</DetailItem>
+                        <DetailItem :label="t('log.login.ipAddress')">{{ formatIpAddress(currentDetail.ip, currentDetail.ip_location) }}</DetailItem>
+                        <DetailItem :label="t('log.login.operationType')">
                             <el-tag :type="currentDetail.type === 1 ? 'primary' : 'info'">
                                 {{ currentDetail.type_name || (currentDetail.type === 1 ? t('log.login.loginAction') : currentDetail.type === 2 ? t('log.login.refresh') : '-') }}
                             </el-tag>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.loginStatus')">
+                        </DetailItem>
+                        <DetailItem :label="t('log.login.loginStatus')">
                             <el-tag :type="currentDetail.login_status === 1 ? 'success' : 'danger'">
                                 {{ currentDetail.login_status_name || (currentDetail.login_status === 1 ? t('common.status.success') : t('common.status.failed')) }}
                             </el-tag>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.durationMs')">{{ currentDetail.execution_time || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.os" :label="t('log.login.os')">{{ currentDetail.os || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.browser" :label="t('log.login.browser')">{{ currentDetail.browser || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('log.login.loginTime')" :span="2">{{ currentDetail.created_at || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.login_status === 0 && currentDetail.login_fail_reason" :label="t('log.login.failReason')" :span="2">
+                        </DetailItem>
+                        <DetailItem :label="t('log.login.durationMs')">{{ currentDetail.execution_time || '-' }}</DetailItem>
+                        <DetailItem v-if="currentDetail.os" :label="t('log.login.os')">{{ currentDetail.os || '-' }}</DetailItem>
+                        <DetailItem v-if="currentDetail.browser" :label="t('log.login.browser')">{{ currentDetail.browser || '-' }}</DetailItem>
+                        <DetailItem :label="t('log.login.loginTime')">{{ currentDetail.created_at || '-' }}</DetailItem>
+                        <DetailItem v-if="currentDetail.login_status === 0 && currentDetail.login_fail_reason" :label="t('log.login.failReason')" :span="2">
                             {{ currentDetail.login_fail_reason || '-' }}
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.is_revoked === 1" :label="t('log.login.revoked')">
+                        </DetailItem>
+                        <DetailItem v-if="currentDetail.is_revoked === 1" :label="t('log.login.revoked')">
                             <el-tag type="danger">{{ t('common.yes') }}</el-tag>
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="currentDetail.is_revoked === 1 && currentDetail.revoked_reason" :label="t('log.login.revokedReason')" :span="2">
+                        </DetailItem>
+                        <DetailItem v-if="currentDetail.is_revoked === 1 && currentDetail.revoked_reason" :label="t('log.login.revokedReason')" :span="2">
                             {{ currentDetail.revoked_reason || '-' }}
-                        </el-descriptions-item>
-                    </el-descriptions>
+                        </DetailItem>
+                    </DetailGrid>
 
                     <template v-if="currentDetail.token_hash || currentDetail.refresh_token_hash">
-                        <el-divider />
-
-                        <el-descriptions :column="1" border>
-                            <el-descriptions-item v-if="currentDetail.token_hash" :label="t('log.login.accessToken')">
+                        <DetailGrid :title="t('log.login.sessionInfo')" :columns="1" class="session-info">
+                            <DetailItem v-if="currentDetail.token_hash" :label="t('log.login.accessToken')">
                                 <code class="hash-content">{{ currentDetail.token_hash }}</code>
-                            </el-descriptions-item>
-                            <el-descriptions-item v-if="currentDetail.refresh_token_hash" :label="t('log.login.refreshToken')">
+                            </DetailItem>
+                            <DetailItem v-if="currentDetail.refresh_token_hash" :label="t('log.login.refreshToken')">
                                 <code class="hash-content">{{ currentDetail.refresh_token_hash }}</code>
-                            </el-descriptions-item>
-                        </el-descriptions>
+                            </DetailItem>
+                        </DetailGrid>
                     </template>
                 </template>
             </div>
@@ -83,6 +81,8 @@
 </template>
 
 <script setup lang="ts">
+import DetailGrid from '@/components/detailGrid/index.vue'
+import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import xlProTable from '@/components/proTable/index.vue'
 import xlActionButton from '@/components/actionButton/index.vue'
 import { computed, onMounted, reactive } from 'vue'
@@ -99,7 +99,8 @@ const { copyText } = useClipboard()
 const detailButtonInfo = getButtonInfoFull('adminLoginLog:detail')
 const { t } = useI18n()
 
-const { loading, logList, pagination, queryWhere, dateRange, showDetailDrawer, currentDetail, detailLoading, formatIpAddress, handleSearch, handleSortChange, handleReset, getList, openDetailDrawer } = useAdminLoginLogPage()
+const { loading, logList, pagination, queryWhere, dateRange, showDetailDrawer, currentDetail, detailLoading, formatIpAddress, handleSearch, handleSortChange, handleReset, getList, openDetailDrawer } =
+    useAdminLoginLogPage()
 
 const searchModel = reactive({
     username: '',
@@ -215,11 +216,14 @@ const tableTitle = computed(
     width: 100%;
 }
 .detail-content {
-    padding: var(--xl-space-5);
+    min-width: 0;
     .hash-content {
         font-family: monospace;
         font-size: var(--xl-font-sm);
         word-break: break-all;
     }
+}
+.session-info {
+    margin-top: var(--xl-space-6);
 }
 </style>

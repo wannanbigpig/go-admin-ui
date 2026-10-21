@@ -5,12 +5,7 @@
                 <!-- 顶部文件概览 -->
                 <div class="file-detail-header">
                     <div class="header-icon">
-                        <AuthenticatedFileImage
-                            v-if="isImageFile(file) && file.url"
-                            :file="file"
-                            class="detail-thumbnail"
-                            preview
-                        />
+                        <AuthenticatedFileImage v-if="isImageFile(file) && file.url" :file="file" class="detail-thumbnail" preview />
                         <div v-else-if="isFolderDetail(file)" class="detail-icon-placeholder">
                             <el-icon :size="48" color="var(--el-color-primary)"><FolderOpened /></el-icon>
                         </div>
@@ -42,8 +37,8 @@
                             {{ t('common.labels.basicInfo') }}
                         </span>
                     </div>
-                    <el-descriptions :column="2" border size="small" class="modern-descriptions">
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.url')" :span="2">
+                    <DetailGrid>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.url')" :span="2">
                             <el-link
                                 v-if="file.url"
                                 :href="Number(file.is_public) === 1 && isSafeUrl(file.url) ? file.url : undefined"
@@ -55,36 +50,36 @@
                                 >{{ file.url }}</el-link
                             >
                             <span v-else>-</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.size')">{{ formatFileSize(file.size) }}</el-descriptions-item>
-                        <el-descriptions-item v-if="isFolderDetail(file)" :label="t('system.file.fileType')">{{ t('system.file.folders') }}</el-descriptions-item>
-                        <el-descriptions-item v-else :label="t('system.file.mimeType')">{{ file.mime_type || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.logicalPath')">{{ file.logical_path || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('system.file.folderId')">{{ file.folder_id ?? '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="isFolderDetail(file)" :label="t('system.file.fileCount')">{{ file.file_count || 0 }}</el-descriptions-item>
-                        <el-descriptions-item v-if="isFolderDetail(file)" :label="t('system.file.childFolderCount')">{{ file.child_folder_count || 0 }}</el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.storageDriver')">{{ getStorageDriverLabel(file.storage_driver) }}</el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.storageStatus')">{{ file.storage_status_name || file.storage_status || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="isLocalStorageFile(file)" :label="t('system.file.actualPath')" :span="2">
+                        </DetailItem>
+                        <DetailItem :label="t('system.file.size')">{{ formatFileSize(file.size) }}</DetailItem>
+                        <DetailItem v-if="isFolderDetail(file)" :label="t('system.file.fileType')">{{ t('system.file.folders') }}</DetailItem>
+                        <DetailItem v-else :label="t('system.file.mimeType')">{{ file.mime_type || '-' }}</DetailItem>
+                        <DetailItem :label="t('system.file.logicalPath')" :span="2">{{ file.logical_path || '-' }}</DetailItem>
+                        <DetailItem :label="t('system.file.folderId')">{{ file.folder_id ?? '-' }}</DetailItem>
+                        <DetailItem v-if="isFolderDetail(file)" :label="t('system.file.fileCount')">{{ file.file_count || 0 }}</DetailItem>
+                        <DetailItem v-if="isFolderDetail(file)" :label="t('system.file.childFolderCount')">{{ file.child_folder_count || 0 }}</DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.storageDriver')">{{ getStorageDriverLabel(file.storage_driver) }}</DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.storageStatus')">{{ file.storage_status_name || file.storage_status || '-' }}</DetailItem>
+                        <DetailItem v-if="isLocalStorageFile(file)" :label="t('system.file.actualPath')" :span="2">
                             <span class="detail-text-mono">{{ buildActualLocalPath(file) || '-' }}</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="!isLocalStorageFile(file)" :label="t('system.file.bucket')" :span="2">{{ file.bucket || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="!isLocalStorageFile(file)" :label="t('system.file.objectKey')" :span="2">
+                        </DetailItem>
+                        <DetailItem v-if="!isLocalStorageFile(file)" :label="t('system.file.bucket')" :span="2">{{ file.bucket || '-' }}</DetailItem>
+                        <DetailItem v-if="!isLocalStorageFile(file)" :label="t('system.file.objectKey')" :span="2">
                             <span class="detail-text-mono">{{ file.object_key || '-' }}</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uploadSource')">{{ file.upload_source_name || file.upload_source || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uploaderName')">{{ file.uploader_name || file.uploader_username || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uploadStatus')">{{ file.upload_status_name || file.upload_status || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.uuid')" :span="2">
+                        </DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.uploadSource')">{{ file.upload_source_name || file.upload_source || '-' }}</DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.uploaderName')">{{ file.uploader_name || file.uploader_username || '-' }}</DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.uploadStatus')">{{ file.upload_status_name || file.upload_status || '-' }}</DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.uuid')" :span="2">
                             <span class="detail-text-mono">{{ file.uuid || '-' }}</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item v-if="!isFolderDetail(file)" :label="t('system.file.hash')" :span="2">
+                        </DetailItem>
+                        <DetailItem v-if="!isFolderDetail(file)" :label="t('system.file.hash')" :span="2">
                             <span class="detail-text-mono">{{ file.hash || '-' }}</span>
-                        </el-descriptions-item>
-                        <el-descriptions-item :label="t('common.labels.createdAt')">{{ file.created_at || '-' }}</el-descriptions-item>
-                        <el-descriptions-item :label="t('common.labels.updatedAt')">{{ file.updated_at || '-' }}</el-descriptions-item>
-                        <el-descriptions-item v-if="file.deleted_at" :label="t('system.file.deletedAt')" :span="2">{{ file.deleted_at }}</el-descriptions-item>
-                    </el-descriptions>
+                        </DetailItem>
+                        <DetailItem :label="t('common.labels.createdAt')">{{ file.created_at || '-' }}</DetailItem>
+                        <DetailItem :label="t('common.labels.updatedAt')">{{ file.updated_at || '-' }}</DetailItem>
+                        <DetailItem v-if="file.deleted_at" :label="t('system.file.deletedAt')" :span="2">{{ file.deleted_at }}</DetailItem>
+                    </DetailGrid>
                 </div>
 
                 <!-- References -->
@@ -96,21 +91,20 @@
                         </span>
                         <el-tag size="small" type="primary" effect="dark" round class="count-tag">{{ file.reference_count || 0 }}</el-tag>
                     </div>
-                    <el-table :data="references" border size="small" :empty-text="t('common.noData')" class="modern-table">
-                        <el-table-column prop="owner_type" :label="t('system.file.referenceOwnerType')" width="110" show-overflow-tooltip>
-                            <template #default="{ row }">
-                                {{ row.owner_type || '-' }}
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="source_name" :label="t('system.file.referenceSource')" min-width="140" show-overflow-tooltip />
-                        <el-table-column prop="field_name" :label="t('system.file.referenceField')" min-width="150" show-overflow-tooltip>
-                            <template #default="{ row }">
-                                <span class="field-label">{{ row.owner_field }}</span>
-                                <span v-if="row.field_name" class="field-remark">({{ row.field_name }})</span>
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="created_at" :label="t('common.labels.createdAt')" width="160" align="center" show-overflow-tooltip />
-                    </el-table>
+                    <ul v-if="references.length" class="reference-list">
+                        <li v-for="reference in references" :key="reference.id">
+                            <DetailGrid>
+                                <DetailItem :label="t('system.file.referenceOwnerType')">{{ reference.owner_type || '-' }}</DetailItem>
+                                <DetailItem :label="t('system.file.referenceSource')">{{ reference.source_name || '-' }}</DetailItem>
+                                <DetailItem :label="t('system.file.referenceField')">
+                                    <span class="field-label">{{ reference.owner_field }}</span>
+                                    <span v-if="reference.field_name" class="field-remark">({{ reference.field_name }})</span>
+                                </DetailItem>
+                                <DetailItem :label="t('common.labels.createdAt')">{{ reference.created_at || '-' }}</DetailItem>
+                            </DetailGrid>
+                        </li>
+                    </ul>
+                    <el-empty v-else :description="t('common.noData')" :image-size="64" />
                 </div>
             </template>
         </div>
@@ -118,6 +112,8 @@
 </template>
 
 <script setup lang="ts">
+import DetailGrid from '@/components/detailGrid/index.vue'
+import DetailItem from '@/components/detailGrid/DetailItem.vue'
 import { Document, FolderOpened, InfoFilled, Link } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -336,27 +332,6 @@ const getStorageStatusTagType = (value?: string) => {
     }
 }
 
-.modern-descriptions {
-    :deep(.el-descriptions__label) {
-        width: 100px;
-        // !important 用于覆盖 EP el-descriptions 自身高优先级样式
-        background-color: var(--el-fill-color-light) !important;
-        font-weight: 600;
-    }
-
-    :deep(.el-descriptions__content) {
-        word-break: break-all;
-        min-width: 160px;
-    }
-
-    // 限制第一列非跨列内容单元格的宽度，将第一列的宽度收窄，使第二列有足够空间展示 UUID
-    :deep(td.el-descriptions__content:nth-child(2)) {
-        &:not([colspan='2']):not([colspan='3']):not([colspan='4']) {
-            width: 165px;
-        }
-    }
-}
-
 .detail-code {
     background: var(--el-fill-color-light);
     padding: 2px 6px;
@@ -375,9 +350,12 @@ const getStorageStatusTagType = (value?: string) => {
     word-break: break-all;
 }
 
-.modern-table {
-    border-radius: 8px;
-    overflow: hidden;
+.reference-list {
+    display: grid;
+    gap: var(--xl-space-3);
+    padding: 0;
+    margin: 0;
+    list-style: none;
 }
 
 .field-label {

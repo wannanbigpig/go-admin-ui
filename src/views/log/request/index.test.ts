@@ -158,14 +158,6 @@ const TableColumnStub = defineComponent({
     },
 })
 
-const DescriptionItemStub = defineComponent({
-    inheritAttrs: false,
-    props: ['label'],
-    setup(props, { slots }) {
-        return () => h('div', { 'data-detail-label': props.label }, slots.default?.())
-    },
-})
-
 const EmptyStub = defineComponent({
     inheritAttrs: false,
     setup() {
@@ -204,8 +196,6 @@ describe('personal request-log page', () => {
                     ElOption: true,
                     ElTableColumn: TableColumnStub,
                     ElDrawer: SlotStub,
-                    ElDescriptions: SlotStub,
-                    ElDescriptionsItem: DescriptionItemStub,
                     ElDivider: SlotStub,
                     ElCollapse: SlotStub,
                     ElCollapseItem: SlotStub,
@@ -243,10 +233,10 @@ describe('personal request-log page', () => {
             'log.request.jwtId',
             'log.request.userAgent',
         ]) {
-            expect(wrapper.find(`[data-detail-label="${label}"]`).exists()).toBe(false)
+            expect(wrapper.findAll('dt').some((item) => item.text() === label)).toBe(false)
         }
         for (const label of ['log.request.operationName', 'log.request.operationStatus', 'log.request.duration', 'common.labels.ipAddress', 'log.login.os', 'log.login.browser', 'log.request.createdAt']) {
-            expect(wrapper.find(`[data-detail-label="${label}"]`).exists()).toBe(true)
+            expect(wrapper.findAll('dt').some((item) => item.text() === label)).toBe(true)
         }
         expect(wrapper.text()).not.toContain('log.request.export')
         expect(wrapper.text()).not.toContain('log.request.maskConfig')
@@ -254,12 +244,7 @@ describe('personal request-log page', () => {
         expect(wrapper.text()).not.toContain('private-response-body')
         expect(wrapper.text()).not.toContain('raw-secret')
         expect(wrapper.findAll('[data-testid="self-list-summary"]').map((item) => item.text())).toEqual(['2 项变更', '已刷新菜单权限缓存'])
-        expect(wrapper.findAll('[data-testid="self-change-summary"] li').map((item) => item.text())).toEqual([
-            '状态 从 禁用 改为 启用',
-            '密码 已更新',
-            '已删除文件（ID 8）',
-            '角色名称 设置为 但是',
-        ])
+        expect(wrapper.findAll('[data-testid="self-change-summary"] li').map((item) => item.text())).toEqual(['状态 从 禁用 改为 启用', '密码 已更新', '已删除文件（ID 8）', '角色名称 设置为 但是'])
         expect(wrapper.text()).toContain('另有 1 项变更未在个人日志中展示')
         expect(mocks.getAdminUserOptions).not.toHaveBeenCalled()
         expect(mocks.openDetailDrawer).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }))
@@ -289,8 +274,6 @@ describe('personal request-log page', () => {
                     ElOption: true,
                     ElTableColumn: TableColumnStub,
                     ElDrawer: SlotStub,
-                    ElDescriptions: SlotStub,
-                    ElDescriptionsItem: DescriptionItemStub,
                     ElDivider: SlotStub,
                     ElCollapse: SlotStub,
                     ElCollapseItem: SlotStub,
@@ -302,8 +285,8 @@ describe('personal request-log page', () => {
         expect(wrapper.find('[data-field="operator_account"]').exists()).toBe(true)
         expect(wrapper.find('[data-field="request_id"]').exists()).toBe(true)
         expect(wrapper.find('[data-field="base_url"]').exists()).toBe(true)
-        expect(wrapper.find('[data-detail-label="log.request.requestId"]').exists()).toBe(true)
-        expect(wrapper.find('[data-detail-label="log.request.operationApi"]').exists()).toBe(true)
+        expect(wrapper.findAll('dt').some((item) => item.text() === 'log.request.requestId')).toBe(true)
+        expect(wrapper.findAll('dt').some((item) => item.text() === 'log.request.operationApi')).toBe(true)
         expect((mocks.mode as { mode: { value: string } }).mode.value).toBe('admin')
         expect(mocks.permissionBindings).toEqual(expect.arrayContaining(['requestLog:export', 'requestLog:maskConfig', 'requestLog:detail']))
         expect(wrapper.text()).toContain('raw-secret')

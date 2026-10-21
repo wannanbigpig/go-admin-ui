@@ -116,6 +116,7 @@ export default {
         login: 'Login',
         refresh: 'Refresh',
         loginAction: 'Login Operation',
+        sessionInfo: 'Session information',
         accessToken: 'Access Token',
         refreshToken: 'Refresh Token',
         format: 'Format',
